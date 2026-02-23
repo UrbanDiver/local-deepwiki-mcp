@@ -35,7 +35,7 @@ class ParsedDocstring(TypedDict):
     raises: list[str]
 
 
-@dataclass
+@dataclass(slots=True)
 class Parameter:
     """Represents a function parameter."""
 
@@ -45,7 +45,7 @@ class Parameter:
     description: str | None = None
 
 
-@dataclass
+@dataclass(slots=True)
 class FunctionSignature:
     """Represents a function/method signature."""
 
@@ -59,7 +59,7 @@ class FunctionSignature:
     decorators: list[str] = field(default_factory=list)
 
 
-@dataclass
+@dataclass(slots=True)
 class ClassSignature:
     """Represents a class signature."""
 

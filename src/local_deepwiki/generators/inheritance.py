@@ -11,7 +11,7 @@ from local_deepwiki.generators.diagrams import sanitize_mermaid_name
 from local_deepwiki.models import IndexStatus
 
 
-@dataclass
+@dataclass(slots=True)
 class ClassNode:
     """A class in the inheritance tree."""
 

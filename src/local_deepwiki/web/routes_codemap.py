@@ -142,6 +142,16 @@ def api_codemap() -> Response | tuple[Response, int]:
         return jsonify({"error": "max_nodes must be an integer between 5 and 60"}), 400
 
     entry_point = data.get("entry_point")
+    if entry_point is not None:
+        if not isinstance(entry_point, str):
+            return jsonify({"error": "entry_point must be a string"}), 400
+        if len(entry_point) > 500:
+            return jsonify(
+                {"error": "entry_point exceeds maximum length (500 characters)"}
+            ), 400
+        # Allow alphanumeric, dots, underscores, colons, slashes (typical qualified names)
+        if not re.match(r"^[\w.:/ -]+$", entry_point):
+            return jsonify({"error": "entry_point contains invalid characters"}), 400
 
     repo_path = wiki_path.parent
     if wiki_path.name == ".deepwiki":

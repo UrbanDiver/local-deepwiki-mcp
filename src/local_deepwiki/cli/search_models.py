@@ -31,7 +31,7 @@ LANGUAGE_LEXERS = {
 }
 
 
-@dataclass
+@dataclass(slots=True)
 class SearchFilters:
     """Filters to apply to search results."""
 
@@ -93,7 +93,7 @@ class SearchFilters:
         self.min_similarity = 0.0
 
 
-@dataclass
+@dataclass(slots=True)
 class SearchState:
     """Current state of the interactive search session."""
 

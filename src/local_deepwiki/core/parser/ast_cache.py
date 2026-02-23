@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-@dataclass
+@dataclass(slots=True)
 class CachedAST:
     """A cached AST entry with metadata for validation and eviction.
 
@@ -30,7 +30,7 @@ class CachedAST:
     estimated_size_bytes: int = 0
 
 
-@dataclass
+@dataclass(slots=True)
 class ASTCacheStats:
     """Statistics for AST cache operations.
 

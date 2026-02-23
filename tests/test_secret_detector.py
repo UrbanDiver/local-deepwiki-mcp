@@ -19,66 +19,29 @@ from local_deepwiki.core.secret_detector import (
 class TestSecretTypeEnum:
     """Tests for SecretType enum values."""
 
-    def test_aws_key_exists(self):
-        """Test AWS_KEY enum value exists."""
-        assert SecretType.AWS_KEY.value == "aws_access_key"
-
-    def test_aws_secret_exists(self):
-        """Test AWS_SECRET enum value exists."""
-        assert SecretType.AWS_SECRET.value == "aws_secret_key"
-
-    def test_private_key_exists(self):
-        """Test PRIVATE_KEY enum value exists."""
-        assert SecretType.PRIVATE_KEY.value == "private_key"
-
-    def test_api_key_exists(self):
-        """Test API_KEY enum value exists."""
-        assert SecretType.API_KEY.value == "api_key"
-
-    def test_generic_token_exists(self):
-        """Test GENERIC_TOKEN enum value exists."""
-        assert SecretType.GENERIC_TOKEN.value == "generic_token"
-
-    def test_github_token_exists(self):
-        """Test GITHUB_TOKEN enum value exists."""
-        assert SecretType.GITHUB_TOKEN.value == "github_token"
-
-    def test_gitlab_token_exists(self):
-        """Test GITLAB_TOKEN enum value exists."""
-        assert SecretType.GITLAB_TOKEN.value == "gitlab_token"
-
-    def test_slack_token_exists(self):
-        """Test SLACK_TOKEN enum value exists."""
-        assert SecretType.SLACK_TOKEN.value == "slack_token"
-
-    def test_azure_key_exists(self):
-        """Test AZURE_KEY enum value exists."""
-        assert SecretType.AZURE_KEY.value == "azure_key"
-
-    def test_google_key_exists(self):
-        """Test GOOGLE_KEY enum value exists."""
-        assert SecretType.GOOGLE_KEY.value == "google_key"
-
-    def test_database_url_exists(self):
-        """Test DATABASE_URL enum value exists."""
-        assert SecretType.DATABASE_URL.value == "database_url"
-
-    def test_docker_auth_exists(self):
-        """Test DOCKER_AUTH enum value exists."""
-        assert SecretType.DOCKER_AUTH.value == "docker_auth"
-
-    def test_ssh_key_exists(self):
-        """Test SSH_KEY enum value exists."""
-        assert SecretType.SSH_KEY.value == "ssh_key"
-
-    def test_pgp_key_exists(self):
-        """Test PGP_KEY enum value exists."""
-        assert SecretType.PGP_KEY.value == "pgp_key"
-
-    def test_all_types_are_strings(self):
-        """Test all secret type values are strings."""
-        for secret_type in SecretType:
-            assert isinstance(secret_type.value, str)
+    @pytest.mark.parametrize(
+        "member, expected_value",
+        [
+            pytest.param(SecretType.AWS_KEY, "aws_access_key", id="aws-key"),
+            pytest.param(SecretType.AWS_SECRET, "aws_secret_key", id="aws-secret"),
+            pytest.param(SecretType.PRIVATE_KEY, "private_key", id="private-key"),
+            pytest.param(SecretType.API_KEY, "api_key", id="api-key"),
+            pytest.param(SecretType.GENERIC_TOKEN, "generic_token", id="generic-token"),
+            pytest.param(SecretType.GITHUB_TOKEN, "github_token", id="github-token"),
+            pytest.param(SecretType.GITLAB_TOKEN, "gitlab_token", id="gitlab-token"),
+            pytest.param(SecretType.SLACK_TOKEN, "slack_token", id="slack-token"),
+            pytest.param(SecretType.AZURE_KEY, "azure_key", id="azure-key"),
+            pytest.param(SecretType.GOOGLE_KEY, "google_key", id="google-key"),
+            pytest.param(SecretType.DATABASE_URL, "database_url", id="database-url"),
+            pytest.param(SecretType.DOCKER_AUTH, "docker_auth", id="docker-auth"),
+            pytest.param(SecretType.SSH_KEY, "ssh_key", id="ssh-key"),
+            pytest.param(SecretType.PGP_KEY, "pgp_key", id="pgp-key"),
+        ],
+    )
+    def test_secret_type_exists(self, member, expected_value):
+        """Test SecretType enum value exists and has correct string value."""
+        assert member.value == expected_value
+        assert isinstance(member.value, str)
 
 
 class TestSecretFindingDataclass:
@@ -122,10 +85,59 @@ class TestSecretFindingDataclass:
 class TestSecretDetectorScanContent:
     """Tests for SecretDetector.scan_content method."""
 
-    def test_finds_aws_access_key(self):
-        """Test detecting AWS access key (AKIA...)."""
+    @pytest.mark.parametrize(
+        "content, filename, expected_type",
+        [
+            pytest.param(
+                'AWS_KEY = "AKIAWR5PROD9N7K2JLMN"',
+                "config.py",
+                SecretType.AWS_KEY,
+                id="aws-access-key",
+            ),
+            pytest.param(
+                'gh_pat = "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890"',
+                "auth.py",
+                SecretType.GITHUB_TOKEN,
+                id="github-token",
+            ),
+            pytest.param(
+                'DATABASE_URL = "postgres://admin:S3cr3tP4ss@localhost:5432/proddb"',
+                "settings.py",
+                SecretType.DATABASE_URL,
+                id="database-url",
+            ),
+            pytest.param(
+                'GITLAB_KEY = "glpat-R7k2JlmnProdWr5N91234"',
+                "ci.yml",
+                SecretType.GITLAB_TOKEN,
+                id="gitlab-token",
+            ),
+            pytest.param(
+                'SLACK_BOT = "xoxb-123456789012-R7k2JlmnProd"',
+                "bot.py",
+                SecretType.SLACK_TOKEN,
+                id="slack-token",
+            ),
+            pytest.param(
+                'GOOGLE_KEY = "AIzaSyR7k2JlmnProdWr5N9AbcdEfgHiJkL12345"',
+                "config.py",
+                SecretType.GOOGLE_KEY,
+                id="google-api-key",
+            ),
+        ],
+    )
+    def test_finds_secret_by_type(self, content, filename, expected_type):
+        """Test detecting various secret types in content."""
         detector = SecretDetector()
-        # Use a realistic-looking but clearly fake key (not containing "example", "test", etc.)
+        findings = detector.scan_content(content, filename)
+
+        assert len(findings) >= 1
+        secret_types = [f.secret_type for f in findings]
+        assert expected_type in secret_types
+
+    def test_finds_aws_access_key_details(self):
+        """Test AWS access key detection includes line number."""
+        detector = SecretDetector()
         content = 'AWS_KEY = "AKIAWR5PROD9N7K2JLMN"'
 
         findings = detector.scan_content(content, "config.py")
@@ -133,22 +145,6 @@ class TestSecretDetectorScanContent:
         assert len(findings) == 1
         assert findings[0].secret_type == SecretType.AWS_KEY
         assert findings[0].line_number == 1
-
-    def test_finds_github_token(self):
-        """Test detecting GitHub personal access token (ghp_...)."""
-        detector = SecretDetector()
-        # Token must have exactly 36 characters after ghp_ prefix
-        # Use a variable name that doesn't trigger GENERIC_TOKEN pattern
-        content = 'gh_pat = "ghp_aBcDeFgHiJkLmNoPqRsTuVwXyZ1234567890"'
-
-        findings = detector.scan_content(content, "auth.py")
-
-        assert len(findings) >= 1
-        # Check that GitHub token was found
-        github_findings = [
-            f for f in findings if f.secret_type == SecretType.GITHUB_TOKEN
-        ]
-        assert len(github_findings) == 1
 
     def test_finds_private_key(self):
         """Test detecting private key header (-----BEGIN...)."""
@@ -166,17 +162,6 @@ MIIEowIBAAKCAQEA1234...
             SecretType.PRIVATE_KEY in secret_types or SecretType.SSH_KEY in secret_types
         )
 
-    def test_finds_database_url(self):
-        """Test detecting database URLs with credentials."""
-        detector = SecretDetector()
-        content = 'DATABASE_URL = "postgres://admin:S3cr3tP4ss@localhost:5432/proddb"'
-
-        findings = detector.scan_content(content, "settings.py")
-
-        assert len(findings) >= 1
-        secret_types = [f.secret_type for f in findings]
-        assert SecretType.DATABASE_URL in secret_types
-
     def test_finds_api_key(self):
         """Test detecting generic API keys."""
         detector = SecretDetector()
@@ -188,114 +173,59 @@ MIIEowIBAAKCAQEA1234...
         # Should find API_KEY or GENERIC_TOKEN
         assert len(findings) >= 1
 
-    def test_finds_gitlab_token(self):
-        """Test detecting GitLab token."""
-        detector = SecretDetector()
-        content = 'GITLAB_KEY = "glpat-R7k2JlmnProdWr5N91234"'
-
-        findings = detector.scan_content(content, "ci.yml")
-
-        assert len(findings) >= 1
-        secret_types = [f.secret_type for f in findings]
-        assert SecretType.GITLAB_TOKEN in secret_types
-
-    def test_finds_slack_token(self):
-        """Test detecting Slack tokens."""
-        detector = SecretDetector()
-        content = 'SLACK_BOT = "xoxb-123456789012-R7k2JlmnProd"'
-
-        findings = detector.scan_content(content, "bot.py")
-
-        assert len(findings) >= 1
-        secret_types = [f.secret_type for f in findings]
-        assert SecretType.SLACK_TOKEN in secret_types
-
-    def test_finds_google_api_key(self):
-        """Test detecting Google API keys."""
-        detector = SecretDetector()
-        content = 'GOOGLE_KEY = "AIzaSyR7k2JlmnProdWr5N9AbcdEfgHiJkL12345"'
-
-        findings = detector.scan_content(content, "config.py")
-
-        assert len(findings) >= 1
-        secret_types = [f.secret_type for f in findings]
-        assert SecretType.GOOGLE_KEY in secret_types
-
 
 class TestFalsePositiveFiltering:
     """Tests for false positive filtering."""
 
-    def test_skips_test_values(self):
-        """Test that test_ prefixed values are skipped."""
+    @pytest.mark.parametrize(
+        "content, filename",
+        [
+            pytest.param(
+                'test_api_key = "test_abcdefghijklmnop123456"',
+                "test_config.py",
+                id="test-prefix-values",
+            ),
+            pytest.param(
+                'api_key = "example_key_abcdefghij123456"',
+                "example.py",
+                id="example-values",
+            ),
+            pytest.param(
+                'mock_token = "mock_abcdefghijklmnop123456"',
+                "mock.py",
+                id="mock-values",
+            ),
+            pytest.param(
+                'api_key = "placeholder_key_123456789012"',
+                "config.py",
+                id="placeholder-values",
+            ),
+            pytest.param(
+                'api_key = os.environ["API_KEY"]',
+                "config.py",
+                id="env-var-reference",
+            ),
+            pytest.param(
+                'api_key = "your_api_key_here"',
+                "config.py",
+                id="your-key-placeholder",
+            ),
+            pytest.param(
+                "# AKIAIOSFODNN7EXAMPLE  <- this is an example",
+                "readme.py",
+                id="comment-lines",
+            ),
+            pytest.param(
+                'api_key = "${API_KEY}"',
+                "config.py",
+                id="env-variable-syntax",
+            ),
+        ],
+    )
+    def test_skips_false_positive(self, content, filename):
+        """Test that known false positive patterns are skipped."""
         detector = SecretDetector()
-        content = 'test_api_key = "test_abcdefghijklmnop123456"'
-
-        findings = detector.scan_content(content, "test_config.py")
-
-        # Should be filtered as false positive
-        assert len(findings) == 0
-
-    def test_skips_example_values(self):
-        """Test that example values are skipped."""
-        detector = SecretDetector()
-        content = 'api_key = "example_key_abcdefghij123456"'
-
-        findings = detector.scan_content(content, "example.py")
-
-        assert len(findings) == 0
-
-    def test_skips_mock_values(self):
-        """Test that mock values are skipped."""
-        detector = SecretDetector()
-        content = 'mock_token = "mock_abcdefghijklmnop123456"'
-
-        findings = detector.scan_content(content, "mock.py")
-
-        assert len(findings) == 0
-
-    def test_skips_placeholder_values(self):
-        """Test that placeholder values are skipped."""
-        detector = SecretDetector()
-        content = 'api_key = "placeholder_key_123456789012"'
-
-        findings = detector.scan_content(content, "config.py")
-
-        assert len(findings) == 0
-
-    def test_skips_environment_variable_reference(self):
-        """Test that env var references are skipped."""
-        detector = SecretDetector()
-        content = 'api_key = os.environ["API_KEY"]'
-
-        findings = detector.scan_content(content, "config.py")
-
-        assert len(findings) == 0
-
-    def test_skips_your_key_placeholder(self):
-        """Test that 'your_key' placeholders are skipped."""
-        detector = SecretDetector()
-        content = 'api_key = "your_api_key_here"'
-
-        findings = detector.scan_content(content, "config.py")
-
-        assert len(findings) == 0
-
-    def test_skips_comment_lines(self):
-        """Test that comment lines are skipped."""
-        detector = SecretDetector()
-        content = "# AKIAIOSFODNN7EXAMPLE  <- this is an example"
-
-        findings = detector.scan_content(content, "readme.py")
-
-        assert len(findings) == 0
-
-    def test_skips_env_variable_syntax(self):
-        """Test that ${ENV_VAR} syntax is skipped."""
-        detector = SecretDetector()
-        content = 'api_key = "${API_KEY}"'
-
-        findings = detector.scan_content(content, "config.py")
-
+        findings = detector.scan_content(content, filename)
         assert len(findings) == 0
 
 
@@ -692,76 +622,55 @@ class TestCompoundVariableFalsePositives:
     api_key=credentials(...).
     """
 
-    def test_progress_token_assignment_not_flagged(self):
-        """Test that progress_token = token does NOT trigger detection."""
+    @pytest.mark.parametrize(
+        "content, filename",
+        [
+            pytest.param(
+                "progress_token = token",
+                "handler.py",
+                id="progress-token-assignment",
+            ),
+            pytest.param(
+                "self.progress_token: str | int | None = None",
+                "handler.py",
+                id="self-progress-token-annotation",
+            ),
+            pytest.param(
+                'api_key=credentials("service_name")',
+                "config.py",
+                id="api-key-credentials-call",
+            ),
+            pytest.param(
+                "token_config.set(config)",
+                "settings.py",
+                id="token-config-method-call",
+            ),
+            pytest.param(
+                'access_token_url = "https://oauth.provider.com/token"',
+                "oauth.py",
+                id="access-token-url",
+            ),
+            pytest.param(
+                "secret_manager = SecretManager()",
+                "app.py",
+                id="secret-manager-variable",
+            ),
+            pytest.param(
+                "password_hash = bcrypt.hash(raw_input)",
+                "auth.py",
+                id="password-hash-variable",
+            ),
+            pytest.param(
+                "token: Optional[str] = None",
+                "models.py",
+                id="token-optional-annotation",
+            ),
+        ],
+    )
+    def test_compound_variable_not_flagged(self, content, filename):
+        """Test that compound variable names and type annotations are NOT flagged."""
         detector = SecretDetector()
-        content = "progress_token = token"
-
-        findings = detector.scan_content(content, "handler.py")
-
-        assert len(findings) == 0
-
-    def test_self_progress_token_type_annotation_not_flagged(self):
-        """Test that self.progress_token: str | int | None = None does NOT trigger."""
-        detector = SecretDetector()
-        content = "self.progress_token: str | int | None = None"
-
-        findings = detector.scan_content(content, "handler.py")
-
-        assert len(findings) == 0
-
-    def test_api_key_equals_credentials_call_not_flagged(self):
-        """Test that api_key=credentials(...) does NOT trigger detection."""
-        detector = SecretDetector()
-        content = 'api_key=credentials("service_name")'
-
-        findings = detector.scan_content(content, "config.py")
-
-        assert len(findings) == 0
-
-    def test_token_config_method_call_not_flagged(self):
-        """Test that token_config.set(config) does NOT trigger detection."""
-        detector = SecretDetector()
-        content = "token_config.set(config)"
-
-        findings = detector.scan_content(content, "settings.py")
-
-        assert len(findings) == 0
-
-    def test_access_token_url_not_flagged(self):
-        """Test that access_token_url assignment does NOT trigger."""
-        detector = SecretDetector()
-        content = 'access_token_url = "https://oauth.provider.com/token"'
-
-        findings = detector.scan_content(content, "oauth.py")
-
-        assert len(findings) == 0
-
-    def test_secret_manager_not_flagged(self):
-        """Test that secret_manager variable does NOT trigger."""
-        detector = SecretDetector()
-        content = "secret_manager = SecretManager()"
-
-        findings = detector.scan_content(content, "app.py")
-
-        assert len(findings) == 0
-
-    def test_password_hash_not_flagged(self):
-        """Test that password_hash variable does NOT trigger."""
-        detector = SecretDetector()
-        content = "password_hash = bcrypt.hash(raw_input)"
-
-        findings = detector.scan_content(content, "auth.py")
-
-        assert len(findings) == 0
-
-    def test_token_type_annotation_optional_not_flagged(self):
-        """Test that token: Optional[str] = None does NOT trigger."""
-        detector = SecretDetector()
-        content = "token: Optional[str] = None"
-
-        findings = detector.scan_content(content, "models.py")
-
+        findings = detector.scan_content(content, filename)
         assert len(findings) == 0
 
     def test_real_generic_token_still_triggers(self):

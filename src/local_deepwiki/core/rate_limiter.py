@@ -59,7 +59,7 @@ class RateLimitExceeded(Exception):
         self.reset_seconds = reset_seconds
 
 
-@dataclass
+@dataclass(slots=True)
 class RateLimitConfig:
     """Rate limit configuration.
 
@@ -78,7 +78,7 @@ class RateLimitConfig:
     wait_for_hour_limit: bool = False
 
 
-@dataclass
+@dataclass(slots=True)
 class RateLimitState:
     """Tracks rate limit state.
 

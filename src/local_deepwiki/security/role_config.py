@@ -29,7 +29,7 @@ class RoleAssignment:
     role: Role
 
 
-@dataclass
+@dataclass(slots=True)
 class RoleConfig:
     """Configuration for role assignments.
 

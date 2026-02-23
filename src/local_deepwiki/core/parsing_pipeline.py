@@ -23,7 +23,7 @@ from local_deepwiki.models import CodeChunk, FileInfo, ProgressCallback
 logger = get_logger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class ParseResult:
     """Result of parsing a single file."""
 

@@ -19,7 +19,7 @@ __all__ = [
 ]
 
 
-@dataclass
+@dataclass(slots=True)
 class PluginMetadata:
     """Metadata for a plugin."""
 
@@ -126,7 +126,7 @@ class LanguageParserPlugin(Plugin):
         return file_path.suffix.lower() in self.file_extensions
 
 
-@dataclass
+@dataclass(slots=True)
 class WikiGeneratorResult:
     """Result from a wiki generator plugin."""
 

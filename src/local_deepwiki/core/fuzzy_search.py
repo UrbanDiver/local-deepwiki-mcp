@@ -283,7 +283,7 @@ def filter_by_path(
     return [r for r in results if matches_path_pattern(r.chunk.file_path, path_pattern)]
 
 
-@dataclass
+@dataclass(slots=True)
 class NameEntry:
     """An indexed name entry for fuzzy matching.
 

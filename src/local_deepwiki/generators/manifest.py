@@ -50,7 +50,7 @@ MANIFEST_FILES = [
 ]
 
 
-@dataclass
+@dataclass(slots=True)
 class ManifestCacheEntry:
     """Cache entry storing manifest data and file modification times."""
 
@@ -73,7 +73,7 @@ class ManifestCacheEntry:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class ProjectManifest:
     """Extracted project metadata from package manifests."""
 

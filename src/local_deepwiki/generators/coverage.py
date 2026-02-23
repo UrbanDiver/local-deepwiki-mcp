@@ -23,7 +23,7 @@ MAX_LOW_COVERAGE_FILES = 10
 MAX_UNDOCUMENTED_ITEMS = 20
 
 
-@dataclass
+@dataclass(slots=True)
 class CoverageStats:
     """Documentation coverage statistics."""
 
@@ -66,7 +66,7 @@ class CoverageStats:
         return self
 
 
-@dataclass
+@dataclass(slots=True)
 class FileCoverage:
     """Coverage statistics for a single file."""
 

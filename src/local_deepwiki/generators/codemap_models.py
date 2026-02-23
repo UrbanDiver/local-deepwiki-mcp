@@ -89,7 +89,7 @@ class CodemapEdge:
     target_file: str
 
 
-@dataclass
+@dataclass(slots=True)
 class CodemapGraph:
     """The complete codemap graph built via BFS."""
 

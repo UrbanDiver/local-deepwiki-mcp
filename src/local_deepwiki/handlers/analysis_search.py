@@ -32,6 +32,37 @@ from local_deepwiki.validation import validate_query_parameters
 logger = get_logger(__name__)
 
 
+def _score_page_match(page: dict[str, Any], query: str) -> float:
+    """Score a wiki page against a lowercased *query*."""
+    title = (page.get("title") or "").lower()
+    if query in title:
+        return 1.0
+    if any(query in h.lower() for h in page.get("headings", [])):
+        return 0.8
+    if any(query in t.lower() for t in page.get("terms", [])):
+        return 0.6
+    if query in (page.get("snippet") or "").lower():
+        return 0.4
+    return 0.0
+
+
+def _score_entity_match(entity: dict[str, Any], query: str) -> float:
+    """Score a code entity against a lowercased *query*."""
+    name = (entity.get("name") or "").lower()
+    display_name = (entity.get("display_name") or "").lower()
+    if query == name or query == display_name:
+        return 1.0
+    if query in name or query in display_name:
+        return 0.85
+    description = (entity.get("description") or "").lower()
+    if query in description:
+        return 0.6
+    keywords = [k.lower() for k in entity.get("keywords", [])]
+    if any(query in k for k in keywords):
+        return 0.5
+    return 0.0
+
+
 @handle_tool_errors
 async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
     """Handle search_wiki tool call.
@@ -54,7 +85,6 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    # Validate query parameters (CWE-400 prevention)
     validate_query_parameters(query, str(repo_path), limit)
 
     query = query.lower()
@@ -86,17 +116,7 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
     # Search pages
     if entity_types is None or "page" in entity_types:
         for page in pages:
-            score = 0.0
-            title = (page.get("title") or "").lower()
-            if query in title:
-                score = 1.0
-            elif any(query in h.lower() for h in page.get("headings", [])):
-                score = 0.8
-            elif any(query in t.lower() for t in page.get("terms", [])):
-                score = 0.6
-            elif query in (page.get("snippet") or "").lower():
-                score = 0.4
-
+            score = _score_page_match(page, query)
             if score > 0:
                 page_match: dict[str, Any] = {
                     "type": "page",
@@ -125,21 +145,7 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
             ):
                 continue
 
-            score = 0.0
-            name = (entity.get("name") or "").lower()
-            display_name = (entity.get("display_name") or "").lower()
-            description = (entity.get("description") or "").lower()
-            keywords = [k.lower() for k in entity.get("keywords", [])]
-
-            if query == name or query == display_name:
-                score = 1.0
-            elif query in name or query in display_name:
-                score = 0.85
-            elif query in description:
-                score = 0.6
-            elif any(query in k for k in keywords):
-                score = 0.5
-
+            score = _score_entity_match(entity, query)
             if score > 0:
                 matches.append(
                     {
@@ -153,9 +159,7 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
                     }
                 )
 
-    # Sort by score descending, then limit
-    matches = sorted(matches, key=itemgetter("score"), reverse=True)
-    matches = matches[:limit]
+    matches = sorted(matches, key=itemgetter("score"), reverse=True)[:limit]
 
     result = {
         "status": "success",

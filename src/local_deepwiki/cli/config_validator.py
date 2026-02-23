@@ -13,7 +13,7 @@ from pydantic import ValidationError
 from local_deepwiki.config import Config
 
 
-@dataclass
+@dataclass(slots=True)
 class ValidationIssue:
     """Represents a configuration validation issue."""
 

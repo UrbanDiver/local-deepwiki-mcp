@@ -31,7 +31,7 @@ def _format_duration(seconds: float) -> str:
         return f"{hours}h {mins}m"
 
 
-@dataclass
+@dataclass(slots=True)
 class PhaseStats:
     """Statistics for a single generation phase."""
 
@@ -55,7 +55,7 @@ class PhaseStats:
         return (self.items_completed / self.duration_seconds) * 60
 
 
-@dataclass
+@dataclass(slots=True)
 class GenerationProgress:
     """Tracks wiki generation progress with timing statistics."""
 

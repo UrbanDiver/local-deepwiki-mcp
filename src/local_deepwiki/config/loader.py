@@ -83,7 +83,7 @@ def config_context(config: Config) -> Generator[Config, None, None]:
 # ---------------------------------------------------------------------------
 
 
-@dataclass
+@dataclass(slots=True)
 class ConfigChange:
     """Represents a single configuration change.
 
@@ -104,7 +104,7 @@ class ConfigChange:
         return f"{self.field}: {self.old_value!r} -> {self.new_value!r} (from {self.source})"
 
 
-@dataclass
+@dataclass(slots=True)
 class ConfigDiff:
     """Tracks differences between two configurations.
 

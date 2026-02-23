@@ -76,7 +76,7 @@ def _create_source_details(
 """
 
 
-@dataclass
+@dataclass(slots=True)
 class _ChunkMaps:
     """Maps for looking up chunks by name."""
 

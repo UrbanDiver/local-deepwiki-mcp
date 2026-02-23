@@ -106,7 +106,7 @@ class AuthenticationException(Exception):
     pass
 
 
-@dataclass
+@dataclass(slots=True)
 class Subject:
     """Represents a user or service making a request.
 

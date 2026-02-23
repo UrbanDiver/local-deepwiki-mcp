@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class DrainStatus:
     """Observable drain state."""
 

@@ -15,7 +15,7 @@ from local_deepwiki.generators.wiki_utils import relative_wiki_path
 from local_deepwiki.models import ChunkType, CodeChunk, WikiPage
 
 
-@dataclass
+@dataclass(slots=True)
 class FileRelationships:
     """Relationships for a single file."""
 

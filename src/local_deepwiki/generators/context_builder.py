@@ -27,7 +27,7 @@ from local_deepwiki.models import ChunkType, CodeChunk
 logger = get_logger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class FileContext:
     """Rich context for a source file."""
 

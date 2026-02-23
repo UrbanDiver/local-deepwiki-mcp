@@ -175,6 +175,26 @@ def api_chat() -> Response | tuple[Response, int]:
     question = data.get("question", "").strip()
     history = data.get("history", [])
 
+    # Validate history field (prevent abuse)
+    if not isinstance(history, list):
+        return jsonify({"error": "history must be a list"}), 400
+    if len(history) > 50:
+        return jsonify({"error": "history exceeds maximum length (50 exchanges)"}), 400
+    for exchange in history:
+        if not isinstance(exchange, dict):
+            return jsonify({"error": "Each history entry must be an object"}), 400
+        if not isinstance(exchange.get("question", ""), str) or not isinstance(
+            exchange.get("answer", ""), str
+        ):
+            return jsonify(
+                {"error": "History entries must have string question and answer fields"}
+            ), 400
+        if (
+            len(exchange.get("question", "")) > 5000
+            or len(exchange.get("answer", "")) > 50000
+        ):
+            return jsonify({"error": "History entry exceeds maximum field length"}), 400
+
     if not question:
         return jsonify({"error": "Question is required"}), 400
 

@@ -73,7 +73,7 @@ class AuditSeverity(StrEnum):
     CRITICAL = "critical"
 
 
-@dataclass
+@dataclass(slots=True)
 class AuditEvent:
     """Represents an audit event for logging.
 

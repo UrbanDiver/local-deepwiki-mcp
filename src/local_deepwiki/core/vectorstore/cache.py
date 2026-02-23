@@ -266,7 +266,7 @@ class AdaptiveSearcher:
         }
 
 
-@dataclass
+@dataclass(slots=True)
 class SearchCacheEntry:
     """A cached search result entry."""
 

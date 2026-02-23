@@ -34,7 +34,7 @@ def _is_test_module(module: str, file_path: str) -> bool:
     return False
 
 
-@dataclass
+@dataclass(slots=True)
 class _DependencyData:
     """Internal data structure for dependency graph generation."""
 

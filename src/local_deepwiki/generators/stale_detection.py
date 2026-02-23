@@ -20,7 +20,7 @@ from local_deepwiki.core.git_utils import (
 from local_deepwiki.models import WikiGenerationStatus, WikiPage
 
 
-@dataclass
+@dataclass(slots=True)
 class StaleReport:
     """Summary of stale documentation analysis."""
 

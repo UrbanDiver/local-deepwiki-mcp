@@ -458,59 +458,73 @@ class TestExtractClassSignature:
 class TestFormatParameter:
     """Test parameter formatting."""
 
-    def test_simple_param(self):
-        """Test formatting simple parameter."""
-        param = Parameter(name="value")
-        assert format_parameter(param) == "value"
-
-    def test_typed_param(self):
-        """Test formatting typed parameter."""
-        param = Parameter(name="value", type_hint="int")
-        assert format_parameter(param) == "value: int"
-
-    def test_default_param(self):
-        """Test formatting parameter with default."""
-        param = Parameter(name="value", default_value="10")
-        assert format_parameter(param) == "value = 10"
-
-    def test_full_param(self):
-        """Test formatting parameter with type and default."""
-        param = Parameter(name="value", type_hint="int", default_value="10")
-        assert format_parameter(param) == "value: int = 10"
+    @pytest.mark.parametrize(
+        "param, expected",
+        [
+            pytest.param(
+                Parameter(name="value"),
+                "value",
+                id="simple-param",
+            ),
+            pytest.param(
+                Parameter(name="value", type_hint="int"),
+                "value: int",
+                id="typed-param",
+            ),
+            pytest.param(
+                Parameter(name="value", default_value="10"),
+                "value = 10",
+                id="default-param",
+            ),
+            pytest.param(
+                Parameter(name="value", type_hint="int", default_value="10"),
+                "value: int = 10",
+                id="full-param",
+            ),
+        ],
+    )
+    def test_format_parameter(self, param, expected):
+        """Test parameter formatting for various combinations."""
+        assert format_parameter(param) == expected
 
 
 class TestFormatFunctionSignatureLine:
     """Test function signature line formatting."""
 
-    def test_simple_function(self):
-        """Test formatting simple function."""
-        sig = FunctionSignature(name="func")
-        result = format_function_signature_line(sig)
-        assert result == "def func()"
-
-    def test_function_with_params(self):
-        """Test formatting function with parameters."""
-        sig = FunctionSignature(
-            name="func",
-            parameters=[
-                Parameter(name="a", type_hint="int"),
-                Parameter(name="b", type_hint="str", default_value='"x"'),
-            ],
-        )
-        result = format_function_signature_line(sig)
-        assert result == 'def func(a: int, b: str = "x")'
-
-    def test_function_with_return_type(self):
-        """Test formatting function with return type."""
-        sig = FunctionSignature(name="func", return_type="bool")
-        result = format_function_signature_line(sig)
-        assert result == "def func() -> bool"
-
-    def test_async_function(self):
-        """Test formatting async function."""
-        sig = FunctionSignature(name="func", is_async=True)
-        result = format_function_signature_line(sig)
-        assert result == "async def func()"
+    @pytest.mark.parametrize(
+        "sig, expected",
+        [
+            pytest.param(
+                FunctionSignature(name="func"),
+                "def func()",
+                id="simple-function",
+            ),
+            pytest.param(
+                FunctionSignature(
+                    name="func",
+                    parameters=[
+                        Parameter(name="a", type_hint="int"),
+                        Parameter(name="b", type_hint="str", default_value='"x"'),
+                    ],
+                ),
+                'def func(a: int, b: str = "x")',
+                id="function-with-params",
+            ),
+            pytest.param(
+                FunctionSignature(name="func", return_type="bool"),
+                "def func() -> bool",
+                id="function-with-return-type",
+            ),
+            pytest.param(
+                FunctionSignature(name="func", is_async=True),
+                "async def func()",
+                id="async-function",
+            ),
+        ],
+    )
+    def test_format_function_signature_line(self, sig, expected):
+        """Test function signature line formatting for various cases."""
+        assert format_function_signature_line(sig) == expected
 
 
 class TestGenerateApiReferenceMarkdown:
@@ -866,58 +880,35 @@ class TestGoogleDocstringEdgeCases:
         assert result["returns"] is None
         assert result["raises"] == []
 
-    def test_raises_section(self):
-        """Test parsing Raises section."""
-        docstring = dedent(
-            """
-            Do something.
-
-            Raises:
-                ValueError: If value is invalid.
-        """
-        ).strip()
+    @pytest.mark.parametrize(
+        "docstring, expected_description",
+        [
+            pytest.param(
+                "Do something.\n\nRaises:\n    ValueError: If value is invalid.",
+                "Do something.",
+                id="raises-section",
+            ),
+            pytest.param(
+                "Do something.\n\nExample:\n    >>> func()\n    True",
+                "Do something.",
+                id="example-section",
+            ),
+            pytest.param(
+                "Do something.\n\nNotes:\n    Some implementation notes.",
+                "Do something.",
+                id="notes-section",
+            ),
+            pytest.param(
+                "Generate items.\n\nYields:\n    The next item.",
+                "Generate items.",
+                id="yields-section",
+            ),
+        ],
+    )
+    def test_section_extracts_description(self, docstring, expected_description):
+        """Test that various sections correctly extract description."""
         result = parse_google_docstring(docstring)
-        assert result["description"] == "Do something."
-
-    def test_example_section(self):
-        """Test that Example section is handled."""
-        docstring = dedent(
-            """
-            Do something.
-
-            Example:
-                >>> func()
-                True
-        """
-        ).strip()
-        result = parse_google_docstring(docstring)
-        assert result["description"] == "Do something."
-
-    def test_notes_section(self):
-        """Test that Notes section is handled."""
-        docstring = dedent(
-            """
-            Do something.
-
-            Notes:
-                Some implementation notes.
-        """
-        ).strip()
-        result = parse_google_docstring(docstring)
-        assert result["description"] == "Do something."
-
-    def test_yields_section(self):
-        """Test that Yields section is handled."""
-        docstring = dedent(
-            """
-            Generate items.
-
-            Yields:
-                The next item.
-        """
-        ).strip()
-        result = parse_google_docstring(docstring)
-        assert result["description"] == "Generate items."
+        assert result["description"] == expected_description
 
     def test_param_continuation(self):
         """Test parameter description continuation across lines."""
@@ -993,36 +984,25 @@ class TestNumpyDocstringEdgeCases:
         assert result["returns"] is not None
         assert "str" in result["returns"]
 
-    def test_raises_section(self):
-        """Test parsing Raises section."""
-        docstring = dedent(
-            """
-            Do something.
-
-            Raises
-            ------
-            ValueError
-                If value is invalid.
-        """
-        ).strip()
+    @pytest.mark.parametrize(
+        "docstring, expected_description",
+        [
+            pytest.param(
+                "Do something.\n\nRaises\n------\nValueError\n    If value is invalid.",
+                "Do something.",
+                id="raises-section",
+            ),
+            pytest.param(
+                "Do something.\n\nExamples\n--------\n>>> func()\nTrue",
+                "Do something.",
+                id="examples-section",
+            ),
+        ],
+    )
+    def test_section_extracts_description(self, docstring, expected_description):
+        """Test that various sections correctly extract description."""
         result = parse_numpy_docstring(docstring)
-        # Raises is parsed but not populated (just changes section)
-        assert result["description"] == "Do something."
-
-    def test_other_section(self):
-        """Test parsing other sections (like Examples)."""
-        docstring = dedent(
-            """
-            Do something.
-
-            Examples
-            --------
-            >>> func()
-            True
-        """
-        ).strip()
-        result = parse_numpy_docstring(docstring)
-        assert result["description"] == "Do something."
+        assert result["description"] == expected_description
 
     def test_returns_continuation(self):
         """Test returns description continuation."""
@@ -1315,7 +1295,9 @@ class TestFunctionNameExtractionFailure:
                                 break
 
         if lambda_node:
-            sig = extract_function_signature(lambda_node, source.encode(), Language.PYTHON)
+            sig = extract_function_signature(
+                lambda_node, source.encode(), Language.PYTHON
+            )
             # Lambda doesn't have a name field like function_definition
             assert sig is None
 

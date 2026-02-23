@@ -32,35 +32,26 @@ class TestCodeParser:
         """Set up test fixtures."""
         self.parser = CodeParser()
 
-    def test_detect_language_python(self):
-        """Test Python language detection."""
-        assert self.parser.detect_language(Path("test.py")) == Language.PYTHON
-        assert self.parser.detect_language(Path("test.pyi")) == Language.PYTHON
-
-    def test_detect_language_javascript(self):
-        """Test JavaScript language detection."""
-        assert self.parser.detect_language(Path("test.js")) == Language.JAVASCRIPT
-        assert self.parser.detect_language(Path("test.jsx")) == Language.JAVASCRIPT
-        assert self.parser.detect_language(Path("test.mjs")) == Language.JAVASCRIPT
-
-    def test_detect_language_typescript(self):
-        """Test TypeScript language detection."""
-        assert self.parser.detect_language(Path("test.ts")) == Language.TYPESCRIPT
-        assert self.parser.detect_language(Path("test.tsx")) == Language.TSX
-
-    def test_detect_language_go(self):
-        """Test Go language detection."""
-        assert self.parser.detect_language(Path("test.go")) == Language.GO
-
-    def test_detect_language_rust(self):
-        """Test Rust language detection."""
-        assert self.parser.detect_language(Path("test.rs")) == Language.RUST
-
-    def test_detect_language_unsupported(self):
-        """Test unsupported file extensions."""
-        assert self.parser.detect_language(Path("test.txt")) is None
-        assert self.parser.detect_language(Path("test.md")) is None
-        assert self.parser.detect_language(Path("test.json")) is None
+    @pytest.mark.parametrize(
+        "filename, expected_language",
+        [
+            pytest.param("test.py", Language.PYTHON, id="python-py"),
+            pytest.param("test.pyi", Language.PYTHON, id="python-pyi"),
+            pytest.param("test.js", Language.JAVASCRIPT, id="javascript-js"),
+            pytest.param("test.jsx", Language.JAVASCRIPT, id="javascript-jsx"),
+            pytest.param("test.mjs", Language.JAVASCRIPT, id="javascript-mjs"),
+            pytest.param("test.ts", Language.TYPESCRIPT, id="typescript-ts"),
+            pytest.param("test.tsx", Language.TSX, id="tsx"),
+            pytest.param("test.go", Language.GO, id="go"),
+            pytest.param("test.rs", Language.RUST, id="rust"),
+            pytest.param("test.txt", None, id="unsupported-txt"),
+            pytest.param("test.md", None, id="unsupported-md"),
+            pytest.param("test.json", None, id="unsupported-json"),
+        ],
+    )
+    def test_detect_language(self, filename, expected_language):
+        """Test language detection for various file extensions."""
+        assert self.parser.detect_language(Path(filename)) == expected_language
 
     def test_parse_python_file(self, tmp_path):
         """Test parsing a Python file."""

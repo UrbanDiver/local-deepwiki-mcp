@@ -64,6 +64,120 @@ class SearchMixin:
 
         return self._fuzzy_search_helper
 
+    # -----------------------------------------------------------------
+    # Shared helpers for search() and search_paginated()
+    # -----------------------------------------------------------------
+
+    def _resolve_search_profile(
+        self, profile: SearchProfile | str | None
+    ) -> tuple[SearchProfile, Any]:
+        """Resolve a profile argument to a ``(SearchProfile, ProfileConfig)`` pair."""
+        if profile is None:
+            resolved = self._default_search_profile
+        elif isinstance(profile, str):
+            try:
+                resolved = SearchProfile(profile.lower())
+            except ValueError:
+                logger.warning("Invalid search profile '%s', using default", profile)
+                resolved = self._default_search_profile
+        else:
+            resolved = profile
+        return resolved, SEARCH_PROFILES[resolved]
+
+    @staticmethod
+    def _build_search_filters(
+        language: str | None,
+        chunk_type: str | None,
+    ) -> list[str]:
+        """Validate filter values and return LanceDB filter expressions."""
+        filters: list[str] = []
+        if language:
+            if language not in VALID_LANGUAGES:
+                raise ValueError(f"Invalid language filter: {language}")
+            filters.append(f"language = '{language}'")
+        if chunk_type:
+            if chunk_type not in VALID_CHUNK_TYPES:
+                raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
+            filters.append(f"chunk_type = '{chunk_type}'")
+        return filters
+
+    def _compute_fetch_limit(
+        self,
+        limit: int,
+        profile_config: Any,
+        query: str,
+        *,
+        needs_extra: bool = False,
+    ) -> int:
+        """Return how many raw rows to fetch from LanceDB."""
+        base_multiplier = profile_config.fetch_multiplier
+        if needs_extra:
+            base_multiplier = max(base_multiplier, 3.0)
+
+        if self._adaptive_search_enabled:
+            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(
+                query, limit
+            )
+            fetch_limit = max(int(limit * base_multiplier), adaptive_depth)
+        else:
+            fetch_limit = int(limit * base_multiplier)
+
+        return min(fetch_limit, profile_config.rerank_candidates)
+
+    def _convert_results_to_search_results(
+        self,
+        rows: list[dict[str, Any]],
+        min_similarity: float,
+    ) -> list[SearchResult]:
+        """Convert raw LanceDB rows to ``SearchResult`` objects with score filtering."""
+        results: list[SearchResult] = []
+        for row in rows:
+            dist = row.get("_distance", 0)
+            score = 1.0 - dist * dist / 2.0
+            if score < min_similarity:
+                continue
+            chunk = self._row_to_chunk(row)
+            results.append(SearchResult(chunk=chunk, score=score, highlights=[]))
+        return results
+
+    async def _generate_suggestions(
+        self,
+        query: str,
+        search_results: list[SearchResult],
+    ) -> list[str] | None:
+        """Generate 'Did you mean?' suggestions for poor-quality results."""
+        fuzzy_config = self._fuzzy_search_config
+        from local_deepwiki.core.fuzzy_search import should_auto_enable_fuzzy
+
+        if not (
+            fuzzy_config.enable_auto_fuzzy
+            and should_auto_enable_fuzzy(
+                search_results, fuzzy_config.auto_fuzzy_threshold
+            )
+        ):
+            return None
+        try:
+            fuzzy_helper = await self._get_fuzzy_helper()
+            suggestions = fuzzy_helper.generate_suggestions(
+                query,
+                search_results,
+                threshold=fuzzy_config.suggestion_threshold,
+                max_suggestions=fuzzy_config.max_suggestions,
+            )
+            if suggestions:
+                logger.debug("Generated suggestions: %s", suggestions)
+            return suggestions or None
+        except (RuntimeError, OSError, ValueError, KeyError) as e:
+            # RuntimeError: LanceDB/vector store failures
+            # OSError: File system issues
+            # ValueError/KeyError: Invalid fuzzy search data
+            logger.warning("Failed to generate suggestions: %s", e)
+            return None
+
+    # -----------------------------------------------------------------
+    # search()
+    # -----------------------------------------------------------------
+
     async def search(
         self,
         query: str,
@@ -114,21 +228,7 @@ class SearchMixin:
             logger.debug("No table found for search")
             return []
 
-        # Resolve search profile
-        if profile is None:
-            resolved_profile = self._default_search_profile
-        elif isinstance(profile, str):
-            try:
-                resolved_profile = SearchProfile(profile.lower())
-            except ValueError:
-                logger.warning("Invalid search profile '%s', using default", profile)
-                resolved_profile = self._default_search_profile
-        else:
-            resolved_profile = profile
-
-        profile_config = SEARCH_PROFILES[resolved_profile]
-
-        # Resolve minimum similarity threshold
+        resolved_profile, profile_config = self._resolve_search_profile(profile)
         effective_min_similarity = (
             min_similarity
             if min_similarity is not None
@@ -143,63 +243,36 @@ class SearchMixin:
             effective_min_similarity,
         )
 
-        # Generate query embedding
         query_embedding = (await self.embedding_provider.embed([query]))[0]
 
         # Build cache filter key (only cache-relevant filters, not path_pattern/fuzzy)
+        filters = self._build_search_filters(language, chunk_type)
         cache_filters: dict[str, Any] = {
             "limit": limit,
             "profile": resolved_profile.value,
             "min_similarity": effective_min_similarity,
         }
         if language:
-            if language not in VALID_LANGUAGES:
-                raise ValueError(f"Invalid language filter: {language}")
             cache_filters["language"] = language
         if chunk_type:
-            if chunk_type not in VALID_CHUNK_TYPES:
-                raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
             cache_filters["chunk_type"] = chunk_type
 
         # Try to get cached results (only for non-fuzzy, non-path-pattern searches)
-        # Fuzzy and path_pattern modify results after retrieval, so we can't cache them directly
         use_cache = not use_fuzzy and not path_pattern
         if use_cache:
             cached_results = self._search_cache.get(query_embedding, cache_filters)
             if cached_results is not None:
                 return cached_results
 
-        # Calculate fetch limit based on profile and adaptive search
-        base_fetch_multiplier = profile_config.fetch_multiplier
-        if path_pattern or use_fuzzy:
-            # Need more candidates for post-filtering
-            base_fetch_multiplier = max(base_fetch_multiplier, 3.0)
-
-        # Use adaptive search depth if enabled
-        if self._adaptive_search_enabled:
-            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(
-                query, limit
-            )
-            fetch_limit = max(
-                int(limit * base_fetch_multiplier),
-                adaptive_depth,
-            )
-        else:
-            fetch_limit = int(limit * base_fetch_multiplier)
-
-        # Cap fetch limit based on rerank candidates from profile
-        fetch_limit = min(fetch_limit, profile_config.rerank_candidates)
+        fetch_limit = self._compute_fetch_limit(
+            limit,
+            profile_config,
+            query,
+            needs_extra=bool(path_pattern or use_fuzzy),
+        )
 
         # Build search query
         search = table.search(query_embedding).limit(fetch_limit)
-
-        # Apply filters with validation to prevent injection
-        filters = []
-        if language:
-            filters.append(f"language = '{language}'")
-        if chunk_type:
-            filters.append(f"chunk_type = '{chunk_type}'")
-
         if filters:
             search = search.where(" AND ".join(filters))
 
@@ -213,7 +286,6 @@ class SearchMixin:
 
         # Check if we should trigger lazy index creation based on latency
         if self._lazy_index_manager.should_create_index():
-            # Schedule background index creation (non-blocking)
             try:
                 task = asyncio.create_task(
                     self._lazy_index_manager.schedule_index_creation()
@@ -223,25 +295,10 @@ class SearchMixin:
                 # No event loop running (e.g., in sync context)
                 logger.debug("Cannot schedule lazy index creation: no event loop")
 
-        # Convert to SearchResult objects and apply similarity threshold
-        search_results = []
-        for row in results:
-            # LanceDB returns L2 distance. For normalized vectors (norm=1),
-            # L2 distance d relates to cosine similarity s by: s = 1 - d^2/2.
-            # L2 range [0, 2] maps to cosine similarity [1, -1].
-            dist = row.get("_distance", 0)
-            score = 1.0 - dist * dist / 2.0
-            # Apply minimum similarity threshold
-            if score < effective_min_similarity:
-                continue
-            chunk = self._row_to_chunk(row)
-            search_results.append(
-                SearchResult(
-                    chunk=chunk,
-                    score=score,
-                    highlights=[],
-                )
-            )
+        search_results = self._convert_results_to_search_results(
+            results,
+            effective_min_similarity,
+        )
 
         # Apply path pattern filter
         if path_pattern:
@@ -266,42 +323,18 @@ class SearchMixin:
         # Apply fuzzy re-ranking (either explicit or auto-enabled)
         if (use_fuzzy or auto_fuzzy_enabled) and search_results:
             search_results = rerank_with_fuzzy(search_results, query, fuzzy_weight)
-
-            # Add highlights for fuzzy matches
             for result in search_results:
                 result.highlights = extract_highlights(result.chunk.content, query)
 
-        # Limit results to requested amount
         search_results = search_results[:limit]
 
-        # Generate "Did you mean?" suggestions if results are poor and auto_suggest is enabled
+        # Generate "Did you mean?" suggestions if results are poor
         suggestions: list[str] | None = None
-        if (
-            auto_suggest
-            and fuzzy_config.enable_auto_fuzzy
-            and should_auto_enable_fuzzy(
-                search_results, fuzzy_config.auto_fuzzy_threshold
-            )
-        ):
-            try:
-                fuzzy_helper = await self._get_fuzzy_helper()
-                suggestions = fuzzy_helper.generate_suggestions(
-                    query,
-                    search_results,
-                    threshold=fuzzy_config.suggestion_threshold,
-                    max_suggestions=fuzzy_config.max_suggestions,
-                )
-                if suggestions:
-                    logger.debug("Generated suggestions: %s", suggestions)
-            except (RuntimeError, OSError, ValueError, KeyError) as e:
-                # RuntimeError: LanceDB/vector store failures
-                # OSError: File system issues
-                # ValueError/KeyError: Invalid fuzzy search data
-                logger.warning("Failed to generate suggestions: %s", e)
+        if auto_suggest:
+            suggestions = await self._generate_suggestions(query, search_results)
 
-        # Attach suggestions to the first result if we have any
+        # Attach suggestions to the first result
         if suggestions and search_results:
-            # Create a new SearchResult with suggestions attached
             first_result = search_results[0]
             search_results[0] = SearchResult(
                 chunk=first_result.chunk,
@@ -310,14 +343,10 @@ class SearchMixin:
                 suggestions=suggestions,
             )
         elif suggestions and not search_results:
-            # Create a placeholder result with suggestions when no results found
-            # This allows the caller to show "Did you mean?" even with empty results
-            # We don't add a fake result, but we can log for now
             logger.debug("No results found, but have suggestions: %s", suggestions)
 
         # Record search for adaptive learning
         if self._adaptive_search_enabled and search_results:
-            # Estimate quality based on score distribution
             avg_score = sum(r.score for r in search_results) / len(search_results)
             self._adaptive_searcher.record_search_quality(
                 query, avg_score, len(search_results), fetch_limit
@@ -330,6 +359,10 @@ class SearchMixin:
             )
 
         return search_results
+
+    # -----------------------------------------------------------------
+    # search_paginated()
+    # -----------------------------------------------------------------
 
     async def search_paginated(
         self,
@@ -389,21 +422,7 @@ class SearchMixin:
                 has_more=False,
             )
 
-        # Resolve search profile
-        if profile is None:
-            resolved_profile = self._default_search_profile
-        elif isinstance(profile, str):
-            try:
-                resolved_profile = SearchProfile(profile.lower())
-            except ValueError:
-                logger.warning("Invalid search profile '%s', using default", profile)
-                resolved_profile = self._default_search_profile
-        else:
-            resolved_profile = profile
-
-        profile_config = SEARCH_PROFILES[resolved_profile]
-
-        # Resolve minimum similarity threshold
+        resolved_profile, profile_config = self._resolve_search_profile(profile)
         effective_min_similarity = (
             min_similarity
             if min_similarity is not None
@@ -428,25 +447,12 @@ class SearchMixin:
                     "Invalid cursor format: %s, using offset=%d", cursor, offset
                 )
 
-        # Generate query embedding
         query_embedding = (await self.embedding_provider.embed([query]))[0]
 
-        # Build filter expressions
-        filters = []
-        if language:
-            if language not in VALID_LANGUAGES:
-                raise ValueError(f"Invalid language filter: {language}")
-            filters.append(f"language = '{language}'")
-        if chunk_type:
-            if chunk_type not in VALID_CHUNK_TYPES:
-                raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
-            filters.append(f"chunk_type = '{chunk_type}'")
-
+        filters = self._build_search_filters(language, chunk_type)
         filter_expr = " AND ".join(filters) if filters else None
 
-        # For total count, we need to fetch more results (expensive but accurate)
-        # In production, you might want to cache this or use approximate counts
-        # Profile affects how many candidates we consider
+        # Fetch extra candidates for total count estimation
         base_count_limit = int(1000 * profile_config.fetch_multiplier)
         count_limit = offset + limit + base_count_limit
         count_search = table.search(query_embedding).limit(count_limit)
@@ -455,7 +461,6 @@ class SearchMixin:
         all_results = count_search.to_list()
 
         # Apply similarity threshold filtering
-        # Use same L2-to-cosine conversion as search(): s = 1 - d^2/2
         all_results = [
             row
             for row in all_results
@@ -475,21 +480,12 @@ class SearchMixin:
             all_results = filtered_results
             total_estimate = len(all_results)
 
-        # Apply pagination
-        paginated_results = all_results[offset : offset + limit]
-
-        # Convert to SearchResult objects
-        search_results = []
-        for row in paginated_results:
-            chunk = self._row_to_chunk(row)
-            dist = row.get("_distance", 0)
-            search_results.append(
-                SearchResult(
-                    chunk=chunk,
-                    score=1.0 - dist * dist / 2.0,
-                    highlights=[],
-                )
-            )
+        # Apply pagination and convert
+        paginated_rows = all_results[offset : offset + limit]
+        search_results = self._convert_results_to_search_results(
+            paginated_rows,
+            effective_min_similarity,
+        )
 
         # Apply fuzzy re-ranking if requested
         if use_fuzzy and search_results:
@@ -497,10 +493,7 @@ class SearchMixin:
             for result in search_results:
                 result.highlights = extract_highlights(result.chunk.content, query)
 
-        # Determine if there are more results
         has_more = offset + limit < total_estimate
-
-        # Generate cursor for next page
         next_cursor = f"offset:{offset + limit}" if has_more else None
 
         return SearchResultPage(

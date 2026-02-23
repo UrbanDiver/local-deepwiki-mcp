@@ -29,7 +29,7 @@ class TocEntry:
         return result
 
 
-@dataclass
+@dataclass(slots=True)
 class TableOfContents:
     """Hierarchical table of contents with numbered sections."""
 

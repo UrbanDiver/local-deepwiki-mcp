@@ -310,6 +310,131 @@ def _is_test_path(file_path: str) -> bool:
     return False
 
 
+def _build_combined_call_graph(
+    files_to_chunks: dict[str, list[CodeChunk]],
+    repo: Path,
+) -> dict[str, list[str]]:
+    """Build a merged call graph across all files in the repository."""
+    from local_deepwiki.generators.callgraph import CallGraphExtractor
+
+    extractor = CallGraphExtractor()
+    combined_cg: dict[str, list[str]] = {}
+
+    for file_path in files_to_chunks:
+        abs_path = Path(file_path)
+        if not abs_path.is_absolute():
+            abs_path = repo / file_path
+        try:
+            cg = extractor.extract_from_file(abs_path, repo)
+            combined_cg.update(cg)
+        except (OSError, ValueError, RuntimeError):
+            logger.debug(
+                "Failed to extract call graph from %s", file_path, exc_info=True
+            )
+    return combined_cg
+
+
+def _rank_functions_by_connections(
+    combined_cg: dict[str, list[str]],
+    all_chunks: list[CodeChunk],
+    chunk_by_name: dict[str, CodeChunk],
+    repo: Path,
+) -> Counter[str]:
+    """Score every function by call-graph connections, chunk-type weight, and import popularity."""
+    connection_count: Counter[str] = Counter()
+    for caller, callees in combined_cg.items():
+        if _is_noise(caller):
+            continue
+        connection_count[caller] += len(callees)
+        for callee in callees:
+            if not _is_noise(callee):
+                connection_count[callee] += 1
+
+    # Apply chunk-type weighting
+    for func_name in list(connection_count):
+        chunk = chunk_by_name.get(func_name)
+        if chunk:
+            weight = CHUNK_TYPE_WEIGHTS.get(chunk.chunk_type.value, 1.0)
+            connection_count[func_name] = int(connection_count[func_name] * weight)
+
+    # Boost score for functions in heavily-imported modules
+    file_import_count: Counter[str] = Counter()
+    for chunk in all_chunks:
+        if chunk.chunk_type == ChunkType.IMPORT:
+            for line in chunk.content.splitlines():
+                stripped = line.strip()
+                if stripped.startswith(("import ", "from ")):
+                    match = re.match(r"(?:from\s+(\S+)|import\s+(\S+))", stripped)
+                    if match:
+                        module = match.group(1) or match.group(2)
+                        if module:
+                            file_import_count[module] += 1
+
+    for func_name in list(connection_count):
+        chunk = chunk_by_name.get(func_name)
+        if chunk and chunk.file_path:
+            try:
+                rel = str(Path(chunk.file_path).relative_to(repo))
+            except (ValueError, TypeError):
+                rel = chunk.file_path
+            module = rel.rsplit(".", 1)[0].replace("/", ".").replace("\\", ".")
+            if module in file_import_count:
+                connection_count[func_name] += file_import_count[module]
+
+    return connection_count
+
+
+def _format_topic_suggestions(
+    ranked: list[tuple[str, int]],
+    chunk_by_name: dict[str, CodeChunk],
+    repo: Path,
+    max_suggestions: int,
+) -> list[dict[str, Any]]:
+    """Convert ranked function list into topic suggestion dicts."""
+    suggestions: list[dict[str, Any]] = []
+    seen_names: set[str] = set()
+
+    for func_name, count in ranked:
+        if func_name in seen_names or _is_noise(func_name):
+            continue
+        seen_names.add(func_name)
+
+        chunk = chunk_by_name.get(func_name)
+        if chunk is None:
+            continue
+
+        file_path = chunk.file_path
+        try:
+            file_path = str(Path(file_path).relative_to(repo))
+        except (ValueError, TypeError):
+            pass
+
+        if _is_test_path(file_path):
+            continue
+
+        is_entry = bool(ENTRY_PATTERNS.match(func_name.split(".")[-1]))
+        reason = (
+            f"Entry point with {count} connections"
+            if is_entry
+            else f"Hub function with {count} connections"
+        )
+
+        display_name = func_name.replace("_", " ").replace(".", " ")
+        suggestions.append(
+            {
+                "topic": f"How {display_name} works",
+                "entry_point": func_name,
+                "file_path": file_path,
+                "reason": reason,
+                "suggested_query": f"How does {func_name} work?",
+            }
+        )
+        if len(suggestions) >= max_suggestions:
+            break
+
+    return suggestions
+
+
 async def suggest_topics(
     vector_store: "VectorStore",
     repo_path: Path,
@@ -323,46 +448,27 @@ async def suggest_topics(
     Returns a list of suggestion dicts sorted by connection count.
     """
     try:
-        from local_deepwiki.generators.callgraph import CallGraphExtractor
+        from local_deepwiki.generators.callgraph import CallGraphExtractor  # noqa: F401
     except ImportError:  # pragma: no cover
         logger.warning("Could not import CallGraphExtractor")
         return []
 
     repo = Path(repo_path)
 
-    # Gather all callable chunks
     try:
         all_chunks = list(vector_store.get_all_chunks())
     except (OSError, ValueError, RuntimeError):
         logger.exception("Failed to retrieve chunks for topic suggestions")
         return []
 
-    # Group chunks by file for call-graph extraction
     files_to_chunks: dict[str, list[CodeChunk]] = defaultdict(list)
     for chunk in all_chunks:
         files_to_chunks[chunk.file_path].append(chunk)
 
-    # Build combined call graph across all files
-    extractor = CallGraphExtractor()
-    combined_cg: dict[str, list[str]] = {}
+    combined_cg = _build_combined_call_graph(files_to_chunks, repo)
+
+    # Index callable chunks by name, preferring production source over tests
     chunk_by_name: dict[str, CodeChunk] = {}
-
-    for file_path in files_to_chunks:
-        abs_path = Path(file_path)
-        if not abs_path.is_absolute():
-            abs_path = repo / file_path
-        try:
-            cg = extractor.extract_from_file(abs_path, repo)
-            combined_cg.update(cg)
-        except (OSError, ValueError, RuntimeError):
-            logger.debug(
-                "Failed to extract call graph from %s", file_path, exc_info=True
-            )
-            continue
-
-    # Index callable chunks by name for quick lookup.
-    # When multiple chunks share a name (e.g. "main" in several files),
-    # prefer the one from production source code.
     for chunk in all_chunks:
         if chunk.chunk_type.value in CALLABLE_CHUNK_TYPES and chunk.name:
             key = chunk.name
@@ -374,100 +480,18 @@ async def suggest_topics(
             elif _is_test_path(existing.file_path) and not _is_test_path(
                 chunk.file_path
             ):
-                # Prefer source over test when names collide
                 chunk_by_name[key] = chunk
 
-    # Count connections per function (skip noise/builtins for accurate ranking)
-    connection_count: Counter[str] = Counter()
-    for caller, callees in combined_cg.items():
-        if _is_noise(caller):
-            continue
-        connection_count[caller] += len(callees)
-        for callee in callees:
-            if not _is_noise(callee):
-                connection_count[callee] += 1
+    connection_count = _rank_functions_by_connections(
+        combined_cg,
+        all_chunks,
+        chunk_by_name,
+        repo,
+    )
 
-    # Apply chunk-type weighting so classes (which accumulate connections
-    # from their methods) don't dominate over actual execution-flow functions.
-    for func_name in list(connection_count):
-        chunk = chunk_by_name.get(func_name)
-        if chunk:
-            weight = CHUNK_TYPE_WEIGHTS.get(chunk.chunk_type.value, 1.0)
-            connection_count[func_name] = int(connection_count[func_name] * weight)
-
-    # Also count how many files import each file (core module detection)
-    file_import_count: Counter[str] = Counter()
-    for chunk in all_chunks:
-        if chunk.chunk_type == ChunkType.IMPORT:
-            for line in chunk.content.splitlines():
-                stripped = line.strip()
-                if stripped.startswith(("import ", "from ")):
-                    # Extract module path
-                    match = re.match(r"(?:from\s+(\S+)|import\s+(\S+))", stripped)
-                    if match:
-                        module = match.group(1) or match.group(2)
-                        if module:
-                            file_import_count[module] += 1
-
-    # Boost score for functions in heavily-imported modules
-    for func_name in list(connection_count):
-        chunk = chunk_by_name.get(func_name)
-        if chunk and chunk.file_path:
-            # Convert file path to dotted module name for matching
-            try:
-                rel = str(Path(chunk.file_path).relative_to(repo))
-            except (ValueError, TypeError):
-                rel = chunk.file_path
-            # Strip extension and convert separators to dots
-            module = rel.rsplit(".", 1)[0].replace("/", ".").replace("\\", ".")
-            if module in file_import_count:
-                connection_count[func_name] += file_import_count[module]
-
-    # Build suggestions from hubs and entry patterns
-    suggestions: list[dict[str, Any]] = []
-    seen_names: set[str] = set()
-
-    # Sort by connection count (most_common returns descending order)
-    ranked = connection_count.most_common()
-
-    for func_name, count in ranked:
-        if func_name in seen_names:
-            continue
-        if _is_noise(func_name):
-            continue
-        seen_names.add(func_name)
-
-        chunk = chunk_by_name.get(func_name)
-        if chunk is None:
-            continue  # Skip stdlib/external entities without indexed source
-
-        file_path = chunk.file_path
-        try:
-            file_path = str(Path(file_path).relative_to(repo))
-        except (ValueError, TypeError):
-            pass
-
-        # Skip test helpers / fixtures -- they aren't useful entry points
-        if _is_test_path(file_path):
-            continue
-
-        is_entry = bool(ENTRY_PATTERNS.match(func_name.split(".")[-1]))
-        reason = f"Hub function with {count} connections"
-        if is_entry:
-            reason = f"Entry point with {count} connections"
-
-        display_name = func_name.replace("_", " ").replace(".", " ")
-        suggestions.append(
-            {
-                "topic": f"How {display_name} works",
-                "entry_point": func_name,
-                "file_path": file_path,
-                "reason": reason,
-                "suggested_query": f"How does {func_name} work?",
-            }
-        )
-
-        if len(suggestions) >= max_suggestions:
-            break
-
-    return suggestions
+    return _format_topic_suggestions(
+        connection_count.most_common(),
+        chunk_by_name,
+        repo,
+        max_suggestions,
+    )

@@ -121,7 +121,7 @@ from local_deepwiki.core.git_blame import (  # noqa: E402
 )
 
 
-@dataclass
+@dataclass(slots=True)
 class GitRepoInfo:
     """Information about a git repository."""
 
@@ -415,7 +415,7 @@ def get_files_last_modified(
     return result
 
 
-@dataclass
+@dataclass(slots=True)
 class StaleInfo:
     """Information about a potentially stale wiki page."""
 

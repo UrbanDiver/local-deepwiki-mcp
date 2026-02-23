@@ -101,6 +101,9 @@ def add_security_headers(response: Response) -> Response:
         "img-src 'self' data:; "
         "font-src 'self'; "
         "connect-src 'self'; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
         "frame-ancestors 'none'"
     )
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"

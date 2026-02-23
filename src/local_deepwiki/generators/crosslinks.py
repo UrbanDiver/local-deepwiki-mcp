@@ -20,7 +20,7 @@ from local_deepwiki.generators.wiki_utils import (
 from local_deepwiki.models import ChunkType, CodeChunk, WikiPage
 
 
-@dataclass
+@dataclass(slots=True)
 class EntityInfo:
     """Information about a documented entity."""
 

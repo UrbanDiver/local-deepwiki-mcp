@@ -157,7 +157,7 @@ class BatchEmbeddingResult:
     retry_count: int = 0
 
 
-@dataclass
+@dataclass(slots=True)
 class EmbeddingProgress:
     """Progress tracker for embedding operations."""
 
@@ -224,7 +224,7 @@ class EmbeddingProgress:
         )
 
 
-@dataclass
+@dataclass(slots=True)
 class LatencyStats:
     """Statistics for tracking search query latency."""
 

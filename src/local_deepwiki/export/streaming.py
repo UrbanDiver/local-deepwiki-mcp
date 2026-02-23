@@ -42,7 +42,7 @@ class ExportConfig(BaseModel):
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class WikiPageMetadata:
     """Lightweight metadata for a wiki page without full content."""
 
@@ -52,7 +52,7 @@ class WikiPageMetadata:
     relative_path: Path
 
 
-@dataclass
+@dataclass(slots=True)
 class WikiPage:
     """A wiki page with content loaded on demand."""
 
@@ -84,7 +84,7 @@ class WikiPage:
         self._content = None
 
 
-@dataclass
+@dataclass(slots=True)
 class ExportResult:
     """Result of an export operation."""
 

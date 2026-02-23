@@ -116,56 +116,71 @@ class TestValidateRepoPath:
 class TestParseRemoteUrl:
     """Tests for parse_remote_url function."""
 
-    def test_github_https(self) -> None:
-        """Test parsing GitHub HTTPS URL."""
-        result = parse_remote_url("https://github.com/owner/repo")
-        assert result == ("github.com", "owner", "repo")
+    @pytest.mark.parametrize(
+        "url, expected",
+        [
+            pytest.param(
+                "https://github.com/owner/repo",
+                ("github.com", "owner", "repo"),
+                id="github-https",
+            ),
+            pytest.param(
+                "https://github.com/owner/repo.git",
+                ("github.com", "owner", "repo"),
+                id="github-https-git-suffix",
+            ),
+            pytest.param(
+                "git@github.com:owner/repo.git",
+                ("github.com", "owner", "repo"),
+                id="github-ssh",
+            ),
+            pytest.param(
+                "git@github.com:owner/repo",
+                ("github.com", "owner", "repo"),
+                id="github-ssh-no-suffix",
+            ),
+            pytest.param(
+                "https://gitlab.com/owner/repo.git",
+                ("gitlab.com", "owner", "repo"),
+                id="gitlab-https",
+            ),
+            pytest.param(
+                "git@gitlab.com:owner/repo",
+                ("gitlab.com", "owner", "repo"),
+                id="gitlab-ssh",
+            ),
+            pytest.param(
+                "https://git.company.com/team/project.git",
+                ("git.company.com", "team", "project"),
+                id="self-hosted-gitlab",
+            ),
+            pytest.param(
+                "ssh://git@github.com/owner/repo.git",
+                ("github.com", "owner", "repo"),
+                id="ssh-url-format",
+            ),
+            pytest.param(
+                "https://gitlab.com/group/subgroup/repo.git",
+                ("gitlab.com", "group/subgroup", "repo"),
+                id="nested-path",
+            ),
+        ],
+    )
+    def test_parses_remote_url(self, url: str, expected: tuple) -> None:
+        """Test parsing various remote URL formats."""
+        assert parse_remote_url(url) == expected
 
-    def test_github_https_with_git_suffix(self) -> None:
-        """Test parsing GitHub HTTPS URL with .git suffix."""
-        result = parse_remote_url("https://github.com/owner/repo.git")
-        assert result == ("github.com", "owner", "repo")
-
-    def test_github_ssh(self) -> None:
-        """Test parsing GitHub SSH URL."""
-        result = parse_remote_url("git@github.com:owner/repo.git")
-        assert result == ("github.com", "owner", "repo")
-
-    def test_github_ssh_without_suffix(self) -> None:
-        """Test parsing GitHub SSH URL without .git suffix."""
-        result = parse_remote_url("git@github.com:owner/repo")
-        assert result == ("github.com", "owner", "repo")
-
-    def test_gitlab_https(self) -> None:
-        """Test parsing GitLab HTTPS URL."""
-        result = parse_remote_url("https://gitlab.com/owner/repo.git")
-        assert result == ("gitlab.com", "owner", "repo")
-
-    def test_gitlab_ssh(self) -> None:
-        """Test parsing GitLab SSH URL."""
-        result = parse_remote_url("git@gitlab.com:owner/repo")
-        assert result == ("gitlab.com", "owner", "repo")
-
-    def test_self_hosted_gitlab(self) -> None:
-        """Test parsing self-hosted GitLab URL."""
-        result = parse_remote_url("https://git.company.com/team/project.git")
-        assert result == ("git.company.com", "team", "project")
-
-    def test_ssh_url_format(self) -> None:
-        """Test parsing ssh:// URL format."""
-        result = parse_remote_url("ssh://git@github.com/owner/repo.git")
-        assert result == ("github.com", "owner", "repo")
-
-    def test_nested_path(self) -> None:
-        """Test parsing URL with nested group/project paths."""
-        result = parse_remote_url("https://gitlab.com/group/subgroup/repo.git")
-        assert result == ("gitlab.com", "group/subgroup", "repo")
-
-    def test_invalid_url_returns_none(self) -> None:
+    @pytest.mark.parametrize(
+        "url",
+        [
+            pytest.param("not-a-url", id="not-a-url"),
+            pytest.param("", id="empty-string"),
+            pytest.param("https://github.com", id="no-path"),
+        ],
+    )
+    def test_invalid_url_returns_none(self, url: str) -> None:
         """Test that invalid URLs return None."""
-        assert parse_remote_url("not-a-url") is None
-        assert parse_remote_url("") is None
-        assert parse_remote_url("https://github.com") is None
+        assert parse_remote_url(url) is None
 
 
 class TestBuildSourceUrl:
@@ -308,24 +323,27 @@ class TestGetGitRemoteUrl:
         result = get_git_remote_url(tmp_path)
         assert result is None
 
-    def test_handles_timeout_error(self, tmp_path: Path) -> None:
-        """Test returns None when subprocess times out."""
+    @pytest.mark.parametrize(
+        "side_effect",
+        [
+            pytest.param(
+                subprocess.TimeoutExpired(cmd="git", timeout=5),
+                id="timeout-error",
+            ),
+            pytest.param(
+                FileNotFoundError("git not found"),
+                id="file-not-found-error",
+            ),
+            pytest.param(
+                OSError("Permission denied"),
+                id="os-error",
+            ),
+        ],
+    )
+    def test_handles_subprocess_error(self, tmp_path: Path, side_effect) -> None:
+        """Test returns None on various subprocess errors."""
         with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=5)
-            result = get_git_remote_url(tmp_path)
-            assert result is None
-
-    def test_handles_file_not_found_error(self, tmp_path: Path) -> None:
-        """Test returns None when git is not found."""
-        with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = FileNotFoundError("git not found")
-            result = get_git_remote_url(tmp_path)
-            assert result is None
-
-    def test_handles_os_error(self, tmp_path: Path) -> None:
-        """Test returns None on OSError."""
-        with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = OSError("Permission denied")
+            mock_run.side_effect = side_effect
             result = get_git_remote_url(tmp_path)
             assert result is None
 
@@ -364,18 +382,25 @@ class TestGetDefaultBranch:
         result = get_default_branch(tmp_path)
         assert result == "main"
 
-    def test_handles_timeout_in_first_try(self, tmp_path: Path) -> None:
-        """Test handles timeout when getting current branch."""
+    @pytest.mark.parametrize(
+        "side_effect",
+        [
+            pytest.param(
+                subprocess.TimeoutExpired(cmd="git", timeout=5),
+                id="timeout-error",
+            ),
+            pytest.param(
+                FileNotFoundError("git not found"),
+                id="file-not-found-error",
+            ),
+        ],
+    )
+    def test_handles_subprocess_error_in_first_try(
+        self, tmp_path: Path, side_effect
+    ) -> None:
+        """Test returns 'main' fallback on subprocess errors."""
         with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=5)
-            result = get_default_branch(tmp_path)
-            # Should fall through all try blocks and return "main"
-            assert result == "main"
-
-    def test_handles_file_not_found_in_first_try(self, tmp_path: Path) -> None:
-        """Test handles FileNotFoundError when git not found."""
-        with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = FileNotFoundError("git not found")
+            mock_run.side_effect = side_effect
             result = get_default_branch(tmp_path)
             assert result == "main"
 
@@ -397,7 +422,9 @@ class TestGetDefaultBranch:
             result = get_default_branch(tmp_path)
             assert result == "develop"
 
-    def test_gets_branch_from_remote_head_when_first_call_fails(self, tmp_path: Path) -> None:
+    def test_gets_branch_from_remote_head_when_first_call_fails(
+        self, tmp_path: Path
+    ) -> None:
         """Test falling back to remote HEAD when rev-parse fails."""
         with patch("subprocess.run") as mock_run:
             # First call fails
@@ -421,7 +448,9 @@ class TestGetDefaultBranch:
                 args=[], returncode=0, stdout="HEAD\n", stderr=""
             )
             # Second call returns empty
-            mock_result2 = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
+            mock_result2 = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
             mock_run.side_effect = [mock_result1, mock_result2]
 
             result = get_default_branch(tmp_path)
@@ -452,7 +481,9 @@ class TestGetRepoInfo:
     def test_returns_partial_info_without_remote(self, tmp_path: Path) -> None:
         """Test returns partial info for repo without remote."""
         # Initialize repo with a commit so branch exists
-        subprocess.run(["git", "init", "-b", "develop"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "init", "-b", "develop"], cwd=tmp_path, capture_output=True
+        )
         subprocess.run(
             ["git", "config", "user.email", "test@test.com"],
             cwd=tmp_path,
@@ -827,26 +858,27 @@ class MyClass:
         result = get_file_entity_blame(tmp_path, "test.py", [])
         assert result == []
 
-    def test_handles_timeout_error(self, tmp_path: Path) -> None:
-        """Test returns empty list when subprocess times out."""
+    @pytest.mark.parametrize(
+        "side_effect",
+        [
+            pytest.param(
+                subprocess.TimeoutExpired(cmd="git", timeout=60),
+                id="timeout-error",
+            ),
+            pytest.param(
+                FileNotFoundError("git not found"),
+                id="file-not-found-error",
+            ),
+            pytest.param(
+                OSError("Permission denied"),
+                id="os-error",
+            ),
+        ],
+    )
+    def test_handles_subprocess_error(self, tmp_path: Path, side_effect) -> None:
+        """Test returns empty list on various subprocess errors."""
         with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=60)
-            entities = [("foo", "function", 1, 2)]
-            result = get_file_entity_blame(tmp_path, "test.py", entities)
-            assert result == []
-
-    def test_handles_file_not_found_error(self, tmp_path: Path) -> None:
-        """Test returns empty list when git is not found."""
-        with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = FileNotFoundError("git not found")
-            entities = [("foo", "function", 1, 2)]
-            result = get_file_entity_blame(tmp_path, "test.py", entities)
-            assert result == []
-
-    def test_handles_os_error(self, tmp_path: Path) -> None:
-        """Test returns empty list on OSError."""
-        with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = OSError("Permission denied")
+            mock_run.side_effect = side_effect
             entities = [("foo", "function", 1, 2)]
             result = get_file_entity_blame(tmp_path, "test.py", entities)
             assert result == []
@@ -866,24 +898,27 @@ class MyClass:
 class TestGetLineBlameExceptionHandling:
     """Additional tests for get_line_blame exception handling."""
 
-    def test_handles_timeout_error(self, tmp_path: Path) -> None:
-        """Test returns None when subprocess times out."""
+    @pytest.mark.parametrize(
+        "side_effect",
+        [
+            pytest.param(
+                subprocess.TimeoutExpired(cmd="git", timeout=10),
+                id="timeout-error",
+            ),
+            pytest.param(
+                FileNotFoundError("git not found"),
+                id="file-not-found-error",
+            ),
+            pytest.param(
+                OSError("Permission denied"),
+                id="os-error",
+            ),
+        ],
+    )
+    def test_handles_subprocess_error(self, tmp_path: Path, side_effect) -> None:
+        """Test returns None on various subprocess errors."""
         with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=10)
-            result = get_line_blame(tmp_path, "test.py", 1)
-            assert result is None
-
-    def test_handles_file_not_found_error(self, tmp_path: Path) -> None:
-        """Test returns None when git is not found."""
-        with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = FileNotFoundError("git not found")
-            result = get_line_blame(tmp_path, "test.py", 1)
-            assert result is None
-
-    def test_handles_os_error(self, tmp_path: Path) -> None:
-        """Test returns None on OSError."""
-        with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = OSError("Permission denied")
+            mock_run.side_effect = side_effect
             result = get_line_blame(tmp_path, "test.py", 1)
             assert result is None
 
@@ -891,24 +926,27 @@ class TestGetLineBlameExceptionHandling:
 class TestGetRangeBlameExceptionHandling:
     """Additional tests for get_range_blame exception handling."""
 
-    def test_handles_timeout_error(self, tmp_path: Path) -> None:
-        """Test returns None when subprocess times out."""
+    @pytest.mark.parametrize(
+        "side_effect",
+        [
+            pytest.param(
+                subprocess.TimeoutExpired(cmd="git", timeout=30),
+                id="timeout-error",
+            ),
+            pytest.param(
+                FileNotFoundError("git not found"),
+                id="file-not-found-error",
+            ),
+            pytest.param(
+                OSError("Permission denied"),
+                id="os-error",
+            ),
+        ],
+    )
+    def test_handles_subprocess_error(self, tmp_path: Path, side_effect) -> None:
+        """Test returns None on various subprocess errors."""
         with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=30)
-            result = get_range_blame(tmp_path, "test.py", 1, 10)
-            assert result is None
-
-    def test_handles_file_not_found_error(self, tmp_path: Path) -> None:
-        """Test returns None when git is not found."""
-        with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = FileNotFoundError("git not found")
-            result = get_range_blame(tmp_path, "test.py", 1, 10)
-            assert result is None
-
-    def test_handles_os_error(self, tmp_path: Path) -> None:
-        """Test returns None on OSError."""
-        with patch("subprocess.run") as mock_run:
-            mock_run.side_effect = OSError("Permission denied")
+            mock_run.side_effect = side_effect
             result = get_range_blame(tmp_path, "test.py", 1, 10)
             assert result is None
 
@@ -1068,24 +1106,27 @@ class TestGetFileLastModified:
         result = get_file_last_modified(tmp_path, "test.py")
         assert result is None
 
-    def test_handles_timeout_error(self, tmp_path: Path) -> None:
-        """Test returns None when subprocess times out."""
+    @pytest.mark.parametrize(
+        "side_effect",
+        [
+            pytest.param(
+                subprocess.TimeoutExpired(cmd="git", timeout=10),
+                id="timeout-error",
+            ),
+            pytest.param(
+                FileNotFoundError("git not found"),
+                id="file-not-found-error",
+            ),
+            pytest.param(
+                OSError("Permission denied"),
+                id="os-error",
+            ),
+        ],
+    )
+    def test_handles_subprocess_error(self, tmp_path: Path, side_effect) -> None:
+        """Test returns None on various subprocess errors."""
         with patch("local_deepwiki.core.git_utils.subprocess.run") as mock_run:
-            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=10)
-            result = get_file_last_modified(tmp_path, "test.py")
-            assert result is None
-
-    def test_handles_file_not_found_error(self, tmp_path: Path) -> None:
-        """Test returns None when git is not found."""
-        with patch("local_deepwiki.core.git_utils.subprocess.run") as mock_run:
-            mock_run.side_effect = FileNotFoundError("git not found")
-            result = get_file_last_modified(tmp_path, "test.py")
-            assert result is None
-
-    def test_handles_os_error(self, tmp_path: Path) -> None:
-        """Test returns None on OSError."""
-        with patch("local_deepwiki.core.git_utils.subprocess.run") as mock_run:
-            mock_run.side_effect = OSError("Permission denied")
+            mock_run.side_effect = side_effect
             result = get_file_last_modified(tmp_path, "test.py")
             assert result is None
 
@@ -1176,9 +1217,7 @@ class TestCheckPageStaleness:
 
         # Document generated "now" (after the commit)
         future_time = (datetime.now() + timedelta(seconds=10)).timestamp()
-        result = check_page_staleness(
-            tmp_path, "page.md", future_time, ["test.py"]
-        )
+        result = check_page_staleness(tmp_path, "page.md", future_time, ["test.py"])
         assert result is None
 
     def test_returns_stale_info_when_source_newer(self, tmp_path: Path) -> None:
@@ -1207,9 +1246,7 @@ class TestCheckPageStaleness:
 
         # Document generated in the past (before the commit)
         past_time = (datetime.now() - timedelta(days=30)).timestamp()
-        result = check_page_staleness(
-            tmp_path, "page.md", past_time, ["test.py"]
-        )
+        result = check_page_staleness(tmp_path, "page.md", past_time, ["test.py"])
 
         assert result is not None
         assert isinstance(result, StaleInfo)

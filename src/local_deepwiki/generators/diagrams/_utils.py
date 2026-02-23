@@ -8,7 +8,7 @@ from typing import Any
 from local_deepwiki.models import CodeChunk
 
 
-@dataclass
+@dataclass(slots=True)
 class ClassInfo:
     """Information about a class for diagram generation."""
 

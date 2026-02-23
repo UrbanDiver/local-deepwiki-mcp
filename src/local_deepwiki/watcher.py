@@ -46,7 +46,7 @@ class ChangeType(Enum):
     MOVED = "moved"
 
 
-@dataclass
+@dataclass(slots=True)
 class FileChange:
     """Represents a single file change event."""
 
@@ -56,7 +56,7 @@ class FileChange:
     dest_path: str | None = None  # For moved files
 
 
-@dataclass
+@dataclass(slots=True)
 class ReindexResult:
     """Result of a reindex operation."""
 

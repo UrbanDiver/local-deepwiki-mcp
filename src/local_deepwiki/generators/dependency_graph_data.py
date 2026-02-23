@@ -69,7 +69,7 @@ class DependencyNode:
     is_test: bool = False
 
 
-@dataclass
+@dataclass(slots=True)
 class DependencyEdge:
     """An edge in the dependency graph."""
 
@@ -79,7 +79,7 @@ class DependencyEdge:
     is_circular: bool = False
 
 
-@dataclass
+@dataclass(slots=True)
 class DependencyGraph:
     """A complete dependency graph."""
 

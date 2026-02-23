@@ -65,7 +65,7 @@ __all__ = [
 logger = get_logger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class UsageExample:
     """A usage example extracted from a test file."""
 

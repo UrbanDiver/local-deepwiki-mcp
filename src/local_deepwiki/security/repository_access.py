@@ -15,7 +15,7 @@ from local_deepwiki.logging import get_logger
 logger = get_logger(__name__)
 
 
-@dataclass
+@dataclass(slots=True)
 class RepositoryAccessConfig:
     """Configuration for repository access control.
 

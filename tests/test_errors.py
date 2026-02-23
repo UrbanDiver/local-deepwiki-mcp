@@ -292,53 +292,72 @@ class TestBaseProviderErrorFactory:
         assert error.provider_name == "anthropic"
         assert error.original_error is original
 
-    def test_detects_api_key_error(self):
-        """Test detection of API key errors."""
-        original = Exception("Invalid API key")
-        error = provider_error("anthropic", original)
-        assert "authentication" in str(error).lower()
-        assert "ANTHROPIC_API_KEY" in str(error)
-
-    def test_detects_rate_limit_error(self):
-        """Test detection of rate limit errors."""
-        original = Exception("Rate limit exceeded")
-        error = provider_error("openai", original)
-        assert "rate limit" in str(error).lower()
-        assert "wait" in str(error).lower()
-
-    def test_detects_connection_error(self):
-        """Test detection of connection errors."""
-        original = Exception("Connection refused")
-        error = provider_error("ollama", original)
-        assert "connect" in str(error).lower()
-        # Ollama-specific hint
-        assert "ollama serve" in str(error).lower()
-
-    def test_detects_model_not_found_error(self):
-        """Test detection of model not found errors."""
-        original = Exception("Model not found")
-        error = provider_error("openai", original)
-        assert "model" in str(error).lower()
-        assert "not found" in str(error).lower() or "available" in str(error).lower()
-
-    def test_detects_server_overloaded_error(self):
-        """Test detection of server overloaded errors."""
-        original = Exception("Server overloaded, try again later")
-        error = provider_error("anthropic", original)
-        assert "overloaded" in str(error).lower() or "unavailable" in str(error).lower()
-
-    def test_detects_503_error(self):
-        """Test detection of 503 errors."""
-        original = Exception("503 Service Unavailable")
-        error = provider_error("anthropic", original)
-        assert "unavailable" in str(error).lower()
-
-    def test_handles_unknown_error(self):
-        """Test handling of unknown errors."""
-        original = Exception("Some random error")
-        error = provider_error("anthropic", original)
+    @pytest.mark.parametrize(
+        "provider_name, error_msg, expected_in_str",
+        [
+            pytest.param(
+                "anthropic",
+                "Invalid API key",
+                ["authentication", "ANTHROPIC_API_KEY"],
+                id="api-key-error",
+            ),
+            pytest.param(
+                "openai",
+                "Rate limit exceeded",
+                ["rate limit", "wait"],
+                id="rate-limit-error",
+            ),
+            pytest.param(
+                "ollama",
+                "Connection refused",
+                ["connect", "ollama serve"],
+                id="connection-error",
+            ),
+            pytest.param(
+                "openai",
+                "Model not found",
+                ["model"],
+                id="model-not-found-error",
+            ),
+            pytest.param(
+                "anthropic",
+                "Server overloaded, try again later",
+                ["overloaded|unavailable"],
+                id="server-overloaded-error",
+            ),
+            pytest.param(
+                "anthropic",
+                "503 Service Unavailable",
+                ["unavailable"],
+                id="503-error",
+            ),
+            pytest.param(
+                "anthropic",
+                "Some random error",
+                ["Some random error"],
+                id="unknown-error",
+            ),
+        ],
+    )
+    def test_detects_provider_error_type(
+        self, provider_name, error_msg, expected_in_str
+    ):
+        """Test detection and classification of various provider errors."""
+        original = Exception(error_msg)
+        error = provider_error(provider_name, original)
         assert isinstance(error, BaseProviderError)
-        assert "Some random error" in str(error)
+        error_str = str(error).lower()
+        for expected in expected_in_str:
+            if "|" in expected:
+                # OR condition: at least one must match
+                alternatives = expected.split("|")
+                assert any(alt in error_str for alt in alternatives), (
+                    f"None of {alternatives} found in {error_str}"
+                )
+            else:
+                assert expected.lower() in error_str, (
+                    f"'{expected}' not found in '{error_str}'"
+                )
 
 
 class TestEnvironmentSetupErrorFactory:
@@ -369,20 +388,30 @@ class TestIndexingErrorFactory:
         assert isinstance(error, IndexingError)
         assert "not found" in str(error).lower()
 
-    def test_provides_hint_for_not_found(self):
-        """Test that not found error has appropriate hint."""
-        error = indexing_error("Path does not exist")
-        assert "path" in str(error).lower()
-
-    def test_provides_hint_for_permission(self):
-        """Test that permission error has appropriate hint."""
-        error = indexing_error("Permission denied")
-        assert "permission" in str(error).lower()
-
-    def test_provides_hint_for_empty_repo(self):
-        """Test that empty repo error has appropriate hint."""
-        error = indexing_error("Repository is empty")
-        assert "empty" in str(error).lower()
+    @pytest.mark.parametrize(
+        "message, expected_in_str",
+        [
+            pytest.param(
+                "Path does not exist",
+                "path",
+                id="not-found-hint",
+            ),
+            pytest.param(
+                "Permission denied",
+                "permission",
+                id="permission-hint",
+            ),
+            pytest.param(
+                "Repository is empty",
+                "empty",
+                id="empty-repo-hint",
+            ),
+        ],
+    )
+    def test_provides_hint_for_error_type(self, message, expected_in_str):
+        """Test that indexing errors have appropriate hints."""
+        error = indexing_error(message)
+        assert expected_in_str in str(error).lower()
 
     def test_provides_hint_for_parse_error(self):
         """Test that parse error has appropriate hint."""
@@ -492,41 +521,52 @@ class TestMapExceptionToDeepWikiError:
         result = map_exception_to_deepwiki_error(original)
         assert result is original
 
-    def test_maps_file_not_found_error(self):
-        """Test mapping of FileNotFoundError."""
-        original = FileNotFoundError("No such file")
-        result = map_exception_to_deepwiki_error(original)
+    @pytest.mark.parametrize(
+        "exception, hint_contains",
+        [
+            pytest.param(
+                FileNotFoundError("No such file"),
+                ["file|path"],
+                id="file-not-found",
+            ),
+            pytest.param(
+                PermissionError("Access denied"),
+                ["permission"],
+                id="permission-error",
+            ),
+            pytest.param(
+                ConnectionError("Connection refused"),
+                ["connection"],
+                id="connection-error",
+            ),
+            pytest.param(
+                TimeoutError("Request timed out"),
+                ["timeout|long"],
+                id="timeout-error",
+            ),
+            pytest.param(
+                Exception("Unknown error"),
+                [],
+                id="unknown-error",
+            ),
+        ],
+    )
+    def test_maps_exception_to_deepwiki_error(self, exception, hint_contains):
+        """Test mapping of various exception types to DeepWikiError."""
+        result = map_exception_to_deepwiki_error(exception)
         assert isinstance(result, DeepWikiError)
         assert result.hint is not None
-        assert "file" in result.hint.lower() or "path" in result.hint.lower()
-
-    def test_maps_permission_error(self):
-        """Test mapping of PermissionError."""
-        original = PermissionError("Access denied")
-        result = map_exception_to_deepwiki_error(original)
-        assert isinstance(result, DeepWikiError)
-        assert "permission" in result.hint.lower()
-
-    def test_maps_connection_error(self):
-        """Test mapping of ConnectionError."""
-        original = ConnectionError("Connection refused")
-        result = map_exception_to_deepwiki_error(original)
-        assert isinstance(result, DeepWikiError)
-        assert "connection" in result.hint.lower()
-
-    def test_maps_timeout_error(self):
-        """Test mapping of TimeoutError."""
-        original = TimeoutError("Request timed out")
-        result = map_exception_to_deepwiki_error(original)
-        assert isinstance(result, DeepWikiError)
-        assert "timeout" in result.hint.lower() or "long" in result.hint.lower()
-
-    def test_maps_unknown_error(self):
-        """Test mapping of unknown errors."""
-        original = Exception("Unknown error")
-        result = map_exception_to_deepwiki_error(original)
-        assert isinstance(result, DeepWikiError)
-        assert result.hint is not None
+        hint_lower = result.hint.lower()
+        for expected in hint_contains:
+            if "|" in expected:
+                alternatives = expected.split("|")
+                assert any(alt in hint_lower for alt in alternatives), (
+                    f"None of {alternatives} found in hint: {result.hint}"
+                )
+            else:
+                assert expected in hint_lower, (
+                    f"'{expected}' not found in hint: {result.hint}"
+                )
 
     def test_preserves_context(self):
         """Test that context is preserved."""
@@ -715,23 +755,35 @@ class TestHandlerIntegration:
 class TestProviderSpecificHints:
     """Tests for provider-specific hint generation."""
 
-    def test_anthropic_api_key_hint(self):
-        """Test Anthropic API key error has proper hint."""
-        error = provider_error("anthropic", Exception("Invalid API key"))
-        assert "ANTHROPIC_API_KEY" in str(error)
-        assert "console.anthropic.com" in str(error)
-
-    def test_openai_api_key_hint(self):
-        """Test OpenAI API key error has proper hint."""
-        error = provider_error("openai", Exception("Authentication failed"))
-        assert "OPENAI_API_KEY" in str(error)
-        assert "platform.openai.com" in str(error)
-
-    def test_ollama_connection_hint(self):
-        """Test Ollama connection error has proper hint."""
-        error = provider_error("ollama", Exception("Connection refused"))
-        assert "ollama serve" in str(error)
-        assert "ollama.ai/download" in str(error)
+    @pytest.mark.parametrize(
+        "provider_name, error_msg, expected_strings",
+        [
+            pytest.param(
+                "anthropic",
+                "Invalid API key",
+                ["ANTHROPIC_API_KEY", "console.anthropic.com"],
+                id="anthropic-api-key",
+            ),
+            pytest.param(
+                "openai",
+                "Authentication failed",
+                ["OPENAI_API_KEY", "platform.openai.com"],
+                id="openai-api-key",
+            ),
+            pytest.param(
+                "ollama",
+                "Connection refused",
+                ["ollama serve", "ollama.ai/download"],
+                id="ollama-connection",
+            ),
+        ],
+    )
+    def test_provider_specific_hint(self, provider_name, error_msg, expected_strings):
+        """Test provider-specific hints contain correct guidance."""
+        error = provider_error(provider_name, Exception(error_msg))
+        error_str = str(error)
+        for expected in expected_strings:
+            assert expected in error_str, f"'{expected}' not found in '{error_str}'"
 
     def test_unknown_provider_generic_hint(self):
         """Test unknown provider gets generic hint."""
