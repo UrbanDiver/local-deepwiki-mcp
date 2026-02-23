@@ -11,18 +11,19 @@ from typing import Any
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
-from local_deepwiki.handlers._shared import (
+from local_deepwiki.errors import path_not_found_error
+from local_deepwiki.handlers._error_handling import handle_tool_errors
+from local_deepwiki.handlers._index_helpers import _load_index_status
+from local_deepwiki.handlers._response import wrap_tool_response
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import (
     BatchExplainEntitiesArgs,
-    Permission,
     QueryCodebaseArgs,
     SuggestNextActionsArgs,
-    _load_index_status,
-    get_access_controller,
-    handle_tool_errors,
-    logger,
-    path_not_found_error,
-    wrap_tool_response,
 )
+from local_deepwiki.security import Permission, get_access_controller
+
+logger = get_logger(__name__)
 
 # Re-export data constants and helpers for backward compatibility
 from local_deepwiki.handlers.agentic_data import (  # noqa: F401

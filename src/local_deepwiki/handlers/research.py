@@ -18,25 +18,24 @@ if TYPE_CHECKING:
     from local_deepwiki.core.deep_research import DeepResearchPipeline
     from local_deepwiki.models import ResearchProgress
 
-from local_deepwiki.handlers._shared import (
+from local_deepwiki.config import get_config
+from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.errors import not_indexed_error, path_not_found_error
+from local_deepwiki.handlers._error_handling import handle_tool_errors
+from local_deepwiki.handlers._index_helpers import _format_research_results
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import (
     CancelResearchArgs,
     DeepResearchArgs,
-    GetOperationProgressArgs,
     ListResearchCheckpointsArgs,
-    Permission,
     ResumeResearchArgs,
-    VectorStore,
-    _format_research_results,
-    get_access_controller,
-    get_config,
-    get_embedding_provider,
-    get_progress_registry,
-    handle_tool_errors,
-    logger,
-    not_indexed_error,
-    path_not_found_error,
-    validate_deep_research_parameters,
 )
+from local_deepwiki.progress import GetOperationProgressArgs, get_progress_registry
+from local_deepwiki.providers.embeddings import get_embedding_provider
+from local_deepwiki.security import Permission, get_access_controller
+from local_deepwiki.validation import validate_deep_research_parameters
+
+logger = get_logger(__name__)
 
 
 class _DeepResearchContext:

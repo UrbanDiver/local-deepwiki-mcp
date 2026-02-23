@@ -11,20 +11,22 @@ from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
 from local_deepwiki.core.path_utils import validate_file_in_repo
-from local_deepwiki.handlers._shared import (
-    ExplainEntityArgs,
-    ImpactAnalysisArgs,
-    Permission,
+from local_deepwiki.errors import (
     ValidationError,
-    _create_vector_store,
-    _load_index_status,
-    get_access_controller,
-    handle_tool_errors,
-    logger,
-    make_tool_text_content,
     path_not_found_error,
     sanitize_error_message,
 )
+from local_deepwiki.handlers._error_handling import handle_tool_errors
+from local_deepwiki.handlers._index_helpers import (
+    _create_vector_store,
+    _load_index_status,
+)
+from local_deepwiki.handlers._response import make_tool_text_content
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import ExplainEntityArgs, ImpactAnalysisArgs
+from local_deepwiki.security import Permission, get_access_controller
+
+logger = get_logger(__name__)
 
 
 def _set_section_error(

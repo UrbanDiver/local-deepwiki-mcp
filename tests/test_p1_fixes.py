@@ -382,7 +382,7 @@ class TestIsTestFile:
 
     def test_test_directory(self):
         """Files in tests/ should be detected as test files."""
-        from local_deepwiki.handlers._shared import _is_test_file
+        from local_deepwiki.handlers._index_helpers import _is_test_file
 
         assert _is_test_file("tests/test_something.py") is True
         assert _is_test_file("test/test_thing.py") is True
@@ -390,33 +390,33 @@ class TestIsTestFile:
 
     def test_spec_directory(self):
         """Files in spec/ or specs/ should be detected as test files."""
-        from local_deepwiki.handlers._shared import _is_test_file
+        from local_deepwiki.handlers._index_helpers import _is_test_file
 
         assert _is_test_file("spec/foo_spec.rb") is True
         assert _is_test_file("specs/bar.js") is True
 
     def test_test_file_prefix(self):
         """Files starting with test_ should be detected as test files."""
-        from local_deepwiki.handlers._shared import _is_test_file
+        from local_deepwiki.handlers._index_helpers import _is_test_file
 
         assert _is_test_file("src/test_utils.py") is True
 
     def test_test_file_suffix(self):
         """Files ending with _test.py should be detected as test files."""
-        from local_deepwiki.handlers._shared import _is_test_file
+        from local_deepwiki.handlers._index_helpers import _is_test_file
 
         assert _is_test_file("src/utils_test.py") is True
 
     def test_conftest(self):
         """conftest.py files should be detected as test files."""
-        from local_deepwiki.handlers._shared import _is_test_file
+        from local_deepwiki.handlers._index_helpers import _is_test_file
 
         assert _is_test_file("conftest.py") is True
         assert _is_test_file("tests/conftest.py") is True
 
     def test_regular_source_file(self):
         """Regular source files should not be detected as test files."""
-        from local_deepwiki.handlers._shared import _is_test_file
+        from local_deepwiki.handlers._index_helpers import _is_test_file
 
         assert _is_test_file("src/models.py") is False
         assert _is_test_file("src/handlers.py") is False
@@ -424,6 +424,6 @@ class TestIsTestFile:
 
     def test_nested_test_directory(self):
         """Deeply nested test directories should be detected."""
-        from local_deepwiki.handlers._shared import _is_test_file
+        from local_deepwiki.handlers._index_helpers import _is_test_file
 
         assert _is_test_file("src/app/tests/test_auth.py") is True

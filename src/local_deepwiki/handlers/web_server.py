@@ -17,17 +17,14 @@ from typing import Any
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
-from local_deepwiki.handlers._shared import (
-    Permission,
-    ServeWikiArgs,
-    StopWikiServerArgs,
-    ValidationError,
-    get_access_controller,
-    handle_tool_errors,
-    logger,
-    make_tool_text_content,
-    path_not_found_error,
-)
+from local_deepwiki.errors import ValidationError, path_not_found_error
+from local_deepwiki.handlers._error_handling import handle_tool_errors
+from local_deepwiki.handlers._response import make_tool_text_content
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import ServeWikiArgs, StopWikiServerArgs
+from local_deepwiki.security import Permission, get_access_controller
+
+logger = get_logger(__name__)
 
 # --- Security: loopback-only host restriction ---
 ALLOWED_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})

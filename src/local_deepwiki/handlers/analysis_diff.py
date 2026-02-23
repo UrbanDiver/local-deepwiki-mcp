@@ -23,23 +23,23 @@ MAX_DIFF_TEXT_LENGTH = 10000
 # Maximum affected entities to return in diff analysis
 MAX_AFFECTED_ENTITIES = 100
 
-from local_deepwiki.handlers._shared import (
-    AnalyzeDiffArgs,
-    AskAboutDiffArgs,
-    Permission,
+from local_deepwiki.config import get_config
+from local_deepwiki.core.rate_limiter import get_rate_limiter
+from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.errors import (
     ValidationError,
-    VectorStore,
-    _load_index_status,
-    get_access_controller,
-    get_config,
-    get_embedding_provider,
-    get_rate_limiter,
-    handle_tool_errors,
-    logger,
-    make_tool_text_content,
     path_not_found_error,
     sanitize_error_message,
 )
+from local_deepwiki.handlers._error_handling import handle_tool_errors
+from local_deepwiki.handlers._index_helpers import _load_index_status
+from local_deepwiki.handlers._response import make_tool_text_content
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import AnalyzeDiffArgs, AskAboutDiffArgs
+from local_deepwiki.providers.embeddings import get_embedding_provider
+from local_deepwiki.security import Permission, get_access_controller
+
+logger = get_logger(__name__)
 
 
 @handle_tool_errors

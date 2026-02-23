@@ -14,20 +14,22 @@ from pydantic import ValidationError as PydanticValidationError
 # Maximum file suggestions in fuzzy search
 FILE_SUGGESTIONS_LIMIT = 3
 
-from local_deepwiki.handlers._shared import (
-    FuzzySearchArgs,
-    Permission,
-    SearchWikiArgs,
+from local_deepwiki.errors import path_not_found_error
+from local_deepwiki.handlers._error_handling import handle_tool_errors
+from local_deepwiki.handlers._index_helpers import (
     _create_vector_store,
     _load_index_status,
-    build_wiki_resource_uri,
-    get_access_controller,
-    handle_tool_errors,
-    logger,
-    make_tool_text_content,
-    path_not_found_error,
-    validate_query_parameters,
 )
+from local_deepwiki.handlers._response import (
+    build_wiki_resource_uri,
+    make_tool_text_content,
+)
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import FuzzySearchArgs, SearchWikiArgs
+from local_deepwiki.security import Permission, get_access_controller
+from local_deepwiki.validation import validate_query_parameters
+
+logger = get_logger(__name__)
 
 
 @handle_tool_errors

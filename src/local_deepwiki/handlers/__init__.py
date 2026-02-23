@@ -8,14 +8,12 @@ the public API and should be imported from their defining modules.
 from __future__ import annotations
 
 # --- Shared helpers, types, and constants ---
-from local_deepwiki.handlers._shared import (
+from local_deepwiki.handlers._error_handling import ToolHandler, handle_tool_errors
+from local_deepwiki.handlers._export_validation import (
     FORBIDDEN_EXPORT_DIRS,
     FORBIDDEN_VAR_SUBDIRS,
-    ProgressNotifier,
-    ToolHandler,
-    create_progress_notifier,
-    handle_tool_errors,
 )
+from local_deepwiki.handlers._progress import ProgressNotifier, create_progress_notifier
 
 # --- Analysis and search tool handlers ---
 from local_deepwiki.handlers.analysis import (

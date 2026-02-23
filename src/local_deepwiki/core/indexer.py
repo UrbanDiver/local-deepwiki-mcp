@@ -6,9 +6,6 @@ import asyncio
 import fnmatch
 import os
 import re
-import time
-from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,27 +17,18 @@ from local_deepwiki.core.index_manager import (
     IndexStatusManager,
 )
 from local_deepwiki.core.parser import ASTCache, CodeParser
+from local_deepwiki.core.parsing_pipeline import FileParsingPipeline, ParseResult
 from local_deepwiki.core.secret_detector import scan_repository_for_secrets
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.logging import get_logger
-from local_deepwiki.models import CodeChunk, FileInfo, IndexStatus, ProgressCallback
+from local_deepwiki.models import FileInfo, IndexStatus, ProgressCallback
 from local_deepwiki.providers.embeddings import get_embedding_provider
 
 if TYPE_CHECKING:
     from local_deepwiki.handlers.types import SearchResult
 
 logger = get_logger(__name__)
-
-
-@dataclass
-class ParseResult:
-    """Result of parsing a single file."""
-
-    file_path: Path
-    file_info: FileInfo
-    chunks: list[CodeChunk]
-    error: str | None = None
 
 
 __all__ = [
@@ -179,29 +167,21 @@ class RepositoryIndexer:
         else:
             logger.info("No hardcoded secrets detected")
 
+    def _create_parsing_pipeline(self) -> FileParsingPipeline:
+        """Create a FileParsingPipeline from current indexer state."""
+        return FileParsingPipeline(
+            parser=self.parser,
+            chunker=self.chunker,
+            repo_path=self.repo_path,
+            vector_store=self.vector_store,
+            batch_size=self.config.chunking.batch_size,
+            parallel_workers=self.config.chunking.parallel_workers,
+            pipeline_logger=logger,
+        )
+
     def _parse_single_file(self, file_path: Path) -> ParseResult:
-        """Parse and chunk a single file (CPU-bound, runs in thread pool).
-
-        Args:
-            file_path: Path to the file to parse.
-
-        Returns:
-            ParseResult with file info and chunks, or error message.
-        """
-        try:
-            file_info = self.parser.get_file_info(file_path, self.repo_path)
-            chunks = list(self.chunker.chunk_file(file_path, self.repo_path))
-            file_info.chunk_count = len(chunks)
-            return ParseResult(file_path=file_path, file_info=file_info, chunks=chunks)
-        except (OSError, ValueError, RuntimeError, UnicodeDecodeError) as e:
-            # Return error result instead of raising
-            file_info = self.parser.get_file_info(file_path, self.repo_path)
-            return ParseResult(
-                file_path=file_path,
-                file_info=file_info,
-                chunks=[],
-                error=str(e),
-            )
+        """Parse and chunk a single file. Delegates to FileParsingPipeline."""
+        return self._create_parsing_pipeline().parse_single_file(file_path)
 
     def _load_previous_status(
         self, full_rebuild: bool
@@ -367,198 +347,14 @@ class RepositoryIndexer:
         full_rebuild: bool,
         progress_callback: ProgressCallback | None,
     ) -> tuple[list[FileInfo], int]:
-        """Handle parallel file parsing with ThreadPoolExecutor.
-
-        Uses multiple threads to parse files concurrently, significantly speeding up
-        indexing for large repositories. Embedding generation remains sequential
-        to respect API rate limits.
-
-        Args:
-            files_to_process: List of file paths to parse.
-            full_rebuild: If True, this is a full rebuild (affects table creation).
-            progress_callback: Optional callback for progress updates.
-
-        Returns:
-            Tuple of (processed_files, total_chunks_processed).
-        """
-        from concurrent.futures import as_completed
-
-        batch_size = self.config.chunking.batch_size
-        parallel_workers = self.config.chunking.parallel_workers
-        chunk_batch: list[CodeChunk] = []
-        processed_files: list[FileInfo] = []
-        total_chunks_processed = 0
-        is_first_batch = True
-        error_count = 0
-
-        file_count = len(files_to_process)
-        if file_count == 0:
-            logger.info("No files to parse")
-            return processed_files, total_chunks_processed
-
-        logger.info(
-            "Starting parallel file parsing: %d files with %d workers",
-            file_count,
-            parallel_workers,
+        """Handle parallel file parsing. Delegates to FileParsingPipeline."""
+        pipeline = self._create_parsing_pipeline()
+        return await pipeline.parse_files_parallel(
+            files_to_process,
+            full_rebuild,
+            progress_callback,
+            parse_fn=self._parse_single_file,
         )
-        parse_start_time = time.time()
-
-        # Process files in windows to limit memory from queued futures.
-        # Each window submits at most ``window_size`` futures at a time so
-        # that completed results can be flushed before the next window.
-        window_size = max(batch_size, parallel_workers * 4)
-        files_completed = 0
-
-        with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
-            for window_start in range(0, file_count, window_size):
-                window_end = min(window_start + window_size, file_count)
-                window_files = files_to_process[window_start:window_end]
-                futures = {
-                    executor.submit(self._parse_single_file, fp): fp
-                    for fp in window_files
-                }
-
-                for future in as_completed(futures):
-                    file_path = futures[future]
-                    if progress_callback:
-                        progress_callback(
-                            f"Parsing {file_path.name}",
-                            files_completed,
-                            file_count,
-                        )
-
-                    result = future.result()
-
-                    if result.error:
-                        error_count += 1
-                        logger.warning(
-                            "Error processing %s: %s", result.file_path, result.error
-                        )
-                        if progress_callback:
-                            progress_callback(
-                                f"Error processing {result.file_path}: {result.error}",
-                                files_completed,
-                                file_count,
-                            )
-                        # Emit INDEX_ERROR event for file processing errors
-                        emitter = get_event_emitter()
-                        await emitter.emit(
-                            EventType.INDEX_ERROR,
-                            {
-                                "file_path": str(result.file_path),
-                                "error": result.error,
-                            },
-                        )
-                        files_completed += 1
-                        continue
-
-                    chunk_batch.extend(result.chunks)
-                    processed_files.append(result.file_info)
-
-                    # Emit INDEX_FILE event for successfully parsed file
-                    emitter = get_event_emitter()
-                    await emitter.emit(
-                        EventType.INDEX_FILE,
-                        {
-                            "file_path": str(result.file_path),
-                            "language": (
-                                result.file_info.language.value
-                                if result.file_info.language
-                                else None
-                            ),
-                            "chunk_count": len(result.chunks),
-                        },
-                    )
-
-                    # Process batch if it reaches the batch size
-                    if len(chunk_batch) >= batch_size:
-                        chunks_stored = await self._process_chunk_batch(
-                            chunk_batch,
-                            full_rebuild,
-                            is_first_batch,
-                            progress_callback,
-                            files_completed,
-                            file_count,
-                        )
-                        total_chunks_processed += chunks_stored
-                        is_first_batch = False
-                        chunk_batch = []
-
-                    files_completed += 1
-
-        # Process any remaining chunks in the final batch
-        if chunk_batch:
-            chunks_stored = await self._process_chunk_batch(
-                chunk_batch,
-                full_rebuild,
-                is_first_batch,
-                progress_callback,
-                file_count,
-                file_count,
-                is_final=True,
-            )
-            total_chunks_processed += chunks_stored
-
-        # Log performance metrics
-        parse_duration = time.time() - parse_start_time
-        files_parsed = len(processed_files)
-        files_per_second = files_parsed / parse_duration if parse_duration > 0 else 0
-        chunks_per_second = (
-            total_chunks_processed / parse_duration if parse_duration > 0 else 0
-        )
-
-        logger.info(
-            "Parallel parsing complete: %d files, %d chunks in %.2fs "
-            "(%.1f files/s, %.1f chunks/s, %d workers, %d errors)",
-            files_parsed,
-            total_chunks_processed,
-            parse_duration,
-            files_per_second,
-            chunks_per_second,
-            parallel_workers,
-            error_count,
-        )
-
-        return processed_files, total_chunks_processed
-
-    async def _process_chunk_batch(
-        self,
-        chunk_batch: list[CodeChunk],
-        full_rebuild: bool,
-        is_first_batch: bool,
-        progress_callback: ProgressCallback | None,
-        current: int,
-        total: int,
-        is_final: bool = False,
-    ) -> int:
-        """Process a batch of chunks and store in vector store.
-
-        Args:
-            chunk_batch: List of code chunks to store.
-            full_rebuild: If True, may need to create table on first batch.
-            is_first_batch: True if this is the first batch being processed.
-            progress_callback: Optional callback for progress updates.
-            current: Current progress index.
-            total: Total number of files being processed.
-            is_final: True if this is the final batch.
-
-        Returns:
-            Number of chunks processed.
-        """
-        batch_type = "final batch" if is_final else "batch"
-        if progress_callback:
-            progress_callback(
-                f"Storing {batch_type} of {len(chunk_batch)} chunks...",
-                current,
-                total,
-            )
-
-        if full_rebuild and is_first_batch:
-            await self.vector_store.create_or_update_table(chunk_batch)
-        else:
-            await self.vector_store.add_chunks(chunk_batch)
-
-        return len(chunk_batch)
 
     def _create_index_status(
         self,

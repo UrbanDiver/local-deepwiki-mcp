@@ -10,28 +10,25 @@ from typing import Any
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
+from local_deepwiki.config import get_config
+from local_deepwiki.core.audit import get_audit_logger
 from local_deepwiki.core.indexer import RepositoryIndexer
-from local_deepwiki.handlers._shared import (
-    IndexRepositoryArgs,
-    OperationType,
+from local_deepwiki.errors import ValidationError, path_not_found_error
+from local_deepwiki.generators.wiki import generate_wiki
+from local_deepwiki.handlers._error_handling import handle_tool_errors
+from local_deepwiki.handlers._progress import create_progress_notifier
+from local_deepwiki.handlers._response import make_tool_text_content
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import IndexRepositoryArgs, WikiStructure
+from local_deepwiki.progress import OperationType, ProgressPhase, get_progress_registry
+from local_deepwiki.security import (
     Permission,
-    ProgressPhase,
-    ValidationError,
-    create_progress_notifier,
-    generate_wiki,
     get_access_controller,
-    get_audit_logger,
-    get_config,
-    get_progress_registry,
     get_repository_access_controller,
-    handle_tool_errors,
-    logger,
-    make_tool_text_content,
-    path_not_found_error,
-    validate_index_parameters,
-    validate_languages_list,
 )
-from local_deepwiki.models import WikiStructure
+from local_deepwiki.validation import validate_index_parameters, validate_languages_list
+
+logger = get_logger(__name__)
 
 
 @handle_tool_errors
@@ -191,6 +188,11 @@ async def _run_indexing_pipeline(
             full_rebuild=full_rebuild,
             progress_callback=sync_progress_callback,
         )
+
+        # LanceDB 0.26: compact all dataset versions into a single stable
+        # snapshot so concurrent wiki-generation reads don't collide with
+        # deferred fragment compaction.
+        indexer.vector_store.stabilize()
 
         if notifier:
             await notifier.update(

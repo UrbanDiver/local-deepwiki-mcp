@@ -7,7 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from local_deepwiki.handlers._shared import build_wiki_resource_uri, wrap_tool_response
+from local_deepwiki.handlers._response import (
+    build_wiki_resource_uri,
+    wrap_tool_response,
+)
 
 
 class TestWrapToolResponse:

@@ -11,35 +11,41 @@ from typing import Any
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
+from local_deepwiki.config import get_config
+from local_deepwiki.core.audit import get_audit_logger
 from local_deepwiki.core.path_utils import validate_sub_path
-from local_deepwiki.handlers._shared import (
-    MAX_WIKI_PAGE_SIZE,
+from local_deepwiki.core.rate_limiter import get_rate_limiter
+from local_deepwiki.errors import ValidationError, path_not_found_error
+from local_deepwiki.handlers._error_handling import handle_tool_errors
+from local_deepwiki.handlers._export_validation import _validate_export_path
+from local_deepwiki.handlers._index_helpers import (
+    _create_vector_store,
+    _load_index_status,
+)
+from local_deepwiki.handlers._response import (
+    build_wiki_resource_uri,
+    make_tool_text_content,
+)
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import (
     AskQuestionArgs,
     ExportWikiHtmlArgs,
     ExportWikiPdfArgs,
-    Permission,
     ReadWikiPageArgs,
     ReadWikiStructureArgs,
     SearchCodeArgs,
-    ValidationError,
-    _create_vector_store,
-    _load_index_status,
-    _validate_export_path,
-    build_wiki_resource_uri,
-    get_access_controller,
-    get_audit_logger,
-    get_config,
-    get_embedding_provider,
-    get_rate_limiter,
-    handle_tool_errors,
-    logger,
-    make_tool_text_content,
-    path_not_found_error,
+)
+from local_deepwiki.providers.embeddings import get_embedding_provider
+from local_deepwiki.security import Permission, get_access_controller
+from local_deepwiki.validation import (
+    MAX_WIKI_PAGE_SIZE,
     validate_chunk_type,
     validate_language,
     validate_path_pattern,
     validate_query_parameters,
 )
+
+logger = get_logger(__name__)
 
 # Re-export indexing handler and helpers for backward compatibility
 from local_deepwiki.handlers.indexing import (  # noqa: F401

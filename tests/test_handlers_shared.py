@@ -1,4 +1,4 @@
-"""Tests for handlers._shared module."""
+"""Tests for handler shared modules (_error_handling, _export_validation, etc.)."""
 
 import asyncio
 import json
@@ -16,17 +16,18 @@ from local_deepwiki.errors import (
     ValidationError,
     format_error_response,
 )
-from local_deepwiki.handlers._shared import (
+from local_deepwiki.handlers._error_handling import handle_tool_errors
+from local_deepwiki.handlers._export_validation import (
     FORBIDDEN_EXPORT_DIRS,
     FORBIDDEN_VAR_SUBDIRS,
-    ProgressNotifier,
-    create_progress_notifier,
-    handle_tool_errors,
+    _validate_export_path,
+)
+from local_deepwiki.handlers._index_helpers import (
     _format_research_results,
     _is_test_file,
     _load_index_status,
-    _validate_export_path,
 )
+from local_deepwiki.handlers._progress import ProgressNotifier, create_progress_notifier
 from local_deepwiki.progress import OperationType, ProgressPhase, ProgressUpdate
 from local_deepwiki.security import AccessDeniedException, AuthenticationException
 
@@ -324,7 +325,7 @@ class TestLoadIndexStatus:
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
 
-        with patch("local_deepwiki.handlers._shared.get_config") as mock_config:
+        with patch("local_deepwiki.handlers._index_helpers.get_config") as mock_config:
             config = Mock()
             wiki_path = tmp_path / ".deepwiki"
             wiki_path.mkdir()
@@ -358,7 +359,7 @@ class TestLoadIndexStatus:
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
 
-        with patch("local_deepwiki.handlers._shared.get_config") as mock_config:
+        with patch("local_deepwiki.handlers._index_helpers.get_config") as mock_config:
             config = Mock()
             wiki_path = tmp_path / ".deepwiki"
             vector_db_path = tmp_path / "vectors.lance"  # Does not exist
@@ -377,7 +378,7 @@ class TestLoadIndexStatus:
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
 
-        with patch("local_deepwiki.handlers._shared.get_config") as mock_config:
+        with patch("local_deepwiki.handlers._index_helpers.get_config") as mock_config:
             config = Mock()
             wiki_path = tmp_path / ".deepwiki"
             wiki_path.mkdir()

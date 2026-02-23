@@ -9,20 +9,20 @@ from typing import Any
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
-from local_deepwiki.handlers._shared import (
-    GenerateCodemapArgs,
-    Permission,
-    SuggestCodemapTopicsArgs,
+from local_deepwiki.core.rate_limiter import get_rate_limiter
+from local_deepwiki.errors import path_not_found_error
+from local_deepwiki.handlers._error_handling import handle_tool_errors
+from local_deepwiki.handlers._index_helpers import (
     _create_vector_store,
     _load_index_status,
-    get_access_controller,
-    get_embedding_provider,
-    get_rate_limiter,
-    handle_tool_errors,
-    logger,
-    path_not_found_error,
-    validate_query_parameters,
 )
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import GenerateCodemapArgs, SuggestCodemapTopicsArgs
+from local_deepwiki.providers.embeddings import get_embedding_provider
+from local_deepwiki.security import Permission, get_access_controller
+from local_deepwiki.validation import validate_query_parameters
+
+logger = get_logger(__name__)
 
 
 @handle_tool_errors

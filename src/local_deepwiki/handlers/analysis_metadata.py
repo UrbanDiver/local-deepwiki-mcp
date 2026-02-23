@@ -15,21 +15,23 @@ from pydantic import ValidationError as PydanticValidationError
 STALE_DOCS_THRESHOLD_SECONDS = 30 * 24 * 60 * 60
 
 from local_deepwiki.core.path_utils import validate_file_in_repo
-from local_deepwiki.handlers._shared import (
+from local_deepwiki.errors import ValidationError, path_not_found_error
+from local_deepwiki.handlers._error_handling import handle_tool_errors
+from local_deepwiki.handlers._index_helpers import (
+    _create_vector_store,
+    _load_index_status,
+)
+from local_deepwiki.handlers._response import make_tool_text_content
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import (
     GetComplexityMetricsArgs,
     GetFileContextArgs,
     GetProjectManifestArgs,
     GetWikiStatsArgs,
-    Permission,
-    ValidationError,
-    _create_vector_store,
-    _load_index_status,
-    get_access_controller,
-    handle_tool_errors,
-    logger,
-    make_tool_text_content,
-    path_not_found_error,
 )
+from local_deepwiki.security import Permission, get_access_controller
+
+logger = get_logger(__name__)
 
 
 @handle_tool_errors
