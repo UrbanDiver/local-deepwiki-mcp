@@ -193,6 +193,84 @@ async def _generate_and_format_doc(
     return content
 
 
+def _add_api_reference_section(abs_file_path: Path) -> str:
+    """Generate API reference section with type signatures."""
+    if not abs_file_path.exists():
+        return ""
+    api_docs = get_file_api_docs(abs_file_path)
+    return ("\n\n## API Reference\n\n" + api_docs) if api_docs else ""
+
+
+def _add_class_diagram_section(all_file_chunks: list[CodeChunk]) -> str:
+    """Generate class diagram if file has classes."""
+    class_diagram = generate_class_diagram(all_file_chunks)
+    return ("\n\n## Class Diagram\n\n" + class_diagram) if class_diagram else ""
+
+
+def _add_call_graph_section(abs_file_path: Path, repo_path: Path) -> str:
+    """Generate call graph diagram and used-by information."""
+    if not abs_file_path.exists():
+        return ""
+
+    parts: list[str] = []
+
+    call_graph = get_file_call_graph(abs_file_path, repo_path)
+    if call_graph:
+        parts.append("\n\n## Call Graph\n\n```mermaid\n" + call_graph + "\n```")
+
+    callers_map = get_file_callers(abs_file_path, repo_path)
+    if callers_map:
+        used_by_lines = [
+            "## Used By",
+            "",
+            "Functions and methods in this file and their callers:",
+            "",
+        ]
+        for callee in sorted(callers_map.keys()):
+            callers = callers_map[callee]
+            if callers:
+                caller_list = ", ".join(f"`{c}`" for c in sorted(callers))
+                used_by_lines.append(f"- **`{callee}`**: called by {caller_list}")
+        if len(used_by_lines) > 4:  # More than just the header
+            parts.append("\n\n" + "\n".join(used_by_lines))
+
+    return "".join(parts)
+
+
+def _add_examples_section(
+    abs_file_path: Path,
+    repo_path: Path,
+    all_file_chunks: list[CodeChunk],
+) -> str:
+    """Add usage examples from test files."""
+    entity_names = [
+        chunk.name for chunk in all_file_chunks if chunk.name and len(chunk.name) > 2
+    ]
+    if not entity_names:
+        return ""
+    examples_md = get_file_examples(
+        source_file=abs_file_path,
+        repo_root=repo_path,
+        entity_names=entity_names,
+        max_examples=5,
+    )
+    return ("\n\n" + examples_md) if examples_md else ""
+
+
+def _add_blame_section(
+    repo_path: Path,
+    file_path: str,
+    all_file_chunks: list[CodeChunk],
+) -> str:
+    """Add git blame "Last Modified" section."""
+    blame_section = _generate_blame_section(
+        repo_path=repo_path,
+        file_path=file_path,
+        chunks=all_file_chunks,
+    )
+    return ("\n\n" + blame_section) if blame_section else ""
+
+
 def _generate_file_enrichments(
     content: str,
     abs_file_path: Path,
@@ -212,64 +290,15 @@ def _generate_file_enrichments(
     Returns:
         The enriched documentation content.
     """
-    # Generate API reference section with type signatures
-    if abs_file_path.exists():
-        api_docs = get_file_api_docs(abs_file_path)
-        if api_docs:
-            content += "\n\n## API Reference\n\n" + api_docs
-
-    # Generate class diagram if file has classes
-    class_diagram = generate_class_diagram(all_file_chunks)
-    if class_diagram:
-        content += "\n\n## Class Diagram\n\n" + class_diagram
-
-    # Generate call graph diagram and used-by information
-    if abs_file_path.exists():
-        call_graph = get_file_call_graph(abs_file_path, repo_path)
-        if call_graph:
-            content += "\n\n## Call Graph\n\n```mermaid\n" + call_graph + "\n```"
-
-        # Add "Used by" section showing callers for each function
-        callers_map = get_file_callers(abs_file_path, repo_path)
-        if callers_map:
-            used_by_lines = [
-                "## Used By",
-                "",
-                "Functions and methods in this file and their callers:",
-                "",
-            ]
-            for callee in sorted(callers_map.keys()):
-                callers = callers_map[callee]
-                if callers:
-                    caller_list = ", ".join(f"`{c}`" for c in sorted(callers))
-                    used_by_lines.append(f"- **`{callee}`**: called by {caller_list}")
-            if len(used_by_lines) > 4:  # More than just the header
-                content += "\n\n" + "\n".join(used_by_lines)
-
-    # Add usage examples from test files
-    entity_names = [
-        chunk.name for chunk in all_file_chunks if chunk.name and len(chunk.name) > 2
-    ]
-    if entity_names:
-        examples_md = get_file_examples(
-            source_file=abs_file_path,
-            repo_root=repo_path,
-            entity_names=entity_names,
-            max_examples=5,
-        )
-        if examples_md:
-            content += "\n\n" + examples_md
-
-    # Add git blame "Last Modified" section
-    blame_section = _generate_blame_section(
-        repo_path=repo_path,
-        file_path=file_path,
-        chunks=all_file_chunks,
+    return content + "".join(
+        [
+            _add_api_reference_section(abs_file_path),
+            _add_class_diagram_section(all_file_chunks),
+            _add_call_graph_section(abs_file_path, repo_path),
+            _add_examples_section(abs_file_path, repo_path, all_file_chunks),
+            _add_blame_section(repo_path, file_path, all_file_chunks),
+        ]
     )
-    if blame_section:
-        content += "\n\n" + blame_section
-
-    return content
 
 
 async def generate_single_file_doc(

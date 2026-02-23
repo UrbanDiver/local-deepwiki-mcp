@@ -395,6 +395,98 @@ def validation_error(
     )
 
 
+def _classify_hint(
+    msg_lower: str,
+    classifiers: tuple[tuple[tuple[str, ...], str], ...],
+    default: str,
+) -> str:
+    """Match the first classifier whose keywords appear in the message.
+
+    Args:
+        msg_lower: Lowercased error message to classify.
+        classifiers: Tuple of ((keywords...), hint) pairs checked in order.
+        default: Hint returned when no classifier matches.
+
+    Returns:
+        The matching hint string, or *default*.
+    """
+    for keywords, hint in classifiers:
+        if any(kw in msg_lower for kw in keywords):
+            return hint
+    return default
+
+
+# Sentinel values replaced by callables in _classify_provider_error
+_AUTH_SENTINEL = "__auth__"
+_CONNECTION_SENTINEL = "__connection__"
+
+_PROVIDER_HINT_CLASSIFIERS: tuple[tuple[tuple[str, ...], str, str], ...] = (
+    (
+        ("api key", "authentication", "401"),
+        _AUTH_SENTINEL,
+        "{title} API authentication failed",
+    ),
+    (
+        ("rate limit", "429"),
+        "You've hit the API rate limit. Wait a few minutes and try again, "
+        "or consider upgrading your API plan.",
+        "{title} rate limit exceeded",
+    ),
+    (
+        ("connection", "timeout", "network"),
+        _CONNECTION_SENTINEL,
+        "Failed to connect to {title}",
+    ),
+    (
+        ("overloaded", "503", "502"),
+        "The provider's servers are temporarily overloaded. "
+        "Wait a few minutes and try again.",
+        "{title} service temporarily unavailable",
+    ),
+)
+
+# "model" + "not found" requires both keywords — handled separately
+_PROVIDER_MODEL_NOT_FOUND_HINT = (
+    "The requested model is not available. Check the model name "
+    "and ensure it's accessible in your {title} account."
+)
+
+
+def _classify_provider_error(
+    provider_name: str,
+    original_error: Exception,
+) -> tuple[str, str]:
+    """Return (hint, message) for a provider error.
+
+    Handles special sentinel values that delegate to callable hint builders.
+    """
+    error_str = str(original_error).lower()
+    title = provider_name.title()
+
+    for keywords, hint_or_sentinel, message_template in _PROVIDER_HINT_CLASSIFIERS:
+        if any(kw in error_str for kw in keywords):
+            if hint_or_sentinel == _AUTH_SENTINEL:
+                hint = _get_api_key_hint(provider_name)
+            elif hint_or_sentinel == _CONNECTION_SENTINEL:
+                hint = _get_connection_hint(provider_name)
+            else:
+                hint = hint_or_sentinel
+            return hint, message_template.format(title=title)
+
+    # Two-keyword check: both "model" and "not found" must be present
+    if "model" in error_str and "not found" in error_str:
+        return (
+            _PROVIDER_MODEL_NOT_FOUND_HINT.format(title=title),
+            f"{title} model not found",
+        )
+
+    return (
+        f"Check your {title} configuration and API status. "
+        f"See provider documentation for details.",
+        f"{title} provider error: {original_error}",
+    )
+
+
 def provider_error(
     provider_name: str,
     original_error: Exception,
@@ -420,33 +512,7 @@ def provider_error(
         except Exception as e:
             raise provider_error("anthropic", e)
     """
-    error_str = str(original_error).lower()
-
-    # Analyze the error to provide specific hints
-    if "api key" in error_str or "authentication" in error_str or "401" in error_str:
-        hint = _get_api_key_hint(provider_name)
-        message = f"{provider_name.title()} API authentication failed"
-    elif "rate limit" in error_str or "429" in error_str:
-        hint = (
-            "You've hit the API rate limit. Wait a few minutes and try again, "
-            "or consider upgrading your API plan."
-        )
-        message = f"{provider_name.title()} rate limit exceeded"
-    elif "connection" in error_str or "timeout" in error_str or "network" in error_str:
-        hint = _get_connection_hint(provider_name)
-        message = f"Failed to connect to {provider_name.title()}"
-    elif "model" in error_str and "not found" in error_str:
-        hint = f"The requested model is not available. Check the model name and ensure it's accessible in your {provider_name.title()} account."
-        message = f"{provider_name.title()} model not found"
-    elif "overloaded" in error_str or "503" in error_str or "502" in error_str:
-        hint = (
-            "The provider's servers are temporarily overloaded. "
-            "Wait a few minutes and try again."
-        )
-        message = f"{provider_name.title()} service temporarily unavailable"
-    else:
-        hint = f"Check your {provider_name.title()} configuration and API status. See provider documentation for details."
-        message = f"{provider_name.title()} provider error: {original_error}"
+    hint, message = _classify_provider_error(provider_name, original_error)
 
     return BaseProviderError(
         message=message,
@@ -530,6 +596,26 @@ def environment_error(
     )
 
 
+_INDEXING_HINT_CLASSIFIERS: tuple[tuple[tuple[str, ...], str], ...] = (
+    (
+        ("not exist", "not found"),
+        "Check that the repository path is correct and accessible.",
+    ),
+    (
+        ("permission",),
+        "Check file permissions. You may need to run with elevated privileges or fix ownership.",
+    ),
+    (
+        ("empty",),
+        "The repository appears to be empty or contain no supported files. Check that source files exist.",
+    ),
+    (
+        ("parse", "syntax"),
+        "There was a problem parsing source files. Check for syntax errors in the affected files.",
+    ),
+)
+
+
 def indexing_error(
     message: str,
     *,
@@ -548,19 +634,11 @@ def indexing_error(
     Returns:
         An IndexingError with formatted message and hint.
     """
-    # Determine hint based on the error message
-    msg_lower = message.lower()
-
-    if "not exist" in msg_lower or "not found" in msg_lower:
-        hint = "Check that the repository path is correct and accessible."
-    elif "permission" in msg_lower:
-        hint = "Check file permissions. You may need to run with elevated privileges or fix ownership."
-    elif "empty" in msg_lower:
-        hint = "The repository appears to be empty or contain no supported files. Check that source files exist."
-    elif "parse" in msg_lower or "syntax" in msg_lower:
-        hint = "There was a problem parsing source files. Check for syntax errors in the affected files."
-    else:
-        hint = "Check the repository path, file permissions, and ensure source files are readable."
+    hint = _classify_hint(
+        message.lower(),
+        _INDEXING_HINT_CLASSIFIERS,
+        "Check the repository path, file permissions, and ensure source files are readable.",
+    )
 
     return IndexingError(
         message=message,
@@ -569,6 +647,28 @@ def indexing_error(
         repo_path=repo_path,
         file_path=file_path,
     )
+
+
+_EXPORT_PDF_HINTS: tuple[tuple[tuple[str, ...], str], ...] = (
+    (
+        ("weasyprint", "cairo"),
+        "PDF export requires WeasyPrint. Install it with:\n"
+        "  pip install weasyprint\n"
+        "On macOS, you may also need: brew install pango",
+    ),
+    (
+        ("mermaid", "mmdc"),
+        "Mermaid diagram rendering requires mermaid-cli. Install it with:\n"
+        "  npm install -g @mermaid-js/mermaid-cli",
+    ),
+)
+
+_EXPORT_HTML_HINTS: tuple[tuple[tuple[str, ...], str], ...] = (
+    (
+        ("permission",),
+        "Check that the output directory is writable.",
+    ),
+)
 
 
 def export_error(
@@ -592,24 +692,17 @@ def export_error(
     msg_lower = message.lower()
 
     if export_format == "pdf":
-        if "weasyprint" in msg_lower or "cairo" in msg_lower:
-            hint = (
-                "PDF export requires WeasyPrint. Install it with:\n"
-                "  pip install weasyprint\n"
-                "On macOS, you may also need: brew install pango"
-            )
-        elif "mermaid" in msg_lower or "mmdc" in msg_lower:
-            hint = (
-                "Mermaid diagram rendering requires mermaid-cli. Install it with:\n"
-                "  npm install -g @mermaid-js/mermaid-cli"
-            )
-        else:
-            hint = "Check that the output path is writable and you have the required dependencies installed."
-    else:  # html
-        if "permission" in msg_lower:
-            hint = "Check that the output directory is writable."
-        else:
-            hint = "Check that the wiki path exists and contains valid markdown files."
+        hint = _classify_hint(
+            msg_lower,
+            _EXPORT_PDF_HINTS,
+            "Check that the output path is writable and you have the required dependencies installed.",
+        )
+    else:
+        hint = _classify_hint(
+            msg_lower,
+            _EXPORT_HTML_HINTS,
+            "Check that the wiki path exists and contains valid markdown files.",
+        )
 
     return ExportError(
         message=message,
@@ -618,6 +711,22 @@ def export_error(
         export_format=export_format,
         output_path=output_path,
     )
+
+
+_RESEARCH_HINT_CLASSIFIERS: tuple[tuple[tuple[str, ...], str], ...] = (
+    (
+        ("timeout", "timed out", "cancelled"),
+        "The research took too long. Try a simpler question or reduce the max_chunks parameter.",
+    ),
+    (
+        ("llm", "provider"),
+        "The LLM provider failed. Check your API key and network connection.",
+    ),
+    (
+        ("vector", "search"),
+        "Vector search failed. Make sure the repository is indexed first with index_repository.",
+    ),
+)
 
 
 def research_error(
@@ -638,16 +747,11 @@ def research_error(
     Returns:
         A ResearchError with formatted message and hint.
     """
-    msg_lower = message.lower()
-
-    if "timeout" in msg_lower or "timed out" in msg_lower or "cancelled" in msg_lower:
-        hint = "The research took too long. Try a simpler question or reduce the max_chunks parameter."
-    elif "llm" in msg_lower or "provider" in msg_lower:
-        hint = "The LLM provider failed. Check your API key and network connection."
-    elif "vector" in msg_lower or "search" in msg_lower:
-        hint = "Vector search failed. Make sure the repository is indexed first with index_repository."
-    else:
-        hint = "Check that the repository is indexed and the LLM provider is configured correctly."
+    hint = _classify_hint(
+        message.lower(),
+        _RESEARCH_HINT_CLASSIFIERS,
+        "Check that the repository is indexed and the LLM provider is configured correctly.",
+    )
 
     return ResearchError(
         message=message,
@@ -762,6 +866,44 @@ def map_exception_to_deepwiki_error(
     )
 
 
+_PATH_SANITIZATION_PATTERNS: tuple[tuple[str, str], ...] = (
+    (r"/[a-zA-Z0-9/_.-]*\.py", ".py"),
+    (r"/[a-zA-Z0-9/_.-]*\.yml", ".yml"),
+    (r"/[a-zA-Z0-9/_.-]*\.yaml", ".yaml"),
+    # Remove absolute paths (3+ segments like /foo/bar/baz, not short URL paths)
+    (r"/[a-zA-Z0-9_.-]+(?:/[a-zA-Z0-9_.-]+){2,}", "<path>"),
+)
+
+_GENERAL_SANITIZATION_PATTERNS: tuple[tuple[str, str], ...] = (
+    # Localhost URLs (prevents revealing local service configuration)
+    (r"http://localhost:\d+", "http://internal-service"),
+    (r"http://127\.0\.0\.1:\d+", "http://internal-service"),
+    (r"localhost:\d+", "internal-service"),
+    (r"127\.0\.0\.1:\d+", "internal-service"),
+    # API keys
+    (r"sk-[a-zA-Z0-9]{40,}", "[REDACTED_KEY]"),
+    (r"Bearer [a-zA-Z0-9_-]{20,}", "Bearer [REDACTED_TOKEN]"),
+    (r"token [a-zA-Z0-9_-]{20,}", "token [REDACTED_TOKEN]"),
+    # Database connection strings
+    (
+        r"(postgres|mysql|mongodb)://[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+@[^/\s]+",
+        r"\1://[REDACTED]@[REDACTED]",
+    ),
+    # AWS credentials
+    (r"AKIA[0-9A-Z]{16}", "[REDACTED_AWS_KEY]"),
+)
+
+
+def _apply_sanitization_patterns(
+    text: str,
+    patterns: tuple[tuple[str, str], ...],
+) -> str:
+    """Apply a sequence of regex substitution patterns to *text*."""
+    for pattern, replacement in patterns:
+        text = re.sub(pattern, replacement, text)
+    return text
+
+
 def sanitize_error_message(message: str, sanitize_paths: bool = True) -> str:
     """Remove sensitive information from error messages.
 
@@ -789,39 +931,11 @@ def sanitize_error_message(message: str, sanitize_paths: bool = True) -> str:
     result = message
 
     if sanitize_paths:
-        # Replace home directory paths
         home = str(Path.home())
         result = result.replace(home, "~")
+        result = _apply_sanitization_patterns(result, _PATH_SANITIZATION_PATTERNS)
 
-        # Remove absolute paths (keep only filename)
-        # Pattern: /path/to/file.py → file.py
-        result = re.sub(r"/[a-zA-Z0-9/_.-]*\.py", ".py", result)
-        result = re.sub(r"/[a-zA-Z0-9/_.-]*\.yml", ".yml", result)
-        result = re.sub(r"/[a-zA-Z0-9/_.-]*\.yaml", ".yaml", result)
-
-        # Remove absolute paths (3+ segments like /foo/bar/baz, not short URL paths)
-        result = re.sub(r"/[a-zA-Z0-9_.-]+(?:/[a-zA-Z0-9_.-]+){2,}", "<path>", result)
-
-    # Remove localhost URLs (prevents revealing local service configuration)
-    result = re.sub(r"http://localhost:\d+", "http://internal-service", result)
-    result = re.sub(r"http://127\.0\.0\.1:\d+", "http://internal-service", result)
-    result = re.sub(r"localhost:\d+", "internal-service", result)
-    result = re.sub(r"127\.0\.0\.1:\d+", "internal-service", result)
-
-    # Remove API keys (patterns)
-    result = re.sub(r"sk-[a-zA-Z0-9]{40,}", "[REDACTED_KEY]", result)
-    result = re.sub(r"Bearer [a-zA-Z0-9_-]{20,}", "Bearer [REDACTED_TOKEN]", result)
-    result = re.sub(r"token [a-zA-Z0-9_-]{20,}", "token [REDACTED_TOKEN]", result)
-
-    # Remove database connection strings
-    result = re.sub(
-        r"(postgres|mysql|mongodb)://[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+@[^/\s]+",
-        r"\1://[REDACTED]@[REDACTED]",
-        result,
-    )
-
-    # Remove AWS credentials patterns
-    result = re.sub(r"AKIA[0-9A-Z]{16}", "[REDACTED_AWS_KEY]", result)
+    result = _apply_sanitization_patterns(result, _GENERAL_SANITIZATION_PATTERNS)
 
     return result
 

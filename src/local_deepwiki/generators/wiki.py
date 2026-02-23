@@ -635,6 +635,43 @@ class WikiGenerator:
         await self._write_page(page)
         ctx.pages_generated += 1
 
+    async def _try_load_cached_auxiliary_pages(
+        self,
+        ctx: _GenerationContext,
+        aux_pages: list[tuple[str, str]],
+        index_status: IndexStatus,
+    ) -> bool:
+        """Try to load all auxiliary pages from cache.
+
+        Returns True if all pages loaded successfully; False (with rollback)
+        if any page was missing.
+        """
+        if ctx.full_rebuild or self.status_manager.needs_regeneration_structural(
+            aux_pages[0][0], index_status
+        ):
+            return False
+
+        for page_path, _title in aux_pages:
+            existing = await self.status_manager.load_existing_page(page_path)
+            if existing is None:
+                # Partial load failed — rollback pages we already added
+                loaded_paths = {
+                    pp for pp, _ in aux_pages if pp in self.status_manager.page_statuses
+                }
+                ctx.pages = [p for p in ctx.pages if p.path not in loaded_paths]
+                for pp in loaded_paths:
+                    self.status_manager.page_statuses.pop(pp, None)
+                ctx.pages_skipped -= len(loaded_paths)
+                return False
+
+            ctx.pages.append(existing)
+            self.status_manager.record_summary_page_status(
+                existing, ctx.all_source_files, index_status
+            )
+            ctx.pages_skipped += 1
+
+        return True
+
     async def _generate_auxiliary_pages(
         self,
         ctx: _GenerationContext,
@@ -659,36 +696,8 @@ class WikiGenerator:
             ("dependency-graph.md", "Dependency Graph"),
         ]
 
-        # If structure unchanged, try to load all auxiliary pages from disk
-        if (
-            not ctx.full_rebuild
-            and not self.status_manager.needs_regeneration_structural(
-                aux_pages[0][0], index_status
-            )
-        ):
-            all_loaded = True
-            for page_path, _title in aux_pages:
-                existing = await self.status_manager.load_existing_page(page_path)
-                if existing is not None:
-                    ctx.pages.append(existing)
-                    self.status_manager.record_summary_page_status(
-                        existing, ctx.all_source_files, index_status
-                    )
-                    ctx.pages_skipped += 1
-                else:
-                    all_loaded = False
-                    break
-            if all_loaded:
-                return
-
-            # Partial load failed — regenerate all; undo pages we added
-            loaded_paths = {
-                pp for pp, _ in aux_pages if pp in self.status_manager.page_statuses
-            }
-            ctx.pages = [p for p in ctx.pages if p.path not in loaded_paths]
-            for pp in loaded_paths:
-                self.status_manager.page_statuses.pop(pp, None)
-            ctx.pages_skipped -= len(loaded_paths)
+        if await self._try_load_cached_auxiliary_pages(ctx, aux_pages, index_status):
+            return
 
         async def _safe_dependency_graph() -> str | None:
             """Wrapper that catches dependency graph errors."""
@@ -706,34 +715,15 @@ class WikiGenerator:
                 return None
 
         # Run all auxiliary generators concurrently
-        (
-            inheritance_content,
-            glossary_content,
-            coverage_content,
-            dep_content,
-        ) = await asyncio.gather(
+        contents = await asyncio.gather(
             generate_inheritance_page(index_status, self.vector_store),
             generate_glossary_page(index_status, self.vector_store),
             generate_coverage_page(index_status, self.vector_store),
             _safe_dependency_graph(),
         )
 
-        await self._add_auxiliary_page(
-            ctx,
-            inheritance_content,
-            "inheritance.md",
-            "Class Inheritance",
-            index_status,
-        )
-        await self._add_auxiliary_page(
-            ctx, glossary_content, "glossary.md", "Glossary", index_status
-        )
-        await self._add_auxiliary_page(
-            ctx, coverage_content, "coverage.md", "Documentation Coverage", index_status
-        )
-        await self._add_auxiliary_page(
-            ctx, dep_content, "dependency-graph.md", "Dependency Graph", index_status
-        )
+        for (page_path, title), content in zip(aux_pages, contents):
+            await self._add_auxiliary_page(ctx, content, page_path, title, index_status)
 
     @staticmethod
     def _sort_generators_by_dependencies(

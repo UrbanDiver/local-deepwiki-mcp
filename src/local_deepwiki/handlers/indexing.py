@@ -128,6 +128,89 @@ def _validate_and_build_config(
     return repo_path, config, llm_provider, embedding_provider
 
 
+async def _notify(
+    notifier: Any,
+    current: int,
+    phase: ProgressPhase,
+    message: str,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """Send a progress notification if a notifier is available."""
+    if notifier is None:
+        return
+    await notifier.update(
+        current=current, phase=phase, message=message, metadata=metadata
+    )
+
+
+def _generate_wiki_lazy(
+    indexer: RepositoryIndexer,
+    status: Any,
+    config: Any,
+) -> WikiStructure:
+    """Lazy mode: build entity registry only, defer all page generation."""
+    from local_deepwiki.generators.crosslinks import build_entity_registry_from_store
+    from local_deepwiki.generators.wiki_files import filter_significant_files
+
+    significant = filter_significant_files(status.files, config.wiki.max_file_docs)
+    sig_paths = {f.path for f in significant}
+    entity_reg = build_entity_registry_from_store(
+        indexer.vector_store.get_all_chunks(), sig_paths
+    )
+    entity_reg.save(indexer.wiki_path / "entity_registry.json")
+
+    return WikiStructure(root=str(indexer.wiki_path), pages=[])
+
+
+async def _generate_wiki_hybrid(
+    repo_path: Path,
+    indexer: RepositoryIndexer,
+    status: Any,
+    config: Any,
+    llm_provider: str | None,
+    sync_progress_callback: Any,
+    full_rebuild: bool,
+) -> WikiStructure:
+    """Hybrid mode: generate eager pages, then build full entity registry."""
+    from local_deepwiki.generators.crosslinks import build_entity_registry_from_store
+    from local_deepwiki.generators.wiki_files import filter_significant_files
+
+    eager_limit = config.wiki.hybrid_eager_pages
+    wiki_structure = await generate_wiki(
+        repo_path=repo_path,
+        wiki_path=indexer.wiki_path,
+        vector_store=indexer.vector_store,
+        index_status=status,
+        config=config,
+        llm_provider=llm_provider,
+        progress_callback=sync_progress_callback,
+        full_rebuild=full_rebuild,
+        max_file_pages=eager_limit,
+    )
+
+    significant = filter_significant_files(status.files, config.wiki.max_file_docs)
+    sig_paths = {f.path for f in significant}
+    entity_reg = build_entity_registry_from_store(
+        indexer.vector_store.get_all_chunks(), sig_paths
+    )
+    entity_reg.save(indexer.wiki_path / "entity_registry.json")
+
+    remaining = len(significant) - eager_limit
+    if remaining > 0:
+        logger.info(
+            "Hybrid mode: %d pages generated eagerly, %d deferred to lazy/drain",
+            eager_limit,
+            remaining,
+        )
+        if config.wiki.prefetch_drain:
+            from local_deepwiki.generators.lazy_generator import get_lazy_generator
+
+            lazy_gen = get_lazy_generator(indexer.wiki_path, config)
+            lazy_gen.kickstart_drain()
+
+    return wiki_structure
+
+
 async def _run_indexing_pipeline(
     repo_path: Path,
     config: Any,
@@ -164,25 +247,25 @@ async def _run_indexing_pipeline(
         progress_messages.append(f"[{current}/{total}] {msg}")
 
     try:
-        if notifier:
-            await notifier.update(
-                current=1,
-                phase=ProgressPhase.SCANNING,
-                message=f"Starting indexing of {repo_path.name}",
-                metadata={
-                    "files_processed": 0,
-                    "total_files": 0,
-                    "chunks_created": 0,
-                    "pages_generated": 0,
-                },
-            )
+        await _notify(
+            notifier,
+            current=1,
+            phase=ProgressPhase.SCANNING,
+            message=f"Starting indexing of {repo_path.name}",
+            metadata={
+                "files_processed": 0,
+                "total_files": 0,
+                "chunks_created": 0,
+                "pages_generated": 0,
+            },
+        )
 
-        if notifier:
-            await notifier.update(
-                current=2,
-                phase=ProgressPhase.PARSING,
-                message="Parsing source files...",
-            )
+        await _notify(
+            notifier,
+            current=2,
+            phase=ProgressPhase.PARSING,
+            message="Parsing source files...",
+        )
 
         status = await indexer.index(
             full_rebuild=full_rebuild,
@@ -194,24 +277,24 @@ async def _run_indexing_pipeline(
         # deferred fragment compaction.
         indexer.vector_store.stabilize()
 
-        if notifier:
-            await notifier.update(
-                current=4,
-                phase=ProgressPhase.STORING,
-                message=f"Indexed {status.total_files} files, {status.total_chunks} chunks",
-                metadata={
-                    "files_processed": status.total_files,
-                    "total_files": status.total_files,
-                    "chunks_created": status.total_chunks,
-                },
-            )
+        await _notify(
+            notifier,
+            current=4,
+            phase=ProgressPhase.STORING,
+            message=f"Indexed {status.total_files} files, {status.total_chunks} chunks",
+            metadata={
+                "files_processed": status.total_files,
+                "total_files": status.total_files,
+                "chunks_created": status.total_chunks,
+            },
+        )
 
-        if notifier:
-            await notifier.update(
-                current=5,
-                phase=ProgressPhase.WIKI_GENERATION,
-                message="Generating wiki documentation...",
-            )
+        await _notify(
+            notifier,
+            current=5,
+            phase=ProgressPhase.WIKI_GENERATION,
+            message="Generating wiki documentation...",
+        )
 
         from local_deepwiki.config import GenerationMode
 
@@ -219,68 +302,18 @@ async def _run_indexing_pipeline(
 
         match gen_mode:
             case GenerationMode.LAZY:
-                from local_deepwiki.generators.crosslinks import (
-                    build_entity_registry_from_store,
-                )
-                from local_deepwiki.generators.wiki_files import (
-                    filter_significant_files,
-                )
-
-                significant = filter_significant_files(
-                    status.files, config.wiki.max_file_docs
-                )
-                sig_paths = {f.path for f in significant}
-                registry = build_entity_registry_from_store(
-                    indexer.vector_store.get_all_chunks(), sig_paths
-                )
-                registry.save(indexer.wiki_path / "entity_registry.json")
-
-                wiki_structure = WikiStructure(root=str(indexer.wiki_path), pages=[])
+                wiki_structure = _generate_wiki_lazy(indexer, status, config)
 
             case GenerationMode.HYBRID:
-                from local_deepwiki.generators.crosslinks import (
-                    build_entity_registry_from_store,
+                wiki_structure = await _generate_wiki_hybrid(
+                    repo_path,
+                    indexer,
+                    status,
+                    config,
+                    llm_provider,
+                    sync_progress_callback,
+                    full_rebuild,
                 )
-                from local_deepwiki.generators.wiki_files import (
-                    filter_significant_files,
-                )
-
-                eager_limit = config.wiki.hybrid_eager_pages
-                wiki_structure = await generate_wiki(
-                    repo_path=repo_path,
-                    wiki_path=indexer.wiki_path,
-                    vector_store=indexer.vector_store,
-                    index_status=status,
-                    config=config,
-                    llm_provider=llm_provider,
-                    progress_callback=sync_progress_callback,
-                    full_rebuild=full_rebuild,
-                    max_file_pages=eager_limit,
-                )
-
-                significant = filter_significant_files(
-                    status.files, config.wiki.max_file_docs
-                )
-                sig_paths = {f.path for f in significant}
-                entity_reg = build_entity_registry_from_store(
-                    indexer.vector_store.get_all_chunks(), sig_paths
-                )
-                entity_reg.save(indexer.wiki_path / "entity_registry.json")
-
-                remaining = len(significant) - eager_limit
-                if remaining > 0:
-                    logger.info(
-                        "Hybrid mode: %d pages generated eagerly, %d deferred to lazy/drain",
-                        eager_limit,
-                        remaining,
-                    )
-                    if config.wiki.prefetch_drain:
-                        from local_deepwiki.generators.lazy_generator import (
-                            get_lazy_generator,
-                        )
-
-                        lazy_gen = get_lazy_generator(indexer.wiki_path, config)
-                        lazy_gen.kickstart_drain()
 
             case _:
                 wiki_structure = await generate_wiki(
@@ -294,18 +327,19 @@ async def _run_indexing_pipeline(
                     full_rebuild=full_rebuild,
                 )
 
+        await _notify(
+            notifier,
+            current=6,
+            phase=ProgressPhase.COMPLETE,
+            message=f"Complete: {status.total_files} files, {status.total_chunks} chunks, {len(wiki_structure.pages)} pages",
+            metadata={
+                "files_processed": status.total_files,
+                "total_files": status.total_files,
+                "chunks_created": status.total_chunks,
+                "pages_generated": len(wiki_structure.pages),
+            },
+        )
         if notifier:
-            await notifier.update(
-                current=6,
-                phase=ProgressPhase.COMPLETE,
-                message=f"Complete: {status.total_files} files, {status.total_chunks} chunks, {len(wiki_structure.pages)} pages",
-                metadata={
-                    "files_processed": status.total_files,
-                    "total_files": status.total_files,
-                    "chunks_created": status.total_chunks,
-                    "pages_generated": len(wiki_structure.pages),
-                },
-            )
             await notifier.flush()
 
         registry.complete_operation(operation_id, record_timing=True)
