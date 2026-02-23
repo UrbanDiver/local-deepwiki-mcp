@@ -434,7 +434,7 @@ class TestBuildCrossFileGraph:
             ]
         )
 
-        with patch("local_deepwiki.generators.callgraph.CallGraphExtractor") as MockCGE:
+        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
             extractor = MagicMock()
             extractor.extract_from_file.return_value = {
                 "func_a": ["func_b"],
@@ -489,7 +489,7 @@ class TestBuildCrossFileGraph:
             ]
         )
 
-        with patch("local_deepwiki.generators.callgraph.CallGraphExtractor") as MockCGE:
+        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
             extractor = MagicMock()
             extractor.extract_from_file.return_value = {"handle": ["query"]}
             MockCGE.return_value = extractor
@@ -531,7 +531,7 @@ class TestBuildCrossFileGraph:
         # Return many levels of nested calls
         mock_vs.search = AsyncMock(return_value=[])
 
-        with patch("local_deepwiki.generators.callgraph.CallGraphExtractor") as MockCGE:
+        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
             extractor = MagicMock()
             extractor.extract_from_file.return_value = {"a": ["b", "c", "d"]}
             MockCGE.return_value = extractor
@@ -572,7 +572,7 @@ class TestBuildCrossFileGraph:
         mock_vs = AsyncMock()
         mock_vs.search = AsyncMock(return_value=[])
 
-        with patch("local_deepwiki.generators.callgraph.CallGraphExtractor") as MockCGE:
+        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
             extractor = MagicMock()
             # Simulate a huge call graph
             callees = [f"func_{i}" for i in range(100)]
@@ -862,7 +862,7 @@ class TestSuggestTopics:
             ),
         ]
 
-        with patch("local_deepwiki.generators.callgraph.CallGraphExtractor") as MockCGE:
+        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
             extractor = MagicMock()
             extractor.extract_from_file.return_value = {
                 "main": ["handle_request", "process_data", "send_response"],
@@ -922,7 +922,7 @@ class TestSuggestTopics:
             ),
         ]
 
-        with patch("local_deepwiki.generators.callgraph.CallGraphExtractor") as MockCGE:
+        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
             extractor = MagicMock()
 
             # BigDataModel gets 50 raw connections; handle_request gets 16
@@ -1551,7 +1551,7 @@ class TestSuggestTopicsStdlibFiltering:
             ),
         ]
 
-        with patch("local_deepwiki.generators.callgraph.CallGraphExtractor") as MockCGE:
+        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
             extractor = MagicMock()
             # Call graph includes stdlib names as callees
             extractor.extract_from_file.return_value = {
@@ -1601,7 +1601,7 @@ class TestSuggestTopicsStdlibFiltering:
             ),
         ]
 
-        with patch("local_deepwiki.generators.callgraph.CallGraphExtractor") as MockCGE:
+        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
             extractor = MagicMock()
             extractor.extract_from_file.return_value = {
                 "handle_request": ["validate", "process"],

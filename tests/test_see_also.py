@@ -9,7 +9,7 @@ from local_deepwiki.generators.see_also import (
     build_file_to_wiki_map,
     generate_see_also_section,
 )
-from local_deepwiki.generators.wiki_utils import relative_wiki_path as _relative_path
+from local_deepwiki.generators.wiki.utils import relative_wiki_path as _relative_path
 from local_deepwiki.models import ChunkType, CodeChunk, Language, WikiPage
 
 

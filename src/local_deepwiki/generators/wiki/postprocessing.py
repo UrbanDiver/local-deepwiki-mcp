@@ -15,13 +15,16 @@ from local_deepwiki.generators.crosslinks import add_cross_links
 from local_deepwiki.generators.search import write_full_search_index
 from local_deepwiki.generators.see_also import add_see_also_sections
 from local_deepwiki.generators.source_refs import add_source_refs_sections
-from local_deepwiki.generators.stale_detection import generate_stale_report_page
+from local_deepwiki.generators.analysis.stale_detection import (
+    generate_stale_report_page,
+)
 from local_deepwiki.generators.toc import generate_toc, write_toc
-from local_deepwiki.generators.wiki_codemaps import generate_codemap_pages
+from local_deepwiki.generators.wiki.codemap_pages import generate_codemap_pages
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import WikiGenerationStatus, WikiPage
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
     from pathlib import Path
 
     from local_deepwiki.config import WikiConfig
@@ -29,8 +32,9 @@ if TYPE_CHECKING:
     from local_deepwiki.generators.crosslinks import EntityRegistry
     from local_deepwiki.generators.progress_tracker import GenerationProgress
     from local_deepwiki.generators.see_also import RelationshipAnalyzer
-    from local_deepwiki.generators.wiki_status import WikiStatusManager
+    from local_deepwiki.generators.wiki.status import WikiStatusManager
     from local_deepwiki.models import IndexStatus, ProgressCallback
+    from local_deepwiki.providers.base import LLMProvider
 
 logger = get_logger(__name__)
 
@@ -45,10 +49,10 @@ async def generate_codemap_pages_phase(
     wiki_path: Path,
     wiki_config: WikiConfig,
     vector_store: VectorStore,
-    llm: object,
+    llm: LLMProvider,
     status_manager: WikiStatusManager,
     progress: GenerationProgress,
-    write_callback: object,
+    write_callback: Callable[[WikiPage], Awaitable[None]],
     progress_callback: ProgressCallback | None,
 ) -> tuple[list[WikiPage], int, int]:
     """Generate codemap pages for auto-discovered entry points.
@@ -108,7 +112,7 @@ async def apply_cross_linking(
     relationship_analyzer: RelationshipAnalyzer,
     status_manager: WikiStatusManager,
     wiki_path: Path,
-    write_callback: object,
+    write_callback: Callable[[WikiPage], Awaitable[None]],
     progress_callback: ProgressCallback | None,
 ) -> list[WikiPage]:
     """Apply cross-links, source refs, and see-also sections to pages.
@@ -222,7 +226,7 @@ async def generate_freshness_and_finalize(
     wiki_status: WikiGenerationStatus,
     index_status: IndexStatus,
     status_manager: WikiStatusManager,
-    write_callback: object,
+    write_callback: Callable[[WikiPage], Awaitable[None]],
     progress_callback: ProgressCallback | None,
 ) -> tuple[WikiPage, int]:
     """Generate freshness report and finalize wiki status.

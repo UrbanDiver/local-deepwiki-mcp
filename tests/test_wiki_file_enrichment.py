@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from local_deepwiki.generators.wiki_files import (
+from local_deepwiki.generators.wiki.files import (
     _create_source_details,
     _generate_files_index,
     _inject_inline_source_code,
@@ -501,7 +501,7 @@ class TestExtractEntityFromHeading:
 
     def test_returns_none_for_heading_without_backticks(self):
         """Test returns None when heading has no backticks."""
-        from local_deepwiki.generators.wiki_files import _extract_entity_from_heading
+        from local_deepwiki.generators.wiki.files import _extract_entity_from_heading
 
         entity, is_class = _extract_entity_from_heading("### No backticks here")
 
@@ -510,7 +510,7 @@ class TestExtractEntityFromHeading:
 
     def test_returns_none_for_incomplete_backticks(self):
         """Test returns None when heading has only opening backtick."""
-        from local_deepwiki.generators.wiki_files import _extract_entity_from_heading
+        from local_deepwiki.generators.wiki.files import _extract_entity_from_heading
 
         entity, is_class = _extract_entity_from_heading("#### `incomplete")
 
@@ -519,7 +519,7 @@ class TestExtractEntityFromHeading:
 
     def test_returns_none_for_empty_backticks(self):
         """Test returns None for empty backticks ``."""
-        from local_deepwiki.generators.wiki_files import _extract_entity_from_heading
+        from local_deepwiki.generators.wiki.files import _extract_entity_from_heading
 
         entity, is_class = _extract_entity_from_heading("#### ``")
 
@@ -532,7 +532,7 @@ class TestGenerateBlameSectionCoverage:
 
     def test_returns_none_for_empty_chunks(self):
         """Test returns None when chunks list is empty."""
-        from local_deepwiki.generators.wiki_files import _generate_blame_section
+        from local_deepwiki.generators.wiki.files import _generate_blame_section
 
         result = _generate_blame_section(
             repo_path=Path("/tmp/repo"),
@@ -544,7 +544,7 @@ class TestGenerateBlameSectionCoverage:
 
     def test_returns_none_for_chunks_without_code_entities(self):
         """Test returns None when chunks have no function/class/method types."""
-        from local_deepwiki.generators.wiki_files import _generate_blame_section
+        from local_deepwiki.generators.wiki.files import _generate_blame_section
 
         # Create chunks that are imports or modules (not function/class/method)
         chunk = make_code_chunk(
@@ -564,7 +564,7 @@ class TestGenerateBlameSectionCoverage:
     def test_generates_blame_section_with_entities(self, tmp_path):
         """Test generates blame section when blame info is available."""
         from datetime import datetime
-        from local_deepwiki.generators.wiki_files import _generate_blame_section
+        from local_deepwiki.generators.wiki.files import _generate_blame_section
         from local_deepwiki.core.git_utils import EntityBlameInfo
 
         chunks = [
@@ -608,7 +608,7 @@ class TestGenerateBlameSectionCoverage:
         ]
 
         with patch(
-            "local_deepwiki.generators.wiki_source_formatter.get_file_entity_blame"
+            "local_deepwiki.generators.wiki.source_formatter.get_file_entity_blame"
         ) as mock_blame:
             mock_blame.return_value = mock_blame_info
 
@@ -632,7 +632,7 @@ class TestGenerateBlameSectionCoverage:
     def test_truncates_long_author_names(self, tmp_path):
         """Test truncates author names longer than 20 characters."""
         from datetime import datetime
-        from local_deepwiki.generators.wiki_files import _generate_blame_section
+        from local_deepwiki.generators.wiki.files import _generate_blame_section
         from local_deepwiki.core.git_utils import EntityBlameInfo
 
         chunks = [
@@ -659,7 +659,7 @@ class TestGenerateBlameSectionCoverage:
         ]
 
         with patch(
-            "local_deepwiki.generators.wiki_source_formatter.get_file_entity_blame"
+            "local_deepwiki.generators.wiki.source_formatter.get_file_entity_blame"
         ) as mock_blame:
             mock_blame.return_value = mock_blame_info
 
@@ -676,7 +676,7 @@ class TestGenerateBlameSectionCoverage:
     def test_truncates_long_commit_summary(self, tmp_path):
         """Test truncates commit summaries longer than 30 characters."""
         from datetime import datetime
-        from local_deepwiki.generators.wiki_files import _generate_blame_section
+        from local_deepwiki.generators.wiki.files import _generate_blame_section
         from local_deepwiki.core.git_utils import EntityBlameInfo
 
         chunks = [
@@ -703,7 +703,7 @@ class TestGenerateBlameSectionCoverage:
         ]
 
         with patch(
-            "local_deepwiki.generators.wiki_source_formatter.get_file_entity_blame"
+            "local_deepwiki.generators.wiki.source_formatter.get_file_entity_blame"
         ) as mock_blame:
             mock_blame.return_value = mock_blame_info
 
@@ -719,7 +719,7 @@ class TestGenerateBlameSectionCoverage:
 
     def test_returns_none_when_no_blame_info(self, tmp_path):
         """Test returns None when get_file_entity_blame returns empty list."""
-        from local_deepwiki.generators.wiki_files import _generate_blame_section
+        from local_deepwiki.generators.wiki.files import _generate_blame_section
 
         chunks = [
             make_code_chunk(
@@ -732,7 +732,7 @@ class TestGenerateBlameSectionCoverage:
         ]
 
         with patch(
-            "local_deepwiki.generators.wiki_source_formatter.get_file_entity_blame"
+            "local_deepwiki.generators.wiki.source_formatter.get_file_entity_blame"
         ) as mock_blame:
             mock_blame.return_value = []
 
@@ -750,7 +750,7 @@ class TestGenerateFileEnrichmentsUsedBy:
 
     def test_adds_used_by_section_when_callers_exist(self, tmp_path):
         """Test adds Used By section when file has callers."""
-        from local_deepwiki.generators.wiki_files import _generate_file_enrichments
+        from local_deepwiki.generators.wiki.files import _generate_file_enrichments
 
         # Create a real file
         (tmp_path / "main.py").write_text("def main(): pass")
@@ -766,21 +766,21 @@ class TestGenerateFileEnrichmentsUsedBy:
         ]
 
         with (
-            patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api,
+            patch("local_deepwiki.generators.wiki.files.get_file_api_docs") as mock_api,
             patch(
-                "local_deepwiki.generators.wiki_files.generate_class_diagram"
+                "local_deepwiki.generators.wiki.files.generate_class_diagram"
             ) as mock_diagram,
             patch(
-                "local_deepwiki.generators.wiki_files.get_file_call_graph"
+                "local_deepwiki.generators.wiki.files.get_file_call_graph"
             ) as mock_graph,
             patch(
-                "local_deepwiki.generators.wiki_files.get_file_callers"
+                "local_deepwiki.generators.wiki.files.get_file_callers"
             ) as mock_callers,
             patch(
-                "local_deepwiki.generators.wiki_files.get_file_examples"
+                "local_deepwiki.generators.wiki.files.get_file_examples"
             ) as mock_examples,
             patch(
-                "local_deepwiki.generators.wiki_files._generate_blame_section"
+                "local_deepwiki.generators.wiki.files._generate_blame_section"
             ) as mock_blame,
         ):
             mock_api.return_value = ""
@@ -808,7 +808,7 @@ class TestGenerateFileEnrichmentsUsedBy:
 
     def test_skips_used_by_when_no_callers(self, tmp_path):
         """Test does not add Used By when callers_map is empty."""
-        from local_deepwiki.generators.wiki_files import _generate_file_enrichments
+        from local_deepwiki.generators.wiki.files import _generate_file_enrichments
 
         (tmp_path / "main.py").write_text("def main(): pass")
 
@@ -821,21 +821,21 @@ class TestGenerateFileEnrichmentsUsedBy:
         ]
 
         with (
-            patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api,
+            patch("local_deepwiki.generators.wiki.files.get_file_api_docs") as mock_api,
             patch(
-                "local_deepwiki.generators.wiki_files.generate_class_diagram"
+                "local_deepwiki.generators.wiki.files.generate_class_diagram"
             ) as mock_diagram,
             patch(
-                "local_deepwiki.generators.wiki_files.get_file_call_graph"
+                "local_deepwiki.generators.wiki.files.get_file_call_graph"
             ) as mock_graph,
             patch(
-                "local_deepwiki.generators.wiki_files.get_file_callers"
+                "local_deepwiki.generators.wiki.files.get_file_callers"
             ) as mock_callers,
             patch(
-                "local_deepwiki.generators.wiki_files.get_file_examples"
+                "local_deepwiki.generators.wiki.files.get_file_examples"
             ) as mock_examples,
             patch(
-                "local_deepwiki.generators.wiki_files._generate_blame_section"
+                "local_deepwiki.generators.wiki.files._generate_blame_section"
             ) as mock_blame,
         ):
             mock_api.return_value = ""
@@ -857,7 +857,7 @@ class TestGenerateFileEnrichmentsUsedBy:
 
     def test_skips_used_by_when_callers_are_empty_lists(self, tmp_path):
         """Test does not add Used By when all caller lists are empty."""
-        from local_deepwiki.generators.wiki_files import _generate_file_enrichments
+        from local_deepwiki.generators.wiki.files import _generate_file_enrichments
 
         (tmp_path / "main.py").write_text("def main(): pass")
 
@@ -870,21 +870,21 @@ class TestGenerateFileEnrichmentsUsedBy:
         ]
 
         with (
-            patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api,
+            patch("local_deepwiki.generators.wiki.files.get_file_api_docs") as mock_api,
             patch(
-                "local_deepwiki.generators.wiki_files.generate_class_diagram"
+                "local_deepwiki.generators.wiki.files.generate_class_diagram"
             ) as mock_diagram,
             patch(
-                "local_deepwiki.generators.wiki_files.get_file_call_graph"
+                "local_deepwiki.generators.wiki.files.get_file_call_graph"
             ) as mock_graph,
             patch(
-                "local_deepwiki.generators.wiki_files.get_file_callers"
+                "local_deepwiki.generators.wiki.files.get_file_callers"
             ) as mock_callers,
             patch(
-                "local_deepwiki.generators.wiki_files.get_file_examples"
+                "local_deepwiki.generators.wiki.files.get_file_examples"
             ) as mock_examples,
             patch(
-                "local_deepwiki.generators.wiki_files._generate_blame_section"
+                "local_deepwiki.generators.wiki.files._generate_blame_section"
             ) as mock_blame,
         ):
             mock_api.return_value = ""
@@ -908,7 +908,7 @@ class TestGenerateFileEnrichmentsUsedBy:
 
     def test_adds_blame_section_when_available(self, tmp_path):
         """Test adds blame section when _generate_blame_section returns content."""
-        from local_deepwiki.generators.wiki_files import _generate_file_enrichments
+        from local_deepwiki.generators.wiki.files import _generate_file_enrichments
 
         (tmp_path / "main.py").write_text("def main(): pass")
 
@@ -927,21 +927,21 @@ class TestGenerateFileEnrichmentsUsedBy:
 | `main` | function | John | 2024-01-15 | `abc1234` |"""
 
         with (
-            patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api,
+            patch("local_deepwiki.generators.wiki.files.get_file_api_docs") as mock_api,
             patch(
-                "local_deepwiki.generators.wiki_files.generate_class_diagram"
+                "local_deepwiki.generators.wiki.files.generate_class_diagram"
             ) as mock_diagram,
             patch(
-                "local_deepwiki.generators.wiki_files.get_file_call_graph"
+                "local_deepwiki.generators.wiki.files.get_file_call_graph"
             ) as mock_graph,
             patch(
-                "local_deepwiki.generators.wiki_files.get_file_callers"
+                "local_deepwiki.generators.wiki.files.get_file_callers"
             ) as mock_callers,
             patch(
-                "local_deepwiki.generators.wiki_files.get_file_examples"
+                "local_deepwiki.generators.wiki.files.get_file_examples"
             ) as mock_examples,
             patch(
-                "local_deepwiki.generators.wiki_files._generate_blame_section"
+                "local_deepwiki.generators.wiki.files._generate_blame_section"
             ) as mock_blame,
         ):
             mock_api.return_value = ""

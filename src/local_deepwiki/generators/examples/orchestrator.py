@@ -18,17 +18,17 @@ from textwrap import dedent
 from typing import TYPE_CHECKING
 
 from local_deepwiki.core.parser import CodeParser
-from local_deepwiki.generators.docstring_examples import (  # noqa: F401 -- re-export
+from local_deepwiki.generators.examples.docstring import (  # noqa: F401 -- re-export
     CodeExample,
     parse_docstring_examples,
     parse_doctest_examples,
     parse_google_style_examples,
 )
-from local_deepwiki.generators.example_extractor import (  # noqa: F401 -- re-export
+from local_deepwiki.generators.examples.extractor import (  # noqa: F401 -- re-export
     CodeExampleExtractor,
     format_code_examples_markdown,
 )
-from local_deepwiki.generators.test_discovery import (
+from local_deepwiki.generators.examples.discovery import (
     _find_test_functions,
     _get_docstring,
     _get_function_body,

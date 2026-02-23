@@ -350,7 +350,7 @@ async def handle_get_complexity_metrics(
 
     validate_file_in_repo(repo_path, file_path)
 
-    from local_deepwiki.generators.complexity import compute_complexity_metrics
+    from local_deepwiki.generators.analysis.complexity import compute_complexity_metrics
 
     # Compute complexity metrics using the generator
     result = await compute_complexity_metrics(Path(file_path), repo_path)

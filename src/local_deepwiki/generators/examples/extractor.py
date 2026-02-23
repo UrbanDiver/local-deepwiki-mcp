@@ -12,11 +12,11 @@ from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING
 
-from local_deepwiki.generators.docstring_examples import (
+from local_deepwiki.generators.examples.docstring import (
     CodeExample,
     parse_docstring_examples,
 )
-from local_deepwiki.generators.test_discovery import _is_mock_heavy
+from local_deepwiki.generators.examples.discovery import _is_mock_heavy
 
 if TYPE_CHECKING:
     from local_deepwiki.core.vectorstore import VectorStore

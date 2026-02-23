@@ -6,7 +6,7 @@ from textwrap import dedent
 import pytest
 
 from local_deepwiki.core.parser import CodeParser
-from local_deepwiki.generators.callgraph import (
+from local_deepwiki.generators.analysis.callgraph import (
     CallGraphExtractor,
     _is_builtin_or_noise,
     build_reverse_call_graph,
@@ -1044,7 +1044,7 @@ class TestClassWithoutName:
             from local_deepwiki.core.parser import get_node_name as orig
             return orig(node, source, language)
 
-        with patch("local_deepwiki.generators.callgraph.get_node_name", side_effect=mock_get_node_name):
+        with patch("local_deepwiki.generators.analysis.callgraph.get_node_name", side_effect=mock_get_node_name):
             result = extractor.extract_from_file(test_file, tmp_path)
 
         # The class method should NOT be in results because class name is None

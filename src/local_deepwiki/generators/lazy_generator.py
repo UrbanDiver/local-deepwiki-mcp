@@ -16,18 +16,18 @@ from local_deepwiki.generators.crosslinks import (
     EntityRegistry,
     build_entity_registry_from_store,
 )
-from local_deepwiki.generators.wiki_utils import file_path_to_wiki_path
-from local_deepwiki.generators.wiki_files import (
+from local_deepwiki.generators.wiki.utils import file_path_to_wiki_path
+from local_deepwiki.generators.wiki.files import (
     FileDocContext,
     filter_significant_files,
     _generate_files_index,
     generate_single_file_doc,
 )
-from local_deepwiki.generators.wiki_modules import (
+from local_deepwiki.generators.wiki.modules import (
     _generate_modules_index,
     generate_single_module_doc,
 )
-from local_deepwiki.generators.wiki_pages import (
+from local_deepwiki.generators.wiki.pages import (
     generate_architecture_page,
     generate_changelog_page,
     generate_dependencies_page,
@@ -307,12 +307,12 @@ class LazyPageGenerator:
         if self._auxiliary_cache is not None:
             return self._auxiliary_cache
 
-        from local_deepwiki.generators.coverage import generate_coverage_page
-        from local_deepwiki.generators.dependency_graph import (
+        from local_deepwiki.generators.analysis.coverage import generate_coverage_page
+        from local_deepwiki.generators.analysis.dependency_graph import (
             generate_dependency_graph_page,
         )
-        from local_deepwiki.generators.glossary import generate_glossary_page
-        from local_deepwiki.generators.inheritance import generate_inheritance_page
+        from local_deepwiki.generators.analysis.glossary import generate_glossary_page
+        from local_deepwiki.generators.analysis.inheritance import generate_inheritance_page
 
         idx = self._get_index_status()
         pages: dict[str, WikiPage] = {}
@@ -401,7 +401,7 @@ class LazyPageGenerator:
         prompt = self._get_system_prompt()
         registry = await self._get_entity_registry()
 
-        from local_deepwiki.generators.wiki_status import WikiStatusManager
+        from local_deepwiki.generators.wiki.status import WikiStatusManager
 
         status_mgr = WikiStatusManager(self._wiki_path)
         status_mgr.file_hashes = {f.path: f.hash for f in idx.files}

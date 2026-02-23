@@ -803,7 +803,7 @@ class TestCodemapPhase3Cache:
 
     def test_cache_write_and_read(self, wiki_dir):
         """Test cache write and read round-trip."""
-        from local_deepwiki.generators.codemap_cache import (
+        from local_deepwiki.generators.codemap.cache import (
             cache_key,
             read_cache,
             write_cache,
@@ -824,7 +824,7 @@ class TestCodemapPhase3Cache:
 
     def test_cache_key_deterministic(self):
         """Test that cache key is deterministic."""
-        from local_deepwiki.generators.codemap_cache import cache_key
+        from local_deepwiki.generators.codemap.cache import cache_key
 
         k1 = cache_key("test", "execution_flow", 5, 30)
         k2 = cache_key("test", "execution_flow", 5, 30)
@@ -832,7 +832,7 @@ class TestCodemapPhase3Cache:
 
     def test_cache_key_varies_with_params(self):
         """Test that cache key changes with different params."""
-        from local_deepwiki.generators.codemap_cache import cache_key
+        from local_deepwiki.generators.codemap.cache import cache_key
 
         k1 = cache_key("test", "execution_flow", 5, 30)
         k2 = cache_key("test", "data_flow", 5, 30)

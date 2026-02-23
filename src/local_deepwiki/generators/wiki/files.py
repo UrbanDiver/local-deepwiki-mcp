@@ -14,16 +14,16 @@ from local_deepwiki.config import Config
 from local_deepwiki.core.git_utils import get_repo_info
 from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.api_docs import get_file_api_docs
-from local_deepwiki.generators.callgraph import get_file_call_graph, get_file_callers
+from local_deepwiki.generators.analysis.api_docs import get_file_api_docs
+from local_deepwiki.generators.analysis.callgraph import get_file_call_graph, get_file_callers
 from local_deepwiki.generators.context_builder import (
     build_file_context,
     format_context_for_llm,
 )
 from local_deepwiki.generators.crosslinks import EntityRegistry
 from local_deepwiki.generators.diagrams import generate_class_diagram
-from local_deepwiki.generators.test_examples import get_file_examples
-from local_deepwiki.generators.wiki_source_formatter import (
+from local_deepwiki.generators.examples.orchestrator import get_file_examples
+from local_deepwiki.generators.wiki.source_formatter import (
     _ChunkMaps,
     _append_unused_chunks,
     _build_chunk_maps,
@@ -48,7 +48,7 @@ from local_deepwiki.providers.base import LLMProvider
 
 if TYPE_CHECKING:
     from local_deepwiki.generators.progress_tracker import GenerationProgress
-    from local_deepwiki.generators.wiki_status import WikiStatusManager
+    from local_deepwiki.generators.wiki.status import WikiStatusManager
 
 logger = get_logger(__name__)
 

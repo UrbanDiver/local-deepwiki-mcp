@@ -11,7 +11,7 @@ import re
 from collections import defaultdict
 from pathlib import Path
 
-from local_deepwiki.generators.codemap_models import (
+from local_deepwiki.generators.codemap.models import (
     CodemapFocus,
     CodemapGraph,
     CodemapNode,

@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from local_deepwiki.models import ChunkType, IndexStatus
 
 # Re-export extracted data structures and utilities for backward compatibility
-from local_deepwiki.generators.dependency_graph_data import (  # noqa: F401
+from local_deepwiki.generators.analysis.dependency_graph_data import (  # noqa: F401
     IMPORT_PATTERNS,
     DependencyEdge,
     DependencyGraph,

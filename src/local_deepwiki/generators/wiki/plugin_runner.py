@@ -13,13 +13,15 @@ from local_deepwiki.logging import get_logger
 from local_deepwiki.plugins.registry import get_plugin_registry
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
     from pathlib import Path
 
     from local_deepwiki.config import Config
     from local_deepwiki.core.vectorstore import VectorStore
-    from local_deepwiki.generators.wiki_status import WikiStatusManager
+    from local_deepwiki.generators.wiki.status import WikiStatusManager
     from local_deepwiki.models import IndexStatus, ProgressCallback, WikiPage
     from local_deepwiki.plugins.base import WikiGeneratorPlugin
+    from local_deepwiki.providers.base import LLMProvider
 
 logger = get_logger(__name__)
 
@@ -114,11 +116,11 @@ async def run_plugin_generators(
     all_source_files: list[str],
     index_status: IndexStatus,
     vector_store: VectorStore,
-    llm: object,
+    llm: LLMProvider,
     config: Config,
     wiki_path: Path,
     status_manager: WikiStatusManager,
-    write_callback: object,
+    write_callback: Callable[[WikiPage], Awaitable[None]],
     progress_callback: ProgressCallback | None,
 ) -> tuple[list[WikiPage], int]:
     """Run registered wiki generator plugins.

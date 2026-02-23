@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from local_deepwiki.generators.inheritance import (
+from local_deepwiki.generators.analysis.inheritance import (
     ClassNode,
     collect_class_hierarchy,
     find_root_classes,

@@ -16,7 +16,7 @@ from collections.abc import AsyncIterator
 from flask import Blueprint, Response, abort, jsonify, render_template, request
 
 from local_deepwiki.errors import sanitize_error_message
-from local_deepwiki.generators.codemap_cache import (
+from local_deepwiki.generators.codemap.cache import (
     cache_key,
     list_cached_codemaps,
     read_cache,

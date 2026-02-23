@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from local_deepwiki.generators.wiki_files import (
+from local_deepwiki.generators.wiki.files import (
     _create_source_details,
     _generate_files_index,
     _inject_inline_source_code,

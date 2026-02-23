@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from local_deepwiki.generators.wiki_files import (
+from local_deepwiki.generators.wiki.files import (
     FileDocContext,
     _create_source_details,
     _generate_files_index,
@@ -416,7 +416,7 @@ class TestGenerateSingleFileDoc:
         index_status = make_index_status(repo_path=str(tmp_path))
 
         with patch(
-            "local_deepwiki.generators.wiki_files.generate_class_diagram"
+            "local_deepwiki.generators.wiki.files.generate_class_diagram"
         ) as mock_diagram:
             mock_diagram.return_value = "```mermaid\nclassDiagram\n```"
 
@@ -457,7 +457,7 @@ class TestGenerateSingleFileDoc:
         index_status = make_index_status(repo_path=str(tmp_path))
 
         with patch(
-            "local_deepwiki.generators.wiki_files.get_file_api_docs"
+            "local_deepwiki.generators.wiki.files.get_file_api_docs"
         ) as mock_api:
             mock_api.return_value = "### run()\n\nExecutes the main function."
 
@@ -498,7 +498,7 @@ class TestGenerateSingleFileDoc:
         index_status = make_index_status(repo_path=str(tmp_path))
 
         with patch(
-            "local_deepwiki.generators.wiki_files.generate_class_diagram"
+            "local_deepwiki.generators.wiki.files.generate_class_diagram"
         ) as mock_diagram:
             mock_diagram.return_value = ""  # No auto-generated diagram
 
@@ -574,7 +574,7 @@ class TestGenerateSingleFileDoc:
         index_status = make_index_status(repo_path=str(tmp_path))
 
         with patch(
-            "local_deepwiki.generators.wiki_files.get_file_call_graph"
+            "local_deepwiki.generators.wiki.files.get_file_call_graph"
         ) as mock_graph:
             mock_graph.return_value = "graph TD\n  A --> B"
 
@@ -616,7 +616,7 @@ class TestGenerateSingleFileDoc:
         index_status = make_index_status(repo_path=str(tmp_path))
 
         with patch(
-            "local_deepwiki.generators.wiki_files.get_file_examples"
+            "local_deepwiki.generators.wiki.files.get_file_examples"
         ) as mock_examples:
             mock_examples.return_value = "## Test Examples\n\n```python\ntest code\n```"
 

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from local_deepwiki.generators.wiki import WikiGenerator, _GenerationContext
+from local_deepwiki.generators.wiki.generator import WikiGenerator, _GenerationContext
 from local_deepwiki.models import IndexStatus, WikiPage
 
 
@@ -96,22 +96,22 @@ class TestDependencyGraphFailureWarning:
 
         with (
             patch(
-                "local_deepwiki.generators.wiki.generate_inheritance_page",
+                "local_deepwiki.generators.wiki.generator.generate_inheritance_page",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
             patch(
-                "local_deepwiki.generators.wiki.generate_glossary_page",
+                "local_deepwiki.generators.wiki.generator.generate_glossary_page",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
             patch(
-                "local_deepwiki.generators.wiki.generate_coverage_page",
+                "local_deepwiki.generators.wiki.generator.generate_coverage_page",
                 new_callable=AsyncMock,
                 return_value=None,
             ),
             patch(
-                "local_deepwiki.generators.wiki.generate_dependency_graph_page",
+                "local_deepwiki.generators.wiki.generator.generate_dependency_graph_page",
                 new_callable=AsyncMock,
                 side_effect=RuntimeError("graph computation failed"),
             ),
@@ -141,22 +141,22 @@ class TestDependencyGraphFailureWarning:
 
         with (
             patch(
-                "local_deepwiki.generators.wiki.generate_inheritance_page",
+                "local_deepwiki.generators.wiki.generator.generate_inheritance_page",
                 new_callable=AsyncMock,
                 return_value="# Inheritance\n",
             ),
             patch(
-                "local_deepwiki.generators.wiki.generate_glossary_page",
+                "local_deepwiki.generators.wiki.generator.generate_glossary_page",
                 new_callable=AsyncMock,
                 return_value="# Glossary\n",
             ),
             patch(
-                "local_deepwiki.generators.wiki.generate_coverage_page",
+                "local_deepwiki.generators.wiki.generator.generate_coverage_page",
                 new_callable=AsyncMock,
                 return_value="# Coverage\n",
             ),
             patch(
-                "local_deepwiki.generators.wiki.generate_dependency_graph_page",
+                "local_deepwiki.generators.wiki.generator.generate_dependency_graph_page",
                 new_callable=AsyncMock,
                 side_effect=RuntimeError("graph computation failed"),
             ),

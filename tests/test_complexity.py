@@ -2,7 +2,7 @@
 
 import pytest
 from pathlib import Path
-from local_deepwiki.generators.complexity import compute_complexity_metrics
+from local_deepwiki.generators.analysis.complexity import compute_complexity_metrics
 
 
 @pytest.mark.asyncio

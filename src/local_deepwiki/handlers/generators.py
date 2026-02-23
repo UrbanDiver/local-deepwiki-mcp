@@ -59,7 +59,7 @@ async def handle_get_glossary(args: dict[str, Any]) -> list[TextContent]:
 
     index_status, wiki_path, config = await _load_index_status(repo_path)
 
-    from local_deepwiki.generators.glossary import collect_all_entities
+    from local_deepwiki.generators.analysis.glossary import collect_all_entities
 
     vector_store = _create_vector_store(repo_path, config)
 
@@ -125,7 +125,7 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
 
     index_status, wiki_path, config = await _load_index_status(repo_path)
 
-    from local_deepwiki.generators.callgraph import CallGraphExtractor
+    from local_deepwiki.generators.analysis.callgraph import CallGraphExtractor
     from local_deepwiki.generators.diagrams import (
         generate_class_diagram,
         generate_dependency_graph,
@@ -214,7 +214,7 @@ async def handle_get_inheritance(args: dict[str, Any]) -> list[TextContent]:
 
     index_status, wiki_path, config = await _load_index_status(repo_path)
 
-    from local_deepwiki.generators.inheritance import (
+    from local_deepwiki.generators.analysis.inheritance import (
         collect_class_hierarchy,
         generate_inheritance_diagram,
     )
@@ -287,7 +287,7 @@ async def handle_get_call_graph(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    from local_deepwiki.generators.callgraph import (
+    from local_deepwiki.generators.analysis.callgraph import (
         CallGraphExtractor,
         generate_call_graph_diagram,
     )
@@ -345,7 +345,7 @@ async def handle_get_coverage(args: dict[str, Any]) -> list[TextContent]:
 
     index_status, wiki_path, config = await _load_index_status(repo_path)
 
-    from local_deepwiki.generators.coverage import analyze_project_coverage
+    from local_deepwiki.generators.analysis.coverage import analyze_project_coverage
 
     vector_store = _create_vector_store(repo_path, config)
 
@@ -393,8 +393,8 @@ async def handle_detect_stale_docs(args: dict[str, Any]) -> list[TextContent]:
 
     _index_status, wiki_path, _config = await _load_index_status(repo_path)
 
-    from local_deepwiki.generators.stale_detection import analyze_staleness
-    from local_deepwiki.generators.wiki_status import WikiStatusManager
+    from local_deepwiki.generators.analysis.stale_detection import analyze_staleness
+    from local_deepwiki.generators.wiki.status import WikiStatusManager
 
     manager = WikiStatusManager(wiki_path)
     wiki_status = await manager.load_status()
@@ -562,7 +562,7 @@ async def handle_get_test_examples(args: dict[str, Any]) -> list[TextContent]:
 
     index_status, wiki_path, config = await _load_index_status(repo_path)
 
-    from local_deepwiki.generators.test_examples import CodeExampleExtractor
+    from local_deepwiki.generators.examples.orchestrator import CodeExampleExtractor
 
     vector_store = _create_vector_store(repo_path, config)
 
@@ -627,7 +627,7 @@ async def handle_get_api_docs(args: dict[str, Any]) -> list[TextContent]:
 
     target = validate_file_in_repo(repo_path, file_path)
 
-    from local_deepwiki.generators.api_docs import get_file_api_docs
+    from local_deepwiki.generators.analysis.api_docs import get_file_api_docs
 
     api_docs = await asyncio.to_thread(get_file_api_docs, target)
 

@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from local_deepwiki.core.vectorstore import VectorStore
     from local_deepwiki.providers.base import LLMProvider
 
-from local_deepwiki.generators.codemap_graph import (
+from local_deepwiki.generators.codemap.graph import (
     _content_preview,
     _extract_param_names,
     _is_noise,
@@ -25,7 +25,7 @@ from local_deepwiki.generators.codemap_graph import (
     build_cross_file_graph,
     discover_entry_points,
 )
-from local_deepwiki.generators.codemap_models import (
+from local_deepwiki.generators.codemap.models import (
     BUILTIN_NAMES,
     CALLABLE_CHUNK_TYPES,
     CHUNK_TYPE_WEIGHTS,
@@ -36,7 +36,7 @@ from local_deepwiki.generators.codemap_models import (
     CodemapNode,
     CodemapResult,
 )
-from local_deepwiki.generators.codemap_viz import generate_codemap_diagram
+from local_deepwiki.generators.codemap.viz import generate_codemap_diagram
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk
 
@@ -315,7 +315,7 @@ def _build_combined_call_graph(
     repo: Path,
 ) -> dict[str, list[str]]:
     """Build a merged call graph across all files in the repository."""
-    from local_deepwiki.generators.callgraph import CallGraphExtractor
+    from local_deepwiki.generators.analysis.callgraph import CallGraphExtractor
 
     extractor = CallGraphExtractor()
     combined_cg: dict[str, list[str]] = {}
@@ -448,7 +448,7 @@ async def suggest_topics(
     Returns a list of suggestion dicts sorted by connection count.
     """
     try:
-        from local_deepwiki.generators.callgraph import CallGraphExtractor  # noqa: F401
+        from local_deepwiki.generators.analysis.callgraph import CallGraphExtractor  # noqa: F401
     except ImportError:  # pragma: no cover
         logger.warning("Could not import CallGraphExtractor")
         return []

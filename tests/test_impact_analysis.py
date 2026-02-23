@@ -98,15 +98,15 @@ class TestImpactAnalysisBasic:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value=mock_call_graph,
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value=mock_reverse_graph,
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -163,15 +163,15 @@ class TestImpactAnalysisWithEntityName:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value=mock_reverse_graph,
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -215,15 +215,15 @@ class TestImpactAnalysisNoCallers:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -293,15 +293,15 @@ class TestImpactAnalysisWithInheritance:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value=classes,
             ),
@@ -479,15 +479,15 @@ class TestImpactAnalysisRiskLevels:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -534,15 +534,15 @@ class TestImpactAnalysisRiskLevels:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value=reverse_graph,
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -583,15 +583,15 @@ class TestImpactAnalysisRiskLevels:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value=reverse_graph,
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -722,15 +722,15 @@ class TestImpactAnalysisLeafNode:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -787,15 +787,15 @@ class TestImpactAnalysisCoreModule:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value=reverse_graph,
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -846,15 +846,15 @@ class TestImpactAnalysisCircularDependencies:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value=reverse_graph,
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -926,15 +926,15 @@ class TestImpactAnalysisMultipleEntityFilter:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value=reverse_graph,
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -1056,11 +1056,11 @@ class TestImpactAnalysisOnlyCalls:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value=reverse_graph,
             ),
         ):
@@ -1100,7 +1100,7 @@ class TestImpactAnalysisOnlyInheritance:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -1148,15 +1148,15 @@ class TestImpactAnalysisRiskBoundary:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value=reverse_graph,
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -1195,15 +1195,15 @@ class TestImpactAnalysisRiskBoundary:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value=reverse_graph,
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -1243,15 +1243,15 @@ class TestImpactAnalysisRiskBoundary:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value=reverse_graph,
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -1291,15 +1291,15 @@ class TestImpactAnalysisRiskBoundary:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value=reverse_graph,
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
@@ -1371,15 +1371,15 @@ class TestImpactAnalysisEntityInInheritance:
                 "local_deepwiki.handlers.analysis_entity._load_index_status"
             ) as mock_load,
             patch(
-                "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
+                "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.callgraph.build_reverse_call_graph",
+                "local_deepwiki.generators.analysis.callgraph.build_reverse_call_graph",
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.inheritance.collect_class_hierarchy",
+                "local_deepwiki.generators.analysis.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value=classes,
             ),

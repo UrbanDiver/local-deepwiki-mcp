@@ -13,23 +13,23 @@ if TYPE_CHECKING:
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
-from local_deepwiki.generators.coverage import generate_coverage_page
+from local_deepwiki.generators.analysis.coverage import generate_coverage_page
 from local_deepwiki.generators.crosslinks import EntityRegistry
-from local_deepwiki.generators.dependency_graph import generate_dependency_graph_page
-from local_deepwiki.generators.glossary import generate_glossary_page
-from local_deepwiki.generators.inheritance import generate_inheritance_page
+from local_deepwiki.generators.analysis.dependency_graph import generate_dependency_graph_page
+from local_deepwiki.generators.analysis.glossary import generate_glossary_page
+from local_deepwiki.generators.analysis.inheritance import generate_inheritance_page
 from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
 from local_deepwiki.generators.progress_tracker import GenerationProgress
 from local_deepwiki.generators.see_also import RelationshipAnalyzer
-from local_deepwiki.generators.wiki_files import generate_file_docs
-from local_deepwiki.generators.wiki_modules import generate_module_docs
-from local_deepwiki.generators.wiki_pages import (
+from local_deepwiki.generators.wiki.files import generate_file_docs
+from local_deepwiki.generators.wiki.modules import generate_module_docs
+from local_deepwiki.generators.wiki.pages import (
     generate_architecture_page,
     generate_changelog_page,
     generate_dependencies_page,
     generate_overview_page,
 )
-from local_deepwiki.generators.wiki_phases import (
+from local_deepwiki.generators.wiki.phases import (
     _generate_or_load_page as _phases_generate_or_load_page,
     _generate_or_load_summary_page as _phases_generate_or_load_summary_page,
     generate_auxiliary_pages as _phases_generate_auxiliary_pages,
@@ -37,18 +37,18 @@ from local_deepwiki.generators.wiki_phases import (
     generate_dependencies_page_phase,
     generate_summary_pages,
 )
-from local_deepwiki.generators.wiki_plugin_runner import (
+from local_deepwiki.generators.wiki.plugin_runner import (
     run_plugin_generators,
     sort_generators_by_dependencies,
 )
-from local_deepwiki.generators.wiki_postprocessing import (
+from local_deepwiki.generators.wiki.postprocessing import (
     apply_cross_linking,
     build_wiki_status,
     generate_codemap_pages_phase,
     generate_freshness_and_finalize,
     generate_search_and_toc,
 )
-from local_deepwiki.generators.wiki_status import WikiStatusManager
+from local_deepwiki.generators.wiki.status import WikiStatusManager
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
     IndexStatus,
@@ -439,7 +439,7 @@ class WikiGenerator:
         index_status: IndexStatus,
     ) -> None:
         """Record and write an auxiliary page (delegates to wiki_phases)."""
-        from local_deepwiki.generators.wiki_phases import (
+        from local_deepwiki.generators.wiki.phases import (
             _add_auxiliary_page as _phases_add_aux,
         )
 
@@ -460,7 +460,7 @@ class WikiGenerator:
         index_status: IndexStatus,
     ) -> bool:
         """Try to load all auxiliary pages from cache (delegates to wiki_phases)."""
-        from local_deepwiki.generators.wiki_phases import (
+        from local_deepwiki.generators.wiki.phases import (
             _try_load_cached_auxiliary_pages as _phases_try_load,
         )
 

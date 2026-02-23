@@ -12,7 +12,7 @@ from local_deepwiki.models import IndexStatus, WikiPage
 from local_deepwiki.providers.base import LLMProvider
 
 if TYPE_CHECKING:
-    from local_deepwiki.generators.wiki_status import WikiStatusManager
+    from local_deepwiki.generators.wiki.status import WikiStatusManager
 
 logger = get_logger(__name__)
 
@@ -288,7 +288,7 @@ def _build_authoritative_section(repo_path: Path | None) -> str:
         return ""
 
     try:
-        from local_deepwiki.generators.wiki_pages import _read_authoritative_docs
+        from local_deepwiki.generators.wiki.pages import _read_authoritative_docs
 
         docs = _read_authoritative_docs(repo_path)
         if docs:

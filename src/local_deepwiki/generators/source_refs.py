@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from local_deepwiki.generators.wiki_utils import relative_wiki_path
+from local_deepwiki.generators.wiki.utils import relative_wiki_path
 from local_deepwiki.models import WikiPage, WikiPageStatus
 
 

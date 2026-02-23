@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from local_deepwiki.generators.test_examples import (
+from local_deepwiki.generators.examples.orchestrator import (
     CodeExample,
     CodeExampleExtractor,
     format_code_examples_markdown,

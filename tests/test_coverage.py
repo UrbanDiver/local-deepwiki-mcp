@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from local_deepwiki.generators.coverage import (
+from local_deepwiki.generators.analysis.coverage import (
     CoverageStats,
     FileCoverage,
     _get_coverage_emoji,

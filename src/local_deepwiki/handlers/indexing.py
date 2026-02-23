@@ -150,7 +150,7 @@ def _generate_wiki_lazy(
 ) -> WikiStructure:
     """Lazy mode: build entity registry only, defer all page generation."""
     from local_deepwiki.generators.crosslinks import build_entity_registry_from_store
-    from local_deepwiki.generators.wiki_files import filter_significant_files
+    from local_deepwiki.generators.wiki.files import filter_significant_files
 
     significant = filter_significant_files(status.files, config.wiki.max_file_docs)
     sig_paths = {f.path for f in significant}
@@ -173,7 +173,7 @@ async def _generate_wiki_hybrid(
 ) -> WikiStructure:
     """Hybrid mode: generate eager pages, then build full entity registry."""
     from local_deepwiki.generators.crosslinks import build_entity_registry_from_store
-    from local_deepwiki.generators.wiki_files import filter_significant_files
+    from local_deepwiki.generators.wiki.files import filter_significant_files
 
     eager_limit = config.wiki.hybrid_eager_pages
     wiki_structure = await generate_wiki(

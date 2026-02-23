@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.callgraph import (
+from local_deepwiki.generators.analysis.callgraph import (
     CallGraphExtractor,
     build_reverse_call_graph,
 )

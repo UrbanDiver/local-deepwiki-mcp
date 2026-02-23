@@ -52,7 +52,7 @@ class TestWikiGeneratorInit:
 
     def test_init_with_defaults(self, tmp_path):
         """Test WikiGenerator initialization with default config."""
-        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
@@ -64,7 +64,7 @@ class TestWikiGeneratorInit:
             mock_config.return_value = config
 
             with patch(
-                "local_deepwiki.generators.wiki.get_cached_llm_provider"
+                "local_deepwiki.generators.wiki.generator.get_cached_llm_provider"
             ) as mock_llm:
                 mock_llm.return_value = MagicMock()
 
@@ -87,7 +87,7 @@ class TestWikiGeneratorInit:
     def test_init_with_custom_config(self, tmp_path):
         """Test WikiGenerator initialization with custom config."""
         with patch(
-            "local_deepwiki.generators.wiki.get_cached_llm_provider"
+            "local_deepwiki.generators.wiki.generator.get_cached_llm_provider"
         ) as mock_llm:
             mock_llm.return_value = MagicMock()
 
@@ -118,7 +118,7 @@ class TestWikiGeneratorInit:
 
     def test_init_with_llm_provider_override(self, tmp_path):
         """Test WikiGenerator initialization with LLM provider override."""
-        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.llm.provider = "ollama"  # Original provider
@@ -136,7 +136,7 @@ class TestWikiGeneratorInit:
             mock_config.return_value = config
 
             with patch(
-                "local_deepwiki.generators.wiki.get_cached_llm_provider"
+                "local_deepwiki.generators.wiki.generator.get_cached_llm_provider"
             ) as mock_llm:
                 mock_llm.return_value = MagicMock()
 
@@ -161,14 +161,14 @@ class TestGetMainDefinitionLines:
 
     def test_returns_empty_when_no_table(self, tmp_path):
         """Test returns empty dict when vector store has no table."""
-        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
             with patch(
-                "local_deepwiki.generators.wiki.get_cached_llm_provider"
+                "local_deepwiki.generators.wiki.generator.get_cached_llm_provider"
             ) as mock_llm:
                 mock_llm.return_value = MagicMock()
 
@@ -188,14 +188,14 @@ class TestGetMainDefinitionLines:
 
     def test_returns_class_lines(self, tmp_path):
         """Test returns lines for class definitions."""
-        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
             with patch(
-                "local_deepwiki.generators.wiki.get_cached_llm_provider"
+                "local_deepwiki.generators.wiki.generator.get_cached_llm_provider"
             ) as mock_llm:
                 mock_llm.return_value = MagicMock()
 
@@ -219,14 +219,14 @@ class TestGetMainDefinitionLines:
 
     def test_returns_function_lines_when_no_class(self, tmp_path):
         """Test returns function lines when no class exists."""
-        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
             with patch(
-                "local_deepwiki.generators.wiki.get_cached_llm_provider"
+                "local_deepwiki.generators.wiki.generator.get_cached_llm_provider"
             ) as mock_llm:
                 mock_llm.return_value = MagicMock()
 
@@ -255,7 +255,7 @@ class TestWikiGeneratorGenerate:
     @pytest.fixture
     def mock_generator(self, tmp_path):
         """Create a mocked WikiGenerator."""
-        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
@@ -264,7 +264,7 @@ class TestWikiGeneratorGenerate:
             mock_config.return_value = config
 
             with patch(
-                "local_deepwiki.generators.wiki.get_cached_llm_provider"
+                "local_deepwiki.generators.wiki.generator.get_cached_llm_provider"
             ) as mock_llm:
                 mock_llm.return_value = MagicMock()
 
@@ -293,7 +293,7 @@ class TestWikiGeneratorGenerate:
 
         # Mock all the page generation functions
         with patch(
-            "local_deepwiki.generators.wiki.generate_overview_page"
+            "local_deepwiki.generators.wiki.generator.generate_overview_page"
         ) as mock_overview:
             mock_overview.return_value = WikiPage(
                 path="index.md",
@@ -303,7 +303,7 @@ class TestWikiGeneratorGenerate:
             )
 
             with patch(
-                "local_deepwiki.generators.wiki.generate_architecture_page"
+                "local_deepwiki.generators.wiki.generator.generate_architecture_page"
             ) as mock_arch:
                 mock_arch.return_value = WikiPage(
                     path="architecture.md",
@@ -313,17 +313,17 @@ class TestWikiGeneratorGenerate:
                 )
 
                 with patch(
-                    "local_deepwiki.generators.wiki.generate_module_docs"
+                    "local_deepwiki.generators.wiki.generator.generate_module_docs"
                 ) as mock_modules:
                     mock_modules.return_value = ([], 0, 0)
 
                     with patch(
-                        "local_deepwiki.generators.wiki.generate_file_docs"
+                        "local_deepwiki.generators.wiki.generator.generate_file_docs"
                     ) as mock_files:
                         mock_files.return_value = ([], 0, 0)
 
                         with patch(
-                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                            "local_deepwiki.generators.wiki.generator.generate_dependencies_page"
                         ) as mock_deps:
                             mock_deps.return_value = (
                                 WikiPage(
@@ -336,59 +336,59 @@ class TestWikiGeneratorGenerate:
                             )
 
                             with patch(
-                                "local_deepwiki.generators.wiki.generate_changelog_page"
+                                "local_deepwiki.generators.wiki.generator.generate_changelog_page"
                             ) as mock_changelog:
                                 mock_changelog.return_value = None
 
                                 with patch(
-                                    "local_deepwiki.generators.wiki.generate_inheritance_page"
+                                    "local_deepwiki.generators.wiki.generator.generate_inheritance_page"
                                 ) as mock_inheritance:
                                     mock_inheritance.return_value = None
 
                                     with patch(
-                                        "local_deepwiki.generators.wiki.generate_glossary_page"
+                                        "local_deepwiki.generators.wiki.generator.generate_glossary_page"
                                     ) as mock_glossary:
                                         mock_glossary.return_value = None
 
                                         with patch(
-                                            "local_deepwiki.generators.wiki.generate_coverage_page"
+                                            "local_deepwiki.generators.wiki.generator.generate_coverage_page"
                                         ) as mock_coverage:
                                             mock_coverage.return_value = None
 
                                             with patch(
-                                                "local_deepwiki.generators.wiki_postprocessing.add_cross_links"
+                                                "local_deepwiki.generators.wiki.postprocessing.add_cross_links"
                                             ) as mock_crosslinks:
                                                 mock_crosslinks.side_effect = (
                                                     lambda pages, _: pages
                                                 )
 
                                                 with patch(
-                                                    "local_deepwiki.generators.wiki_postprocessing.add_source_refs_sections"
+                                                    "local_deepwiki.generators.wiki.postprocessing.add_source_refs_sections"
                                                 ) as mock_refs:
                                                     mock_refs.side_effect = (
                                                         lambda pages, _, __: pages
                                                     )
 
                                                     with patch(
-                                                        "local_deepwiki.generators.wiki_postprocessing.add_see_also_sections"
+                                                        "local_deepwiki.generators.wiki.postprocessing.add_see_also_sections"
                                                     ) as mock_see_also:
                                                         mock_see_also.side_effect = (
                                                             lambda pages, _: pages
                                                         )
 
                                                         with patch(
-                                                            "local_deepwiki.generators.wiki_postprocessing.write_full_search_index"
+                                                            "local_deepwiki.generators.wiki.postprocessing.write_full_search_index"
                                                         ):
                                                             with patch(
-                                                                "local_deepwiki.generators.wiki_postprocessing.generate_toc"
+                                                                "local_deepwiki.generators.wiki.postprocessing.generate_toc"
                                                             ) as mock_toc:
                                                                 mock_toc.return_value = []
 
                                                                 with patch(
-                                                                    "local_deepwiki.generators.wiki_postprocessing.write_toc"
+                                                                    "local_deepwiki.generators.wiki.postprocessing.write_toc"
                                                                 ):
                                                                     with patch(
-                                                                        "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                                        "local_deepwiki.generators.wiki.generator.get_cached_manifest"
                                                                     ):
                                                                         result = await mock_generator.generate(
                                                                             index_status=index_status,
@@ -421,7 +421,7 @@ class TestWikiGeneratorGenerate:
 
         # Mock all generation functions
         with patch(
-            "local_deepwiki.generators.wiki.generate_overview_page"
+            "local_deepwiki.generators.wiki.generator.generate_overview_page"
         ) as mock_overview:
             mock_overview.return_value = WikiPage(
                 path="index.md",
@@ -431,7 +431,7 @@ class TestWikiGeneratorGenerate:
             )
 
             with patch(
-                "local_deepwiki.generators.wiki.generate_architecture_page"
+                "local_deepwiki.generators.wiki.generator.generate_architecture_page"
             ) as mock_arch:
                 mock_arch.return_value = WikiPage(
                     path="architecture.md",
@@ -441,15 +441,15 @@ class TestWikiGeneratorGenerate:
                 )
 
                 with patch(
-                    "local_deepwiki.generators.wiki.generate_module_docs",
+                    "local_deepwiki.generators.wiki.generator.generate_module_docs",
                     return_value=([], 0, 0),
                 ):
                     with patch(
-                        "local_deepwiki.generators.wiki.generate_file_docs",
+                        "local_deepwiki.generators.wiki.generator.generate_file_docs",
                         return_value=([], 0, 0),
                     ):
                         with patch(
-                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                            "local_deepwiki.generators.wiki.generator.generate_dependencies_page"
                         ) as mock_deps:
                             mock_deps.return_value = (
                                 WikiPage(
@@ -462,45 +462,45 @@ class TestWikiGeneratorGenerate:
                             )
 
                             with patch(
-                                "local_deepwiki.generators.wiki.generate_changelog_page",
+                                "local_deepwiki.generators.wiki.generator.generate_changelog_page",
                                 return_value=None,
                             ):
                                 with patch(
-                                    "local_deepwiki.generators.wiki.generate_inheritance_page",
+                                    "local_deepwiki.generators.wiki.generator.generate_inheritance_page",
                                     return_value=None,
                                 ):
                                     with patch(
-                                        "local_deepwiki.generators.wiki.generate_glossary_page",
+                                        "local_deepwiki.generators.wiki.generator.generate_glossary_page",
                                         return_value=None,
                                     ):
                                         with patch(
-                                            "local_deepwiki.generators.wiki.generate_coverage_page",
+                                            "local_deepwiki.generators.wiki.generator.generate_coverage_page",
                                             return_value=None,
                                         ):
                                             with patch(
-                                                "local_deepwiki.generators.wiki_postprocessing.add_cross_links",
+                                                "local_deepwiki.generators.wiki.postprocessing.add_cross_links",
                                                 side_effect=lambda p, _: p,
                                             ):
                                                 with patch(
-                                                    "local_deepwiki.generators.wiki_postprocessing.add_source_refs_sections",
+                                                    "local_deepwiki.generators.wiki.postprocessing.add_source_refs_sections",
                                                     side_effect=lambda p, _, __: p,
                                                 ):
                                                     with patch(
-                                                        "local_deepwiki.generators.wiki_postprocessing.add_see_also_sections",
+                                                        "local_deepwiki.generators.wiki.postprocessing.add_see_also_sections",
                                                         side_effect=lambda p, _: p,
                                                     ):
                                                         with patch(
-                                                            "local_deepwiki.generators.wiki_postprocessing.write_full_search_index"
+                                                            "local_deepwiki.generators.wiki.postprocessing.write_full_search_index"
                                                         ):
                                                             with patch(
-                                                                "local_deepwiki.generators.wiki_postprocessing.generate_toc",
+                                                                "local_deepwiki.generators.wiki.postprocessing.generate_toc",
                                                                 return_value=[],
                                                             ):
                                                                 with patch(
-                                                                    "local_deepwiki.generators.wiki_postprocessing.write_toc"
+                                                                    "local_deepwiki.generators.wiki.postprocessing.write_toc"
                                                                 ):
                                                                     with patch(
-                                                                        "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                                        "local_deepwiki.generators.wiki.generator.get_cached_manifest"
                                                                     ):
                                                                         await mock_generator.generate(
                                                                             index_status=index_status,
@@ -532,7 +532,7 @@ class TestCacheStatisticsLogging:
         """Test that cache statistics are logged when LLM provider has stats."""
         from contextlib import ExitStack
 
-        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
@@ -543,7 +543,7 @@ class TestCacheStatisticsLogging:
             mock_config.return_value = config
 
             with patch(
-                "local_deepwiki.generators.wiki.get_cached_llm_provider"
+                "local_deepwiki.generators.wiki.generator.get_cached_llm_provider"
             ) as mock_llm:
                 # Create mock LLM with proper stats
                 llm_mock = MagicMock()
@@ -604,7 +604,7 @@ class TestCacheStatisticsLogging:
 
                     mock_overview = stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_overview_page",
+                            "local_deepwiki.generators.wiki.generator.generate_overview_page",
                             new_callable=AsyncMock,
                         )
                     )
@@ -617,7 +617,7 @@ class TestCacheStatisticsLogging:
 
                     mock_arch = stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_architecture_page",
+                            "local_deepwiki.generators.wiki.generator.generate_architecture_page",
                             new_callable=AsyncMock,
                         )
                     )
@@ -630,14 +630,14 @@ class TestCacheStatisticsLogging:
 
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_module_docs",
+                            "local_deepwiki.generators.wiki.generator.generate_module_docs",
                             new_callable=AsyncMock,
                             return_value=([], 0, 0),
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_file_docs",
+                            "local_deepwiki.generators.wiki.generator.generate_file_docs",
                             new_callable=AsyncMock,
                             return_value=([], 0, 0),
                         )
@@ -645,7 +645,7 @@ class TestCacheStatisticsLogging:
 
                     mock_deps = stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_dependencies_page",
+                            "local_deepwiki.generators.wiki.generator.generate_dependencies_page",
                             new_callable=AsyncMock,
                         )
                     )
@@ -659,68 +659,68 @@ class TestCacheStatisticsLogging:
 
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_changelog_page",
+                            "local_deepwiki.generators.wiki.generator.generate_changelog_page",
                             new_callable=AsyncMock,
                             return_value=None,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_inheritance_page",
+                            "local_deepwiki.generators.wiki.generator.generate_inheritance_page",
                             new_callable=AsyncMock,
                             return_value=None,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_glossary_page",
+                            "local_deepwiki.generators.wiki.generator.generate_glossary_page",
                             new_callable=AsyncMock,
                             return_value=None,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_coverage_page",
+                            "local_deepwiki.generators.wiki.generator.generate_coverage_page",
                             new_callable=AsyncMock,
                             return_value=None,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki_postprocessing.add_cross_links",
+                            "local_deepwiki.generators.wiki.postprocessing.add_cross_links",
                             side_effect=lambda p, _: p,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki_postprocessing.add_source_refs_sections",
+                            "local_deepwiki.generators.wiki.postprocessing.add_source_refs_sections",
                             side_effect=lambda p, _, __: p,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki_postprocessing.add_see_also_sections",
+                            "local_deepwiki.generators.wiki.postprocessing.add_see_also_sections",
                             side_effect=lambda p, _: p,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki_postprocessing.write_full_search_index"
+                            "local_deepwiki.generators.wiki.postprocessing.write_full_search_index"
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki_postprocessing.generate_toc",
+                            "local_deepwiki.generators.wiki.postprocessing.generate_toc",
                             return_value=[],
                         )
                     )
                     stack.enter_context(
-                        patch("local_deepwiki.generators.wiki_postprocessing.write_toc")
+                        patch("local_deepwiki.generators.wiki.postprocessing.write_toc")
                     )
 
                     mock_stale = stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki_postprocessing.generate_stale_report_page"
+                            "local_deepwiki.generators.wiki.postprocessing.generate_stale_report_page"
                         )
                     )
                     mock_stale.return_value = WikiPage(
@@ -730,12 +730,12 @@ class TestCacheStatisticsLogging:
                         generated_at=time.time(),
                     )
                     stack.enter_context(
-                        patch("local_deepwiki.generators.wiki.get_cached_manifest")
+                        patch("local_deepwiki.generators.wiki.generator.get_cached_manifest")
                     )
 
                     # Capture logger calls
                     mock_logger = stack.enter_context(
-                        patch("local_deepwiki.generators.wiki.logger")
+                        patch("local_deepwiki.generators.wiki.generator.logger")
                     )
 
                     await generator.generate(
@@ -767,7 +767,7 @@ class TestCacheStatisticsLogging:
         """Test that mock stats (non-integer) are handled gracefully."""
         from contextlib import ExitStack
 
-        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
@@ -778,7 +778,7 @@ class TestCacheStatisticsLogging:
             mock_config.return_value = config
 
             with patch(
-                "local_deepwiki.generators.wiki.get_cached_llm_provider"
+                "local_deepwiki.generators.wiki.generator.get_cached_llm_provider"
             ) as mock_llm:
                 # Create mock LLM with MagicMock stats (simulates test mocking)
                 llm_mock = MagicMock()
@@ -839,7 +839,7 @@ class TestCacheStatisticsLogging:
 
                     mock_overview = stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_overview_page",
+                            "local_deepwiki.generators.wiki.generator.generate_overview_page",
                             new_callable=AsyncMock,
                         )
                     )
@@ -852,7 +852,7 @@ class TestCacheStatisticsLogging:
 
                     mock_arch = stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_architecture_page",
+                            "local_deepwiki.generators.wiki.generator.generate_architecture_page",
                             new_callable=AsyncMock,
                         )
                     )
@@ -865,14 +865,14 @@ class TestCacheStatisticsLogging:
 
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_module_docs",
+                            "local_deepwiki.generators.wiki.generator.generate_module_docs",
                             new_callable=AsyncMock,
                             return_value=([], 0, 0),
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_file_docs",
+                            "local_deepwiki.generators.wiki.generator.generate_file_docs",
                             new_callable=AsyncMock,
                             return_value=([], 0, 0),
                         )
@@ -880,7 +880,7 @@ class TestCacheStatisticsLogging:
 
                     mock_deps = stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_dependencies_page",
+                            "local_deepwiki.generators.wiki.generator.generate_dependencies_page",
                             new_callable=AsyncMock,
                         )
                     )
@@ -894,68 +894,68 @@ class TestCacheStatisticsLogging:
 
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_changelog_page",
+                            "local_deepwiki.generators.wiki.generator.generate_changelog_page",
                             new_callable=AsyncMock,
                             return_value=None,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_inheritance_page",
+                            "local_deepwiki.generators.wiki.generator.generate_inheritance_page",
                             new_callable=AsyncMock,
                             return_value=None,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_glossary_page",
+                            "local_deepwiki.generators.wiki.generator.generate_glossary_page",
                             new_callable=AsyncMock,
                             return_value=None,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki.generate_coverage_page",
+                            "local_deepwiki.generators.wiki.generator.generate_coverage_page",
                             new_callable=AsyncMock,
                             return_value=None,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki_postprocessing.add_cross_links",
+                            "local_deepwiki.generators.wiki.postprocessing.add_cross_links",
                             side_effect=lambda p, _: p,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki_postprocessing.add_source_refs_sections",
+                            "local_deepwiki.generators.wiki.postprocessing.add_source_refs_sections",
                             side_effect=lambda p, _, __: p,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki_postprocessing.add_see_also_sections",
+                            "local_deepwiki.generators.wiki.postprocessing.add_see_also_sections",
                             side_effect=lambda p, _: p,
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki_postprocessing.write_full_search_index"
+                            "local_deepwiki.generators.wiki.postprocessing.write_full_search_index"
                         )
                     )
                     stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki_postprocessing.generate_toc",
+                            "local_deepwiki.generators.wiki.postprocessing.generate_toc",
                             return_value=[],
                         )
                     )
                     stack.enter_context(
-                        patch("local_deepwiki.generators.wiki_postprocessing.write_toc")
+                        patch("local_deepwiki.generators.wiki.postprocessing.write_toc")
                     )
 
                     mock_stale = stack.enter_context(
                         patch(
-                            "local_deepwiki.generators.wiki_postprocessing.generate_stale_report_page"
+                            "local_deepwiki.generators.wiki.postprocessing.generate_stale_report_page"
                         )
                     )
                     mock_stale.return_value = WikiPage(
@@ -965,7 +965,7 @@ class TestCacheStatisticsLogging:
                         generated_at=time.time(),
                     )
                     stack.enter_context(
-                        patch("local_deepwiki.generators.wiki.get_cached_manifest")
+                        patch("local_deepwiki.generators.wiki.generator.get_cached_manifest")
                     )
 
                     # Should not raise an exception (mock stats are handled gracefully)

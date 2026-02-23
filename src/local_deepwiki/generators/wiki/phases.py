@@ -24,8 +24,11 @@ from local_deepwiki.models import (
 )
 
 if TYPE_CHECKING:
-    from local_deepwiki.generators.wiki import WikiGenerator, _GenerationContext
-    from local_deepwiki.generators.wiki_status import WikiStatusManager
+    from local_deepwiki.generators.wiki.generator import (
+        WikiGenerator,
+        _GenerationContext,
+    )
+    from local_deepwiki.generators.wiki.status import WikiStatusManager
 
 logger = get_logger(__name__)
 
@@ -397,14 +400,14 @@ async def generate_auxiliary_pages(
     """
     import asyncio
 
-    # Late imports so test patches at ``local_deepwiki.generators.wiki.*`` are
+    # Late imports so test patches at ``generators.wiki.generator.*`` are
     # picked up at call time rather than module-load time.
-    from local_deepwiki.generators import wiki as _wiki_mod
+    from local_deepwiki.generators.wiki import generator as _wiki_gen
 
-    _generate_inheritance_page = _wiki_mod.generate_inheritance_page
-    _generate_glossary_page = _wiki_mod.generate_glossary_page
-    _generate_coverage_page = _wiki_mod.generate_coverage_page
-    _generate_dependency_graph_page = _wiki_mod.generate_dependency_graph_page
+    _generate_inheritance_page = _wiki_gen.generate_inheritance_page
+    _generate_glossary_page = _wiki_gen.generate_glossary_page
+    _generate_coverage_page = _wiki_gen.generate_coverage_page
+    _generate_dependency_graph_page = _wiki_gen.generate_dependency_graph_page
 
     if progress_callback:
         progress_callback("Generating auxiliary pages", 6, 14)

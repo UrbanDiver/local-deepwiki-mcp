@@ -24,7 +24,7 @@ from local_deepwiki.models import WikiPage
 if TYPE_CHECKING:
     from local_deepwiki.config import WikiConfig
     from local_deepwiki.core.vectorstore import VectorStore
-    from local_deepwiki.generators.wiki_status import WikiStatusManager
+    from local_deepwiki.generators.wiki.status import WikiStatusManager
     from local_deepwiki.providers.base import LLMProvider
 
 logger = get_logger(__name__)

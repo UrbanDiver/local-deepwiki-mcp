@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from local_deepwiki.generators.codemap import CodemapResult
-from local_deepwiki.generators.wiki_codemaps import (
+from local_deepwiki.generators.wiki.codemap_pages import (
     _fix_mermaid_click_paths,
     _format_codemap_index,
     _format_codemap_page,
@@ -280,8 +280,8 @@ class TestGenerateCodemapPages:
         assert pages == []
         assert gen == 0
 
-    @patch("local_deepwiki.generators.wiki_codemaps.generate_codemap")
-    @patch("local_deepwiki.generators.wiki_codemaps.suggest_topics")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.generate_codemap")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.suggest_topics")
     async def test_generates_pages_and_index(
         self, mock_suggest, mock_codemap, status_manager, tmp_path
     ):
@@ -306,8 +306,8 @@ class TestGenerateCodemapPages:
         assert pages[-1].path == "codemaps/index.md"
         assert pages[0].path == "codemaps/foo.md"
 
-    @patch("local_deepwiki.generators.wiki_codemaps.generate_codemap")
-    @patch("local_deepwiki.generators.wiki_codemaps.suggest_topics")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.generate_codemap")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.suggest_topics")
     async def test_skips_trivial_graphs(
         self, mock_suggest, mock_codemap, status_manager, tmp_path
     ):
@@ -329,8 +329,8 @@ class TestGenerateCodemapPages:
         assert pages[0].path == "codemaps/index.md"
         assert gen == 1
 
-    @patch("local_deepwiki.generators.wiki_codemaps.generate_codemap")
-    @patch("local_deepwiki.generators.wiki_codemaps.suggest_topics")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.generate_codemap")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.suggest_topics")
     async def test_incremental_skip(
         self, mock_suggest, mock_codemap, status_manager, tmp_path
     ):
@@ -358,8 +358,8 @@ class TestGenerateCodemapPages:
         # generate_codemap should NOT have been called
         mock_codemap.assert_not_called()
 
-    @patch("local_deepwiki.generators.wiki_codemaps.generate_codemap")
-    @patch("local_deepwiki.generators.wiki_codemaps.suggest_topics")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.generate_codemap")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.suggest_topics")
     async def test_error_resilience(
         self, mock_suggest, mock_codemap, status_manager, tmp_path
     ):
@@ -386,7 +386,7 @@ class TestGenerateCodemapPages:
         assert len(pages) == 2
         assert gen == 2
 
-    @patch("local_deepwiki.generators.wiki_codemaps.suggest_topics")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.suggest_topics")
     async def test_no_topics_returns_empty(
         self, mock_suggest, status_manager, tmp_path
     ):
@@ -405,8 +405,8 @@ class TestGenerateCodemapPages:
         assert gen == 0
         assert skip == 0
 
-    @patch("local_deepwiki.generators.wiki_codemaps.generate_codemap")
-    @patch("local_deepwiki.generators.wiki_codemaps.suggest_topics")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.generate_codemap")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.suggest_topics")
     async def test_orphan_cleanup(
         self, mock_suggest, mock_codemap, status_manager, tmp_path
     ):
@@ -431,7 +431,7 @@ class TestGenerateCodemapPages:
         )
         assert not orphan.exists()
 
-    @patch("local_deepwiki.generators.wiki_codemaps.suggest_topics")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.suggest_topics")
     async def test_suggest_topics_exception(
         self, mock_suggest, status_manager, tmp_path
     ):
@@ -449,8 +449,8 @@ class TestGenerateCodemapPages:
         assert pages == []
         assert gen == 0
 
-    @patch("local_deepwiki.generators.wiki_codemaps.generate_codemap")
-    @patch("local_deepwiki.generators.wiki_codemaps.suggest_topics")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.generate_codemap")
+    @patch("local_deepwiki.generators.wiki.codemap_pages.suggest_topics")
     async def test_multiple_topics(
         self, mock_suggest, mock_codemap, status_manager, tmp_path
     ):

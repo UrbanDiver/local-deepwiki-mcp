@@ -6,7 +6,7 @@ from textwrap import dedent
 import pytest
 
 from local_deepwiki.core.parser import CodeParser
-from local_deepwiki.generators.api_docs import (
+from local_deepwiki.generators.analysis.api_docs import (
     APIDocExtractor,
     ClassSignature,
     FunctionSignature,
@@ -1333,7 +1333,7 @@ class TestMockedASTEdgeCases:
         mock_node.children = []
 
         with patch(
-            "local_deepwiki.generators.api_docs.get_node_name", return_value=None
+            "local_deepwiki.generators.analysis.api_docs.get_node_name", return_value=None
         ):
             result = extract_class_signature(mock_node, b"", Language.PYTHON)
             assert result is None
@@ -1346,7 +1346,7 @@ class TestMockedASTEdgeCases:
         mock_node.children = []
 
         with patch(
-            "local_deepwiki.generators.api_docs.get_node_name", return_value=None
+            "local_deepwiki.generators.analysis.api_docs.get_node_name", return_value=None
         ):
             result = extract_function_signature(mock_node, b"", Language.PYTHON)
             assert result is None

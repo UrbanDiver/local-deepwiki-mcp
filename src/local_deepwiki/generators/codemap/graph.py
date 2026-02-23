@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from local_deepwiki.core.vectorstore import VectorStore
 
-from local_deepwiki.generators.codemap_models import (
+from local_deepwiki.generators.codemap.models import (
     BUILTIN_NAMES,
     CALLABLE_CHUNK_TYPES,
     ENTRY_PATTERNS,
@@ -128,7 +128,7 @@ async def discover_entry_points(
     """
     _CallGraphExtractor: type | None
     try:
-        from local_deepwiki.generators.callgraph import (
+        from local_deepwiki.generators.analysis.callgraph import (
             CallGraphExtractor as _CallGraphExtractor,
         )
     except ImportError:  # pragma: no cover
@@ -233,7 +233,7 @@ async def build_cross_file_graph(
     """
     _CGExtractor: type | None
     try:
-        from local_deepwiki.generators.callgraph import (
+        from local_deepwiki.generators.analysis.callgraph import (
             CallGraphExtractor as _CGExtractor,
         )
     except ImportError:  # pragma: no cover

@@ -5,7 +5,7 @@ from textwrap import dedent
 
 import pytest
 
-from local_deepwiki.generators.test_examples import (
+from local_deepwiki.generators.examples.orchestrator import (
     UsageExample,
     extract_examples_for_entities,
     find_test_file,
@@ -584,7 +584,7 @@ class TestGetFunctionNameEdgeCases:
 
         This tests the fallback return 'unknown' path.
         """
-        from local_deepwiki.generators.test_examples import _get_function_name
+        from local_deepwiki.generators.examples.orchestrator import _get_function_name
 
         # Create a mock node that returns None for name field
         class MockNode:
@@ -601,7 +601,7 @@ class TestGetDocstringEdgeCases:
 
     def test_function_with_empty_body(self, tmp_path: Path) -> None:
         """Test function body with no children (line 169)."""
-        from local_deepwiki.generators.test_examples import _get_docstring
+        from local_deepwiki.generators.examples.orchestrator import _get_docstring
 
         # Mock node where body has no children
         class MockBodyNode:
@@ -618,7 +618,7 @@ class TestGetDocstringEdgeCases:
 
     def test_function_with_no_body(self, tmp_path: Path) -> None:
         """Test function with no body at all (line 169)."""
-        from local_deepwiki.generators.test_examples import _get_docstring
+        from local_deepwiki.generators.examples.orchestrator import _get_docstring
 
         class MockFuncNode:
             def child_by_field_name(self, name: str):
@@ -639,7 +639,7 @@ class TestGetDocstringEdgeCases:
 '''
         )
 
-        from local_deepwiki.generators.test_examples import extract_examples_for_entities
+        from local_deepwiki.generators.examples.orchestrator import extract_examples_for_entities
 
         examples = extract_examples_for_entities(
             test_file,
@@ -654,7 +654,7 @@ class TestGetFunctionBodyEdgeCases:
 
     def test_function_with_no_body_returns_empty(self) -> None:
         """Test function with no body returns empty string (line 191)."""
-        from local_deepwiki.generators.test_examples import _get_function_body
+        from local_deepwiki.generators.examples.orchestrator import _get_function_body
 
         class MockFuncNode:
             def child_by_field_name(self, name: str):
@@ -808,7 +808,7 @@ class TestExtractUsageSnippetEdgeCases:
 
         This is an edge case where dedent might fail on unusual input.
         """
-        from local_deepwiki.generators.test_examples import _extract_usage_snippet
+        from local_deepwiki.generators.examples.orchestrator import _extract_usage_snippet
         from local_deepwiki.core.parser import CodeParser
         from local_deepwiki.models import Language
 
@@ -830,7 +830,7 @@ class TestExtractUsageSnippetEdgeCases:
         root = parser.parse_source(source, Language.PYTHON)
 
         # Find the function node
-        from local_deepwiki.generators.test_examples import _find_test_functions
+        from local_deepwiki.generators.examples.orchestrator import _find_test_functions
 
         test_funcs = _find_test_functions(root)
         if test_funcs:
@@ -998,7 +998,7 @@ class TestDirectExtractUsageSnippet:
 
     def test_no_relevant_lines_returns_none(self, tmp_path: Path) -> None:
         """Test that no relevant lines returns None directly (line 298)."""
-        from local_deepwiki.generators.test_examples import (
+        from local_deepwiki.generators.examples.orchestrator import (
             _extract_usage_snippet,
             _find_test_functions,
         )
@@ -1060,7 +1060,7 @@ class TestGetDocstringDoubleQuoteEdge:
         Line 180 handles docstrings that start with '""' after stripping.
         This is an edge case from tree-sitter's string parsing.
         """
-        from local_deepwiki.generators.test_examples import _get_docstring
+        from local_deepwiki.generators.examples.orchestrator import _get_docstring
         from local_deepwiki.core.parser import CodeParser
         from local_deepwiki.models import Language
 
@@ -1081,7 +1081,7 @@ class TestGetDocstringDoubleQuoteEdge:
         root = parser.parse_source(source, Language.PYTHON)
 
         # Find the function
-        from local_deepwiki.generators.test_examples import _find_test_functions
+        from local_deepwiki.generators.examples.orchestrator import _find_test_functions
 
         test_funcs = _find_test_functions(root)
         if test_funcs:

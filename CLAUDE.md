@@ -156,46 +156,80 @@ uv run deepwiki cache cleanup
 
 ### Generators
 
-| Generator | File | Purpose |
+Organized into 4 subpackages plus root utilities:
+
+#### `generators/wiki/` — Wiki Documentation
+
+| Component | File | Purpose |
 |-----------|------|---------|
-| Wiki | `generators/wiki.py` | LLM-powered markdown wiki generation |
-| Diagrams | `generators/diagrams.py` | Mermaid diagram generation (class, dependency, module, sequence, language_pie) |
-| Call Graph | `generators/callgraph.py` | Function call graph analysis |
-| Coverage | `generators/coverage.py` | Documentation coverage analysis |
-| Glossary | `generators/glossary.py` | Searchable code entity glossary |
-| Inheritance | `generators/inheritance.py` | Class hierarchy tree generation |
-| Stale Detection | `generators/stale_detection.py` | Detects outdated wiki pages |
-| API Docs | `generators/api_docs.py` | Parameter and return type extraction |
-| Test Examples | `generators/test_examples.py` | Test-file-based example extraction and orchestration |
-| Docstring Examples | `generators/docstring_examples.py` | Docstring example parsing (doctest and Google-style) |
-| Example Extractor | `generators/example_extractor.py` | `CodeExampleExtractor` class and markdown formatting |
-| Crosslinks | `generators/crosslinks.py` | Cross-reference linking between wiki pages |
-| See Also | `generators/see_also.py` | Related page suggestions |
-| Source Refs | `generators/source_refs.py` | Source code reference links |
-| Changelog | `generators/changelog.py` | Git-based changelog generation |
-| Dependency Graph | `generators/dependency_graph.py` | `DependencyGraphGenerator` class and page generation |
-| Dependency Graph Data | `generators/dependency_graph_data.py` | Import patterns, dataclasses (`DependencyNode/Edge/Graph`), utility functions |
-| TOC | `generators/toc.py` | Table of contents generation with hierarchical numbering |
-| Search Index | `generators/search.py` | JSON search index for client-side full-text search |
-| Manifest | `generators/manifest.py` | Manifest dataclasses, cache, and `parse_manifest` orchestrator |
-| Manifest Parsers | `generators/manifest_parsers.py` | Language-specific parsers (pyproject.toml, package.json, Cargo.toml, etc.) |
-| Dir Tree | `generators/dir_tree.py` | Directory tree generation with gitignore support |
-| Context Builder | `generators/context_builder.py` | Rich LLM context from imports, callers, related files |
-| Wiki Modules | `generators/wiki_modules.py` | Module-level documentation generation |
-| Wiki Files | `generators/wiki_files.py` | File-level documentation generation |
-| Wiki Pages | `generators/wiki_pages.py` | Specific documentation page generators |
-| Wiki Status | `generators/wiki_status.py` | Incremental update status management |
-| Progress Tracker | `generators/progress_tracker.py` | Live progress tracking for wiki generation |
-| Examples Plugin | `generators/examples_plugin.py` | Wiki plugin aggregating code examples from tests |
-| Codemap | `generators/codemap.py` | Cross-file execution-flow maps with Mermaid diagrams and LLM narrative |
-| Codemap Cache | `generators/codemap_cache.py` | Caching layer for codemap generation results |
-| Wiki Codemaps | `generators/wiki_codemaps.py` | Codemap-specific wiki page generation |
-| Complexity | `generators/complexity.py` | Cyclomatic complexity and nesting depth via tree-sitter AST |
-| Lazy Generator | `generators/lazy_generator.py` | On-demand wiki page generation for missing pages |
-| LLMs.txt | `generators/llms_txt.py` | LLMs.txt format output for AI consumption |
-| Prefetch | `generators/prefetch.py` | Prefetches vector search results for wiki generation |
-| Wiki Plugin Runner | `generators/wiki_plugin_runner.py` | Executes registered wiki generator plugins |
-| Wiki Postprocessing | `generators/wiki_postprocessing.py` | Post-generation content cleanup and enrichment |
+| Generator | `wiki/generator.py` | LLM-powered markdown wiki generation (`WikiGenerator`, `generate_wiki`) |
+| Files | `wiki/files.py` | File-level documentation generation |
+| Modules | `wiki/modules.py` | Module-level documentation generation |
+| Pages | `wiki/pages.py` | Specific documentation page generators (overview, architecture, etc.) |
+| Phases | `wiki/phases.py` | Generation phase orchestration (summary, auxiliary, changelog) |
+| Plugin Runner | `wiki/plugin_runner.py` | Executes registered wiki generator plugins |
+| Postprocessing | `wiki/postprocessing.py` | Post-generation content cleanup and enrichment |
+| Source Formatter | `wiki/source_formatter.py` | Source code formatting for wiki pages |
+| Status | `wiki/status.py` | Incremental update status management |
+| Utils | `wiki/utils.py` | Shared wiki generation utilities |
+| Codemap Pages | `wiki/codemap_pages.py` | Codemap-specific wiki page generation |
+
+#### `generators/codemap/` — Codemap Generation
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Generator | `codemap/generator.py` | Cross-file execution-flow maps with Mermaid diagrams and LLM narrative |
+| Models | `codemap/models.py` | Data structures and constants (`CodemapNode`, `CodemapEdge`, `CodemapResult`) |
+| Graph | `codemap/graph.py` | BFS traversal, entry point discovery, cross-file graph building |
+| Viz | `codemap/viz.py` | Mermaid diagram generation from codemap graphs |
+| Cache | `codemap/cache.py` | Persistent caching layer for codemap results |
+
+#### `generators/analysis/` — Code Analysis
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| API Docs | `analysis/api_docs.py` | Parameter and return type extraction |
+| Call Graph | `analysis/callgraph.py` | Function call graph analysis |
+| Complexity | `analysis/complexity.py` | Cyclomatic complexity and nesting depth via tree-sitter AST |
+| Coverage | `analysis/coverage.py` | Documentation coverage analysis |
+| Dependency Graph | `analysis/dependency_graph.py` | `DependencyGraphGenerator` class and page generation |
+| Dependency Graph Data | `analysis/dependency_graph_data.py` | Import patterns, dataclasses (`DependencyNode/Edge/Graph`), utility functions |
+| Glossary | `analysis/glossary.py` | Searchable code entity glossary |
+| Inheritance | `analysis/inheritance.py` | Class hierarchy tree generation |
+| Stale Detection | `analysis/stale_detection.py` | Detects outdated wiki pages |
+
+#### `generators/examples/` — Example Extraction
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Orchestrator | `examples/orchestrator.py` | Test-file-based example extraction and orchestration |
+| Discovery | `examples/discovery.py` | Test file discovery and function detection |
+| Docstring | `examples/docstring.py` | Docstring example parsing (doctest and Google-style) |
+| Extractor | `examples/extractor.py` | `CodeExampleExtractor` class and markdown formatting |
+| Plugin | `examples/plugin.py` | Wiki plugin aggregating code examples from tests |
+
+#### `generators/diagrams/` — Diagram Generation (subpackage)
+
+Mermaid diagram generation (class, dependency, module, sequence, language_pie).
+
+#### `generators/` Root Utilities
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Changelog | `changelog.py` | Git-based changelog generation |
+| Context Builder | `context_builder.py` | Rich LLM context from imports, callers, related files |
+| Crosslinks | `crosslinks.py` | Cross-reference linking between wiki pages |
+| Dir Tree | `dir_tree.py` | Directory tree generation with gitignore support |
+| Lazy Generator | `lazy_generator.py` | On-demand wiki page generation for missing pages |
+| LLMs.txt | `llms_txt.py` | LLMs.txt format output for AI consumption |
+| Manifest | `manifest.py` | Manifest dataclasses, cache, and `parse_manifest` orchestrator |
+| Manifest Parsers | `manifest_parsers.py` | Language-specific parsers (pyproject.toml, package.json, Cargo.toml, etc.) |
+| Prefetch | `prefetch.py` | Prefetches vector search results for wiki generation |
+| Progress Tracker | `progress_tracker.py` | Live progress tracking for wiki generation |
+| Search Index | `search.py` | JSON search index for client-side full-text search |
+| See Also | `see_also.py` | Related page suggestions |
+| Source Refs | `source_refs.py` | Source code reference links |
+| TOC | `toc.py` | Table of contents generation with hierarchical numbering |
 
 ### CLI
 

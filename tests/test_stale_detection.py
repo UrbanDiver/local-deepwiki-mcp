@@ -13,7 +13,7 @@ from local_deepwiki.core.git_utils import (
     get_file_last_modified,
     get_files_last_modified,
 )
-from local_deepwiki.generators.stale_detection import (
+from local_deepwiki.generators.analysis.stale_detection import (
     StaleReport,
     add_stale_banners,
     analyze_staleness,

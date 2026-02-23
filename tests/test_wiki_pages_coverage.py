@@ -12,7 +12,7 @@ from conftest import (
     make_search_result,
 )
 from local_deepwiki.generators.manifest import ProjectManifest
-from local_deepwiki.generators.wiki_pages import (
+from local_deepwiki.generators.wiki.pages import (
     generate_architecture_page,
     generate_changelog_page,
     generate_dependencies_page,

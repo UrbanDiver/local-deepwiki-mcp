@@ -11,7 +11,7 @@ from conftest import (
     make_index_status,
     make_search_result,
 )
-from local_deepwiki.generators.wiki_modules import (
+from local_deepwiki.generators.wiki.modules import (
     _generate_modules_index,
     generate_module_docs,
 )
@@ -549,7 +549,7 @@ class TestModuleDocEnrichment:
         self, mock_llm, mock_vector_store, tmp_path
     ):
         """Test that the enriched file list appears in the LLM prompt."""
-        from local_deepwiki.generators.wiki_modules import generate_single_module_doc
+        from local_deepwiki.generators.wiki.modules import generate_single_module_doc
 
         page = await generate_single_module_doc(
             dir_name="src",
@@ -570,7 +570,7 @@ class TestModuleDocEnrichment:
         self, mock_llm, mock_vector_store, tmp_path
     ):
         """Test that authoritative docs appear when CLAUDE.md exists."""
-        from local_deepwiki.generators.wiki_modules import generate_single_module_doc
+        from local_deepwiki.generators.wiki.modules import generate_single_module_doc
 
         # Create CLAUDE.md
         claude_md = tmp_path / "CLAUDE.md"
@@ -594,7 +594,7 @@ class TestModuleDocEnrichment:
         self, mock_llm, mock_vector_store, tmp_path
     ):
         """Test no authoritative section when no docs exist."""
-        from local_deepwiki.generators.wiki_modules import generate_single_module_doc
+        from local_deepwiki.generators.wiki.modules import generate_single_module_doc
 
         page = await generate_single_module_doc(
             dir_name="src",
@@ -613,7 +613,7 @@ class TestModuleDocEnrichment:
         self, mock_llm, mock_vector_store, tmp_path
     ):
         """Test that file list includes entity names from search results."""
-        from local_deepwiki.generators.wiki_modules import generate_single_module_doc
+        from local_deepwiki.generators.wiki.modules import generate_single_module_doc
 
         page = await generate_single_module_doc(
             dir_name="src",
@@ -631,7 +631,7 @@ class TestModuleDocEnrichment:
 
     async def test_repo_path_none_still_works(self, mock_llm, mock_vector_store):
         """Test that generate_single_module_doc works when repo_path is None."""
-        from local_deepwiki.generators.wiki_modules import generate_single_module_doc
+        from local_deepwiki.generators.wiki.modules import generate_single_module_doc
 
         page = await generate_single_module_doc(
             dir_name="src",

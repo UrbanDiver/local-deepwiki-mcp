@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from local_deepwiki.generators.glossary import (
+from local_deepwiki.generators.analysis.glossary import (
     EntityEntry,
     _format_signature,
     _get_brief_description,

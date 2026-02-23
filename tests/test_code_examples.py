@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from local_deepwiki.generators.test_examples import (
+from local_deepwiki.generators.examples.orchestrator import (
     CodeExample,
     CodeExampleExtractor,
     parse_docstring_examples,
@@ -549,7 +549,7 @@ class TestExamplesWikiGenerator:
 
     async def test_generator_metadata(self) -> None:
         """Test plugin metadata."""
-        from local_deepwiki.generators.examples_plugin import ExamplesWikiGenerator
+        from local_deepwiki.generators.examples.plugin import ExamplesWikiGenerator
 
         generator = ExamplesWikiGenerator()
 
@@ -563,7 +563,7 @@ class TestExamplesWikiGenerator:
         tmp_path: Path,
     ) -> None:
         """Test generation without vector store."""
-        from local_deepwiki.generators.examples_plugin import ExamplesWikiGenerator
+        from local_deepwiki.generators.examples.plugin import ExamplesWikiGenerator
 
         generator = ExamplesWikiGenerator()
         result = await generator.generate(
@@ -581,7 +581,7 @@ class TestExamplesWikiGenerator:
         tmp_path: Path,
     ) -> None:
         """Test generation when no examples found."""
-        from local_deepwiki.generators.examples_plugin import ExamplesWikiGenerator
+        from local_deepwiki.generators.examples.plugin import ExamplesWikiGenerator
 
         generator = ExamplesWikiGenerator()
         result = await generator.generate(
@@ -600,7 +600,7 @@ class TestExamplesWikiGenerator:
         tmp_path: Path,
     ) -> None:
         """Test generation with examples."""
-        from local_deepwiki.generators.examples_plugin import ExamplesWikiGenerator
+        from local_deepwiki.generators.examples.plugin import ExamplesWikiGenerator
 
         # Create mock chunk with docstring example
         mock_chunk = MagicMock()

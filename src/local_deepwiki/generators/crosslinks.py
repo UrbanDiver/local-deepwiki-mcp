@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from local_deepwiki.generators.wiki_utils import (
+from local_deepwiki.generators.wiki.utils import (
     file_path_to_wiki_path,
     relative_wiki_path,
 )

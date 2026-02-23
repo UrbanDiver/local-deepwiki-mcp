@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from local_deepwiki.generators.codemap_cache import (
+from local_deepwiki.generators.codemap.cache import (
     CODEMAP_CACHE_TTL,
     cache_key,
     get_cache_dir,
@@ -249,7 +249,7 @@ class TestReadCache:
         data = {"query": "boundary", "cached_at": now - CODEMAP_CACHE_TTL - 1}
         cache_file.write_text(json.dumps(data))
 
-        with patch("local_deepwiki.generators.codemap_cache.time") as mock_time:
+        with patch("local_deepwiki.generators.codemap.cache.time") as mock_time:
             mock_time.time.return_value = now
             result = read_cache(tmp_path, "boundary")
 
@@ -265,7 +265,7 @@ class TestReadCache:
         data = {"query": "justfresh", "cached_at": now - CODEMAP_CACHE_TTL + 1}
         cache_file.write_text(json.dumps(data))
 
-        with patch("local_deepwiki.generators.codemap_cache.time") as mock_time:
+        with patch("local_deepwiki.generators.codemap.cache.time") as mock_time:
             mock_time.time.return_value = now
             result = read_cache(tmp_path, "justfresh")
 

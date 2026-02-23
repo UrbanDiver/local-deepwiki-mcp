@@ -88,7 +88,7 @@ class TestWikiStatusManagerHelpers:
     @pytest.fixture
     def status_manager(self, tmp_path):
         """Create a WikiStatusManager instance."""
-        from local_deepwiki.generators.wiki_status import WikiStatusManager
+        from local_deepwiki.generators.wiki.status import WikiStatusManager
 
         manager = WikiStatusManager(tmp_path)
         manager.file_hashes = {
@@ -203,7 +203,7 @@ class TestWikiStatusPersistence:
 
     async def test_save_and_load_wiki_status(self, tmp_path):
         """Test saving and loading wiki status."""
-        from local_deepwiki.generators.wiki_status import WikiStatusManager
+        from local_deepwiki.generators.wiki.status import WikiStatusManager
 
         manager = WikiStatusManager(tmp_path)
 
@@ -240,7 +240,7 @@ class TestWikiStatusPersistence:
 
     async def test_load_missing_status(self, tmp_path):
         """Test loading when status file doesn't exist."""
-        from local_deepwiki.generators.wiki_status import WikiStatusManager
+        from local_deepwiki.generators.wiki.status import WikiStatusManager
 
         manager = WikiStatusManager(tmp_path)
 
@@ -249,7 +249,7 @@ class TestWikiStatusPersistence:
 
     async def test_load_corrupted_status(self, tmp_path):
         """Test loading when status file is corrupted."""
-        from local_deepwiki.generators.wiki_status import WikiStatusManager
+        from local_deepwiki.generators.wiki.status import WikiStatusManager
 
         manager = WikiStatusManager(tmp_path)
 
@@ -266,7 +266,7 @@ class TestLoadExistingPage:
 
     async def test_load_existing_page(self, tmp_path):
         """Test loading an existing page from disk."""
-        from local_deepwiki.generators.wiki_status import WikiStatusManager
+        from local_deepwiki.generators.wiki.status import WikiStatusManager
 
         manager = WikiStatusManager(tmp_path)
 
@@ -281,7 +281,7 @@ class TestLoadExistingPage:
 
     async def test_load_missing_page(self, tmp_path):
         """Test loading a page that doesn't exist."""
-        from local_deepwiki.generators.wiki_status import WikiStatusManager
+        from local_deepwiki.generators.wiki.status import WikiStatusManager
 
         manager = WikiStatusManager(tmp_path)
 
@@ -290,7 +290,7 @@ class TestLoadExistingPage:
 
     async def test_load_page_uses_previous_timestamp(self, tmp_path):
         """Test that loaded page uses timestamp from previous status."""
-        from local_deepwiki.generators.wiki_status import WikiStatusManager
+        from local_deepwiki.generators.wiki.status import WikiStatusManager
 
         manager = WikiStatusManager(tmp_path)
 

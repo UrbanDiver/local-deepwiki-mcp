@@ -2,7 +2,7 @@
 
 import json
 
-from local_deepwiki.generators.wiki_status import WikiStatusManager
+from local_deepwiki.generators.wiki.status import WikiStatusManager
 from local_deepwiki.models import (
     IndexStatus,
     WikiGenerationStatus,

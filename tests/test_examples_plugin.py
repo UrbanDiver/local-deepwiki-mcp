@@ -11,11 +11,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from local_deepwiki.generators.examples_plugin import (
+from local_deepwiki.generators.examples.plugin import (
     ExamplesWikiGenerator,
     get_examples_for_api_page,
 )
-from local_deepwiki.generators.test_examples import CodeExample, CodeExampleExtractor
+from local_deepwiki.generators.examples.orchestrator import CodeExample, CodeExampleExtractor
 from local_deepwiki.models import ChunkType, IndexStatus, Language
 
 

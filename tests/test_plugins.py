@@ -656,7 +656,7 @@ class TestWikiGeneratorPluginIntegration:
         )
 
         # Run the plugin generator method directly
-        from local_deepwiki.generators.wiki import _GenerationContext
+        from local_deepwiki.generators.wiki.generator import _GenerationContext
 
         ctx = _GenerationContext(
             pages=[],
@@ -676,7 +676,7 @@ class TestWikiGeneratorPluginIntegration:
 
     async def test_wiki_generator_handles_plugin_errors(self, tmp_path):
         """Test that wiki generator handles plugin errors gracefully."""
-        from local_deepwiki.generators.wiki import WikiGenerator, _GenerationContext
+        from local_deepwiki.generators.wiki.generator import WikiGenerator, _GenerationContext
         from local_deepwiki.core.vectorstore import VectorStore
         from local_deepwiki.models import IndexStatus
         from unittest.mock import MagicMock
@@ -736,7 +736,7 @@ class TestWikiGeneratorPluginIntegration:
 
     async def test_wiki_generator_sorts_by_priority(self, tmp_path):
         """Test that wiki generators are sorted by priority."""
-        from local_deepwiki.generators.wiki import WikiGenerator, _GenerationContext
+        from local_deepwiki.generators.wiki.generator import WikiGenerator, _GenerationContext
         from local_deepwiki.core.vectorstore import VectorStore
         from local_deepwiki.models import IndexStatus
         from unittest.mock import MagicMock
@@ -808,7 +808,7 @@ class TestWikiGeneratorPluginIntegration:
 
     async def test_no_plugins_registered_is_noop(self, tmp_path):
         """Test that no plugins registered means no action taken."""
-        from local_deepwiki.generators.wiki import WikiGenerator, _GenerationContext
+        from local_deepwiki.generators.wiki.generator import WikiGenerator, _GenerationContext
         from local_deepwiki.core.vectorstore import VectorStore
         from local_deepwiki.models import IndexStatus
         from unittest.mock import MagicMock
@@ -847,7 +847,7 @@ class TestWikiGeneratorPluginIntegration:
 
     async def test_wiki_generator_respects_run_after_dependencies(self, tmp_path):
         """Test that generators run in dependency order."""
-        from local_deepwiki.generators.wiki import WikiGenerator, _GenerationContext
+        from local_deepwiki.generators.wiki.generator import WikiGenerator, _GenerationContext
         from local_deepwiki.core.vectorstore import VectorStore
         from local_deepwiki.models import IndexStatus
         from unittest.mock import MagicMock
@@ -920,7 +920,7 @@ class TestWikiGeneratorPluginIntegration:
 
     async def test_wiki_generator_handles_missing_dependencies(self, tmp_path):
         """Test that generators with missing dependencies still run (deps are skipped)."""
-        from local_deepwiki.generators.wiki import WikiGenerator, _GenerationContext
+        from local_deepwiki.generators.wiki.generator import WikiGenerator, _GenerationContext
         from local_deepwiki.core.vectorstore import VectorStore
         from local_deepwiki.models import IndexStatus
         from unittest.mock import MagicMock
@@ -984,7 +984,7 @@ class TestWikiGeneratorPluginIntegration:
 
     async def test_wiki_generator_handles_circular_dependencies(self, tmp_path):
         """Test that circular dependencies prevent generators from running."""
-        from local_deepwiki.generators.wiki import WikiGenerator, _GenerationContext
+        from local_deepwiki.generators.wiki.generator import WikiGenerator, _GenerationContext
         from local_deepwiki.core.vectorstore import VectorStore
         from local_deepwiki.models import IndexStatus
         from unittest.mock import MagicMock

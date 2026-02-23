@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.wiki_utils import file_path_to_wiki_path
+from local_deepwiki.generators.wiki.utils import file_path_to_wiki_path
 from local_deepwiki.models import ChunkType, IndexStatus
 
 

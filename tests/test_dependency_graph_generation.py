@@ -5,7 +5,7 @@ import dataclasses
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from local_deepwiki.generators.dependency_graph import (
+from local_deepwiki.generators.analysis.dependency_graph import (
     DependencyEdge,
     DependencyGraph,
     DependencyGraphGenerator,

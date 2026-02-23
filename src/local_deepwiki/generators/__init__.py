@@ -2,24 +2,22 @@
 
 from __future__ import annotations
 
-from local_deepwiki.generators.dependency_graph import (
+from local_deepwiki.generators.analysis import (
     DependencyEdge,
     DependencyGraph,
     DependencyGraphGenerator,
     DependencyNode,
     generate_dependency_graph_page,
 )
-from local_deepwiki.generators.examples_plugin import (
-    ExamplesWikiGenerator,
-    get_examples_for_api_page,
-)
-from local_deepwiki.generators.test_examples import (
+from local_deepwiki.generators.examples import (
     CodeExample,
     CodeExampleExtractor,
+    ExamplesWikiGenerator,
     UsageExample,
     extract_examples_for_entities,
     format_code_examples_markdown,
     format_examples_markdown,
+    get_examples_for_api_page,
     get_file_examples,
     parse_docstring_examples,
     parse_doctest_examples,

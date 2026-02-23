@@ -11,7 +11,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from local_deepwiki.generators.wiki_utils import relative_wiki_path
+from local_deepwiki.generators.wiki.utils import relative_wiki_path
 from local_deepwiki.models import ChunkType, CodeChunk, WikiPage
 
 

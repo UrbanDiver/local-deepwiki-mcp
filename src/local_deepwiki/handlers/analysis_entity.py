@@ -75,7 +75,7 @@ def _collect_call_graph(
 ) -> None:
     """Extract call graph for *entity_name* and store in *result*."""
     try:
-        from local_deepwiki.generators.callgraph import (
+        from local_deepwiki.generators.analysis.callgraph import (
             CallGraphExtractor,
             build_reverse_call_graph,
         )
@@ -110,7 +110,7 @@ async def _collect_inheritance(
 ) -> None:
     """Collect inheritance hierarchy for a class entity."""
     try:
-        from local_deepwiki.generators.inheritance import collect_class_hierarchy
+        from local_deepwiki.generators.analysis.inheritance import collect_class_hierarchy
 
         classes = await collect_class_hierarchy(index_status, vector_store)
         class_node = classes.get(entity_name)
@@ -144,7 +144,7 @@ async def _collect_test_examples(
 ) -> None:
     """Extract test examples for *entity_name* from test files."""
     try:
-        from local_deepwiki.generators.test_examples import CodeExampleExtractor
+        from local_deepwiki.generators.examples.orchestrator import CodeExampleExtractor
 
         extractor = CodeExampleExtractor(vector_store, repo_path=repo_path)
         if entity_type == "class":
@@ -266,7 +266,7 @@ def _collect_api_docs(
 ) -> None:
     """Extract API docs for *entity_name* and store in *result*."""
     try:
-        from local_deepwiki.generators.api_docs import APIDocExtractor
+        from local_deepwiki.generators.analysis.api_docs import APIDocExtractor
 
         full_file_path = (repo_path / entity_file).resolve()
         if not (full_file_path.exists() and full_file_path.is_relative_to(repo_path)):
@@ -393,7 +393,7 @@ def _collect_reverse_calls(
 ) -> None:
     """Extract reverse call graph and update affected sets."""
     try:
-        from local_deepwiki.generators.callgraph import (
+        from local_deepwiki.generators.analysis.callgraph import (
             CallGraphExtractor,
             build_reverse_call_graph,
         )
@@ -435,7 +435,7 @@ async def _collect_inheritance_dependents(
 ) -> None:
     """Collect classes that inherit from classes in *file_path*."""
     try:
-        from local_deepwiki.generators.inheritance import collect_class_hierarchy
+        from local_deepwiki.generators.analysis.inheritance import collect_class_hierarchy
 
         assert vector_store is not None
         classes = await collect_class_hierarchy(index_status, vector_store)
