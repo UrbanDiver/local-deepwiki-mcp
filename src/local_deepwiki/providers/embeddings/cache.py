@@ -554,8 +554,7 @@ class EmbeddingCache:
         """
         try:
             self.close()
-        except Exception:
-            # Suppress all exceptions during cleanup - interpreter may be shutting down
+        except Exception:  # noqa: BLE001 — destructor must not fail during interpreter shutdown when objects may already be gone
             pass
 
 

@@ -312,16 +312,16 @@ async def _execute_research_phases(
     except ResearchCancelledError as e:
         logger.info("Deep research cancelled: %s", e)
         await send_cancellation_notification(e.step)
-        response = {
+        cancel_response: dict[str, str] = {
             "status": "cancelled",
             "message": f"Research cancelled during {e.step}",
         }
         if e.checkpoint_id:
-            response["checkpoint_id"] = e.checkpoint_id
-            response["hint"] = (
+            cancel_response["checkpoint_id"] = e.checkpoint_id
+            cancel_response["hint"] = (
                 "Use resume_research_id to continue from where you left off"
             )
-        return [TextContent(type="text", text=json.dumps(response))]
+        return [TextContent(type="text", text=json.dumps(cancel_response))]
 
     except asyncio.CancelledError:
         logger.info("Deep research task cancelled")

@@ -34,7 +34,7 @@ from local_deepwiki.web.utils import get_wiki_path as _get_wiki_path
 
 
 @codemap_bp.route("/codemap")
-def codemap_page():
+def codemap_page() -> Response | str:
     """Render the interactive codemap visualization page."""
     wiki_path = _get_wiki_path()
     if wiki_path is None:
@@ -50,7 +50,7 @@ def codemap_page():
 
 
 @codemap_bp.route("/api/codemap/topics")
-def api_codemap_topics():
+def api_codemap_topics() -> Response | tuple[Response, int]:
     """Return suggested codemap topics as JSON.
 
     Calls suggest_topics() from the codemap generator using the indexed
@@ -98,7 +98,7 @@ def api_codemap_topics():
 
 
 @codemap_bp.route("/api/codemap", methods=["POST"])
-def api_codemap():
+def api_codemap() -> Response | tuple[Response, int]:
     """Handle codemap generation with streaming response.
 
     Expects JSON body with:
@@ -259,7 +259,7 @@ def api_codemap():
 
 
 @codemap_bp.route("/api/codemap/cache")
-def api_codemap_cache():
+def api_codemap_cache() -> Response | tuple[Response, int]:
     """List cached codemaps or retrieve a specific cached result.
 
     Query params:
@@ -286,7 +286,7 @@ def api_codemap_cache():
 
 
 @codemap_bp.route("/api/codemap/diff")
-def api_codemap_diff():
+def api_codemap_diff() -> Response | tuple[Response, int]:
     """Return list of files changed in recent git commits.
 
     Query params:
@@ -341,7 +341,7 @@ def api_codemap_diff():
 
 
 @codemap_bp.route("/codemap/compare")
-def codemap_compare_page():
+def codemap_compare_page() -> Response | str:
     """Render the side-by-side codemap comparison page."""
     wiki_path = _get_wiki_path()
     if wiki_path is None:

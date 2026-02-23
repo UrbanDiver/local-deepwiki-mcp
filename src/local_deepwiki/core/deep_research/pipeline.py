@@ -390,8 +390,7 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
                 )
             raise
 
-        except Exception as e:
-            # Save checkpoint on error
+        except Exception as e:  # noqa: BLE001 — checkpoint boundary: save research state before re-raising any pipeline error
             if self._current_checkpoint:
                 self._save_checkpoint(
                     step=ResearchCheckpointStep.ERROR,

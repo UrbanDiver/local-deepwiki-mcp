@@ -96,7 +96,7 @@ class CodeChunker:
                 chunks = plugin_parser.parse_file(file_path, source)
                 yield from chunks
                 return
-            except Exception as e:
+            except (OSError, ValueError, LookupError, TypeError, RuntimeError) as e:
                 logger.warning(
                     "Plugin parser failed for %s: %s, falling back to built-in",
                     file_path,

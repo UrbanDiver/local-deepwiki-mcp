@@ -23,9 +23,15 @@ def generate_codemap_diagram(
 ) -> str:
     """Generate a deterministic Mermaid flowchart from *graph*."""
     try:
-        from local_deepwiki.generators.diagrams import sanitize_mermaid_name
+        from local_deepwiki.generators.diagrams import (
+            sanitize_mermaid_name as _sanitize,
+        )
     except ImportError:  # pragma: no cover
-        sanitize_mermaid_name = lambda n: re.sub(r"[^a-zA-Z0-9_]", "_", n)  # noqa: E731
+
+        def _sanitize(name: str) -> str:
+            return re.sub(r"[^a-zA-Z0-9_]", "_", name)
+
+    sanitize_mermaid_name = _sanitize
 
     if not graph.nodes:
         return 'flowchart TD\n    empty["No code paths found for this query"]'

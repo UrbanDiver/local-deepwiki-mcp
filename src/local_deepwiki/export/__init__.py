@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from local_deepwiki.export.html import HtmlExporter, StreamingHtmlExporter, export_to_html
+from local_deepwiki.export.html import (
+    HtmlExporter,
+    StreamingHtmlExporter,
+    export_to_html,
+)
 from local_deepwiki.export.streaming import (
     ExportConfig,
     ExportResult,
@@ -17,7 +21,7 @@ from local_deepwiki.export.streaming import (
 # Import these directly from export.pdf when needed
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> object:
     """Lazy import PDF-related symbols to avoid WeasyPrint import errors."""
     pdf_symbols = {
         "PdfExporter",

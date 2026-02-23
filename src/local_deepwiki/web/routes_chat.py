@@ -141,7 +141,7 @@ Provide a clear, accurate answer based on the code provided."""
 
 
 @chat_bp.route("/chat")
-def chat_page():
+def chat_page() -> Response | str:
     """Render the chat interface."""
     wiki_path = _get_wiki_path()
     if wiki_path is None:
@@ -157,7 +157,7 @@ def chat_page():
 
 
 @chat_bp.route("/api/chat", methods=["POST"])
-def api_chat():
+def api_chat() -> Response | tuple[Response, int]:
     """Handle chat Q&A with streaming response.
 
     Expects JSON body with:

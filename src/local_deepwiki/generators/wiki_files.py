@@ -599,7 +599,7 @@ async def generate_file_docs(
             if generation_progress:
                 generation_progress.complete_file(file_info.path)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — file generation isolation: one file failure must not abort entire wiki build
             logger.error("Error generating file doc: %s", e)
             pages_failed += 1
             if generation_progress:

@@ -185,7 +185,7 @@ async def run_plugin_generators(
                 len(result.pages),
             )
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — plugin isolation: one bad plugin must not crash wiki generation
             logger.debug(
                 "Wiki generator plugin '%s' failed: %s", generator.generator_name, e
             )

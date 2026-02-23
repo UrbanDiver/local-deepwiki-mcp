@@ -152,6 +152,11 @@ async def _run_update_async(
             f"{status.total_chunks} chunks[/green]"
         )
 
+        # LanceDB 0.26: compact all dataset versions into a single stable
+        # snapshot so concurrent wiki-generation reads don't collide with
+        # deferred fragment compaction.
+        indexer.vector_store.stabilize()
+
         # Phase 2: Wiki generation
         progress.add_phase("wiki", "Generating wiki", total=0)
         wiki_callback = progress.get_callback("wiki")

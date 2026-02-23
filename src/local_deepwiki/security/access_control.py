@@ -12,7 +12,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import wraps
-from typing import TypeVar
+from typing import Any, TypeVar
 
 # Type variable for decorators
 F = TypeVar("F", bound=Callable)
@@ -390,7 +390,7 @@ def require_permission(permission: Permission) -> Callable[[F], F]:
         if asyncio.iscoroutinefunction(func):
 
             @wraps(func)
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 controller = get_access_controller()
                 controller.require_permission(permission)
                 return await func(*args, **kwargs)
@@ -399,7 +399,7 @@ def require_permission(permission: Permission) -> Callable[[F], F]:
         else:
 
             @wraps(func)
-            def sync_wrapper(*args, **kwargs):
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 controller = get_access_controller()
                 controller.require_permission(permission)
                 return func(*args, **kwargs)
@@ -429,7 +429,7 @@ def require_any_permission(*permissions: Permission) -> Callable[[F], F]:
         if asyncio.iscoroutinefunction(func):
 
             @wraps(func)
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 controller = get_access_controller()
                 controller.require_any_permission(*permissions)
                 return await func(*args, **kwargs)
@@ -438,7 +438,7 @@ def require_any_permission(*permissions: Permission) -> Callable[[F], F]:
         else:
 
             @wraps(func)
-            def sync_wrapper(*args, **kwargs):
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 controller = get_access_controller()
                 controller.require_any_permission(*permissions)
                 return func(*args, **kwargs)
@@ -468,7 +468,7 @@ def require_all_permissions(*permissions: Permission) -> Callable[[F], F]:
         if asyncio.iscoroutinefunction(func):
 
             @wraps(func)
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 controller = get_access_controller()
                 controller.require_all_permissions(*permissions)
                 return await func(*args, **kwargs)
@@ -477,7 +477,7 @@ def require_all_permissions(*permissions: Permission) -> Callable[[F], F]:
         else:
 
             @wraps(func)
-            def sync_wrapper(*args, **kwargs):
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 controller = get_access_controller()
                 controller.require_all_permissions(*permissions)
                 return func(*args, **kwargs)

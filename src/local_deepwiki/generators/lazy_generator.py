@@ -221,7 +221,7 @@ class LazyPageGenerator:
                 task.add_done_callback(_log_task_exception)
 
             return content
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 — lazy generation isolation: propagate to waiting future
             fut.set_exception(exc)
             raise
         finally:
@@ -231,7 +231,7 @@ class LazyPageGenerator:
         """Generate a page in the background (no return)."""
         try:
             await self.get_page(page_path)
-        except Exception:
+        except Exception:  # noqa: BLE001 — background warm-up must not propagate errors
             logger.debug("Warm failed for %s", page_path, exc_info=True)
 
     def _read_cached(self, page_path: str) -> str | None:
@@ -292,15 +292,15 @@ class LazyPageGenerator:
             )
             return page
         elif page_path == "changelog.md":
-            page = await generate_changelog_page(repo_path)
-            if page is None:
+            changelog_page = await generate_changelog_page(repo_path)
+            if changelog_page is None:
                 return WikiPage(
                     path="changelog.md",
                     title="Changelog",
                     content="# Changelog\n\nNo git history available.",
                     generated_at=time.time(),
                 )
-            return page
+            return changelog_page
         raise FileNotFoundError(f"Unknown summary page: {page_path}")
 
     async def _generate_auxiliary_pages(self, vs: VectorStore) -> dict[str, WikiPage]:
@@ -359,7 +359,7 @@ class LazyPageGenerator:
                     content=dep_content,
                     generated_at=time.time(),
                 )
-        except Exception:
+        except Exception:  # noqa: BLE001 — generator isolation: dependency graph failure must not block auxiliary pages
             logger.debug("Dependency graph generation failed", exc_info=True)
 
         self._auxiliary_cache = pages

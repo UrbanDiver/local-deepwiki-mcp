@@ -180,7 +180,7 @@ async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]
         },
     }
     if context:
-        data["context_applied"] = True
+        data["context_applied"] = True  # type: ignore[assignment]
     return [
         TextContent(type="text", text=wrap_tool_response("suggest_next_actions", data))
     ]

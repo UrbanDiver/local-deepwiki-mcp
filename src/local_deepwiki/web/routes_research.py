@@ -27,7 +27,7 @@ from local_deepwiki.web.utils import get_wiki_path as _get_wiki_path
 
 
 @research_bp.route("/api/research", methods=["POST"])
-def api_research():
+def api_research() -> Response | tuple[Response, int]:
     """Handle deep research with streaming progress updates.
 
     Expects JSON body with:

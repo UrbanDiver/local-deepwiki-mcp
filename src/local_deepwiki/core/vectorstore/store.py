@@ -113,6 +113,67 @@ class VectorStore(SearchMixin, StatsMixin, LazyIndexMixin):
         self._adaptive_searcher = AdaptiveSearcher()
         self._adaptive_searcher.set_store(self)
 
+    def stabilize(self) -> None:
+        """Force eager index creation and fully reopen the DB connection.
+
+        After bulk indexing, the lazy index manager may have a pending vector
+        index.  If that index is created later (triggered by a search during
+        wiki generation), LanceDB's ``create_index()`` compacts data fragments
+        while concurrent readers are still using the old files, producing
+        "Not found" IO errors.
+
+        This method prevents the race by:
+        1. Creating the vector index eagerly (if pending) so no background
+           task fires during reads.
+        2. **Always** marking the index as created — even if index creation
+           fails — so the lazy trigger never fires during concurrent reads.
+           Searches degrade to brute-force (slower but correct).
+        3. Dropping the DB connection so the next access lazily reconnects
+           with a fresh on-disk snapshot.
+
+        Safe to call multiple times (idempotent / no-op if already stable).
+        """
+        with self._lock:
+            if self._table is None:
+                return
+
+            # Step 1: Force eager vector index creation if pending
+            if self._lazy_index_manager.is_index_pending():
+                try:
+                    num_rows = self._table.count_rows()
+                    if num_rows >= self._lazy_index_manager.config.min_rows:
+                        import math
+
+                        num_partitions = min(max(int(math.sqrt(num_rows)), 16), 256)
+                        logger.info(
+                            "stabilize: creating vector index eagerly "
+                            "(%d rows, %d partitions)",
+                            num_rows,
+                            num_partitions,
+                        )
+                        self._table.create_index(
+                            metric="L2",
+                            num_partitions=num_partitions,
+                            num_sub_vectors=16,
+                        )
+                except (RuntimeError, OSError) as exc:
+                    logger.warning(
+                        "stabilize: vector index creation failed (searches "
+                        "will use brute-force): %s",
+                        exc,
+                    )
+
+                # Always mark as created so the lazy trigger never fires
+                # during concurrent reads.  Without a vector index LanceDB
+                # falls back to brute-force search — slower but correct.
+                self._lazy_index_manager.mark_index_created()
+
+            # Step 2: Drop the entire DB connection so the next access
+            # reconnects with a fresh handle that sees the final on-disk state.
+            logger.info("stabilize: closing DB connection for fresh reconnect")
+            self._table = None
+            self._db = None
+
     def close(self) -> None:
         """Close the vector store and release all resources.
 
@@ -134,9 +195,7 @@ class VectorStore(SearchMixin, StatsMixin, LazyIndexMixin):
         """Safety net to release resources on garbage collection."""
         try:
             self.close()
-        except Exception:
-            # Keep broad catch: destructor must not fail during interpreter shutdown
-            # when objects may already be gone
+        except Exception:  # noqa: BLE001 — destructor must not fail during interpreter shutdown when objects may already be gone
             pass
 
     async def __aenter__(self) -> "VectorStore":

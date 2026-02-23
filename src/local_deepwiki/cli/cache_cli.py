@@ -129,7 +129,7 @@ def _get_llm_stats(repo: str) -> dict[str, int | str]:
             "entry_count": count,
             "total_size_bytes": _dir_size(cache_path),
         }
-    except Exception:
+    except Exception:  # noqa: BLE001 — CLI top-level handler: cache stats must degrade gracefully if DB is corrupt
         return {"entry_count": 0, "total_size_bytes": _dir_size(cache_path)}
 
 

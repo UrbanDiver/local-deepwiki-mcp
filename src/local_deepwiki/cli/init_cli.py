@@ -150,7 +150,7 @@ def detect_ollama(base_url: str = "http://localhost:11434") -> bool:
         req = urllib.request.Request(f"{base_url}/api/tags", method="GET")
         with urllib.request.urlopen(req, timeout=2):
             return True
-    except Exception:
+    except Exception:  # noqa: BLE001 — CLI top-level handler: network probe must not crash init wizard
         return False
 
 

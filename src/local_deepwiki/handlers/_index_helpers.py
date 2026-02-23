@@ -84,7 +84,7 @@ def _format_research_results(result: "DeepResearchResult") -> ResearchResult:
                 "file": src.file_path,
                 "lines": f"{src.start_line}-{src.end_line}",
                 "type": src.chunk_type,
-                "name": src.name,
+                "name": src.name or "",
                 "relevance": round(src.relevance_score, 3),
             }
             for src in result.sources

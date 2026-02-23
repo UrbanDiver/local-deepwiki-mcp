@@ -512,7 +512,7 @@ def extract_class_signature(
 class APIDocExtractor:
     """Extracts API documentation from source files."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the extractor."""
         self.parser = CodeParser()
 

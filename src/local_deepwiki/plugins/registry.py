@@ -32,7 +32,7 @@ class PluginRegistry:
         "embedding_provider": "local_deepwiki.plugins.embeddings",
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the plugin registry."""
         self._language_parsers: dict[str, LanguageParserPlugin] = {}
         self._wiki_generators: dict[str, WikiGeneratorPlugin] = {}

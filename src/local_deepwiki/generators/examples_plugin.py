@@ -156,7 +156,7 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
                 if examples:
                     all_examples[chunk.name] = examples[:3]
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — plugin isolation: example extraction failure must not block wiki generation
             logger.debug("Error extracting examples: %s", e)
             return WikiGeneratorResult(pages=[])
 

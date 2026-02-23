@@ -63,7 +63,7 @@ class RepositoryIndexer:
 
         # Create a copy with overridden embedding provider if specified
         if embedding_provider_name:
-            self.config = base_config.with_embedding_provider(embedding_provider_name)  # type: ignore[arg-type]
+            self.config = base_config.with_embedding_provider(embedding_provider_name)
         else:
             # Store a defensive copy to prevent external mutation
             self.config = base_config.model_copy(deep=True)
@@ -593,7 +593,7 @@ class RepositoryIndexer:
         return [
             {
                 "file_path": r.chunk.file_path,
-                "name": r.chunk.name,
+                "name": r.chunk.name or "",
                 "type": r.chunk.chunk_type.value,
                 "language": r.chunk.language.value,
                 "lines": f"{r.chunk.start_line}-{r.chunk.end_line}",

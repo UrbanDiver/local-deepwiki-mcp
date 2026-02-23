@@ -180,7 +180,7 @@ def cmd_show(args: argparse.Namespace) -> int:
 
     try:
         config = Config.load(config_path)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — CLI top-level handler: config load errors shown to user
         console.print(f"[red]Error loading config: {e}[/red]")
         return 1
 
@@ -334,7 +334,7 @@ def cmd_health_check(args: argparse.Namespace) -> int:
                     "suggestion": "Ensure Ollama is running: ollama serve",
                 }
             )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — CLI top-level handler: config errors shown to user as health-check results
         checks.append(
             {
                 "name": "LLM provider",

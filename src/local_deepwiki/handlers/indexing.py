@@ -344,7 +344,7 @@ async def _run_indexing_pipeline(
 
         registry.complete_operation(operation_id, record_timing=True)
 
-    except Exception:
+    except Exception:  # noqa: BLE001 — handler boundary: ensure operation is marked complete before re-raising
         registry.complete_operation(operation_id, record_timing=False)
         raise
 
@@ -396,7 +396,7 @@ async def _handle_index_repository_impl(
             full_rebuild=validated.full_rebuild,
             server=server,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 — handler boundary: audit log failure before re-raising
         duration_ms = int((time.time() - start_time) * 1000)
         audit_logger.log_index_operation(
             subject_id=subject_id,

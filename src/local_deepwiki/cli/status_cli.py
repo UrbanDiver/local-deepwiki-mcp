@@ -137,12 +137,12 @@ def _scan_current_files(repo_path: Path) -> dict[str, str]:
 
             # Check if extension is recognised
             ext = file_path.suffix.lower()
-            lang = ext_to_lang.get(ext)
-            if lang is None:
+            lang_name = ext_to_lang.get(ext)
+            if lang_name is None:
                 continue
 
             # Check if language is in configured list
-            if lang not in configured_languages:
+            if lang_name not in configured_languages:
                 continue
 
             try:

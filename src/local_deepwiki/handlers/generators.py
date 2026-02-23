@@ -539,7 +539,7 @@ async def handle_detect_secrets(args: dict[str, Any]) -> list[TextContent]:
         len(findings_by_file),
         repo_path,
     )
-    return make_tool_text_content("detect_secrets", result)
+    return make_tool_text_content("detect_secrets", dict(result))
 
 
 @handle_tool_errors

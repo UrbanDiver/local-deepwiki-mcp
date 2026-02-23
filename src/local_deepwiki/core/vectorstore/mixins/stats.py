@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import CodeChunk
@@ -92,7 +92,7 @@ class StatsMixin:
         Yields:
             CodeChunk objects.
         """
-        loader = LazyChunkLoader(self)
+        loader = LazyChunkLoader(cast("VectorStore", self))
         yield from loader.get_all_chunks(
             batch_size=batch_size,
             language=language,
@@ -318,7 +318,7 @@ class StatsMixin:
         Returns:
             LazyChunkLoader instance configured for this store.
         """
-        return LazyChunkLoader(self, max_memory_mb=max_memory_mb)
+        return LazyChunkLoader(cast("VectorStore", self), max_memory_mb=max_memory_mb)
 
     def get_chunk_iterator(
         self,

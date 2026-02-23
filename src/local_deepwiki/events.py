@@ -315,8 +315,7 @@ class EventEmitter:
                 else:
                     sync_handler: SyncHandler = entry.handler  # type: ignore[assignment]
                     sync_handler(event)
-            except Exception as e:
-                # Broad catch justified: event handlers are user-provided callbacks; we must isolate failures
+            except Exception as e:  # noqa: BLE001 — event handler isolation: user-provided callbacks must not crash the event bus
                 logger.error(
                     "Error in event handler %s for %s: %s",
                     entry.handler_id,

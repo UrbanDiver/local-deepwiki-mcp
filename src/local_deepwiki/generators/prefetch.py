@@ -46,9 +46,12 @@ class DrainStatus:
         return {
             "enabled": self.enabled,
             "state": (
-                "finished" if self.finished
-                else "draining" if self.started
-                else "waiting" if self.enabled
+                "finished"
+                if self.finished
+                else "draining"
+                if self.started
+                else "waiting"
+                if self.enabled
                 else "disabled"
             ),
             "started_at": self.started_at,
@@ -186,8 +189,13 @@ class PrefetchQueue:
                 self._generated.add(page_path)
                 if self._drain_started:
                     self.drain_status.pages_generated += 1
-                    self.drain_status.pages_remaining = max(0, self.drain_status.pages_remaining - 1)
-                    if self.drain_status.pages_generated % 10 == 0 or self.drain_status.pages_remaining == 0:
+                    self.drain_status.pages_remaining = max(
+                        0, self.drain_status.pages_remaining - 1
+                    )
+                    if (
+                        self.drain_status.pages_generated % 10 == 0
+                        or self.drain_status.pages_remaining == 0
+                    ):
                         logger.info(
                             "Drain progress: %d/%d generated (%d cached, %d failed)",
                             self.drain_status.pages_generated,
@@ -195,7 +203,7 @@ class PrefetchQueue:
                             self.drain_status.pages_cached,
                             self.drain_status.pages_failed,
                         )
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — prefetch isolation: worker failure must not crash drain loop
                 logger.debug(
                     "Prefetch worker %d failed for %s",
                     worker_id,
@@ -204,7 +212,9 @@ class PrefetchQueue:
                 )
                 if self._drain_started:
                     self.drain_status.pages_failed += 1
-                    self.drain_status.pages_remaining = max(0, self.drain_status.pages_remaining - 1)
+                    self.drain_status.pages_remaining = max(
+                        0, self.drain_status.pages_remaining - 1
+                    )
                     self.drain_status.errors.append(f"{page_path}: {exc}")
             finally:
                 self._in_flight.discard(page_path)
@@ -259,7 +269,8 @@ class PrefetchQueue:
 
         logger.info(
             "Drain started: %d pages to generate, %d already cached",
-            enqueued, cached,
+            enqueued,
+            cached,
         )
         if enqueued == 0:
             self.drain_status.completed_at = time.time()

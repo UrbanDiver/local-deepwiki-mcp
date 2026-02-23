@@ -122,10 +122,10 @@ def _cleanup_all_servers() -> None:
         try:
             server_info.process.terminate()
             server_info.process.wait(timeout=3)
-        except Exception:
+        except Exception:  # noqa: BLE001 — atexit cleanup: terminate may fail if process already exited
             try:
                 server_info.process.kill()
-            except Exception:
+            except Exception:  # noqa: BLE001 — atexit cleanup: kill is last resort, must not raise
                 pass
     _running_servers.clear()
 
@@ -267,7 +267,7 @@ async def handle_serve_wiki(args: dict[str, Any]) -> list[TextContent]:
     if validated.open_browser:
         try:
             await asyncio.to_thread(webbrowser.open, url)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — handler boundary: browser open in headless environments must not crash server
             logger.warning("Failed to open browser: %s", e)
 
     return make_tool_text_content(

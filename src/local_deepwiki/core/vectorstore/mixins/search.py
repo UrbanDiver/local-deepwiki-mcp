@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import SearchResult
@@ -56,7 +56,7 @@ class SearchMixin:
         from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
 
         if self._fuzzy_search_helper is None:
-            self._fuzzy_search_helper = FuzzySearchHelper(self)
+            self._fuzzy_search_helper = FuzzySearchHelper(cast("VectorStore", self))
 
         # Build index if not already built
         if not self._fuzzy_search_helper.is_built:

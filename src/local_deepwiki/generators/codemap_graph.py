@@ -126,11 +126,14 @@ async def discover_entry_points(
     specific name; otherwise a semantic search is performed and results are
     scored by relevance, entry-pattern matching, and call-graph root status.
     """
+    _CallGraphExtractor: type | None
     try:
-        from local_deepwiki.generators.callgraph import CallGraphExtractor
+        from local_deepwiki.generators.callgraph import (
+            CallGraphExtractor as _CallGraphExtractor,
+        )
     except ImportError:  # pragma: no cover
         logger.warning("Could not import CallGraphExtractor")
-        CallGraphExtractor = None  # fallback if callgraph module unavailable
+        _CallGraphExtractor = None  # fallback if callgraph module unavailable
 
     search_query = entry_point_hint if entry_point_hint else query
     try:
@@ -158,8 +161,8 @@ async def discover_entry_points(
 
     # Build per-file call graphs for scoring (root detection)
     file_call_graphs: dict[str, dict[str, list[str]]] = {}
-    if CallGraphExtractor is not None:
-        extractor = CallGraphExtractor()
+    if _CallGraphExtractor is not None:
+        extractor = _CallGraphExtractor()
         seen_files: set[str] = set()
         for r in callable_results[:10]:
             fp = r.chunk.file_path
@@ -228,11 +231,14 @@ async def build_cross_file_graph(
     For ``DEPENDENCY_CHAIN`` focus the traversal follows import edges
     instead of call edges.
     """
+    _CGExtractor: type | None
     try:
-        from local_deepwiki.generators.callgraph import CallGraphExtractor
+        from local_deepwiki.generators.callgraph import (
+            CallGraphExtractor as _CGExtractor,
+        )
     except ImportError:  # pragma: no cover
         logger.warning("Could not import CallGraphExtractor")
-        CallGraphExtractor = None  # fallback if callgraph module unavailable
+        _CGExtractor = None  # fallback if callgraph module unavailable
 
     graph = CodemapGraph()
 
@@ -251,8 +257,8 @@ async def build_cross_file_graph(
     file_call_graphs: dict[str, dict[str, list[str]]] = {}
 
     extractor = None
-    if CallGraphExtractor is not None:
-        extractor = CallGraphExtractor()
+    if _CGExtractor is not None:
+        extractor = _CGExtractor()
 
     while queue and len(graph.nodes) < max_nodes:
         current_node, depth = queue.popleft()

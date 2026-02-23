@@ -31,6 +31,7 @@ try:
         Response,
         abort,
         jsonify,
+        make_response,
         redirect,
         render_template,
         request,
@@ -249,7 +250,7 @@ def build_breadcrumb(wiki_path: Path, current_path: str) -> str:
 # Inject shared template variables
 # ---------------------------------------------------------------------------
 @app.context_processor
-def inject_active_page():
+def inject_active_page() -> dict[str, str]:
     """Make active_page available to all templates for nav highlighting."""
     from flask import request as _req
 
@@ -267,7 +268,7 @@ def inject_active_page():
 # Core routes (kept in app.py: index, search, view_page)
 # ---------------------------------------------------------------------------
 @app.route("/")
-def index():
+def index() -> Response | str:
     """Redirect to index.md or show onboarding if wiki doesn't exist."""
     logger.debug("Accessing root route")
 
@@ -282,11 +283,11 @@ def index():
         return render_template("onboarding.html", wiki_path=str(WIKI_PATH.parent))
 
     logger.debug("Redirecting / to index.md")
-    return redirect(url_for("view_page", path="index.md"))
+    return make_response(redirect(url_for("view_page", path="index.md")))
 
 
 @app.route("/search.json")
-def search_json():
+def search_json() -> Response:
     """Serve the search index JSON file."""
     if WIKI_PATH is None:
         abort(500, "Wiki path not configured")
@@ -351,13 +352,13 @@ def _try_lazy_generate(page_path: str, wiki_path: Path) -> str | None:
     except FileNotFoundError:
         logger.debug("Lazy generation has no source for: %s", page_path)
         return None
-    except Exception:
+    except Exception:  # noqa: BLE001 — web handler boundary: lazy generation failure returns None gracefully
         logger.exception("Lazy generation failed for: %s", page_path)
         return None
 
 
 @app.route("/wiki/<path:path>")
-def view_page(path: str):
+def view_page(path: str) -> Response | str:
     """View a wiki page."""
     logger.debug("Viewing page: %s", path)
 
@@ -468,7 +469,7 @@ def run_server(
     host: str = "127.0.0.1",
     port: int = 8080,
     debug: bool = False,
-):
+) -> None:
     """Run the wiki web server."""
     flask_app = create_app(wiki_path)
     logger.info("Starting DeepWiki server at http://%s:%s", host, port)
@@ -476,7 +477,7 @@ def run_server(
     flask_app.run(host=host, port=port, debug=debug)
 
 
-def main():
+def main() -> None:
     """CLI entry point."""
     if not _HAS_FLASK:
         print(

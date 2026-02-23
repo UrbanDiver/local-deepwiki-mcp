@@ -177,7 +177,7 @@ class StreamingHtmlExporter(StreamingExporter):
                 # Release content from memory after writing
                 page.release_content()
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — export error boundary: one page failure must not abort entire export
                 error_msg = f"Failed to export {page.path}: {e}"
                 logger.warning(error_msg)
                 errors.append(error_msg)

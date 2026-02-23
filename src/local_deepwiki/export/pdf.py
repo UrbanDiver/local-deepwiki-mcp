@@ -230,7 +230,7 @@ class StreamingPdfExporter(StreamingExporter):
                         batch_pages = []
                         batch_num += 1
 
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 — export error boundary: one page failure must not abort entire PDF export
                     error_msg = f"Failed to process {page.path}: {e}"
                     logger.warning(error_msg)
                     errors.append(error_msg)
@@ -339,7 +339,7 @@ class StreamingPdfExporter(StreamingExporter):
                 # Release content from memory
                 page.release_content()
 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — export error boundary: one page failure must not abort entire PDF export
                 error_msg = f"Failed to export {page.path}: {e}"
                 logger.warning(error_msg)
                 errors.append(error_msg)

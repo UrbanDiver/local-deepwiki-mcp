@@ -411,7 +411,7 @@ class OperationProgressRegistry:
     active operations, supporting the pull-based progress model.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the registry."""
         self._operations: dict[str, ProgressManager] = {}
         self._historical_data: dict[str, dict[str, Any]] = {}

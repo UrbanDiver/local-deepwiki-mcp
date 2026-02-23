@@ -176,12 +176,12 @@ def _log_security_posture() -> None:
         logger.info("SECURITY: RBAC is ENFORCED — all requests require authentication")
 
 
-def main():
+def main() -> None:
     """Main entry point for the MCP server."""
     logger.info("Starting local-deepwiki MCP server")
     _log_security_posture()
 
-    async def run():
+    async def run() -> None:
         async with stdio_server() as (read_stream, write_stream):
             await server.run(
                 read_stream,

@@ -276,7 +276,7 @@ def _is_builtin_or_noise(name: str, language: Language) -> bool:
 class CallGraphExtractor:
     """Extracts call graphs from source files."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the extractor."""
         self.parser = CodeParser()
 
