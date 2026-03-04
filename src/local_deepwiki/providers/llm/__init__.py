@@ -7,10 +7,7 @@ from pathlib import Path
 
 from local_deepwiki.config import LLMCacheConfig, LLMConfig, get_config
 from local_deepwiki.providers.base import EmbeddingProvider, LLMProvider
-from local_deepwiki.providers.llm.ollama import (
-    OllamaConnectionError,
-    OllamaModelNotFoundError,
-)
+from local_deepwiki.providers.llm.ollama import OllamaConnectionError, OllamaModelNotFoundError
 
 
 def _create_ollama(config: LLMConfig) -> LLMProvider:
@@ -31,10 +28,17 @@ def _create_openai(config: LLMConfig) -> LLMProvider:
     return OpenAILLMProvider(model=config.openai.model)
 
 
+def _create_grok(config: LLMConfig) -> LLMProvider:
+    from local_deepwiki.providers.llm.grok import GrokLLMProvider
+
+    return GrokLLMProvider(model=config.grok.model)
+
+
 _LLM_FACTORIES: dict[str, Callable[[LLMConfig], LLMProvider]] = {
     "ollama": _create_ollama,
     "anthropic": _create_anthropic,
     "openai": _create_openai,
+    "grok": _create_grok,
 }
 
 

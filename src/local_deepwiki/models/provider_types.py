@@ -11,6 +11,7 @@ class LLMProviderType(StrEnum):
     OLLAMA = "ollama"
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
+    GROK = "grok"
 
 
 class EmbeddingProviderType(StrEnum):

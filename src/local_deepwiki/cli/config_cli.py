@@ -31,15 +31,15 @@ def display_config(config: Config, console: Console) -> None:
     elif config.llm.provider == LLMProviderType.ANTHROPIC:
         llm_branch.add(f"Model: {config.llm.anthropic.model}")
         key = os.environ.get("ANTHROPIC_API_KEY", "")
-        llm_branch.add(
-            f"API Key: {'[green]set[/green]' if key else '[red]not set[/red]'}"
-        )
+        llm_branch.add(f"API Key: {'[green]set[/green]' if key else '[red]not set[/red]'}")
     elif config.llm.provider == LLMProviderType.OPENAI:
         llm_branch.add(f"Model: {config.llm.openai.model}")
         key = os.environ.get("OPENAI_API_KEY", "")
-        llm_branch.add(
-            f"API Key: {'[green]set[/green]' if key else '[red]not set[/red]'}"
-        )
+        llm_branch.add(f"API Key: {'[green]set[/green]' if key else '[red]not set[/red]'}")
+    elif config.llm.provider == LLMProviderType.GROK:
+        llm_branch.add(f"Model: {config.llm.grok.model}")
+        key = os.environ.get("GROK_API_KEY", "")
+        llm_branch.add(f"API Key: {'[green]set[/green]' if key else '[red]not set[/red]'}")
 
     # Embedding Settings
     embed_branch = tree.add("[bold cyan]Embedding[/bold cyan]")
@@ -52,9 +52,7 @@ def display_config(config: Config, console: Console) -> None:
     # Parsing Settings
     parse_branch = tree.add("[bold cyan]Parsing[/bold cyan]")
     parse_branch.add(f"Languages: {len(config.parsing.languages)} configured")
-    parse_branch.add(
-        f"Max file size: {config.parsing.max_file_size / 1024 / 1024:.1f} MB"
-    )
+    parse_branch.add(f"Max file size: {config.parsing.max_file_size / 1024 / 1024:.1f} MB")
     parse_branch.add(f"Exclude patterns: {len(config.parsing.exclude_patterns)}")
 
     # Chunking Settings
@@ -74,9 +72,7 @@ def display_config(config: Config, console: Console) -> None:
     # Deep Research Settings
     research_branch = tree.add("[bold cyan]Deep Research[/bold cyan]")
     research_branch.add(f"Max sub-questions: {config.deep_research.max_sub_questions}")
-    research_branch.add(
-        f"Chunks per question: {config.deep_research.chunks_per_subquestion}"
-    )
+    research_branch.add(f"Chunks per question: {config.deep_research.chunks_per_subquestion}")
     research_branch.add(f"Max total chunks: {config.deep_research.max_total_chunks}")
 
     # Cache Settings
@@ -108,11 +104,7 @@ def display_config(config: Config, console: Console) -> None:
 def display_issues(issues: list[ValidationIssue], console: Console) -> None:
     """Display validation issues in a formatted table."""
     if not issues:
-        console.print(
-            Panel(
-                "[green]No validation issues found[/green]", title="Validation Result"
-            )
-        )
+        console.print(Panel("[green]No validation issues found[/green]", title="Validation Result"))
         return
 
     table = Table(title="Validation Issues", show_header=True, header_style="bold")
@@ -200,9 +192,7 @@ def cmd_show(args: argparse.Namespace) -> int:
         if found:
             console.print(f"\nConfig file: [cyan]{found}[/cyan]\n")
         else:
-            console.print(
-                "\n[dim]Using default configuration (no config file found)[/dim]\n"
-            )
+            console.print("\n[dim]Using default configuration (no config file found)[/dim]\n")
 
     display_config(config, console)
 
@@ -233,9 +223,7 @@ def cmd_health_check(args: argparse.Namespace) -> int:
             "passed": py_check_passed,
             "details": f"{py_version.major}.{py_version.minor}.{py_version.micro}",
             "requirement": ">=3.10",
-            "suggestion": "Upgrade to Python 3.10 or higher"
-            if not py_check_passed
-            else None,
+            "suggestion": "Upgrade to Python 3.10 or higher" if not py_check_passed else None,
         }
     )
     if not py_check_passed:
@@ -324,6 +312,29 @@ def cmd_health_check(args: argparse.Namespace) -> int:
                     }
                 )
                 all_passed = False
+        elif llm_provider == "grok":
+            api_key = os.environ.get("GROK_API_KEY")
+            if api_key:
+                checks.append(
+                    {
+                        "name": "LLM provider (Grok)",
+                        "passed": True,
+                        "details": "API key configured",
+                        "requirement": "required",
+                        "suggestion": None,
+                    }
+                )
+            else:
+                checks.append(
+                    {
+                        "name": "LLM provider (Grok)",
+                        "passed": False,
+                        "details": "API key not set",
+                        "requirement": "required",
+                        "suggestion": "Set GROK_API_KEY environment variable",
+                    }
+                )
+                all_passed = False
         else:  # ollama
             checks.append(
                 {
@@ -334,7 +345,9 @@ def cmd_health_check(args: argparse.Namespace) -> int:
                     "suggestion": "Ensure Ollama is running: ollama serve",
                 }
             )
-    except Exception as e:  # noqa: BLE001 — CLI top-level handler: config errors shown to user as health-check results
+    except (
+        Exception
+    ) as e:  # noqa: BLE001 — CLI top-level handler: config errors shown to user as health-check results
         checks.append(
             {
                 "name": "LLM provider",
@@ -617,10 +630,7 @@ def main() -> int:
     health_parser.set_defaults(func=cmd_health_check)
 
     # profile subcommand
-    from local_deepwiki.cli.profile_cli import (
-        dispatch_profile,
-        register_profile_subparser,
-    )
+    from local_deepwiki.cli.profile_cli import dispatch_profile, register_profile_subparser
 
     register_profile_subparser(subparsers)
 

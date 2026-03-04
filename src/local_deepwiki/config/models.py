@@ -32,6 +32,7 @@ from local_deepwiki.config.prompts import (
 from local_deepwiki.config.provider_models import (
     AnthropicConfig,
     EmbeddingConfig,
+    GrokConfig,
     LLMConfig,
     LocalEmbeddingConfig,
     OllamaConfig,
@@ -109,9 +110,7 @@ class ParsingConfig(BaseModel):
         ],
         description="Languages to parse",
     )
-    max_file_size: int = Field(
-        default=1048576, description="Max file size in bytes (1MB)"
-    )
+    max_file_size: int = Field(default=1048576, description="Max file size in bytes (1MB)")
     exclude_patterns: list[str] = Field(
         default=[
             "node_modules/**",
@@ -169,11 +168,11 @@ class WikiConfig(BaseModel):
         description="Use cloud LLM provider (Anthropic Claude) for GitHub repos. "
         "Provides faster, higher-quality documentation but requires API key.",
     )
-    github_llm_provider: Literal["anthropic", "openai"] = Field(
+    github_llm_provider: Literal["anthropic", "openai", "grok"] = Field(
         default="anthropic",
         description="Cloud LLM provider to use for GitHub repos when use_cloud_for_github is enabled.",
     )
-    chat_llm_provider: Literal["default", "anthropic", "openai", "ollama"] = Field(
+    chat_llm_provider: Literal["default", "anthropic", "openai", "ollama", "grok"] = Field(
         default="default",
         description="LLM provider for chat Q&A. 'default' uses the main llm.provider setting. "
         "Set to 'anthropic' or 'openai' for higher-quality chat responses.",
@@ -428,9 +427,7 @@ class OutputConfig(BaseModel):
     model_config = {"frozen": True}
 
     wiki_dir: str = Field(default=".deepwiki", description="Wiki output directory name")
-    vector_db_name: str = Field(
-        default="vectors.lance", description="Vector DB filename"
-    )
+    vector_db_name: str = Field(default="vectors.lance", description="Vector DB filename")
 
 
 class EmbeddingCacheConfig(BaseModel):
@@ -715,9 +712,7 @@ class Config(BaseModel):
         # Cloud providers: allow higher concurrency, cap at configured limit
         return base_concurrency
 
-    def with_embedding_provider(
-        self, provider: EmbeddingProviderType | str
-    ) -> "Config":
+    def with_embedding_provider(self, provider: EmbeddingProviderType | str) -> "Config":
         """Return a new Config with the embedding provider changed.
 
         Args:

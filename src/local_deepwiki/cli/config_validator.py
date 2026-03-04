@@ -192,6 +192,27 @@ class ConfigValidator:
                     )
                 )
 
+        elif provider == "grok":
+            api_key = os.environ.get("GROK_API_KEY")
+            if not api_key:
+                self.issues.append(
+                    ValidationIssue(
+                        level="error",
+                        category="LLM Provider",
+                        message="GROK_API_KEY environment variable not set",
+                        suggestion="Set GROK_API_KEY or switch to 'ollama' provider",
+                    )
+                )
+            elif not api_key.startswith("xai-"):
+                self.issues.append(
+                    ValidationIssue(
+                        level="warning",
+                        category="LLM Provider",
+                        message="GROK_API_KEY does not match expected format (xai-...)",
+                        suggestion="Verify your API key is correct",
+                    )
+                )
+
         elif provider == "ollama":
             base_url = self.config.llm.ollama.base_url
             # Check if Ollama is likely accessible
@@ -290,6 +311,15 @@ class ConfigValidator:
                         category="Wiki Settings",
                         message=f"chat_llm_provider is '{chat_provider}' but API key not set",
                         suggestion="Set OPENAI_API_KEY or use 'default' provider",
+                    )
+                )
+            elif chat_provider == "grok" and not os.environ.get("GROK_API_KEY"):
+                self.issues.append(
+                    ValidationIssue(
+                        level="error",
+                        category="Wiki Settings",
+                        message=f"chat_llm_provider is '{chat_provider}' but API key not set",
+                        suggestion="Set GROK_API_KEY or use 'default' provider",
                     )
                 )
 

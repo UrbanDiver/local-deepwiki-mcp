@@ -150,7 +150,9 @@ def detect_ollama(base_url: str = "http://localhost:11434") -> bool:
         req = urllib.request.Request(f"{base_url}/api/tags", method="GET")
         with urllib.request.urlopen(req, timeout=2):
             return True
-    except Exception:  # noqa: BLE001 — CLI top-level handler: network probe must not crash init wizard
+    except (
+        Exception
+    ):  # noqa: BLE001 — CLI top-level handler: network probe must not crash init wizard
         return False
 
 
@@ -174,12 +176,13 @@ def detect_providers() -> dict[str, bool]:
     return {
         "ollama": detect_ollama(),
         "anthropic": detect_api_key("ANTHROPIC_API_KEY"),
+        "grok": detect_api_key("GROK_API_KEY"),
         "openai": detect_api_key("OPENAI_API_KEY"),
     }
 
 
 def build_config(
-    llm_provider: Literal["ollama", "anthropic", "openai"],
+    llm_provider: Literal["ollama", "anthropic", "grok", "openai"],
     embedding_provider: Literal["local", "openai"],
     languages: list[str],
 ) -> Config:
@@ -298,20 +301,20 @@ def run_wizard(
         if provider_flag:
             llm_provider = provider_flag
         else:
-            # Pick first available, preferring ollama → anthropic → openai
+            # Pick first available, preferring ollama → anthropic → grok → openai
             llm_provider = next(
-                (p for p in ("ollama", "anthropic", "openai") if providers.get(p)),
+                (p for p in ("ollama", "anthropic", "grok", "openai") if providers.get(p)),
                 "ollama",
             )
     else:
         # Build default from first available provider
         default_provider = next(
-            (p for p in ("ollama", "anthropic", "openai") if providers.get(p)),
+            (p for p in ("ollama", "anthropic", "grok", "openai") if providers.get(p)),
             "ollama",
         )
         llm_provider = Prompt.ask(
             "\nLLM provider",
-            choices=["ollama", "anthropic", "openai"],
+            choices=["ollama", "anthropic", "grok", "openai"],
             default=default_provider,
         )
 
@@ -357,12 +360,8 @@ def run_wizard(
         )
     )
     console.print("[bold]Next steps:[/bold]")
-    console.print(
-        "  deepwiki mcp                  Start MCP server (for IDE integration)"
-    )
-    console.print(
-        "  deepwiki serve .deepwiki       Browse wiki at http://localhost:8080"
-    )
+    console.print("  deepwiki mcp                  Start MCP server (for IDE integration)")
+    console.print("  deepwiki serve .deepwiki       Browse wiki at http://localhost:8080")
     console.print("  deepwiki config health-check   Verify providers are working")
     console.print()
 
@@ -406,7 +405,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--provider",
-        choices=["ollama", "anthropic", "openai"],
+        choices=["ollama", "anthropic", "grok", "openai"],
         help="LLM provider (used with --non-interactive)",
     )
     parser.add_argument(
