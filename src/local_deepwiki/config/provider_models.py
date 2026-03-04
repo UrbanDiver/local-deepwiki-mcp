@@ -25,9 +25,7 @@ class OpenAIEmbeddingConfig(BaseModel):
 
     model_config = {"frozen": True}
 
-    model: str = Field(
-        default="text-embedding-3-small", description="OpenAI embedding model"
-    )
+    model: str = Field(default="text-embedding-3-small", description="OpenAI embedding model")
 
 
 class EmbeddingConfig(BaseModel):
@@ -48,9 +46,7 @@ class OllamaConfig(BaseModel):
     model_config = {"frozen": True}
 
     model: str = Field(default="qwen3-coder:30b", description="Ollama model name")
-    base_url: str = Field(
-        default="http://localhost:11434", description="Ollama API URL"
-    )
+    base_url: str = Field(default="http://localhost:11434", description="Ollama API URL")
 
 
 class AnthropicConfig(BaseModel):
@@ -58,9 +54,7 @@ class AnthropicConfig(BaseModel):
 
     model_config = {"frozen": True}
 
-    model: str = Field(
-        default="claude-sonnet-4-20250514", description="Anthropic model name"
-    )
+    model: str = Field(default="claude-sonnet-4-20250514", description="Anthropic model name")
 
 
 class OpenAILLMConfig(BaseModel):
@@ -71,14 +65,21 @@ class OpenAILLMConfig(BaseModel):
     model: str = Field(default="gpt-4o", description="OpenAI model name")
 
 
+class GrokConfig(BaseModel):
+    """Configuration for Grok LLM."""
+
+    model_config = {"frozen": True}
+
+    model: str = Field(default="grok-4-1-fast-reasoning", description="Grok model name")
+
+
 class LLMConfig(BaseModel):
     """LLM provider configuration."""
 
     model_config = {"frozen": True, "use_enum_values": True}
 
-    provider: LLMProviderType = Field(
-        default=LLMProviderType.OLLAMA, description="LLM provider"
-    )
+    provider: LLMProviderType = Field(default=LLMProviderType.OLLAMA, description="LLM provider")
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
     anthropic: AnthropicConfig = Field(default_factory=AnthropicConfig)
     openai: OpenAILLMConfig = Field(default_factory=OpenAILLMConfig)
+    grok: GrokConfig = Field(default_factory=GrokConfig)

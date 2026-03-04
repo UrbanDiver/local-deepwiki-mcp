@@ -160,9 +160,7 @@ class ConfigDiff:
 
             field_path = f"{prefix}.{field_name}" if prefix else field_name
 
-            if isinstance(base_value, BaseModel) and isinstance(
-                override_value, BaseModel
-            ):
+            if isinstance(base_value, BaseModel) and isinstance(override_value, BaseModel):
                 # Recursively compare nested models
                 self._compare_models(base_value, override_value, field_path, source)
             elif base_value != override_value:
@@ -277,9 +275,7 @@ def _apply_nested_updates(config: "Config", updates: dict[str, Any]) -> "Config"
                 for nested_key, nested_value in value.items():
                     if isinstance(nested_value, dict):
                         nested_current = getattr(current, nested_key, None)
-                        if nested_current is not None and isinstance(
-                            nested_current, BaseModel
-                        ):
+                        if nested_current is not None and isinstance(nested_current, BaseModel):
                             nested_updates[nested_key] = nested_current.model_copy(
                                 update=nested_value
                             )
@@ -434,19 +430,18 @@ def validate_config(config: Config) -> list[str]:
     # Check embedding configuration
     if config.embedding.provider == EmbeddingProviderType.OPENAI:
         if not os.environ.get("OPENAI_API_KEY"):
-            warnings.append(
-                "OpenAI embedding provider selected but OPENAI_API_KEY not set"
-            )
+            warnings.append("OpenAI embedding provider selected but OPENAI_API_KEY not set")
 
     # Check LLM configuration
     if config.llm.provider == LLMProviderType.ANTHROPIC:
         if not os.environ.get("ANTHROPIC_API_KEY"):
-            warnings.append(
-                "Anthropic LLM provider selected but ANTHROPIC_API_KEY not set"
-            )
+            warnings.append("Anthropic LLM provider selected but ANTHROPIC_API_KEY not set")
     elif config.llm.provider == LLMProviderType.OPENAI:
         if not os.environ.get("OPENAI_API_KEY"):
             warnings.append("OpenAI LLM provider selected but OPENAI_API_KEY not set")
+    elif config.llm.provider == LLMProviderType.GROK:
+        if not os.environ.get("GROK_API_KEY"):
+            warnings.append("Grok LLM provider selected but GROK_API_KEY not set")
 
     # Check for potential performance issues
     if config.chunking.parallel_workers > (os.cpu_count() or 4):
@@ -480,13 +475,12 @@ def validate_config(config: Config) -> list[str]:
         provider = config.wiki.github_llm_provider
         if provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
             warnings.append(
-                "use_cloud_for_github enabled with anthropic but "
-                "ANTHROPIC_API_KEY not set"
+                "use_cloud_for_github enabled with anthropic but " "ANTHROPIC_API_KEY not set"
             )
         elif provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
-            warnings.append(
-                "use_cloud_for_github enabled with openai but OPENAI_API_KEY not set"
-            )
+            warnings.append("use_cloud_for_github enabled with openai but OPENAI_API_KEY not set")
+        elif provider == "grok" and not os.environ.get("GROK_API_KEY"):
+            warnings.append("use_cloud_for_github enabled with grok but GROK_API_KEY not set")
 
     # Check plugin configuration
     if config.plugins.enabled and config.plugins.custom_dir:
@@ -641,9 +635,7 @@ def save_profile(name: str, config_path: Path | None = None) -> Path:
         PROFILES_DIR.mkdir(parents=True, exist_ok=True)
         profile_path = PROFILES_DIR / f"{name}.yaml"
         default_config = Config()
-        profile_path.write_text(
-            yaml.dump(default_config.model_dump(), default_flow_style=False)
-        )
+        profile_path.write_text(yaml.dump(default_config.model_dump(), default_flow_style=False))
         return profile_path
 
     PROFILES_DIR.mkdir(parents=True, exist_ok=True)

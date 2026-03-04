@@ -51,6 +51,19 @@ ACCURACY RULES:
 - NEVER invent features, patterns, or capabilities not explicitly shown
 - If uncertain about something, omit it rather than guess
 - Base all descriptions on actual code/dependencies provided""",
+    "grok": """You are a technical documentation expert. Generate clear, concise documentation for code.
+
+FORMATTING:
+- Use markdown formatting
+- Include code examples where helpful
+- Write class/function names as plain text (not in backticks) so they can be cross-linked
+- Only use backticks for actual code snippets
+
+ACCURACY RULES:
+- ONLY describe what is shown in the provided code
+- NEVER invent features, patterns, or capabilities not explicitly shown
+- If uncertain about something, omit it rather than guess
+- Base all descriptions on actual code/dependencies provided""",
 }
 
 WIKI_OVERVIEW_PROMPTS = {
@@ -79,6 +92,13 @@ ACCURACY CONSTRAINTS - CRITICAL:
 - Base technology stack descriptions ONLY on actual dependencies
 - When uncertain, omit rather than guess""",
     "openai": """You are a technical documentation expert writing a project overview.
+
+RULES:
+- Ground your description against any AUTHORITATIVE PROJECT DOCUMENTATION provided
+- ONLY describe features verifiable from the provided sources
+- Write class/function names as plain text for cross-linking
+- When uncertain, omit rather than guess""",
+    "grok": """You are a technical documentation expert writing a project overview.
 
 RULES:
 - Ground your description against any AUTHORITATIVE PROJECT DOCUMENTATION provided
@@ -114,6 +134,13 @@ ACCURACY CONSTRAINTS - CRITICAL:
 - If AUTHORITATIVE PROJECT DOCUMENTATION is provided, align your architecture description with it
 - If uncertain about a relationship, omit it rather than guess""",
     "openai": """You are a technical documentation expert writing architecture documentation.
+
+RULES:
+- Describe component relationships visible in the code
+- Only mention design patterns if supported by specific code
+- Write class names as plain text for cross-linking
+- Do NOT invent components or relationships not shown in the code""",
+    "grok": """You are a technical documentation expert writing architecture documentation.
 
 RULES:
 - Describe component relationships visible in the code
@@ -156,6 +183,13 @@ RULES:
 - Use caller/import context for integration explanations
 - Write class names as plain text for cross-linking
 - Do NOT invent APIs, methods, or parameters not shown""",
+    "grok": """You are a technical documentation expert writing file-level documentation.
+
+RULES:
+- Document each class and function with precise API details from the code
+- Use caller/import context for integration explanations
+- Write class names as plain text for cross-linking
+- Do NOT invent APIs, methods, or parameters not shown""",
 }
 
 WIKI_MODULE_PROMPTS = {
@@ -191,6 +225,13 @@ RULES:
 - Use import information for dependency context
 - Write class names as plain text for cross-linking
 - Do NOT invent components not shown in the code""",
+    "grok": """You are a technical documentation expert writing module documentation.
+
+RULES:
+- Explain the module's purpose based on code shown and file list
+- Use import information for dependency context
+- Write class names as plain text for cross-linking
+- Do NOT invent components not shown in the code""",
 }
 
 RESEARCH_DECOMPOSITION_PROMPTS = {
@@ -201,6 +242,9 @@ Always respond with valid JSON only, no other text.""",
     "openai": """You are analyzing questions about codebases. Break down complex questions into simpler sub-questions for investigation.
 
 Always respond with valid JSON only.""",
+    "grok": """You are analyzing questions about codebases. Break down complex questions into simpler sub-questions for investigation.
+
+Always respond with valid JSON only.""",
 }
 
 RESEARCH_GAP_ANALYSIS_PROMPTS = {
@@ -209,6 +253,9 @@ RESEARCH_GAP_ANALYSIS_PROMPTS = {
 
 Always respond with valid JSON only, no other text.""",
     "openai": """You are analyzing code context to identify gaps. Determine what additional context would help answer the question.
+
+Always respond with valid JSON only.""",
+    "grok": """You are analyzing code context to identify gaps. Determine what additional context would help answer the question.
 
 Always respond with valid JSON only.""",
 }
@@ -228,6 +275,12 @@ Guidelines:
 - Cite specific files and line numbers when referencing code
 - Explain architectural reasoning
 - Note any limitations or uncertainties""",
+    "grok": """You are a senior software engineer explaining code architecture. Provide clear, accurate answers based on the code context provided.
+
+Guidelines:
+- Cite specific files and line numbers when referencing code
+- Explain architectural reasoning
+- Note any limitations or uncertainties""",
 }
 
 
@@ -236,12 +289,8 @@ class ProviderPromptsConfig(BaseModel):
 
     model_config = {"frozen": True}
 
-    wiki_system: str = Field(
-        description="System prompt for wiki documentation generation"
-    )
-    research_decomposition: str = Field(
-        description="System prompt for question decomposition"
-    )
+    wiki_system: str = Field(description="System prompt for wiki documentation generation")
+    research_decomposition: str = Field(description="System prompt for question decomposition")
     research_gap_analysis: str = Field(description="System prompt for gap analysis")
     research_synthesis: str = Field(description="System prompt for answer synthesis")
 
@@ -282,6 +331,14 @@ class PromptsConfig(BaseModel):
             research_synthesis=RESEARCH_SYNTHESIS_PROMPTS["openai"],
         )
     )
+    grok: ProviderPromptsConfig = Field(
+        default_factory=lambda: ProviderPromptsConfig(
+            wiki_system=WIKI_SYSTEM_PROMPTS["grok"],
+            research_decomposition=RESEARCH_DECOMPOSITION_PROMPTS["grok"],
+            research_gap_analysis=RESEARCH_GAP_ANALYSIS_PROMPTS["grok"],
+            research_synthesis=RESEARCH_SYNTHESIS_PROMPTS["grok"],
+        )
+    )
 
     def get_for_provider(self, provider: str) -> ProviderPromptsConfig:
         """Get prompts for a specific provider.
@@ -297,6 +354,8 @@ class PromptsConfig(BaseModel):
             return self.ollama
         elif provider == "openai":
             return self.openai
+        elif provider == "grok":
+            return self.grok
         else:
             # Default to anthropic (most detailed prompts)
             return self.anthropic

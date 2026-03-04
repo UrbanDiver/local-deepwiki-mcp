@@ -68,14 +68,10 @@ class CredentialManager:
             return False
 
         if provider == "anthropic":
-            return (
-                key.startswith("sk-ant-")
-                and len(key) > CredentialManager._MIN_KNOWN_KEY_LENGTH
-            )
+            return key.startswith("sk-ant-") and len(key) > CredentialManager._MIN_KNOWN_KEY_LENGTH
         elif provider == "openai":
-            return (
-                key.startswith("sk-")
-                and len(key) > CredentialManager._MIN_KNOWN_KEY_LENGTH
-            )
+            return key.startswith("sk-") and len(key) > CredentialManager._MIN_KNOWN_KEY_LENGTH
+        elif provider == "grok":
+            return key.startswith("xai-") and len(key) > CredentialManager._MIN_KNOWN_KEY_LENGTH
         else:
             return len(key) >= CredentialManager._MIN_GENERIC_KEY_LENGTH
