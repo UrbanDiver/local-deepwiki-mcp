@@ -64,7 +64,7 @@ class TestLinkIntegrity:
     """Tests for internal link validity."""
 
     @pytest.mark.xfail(
-        reason="TODO: Fix broken links in generators — ~4400 broken links to test file pages and __init__.md",
+        reason="Requires wiki rebuild: source_refs now filters test files and uses has_wiki_page; link checker now skips code blocks",
         strict=False,
     )
     def test_no_broken_internal_links(self, wiki_path: Path) -> None:

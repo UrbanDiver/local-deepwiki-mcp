@@ -73,6 +73,9 @@ docs.pdf
 lazy-generated-page
 search-result-404
 
+# Test artifacts (MagicMock dirs created by lancedb.connect(str(MagicMock())))
+<MagicMock*/
+
 # Internal dev/audit docs (kept locally, not published)
 docs/internal/
 

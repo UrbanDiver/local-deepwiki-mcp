@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from local_deepwiki.generators.wiki.utils import relative_wiki_path
+from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.models import WikiPage, WikiPageStatus
 
 
@@ -58,7 +58,18 @@ def build_file_to_wiki_map(
     return file_to_wiki
 
 
-_relative_path = relative_wiki_path
+def _relative_path(from_path: str, to_path: str) -> str:
+    """Lazy-import wrapper to avoid circular dependency."""
+    from local_deepwiki.generators.wiki.utils import relative_wiki_path  # noqa: PLC0415
+
+    return relative_wiki_path(from_path, to_path)
+
+
+def _has_wiki_page(file_path: str) -> bool:
+    """Lazy-import wrapper to avoid circular dependency."""
+    from local_deepwiki.generators.wiki.utils import has_wiki_page  # noqa: PLC0415
+
+    return has_wiki_page(file_path)
 
 
 def _format_file_entry(
@@ -86,8 +97,12 @@ def _format_file_entry(
 
     # Infer wiki path if not in the map (lazy generation will create on demand)
     if wiki_path is None:
-        stem = re.sub(r"\.[^.]+$", "", file_path)
-        wiki_path = f"files/{stem}.md"
+        if _has_wiki_page(file_path):
+            stem = re.sub(r"\.[^.]+$", "", file_path)
+            wiki_path = f"files/{stem}.md"
+        else:
+            # No wiki page for this file — return plain text, no link
+            return f"- {display}"
 
     # Format the entry - prefer local wiki links to keep users on-site
     if wiki_path != current_wiki_path:
@@ -116,6 +131,11 @@ def generate_source_refs_section(
     Returns:
         Markdown string for Relevant Source Files section, or None if no files.
     """
+    if not source_files:
+        return None
+
+    # Filter out test files — they don't get wiki pages so links would break
+    source_files = [f for f in source_files if not is_test_file(f)]
     if not source_files:
         return None
 

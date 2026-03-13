@@ -107,6 +107,9 @@ def get_directory_tree(repo_path: Path, max_depth: int = 3, max_items: int = 50)
             return True
         if name.startswith("."):
             return True
+        # Skip names that look like Python repr strings (e.g. MagicMock dirs)
+        if name.startswith("<") or name.startswith("'") or name.startswith('"'):
+            return True
         return False
 
     def traverse(path: Path, prefix: str, depth: int) -> None:

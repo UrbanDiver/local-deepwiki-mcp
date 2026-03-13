@@ -144,10 +144,11 @@ def scan_page_for_quality_issues(content: str, page_path: str) -> list[str]:
             issues.append(f"{page_path}: {description} found in content")
 
     # Check for empty sections (heading followed immediately by heading)
-    lines = content.split("\n")
-    for i in range(len(lines) - 1):
-        if lines[i].startswith("#") and lines[i + 1].startswith("#"):
-            issues.append(f"{page_path}: Empty section: {lines[i].strip()}")
+    # Use non_code to avoid false positives from Python comments in code blocks
+    nc_lines = non_code.split("\n")
+    for i in range(len(nc_lines) - 1):
+        if nc_lines[i].startswith("#") and nc_lines[i + 1].startswith("#"):
+            issues.append(f"{page_path}: Empty section: {nc_lines[i].strip()}")
 
     # Check for unclosed mermaid blocks
     mermaid_opens = content.count("```mermaid")
@@ -189,7 +190,10 @@ def find_broken_links(wiki_path: Path) -> list[tuple[str, str, str]]:
         page_rel = str(md_file.relative_to(wiki_path))
         page_dir = md_file.parent
 
-        for link_text, link_target in extract_markdown_links(content):
+        # Strip code blocks to avoid false positives from template links
+        content_no_code = _strip_code_blocks(content)
+
+        for link_text, link_target in extract_markdown_links(content_no_code):
             # Skip external links, anchors, and mailto
             if link_target.startswith(("http://", "https://", "#", "mailto:")):
                 continue

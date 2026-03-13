@@ -249,6 +249,54 @@ class TestGenerateSourceRefsSection:
         assert "](parser.md)" not in result
 
 
+class TestSourceRefsTestFileFiltering:
+    """Tests for test file filtering in source refs."""
+
+    def test_filters_test_files_from_source_list(self):
+        """Test that test files are removed from source_files before generating refs."""
+        result = generate_source_refs_section(
+            source_files=[
+                "src/parser.py",
+                "tests/test_parser.py",
+                "tests/test_utils.py",
+                "src/models.py",
+            ],
+            current_wiki_path="modules/src.md",
+            file_to_wiki={},
+        )
+
+        assert result is not None
+        assert "src/parser.py" in result
+        assert "src/models.py" in result
+        assert "test_parser.py" not in result
+        assert "test_utils.py" not in result
+
+    def test_returns_none_when_all_files_are_tests(self):
+        """Test that None is returned when only test files remain after filtering."""
+        result = generate_source_refs_section(
+            source_files=[
+                "tests/test_parser.py",
+                "tests/test_utils.py",
+            ],
+            current_wiki_path="modules/src.md",
+            file_to_wiki={},
+        )
+
+        assert result is None
+
+    def test_format_entry_no_link_for_init_files(self):
+        """Test that __init__.py files get no wiki link (they have no wiki page)."""
+        result = _format_file_entry(
+            file_path="src/local_deepwiki/__init__.py",
+            wiki_path=None,
+            current_wiki_path="modules/src.md",
+        )
+
+        # Should be plain text, no link
+        assert "`src/local_deepwiki/__init__.py`" in result
+        assert "(" not in result  # No link target
+
+
 class TestAddSourceRefsSections:
     """Tests for add_source_refs_sections function."""
 

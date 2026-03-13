@@ -88,6 +88,7 @@ packages = ["src/local_deepwiki"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["tests"]
+norecursedirs = ["tests/fixtures"]
 markers = [
     "slow: marks tests with timing-sensitive assertions (deselect with '-m \"not slow\"')",
     "wiki_output: marks tests that validate generated wiki output quality (requires .deepwiki/)",

@@ -56,7 +56,7 @@ class TestOverviewQuality:
     """Tests for the main index.md overview page."""
 
     @pytest.mark.xfail(
-        reason="TODO: Fix mock leakage in dir_tree generator — MagicMock paths from test runs",
+        reason="Requires wiki rebuild: dir_tree now skips MagicMock dirs, MagicMock dirs deleted",
         strict=False,
     )
     def test_overview_no_mock_objects(self, index_md: str) -> None:
@@ -79,7 +79,7 @@ class TestOverviewQuality:
         )
 
     @pytest.mark.xfail(
-        reason="TODO: Fix dir_tree generator — tree is truncated and polluted with MagicMock, src/ never appears",
+        reason="Requires wiki rebuild: dir_tree now skips MagicMock dirs, MagicMock dirs deleted",
         strict=False,
     )
     def test_overview_has_directory_structure(self, index_md: str) -> None:
@@ -113,10 +113,6 @@ class TestModuleQuality:
             "modules/index.md does not exist"
         )
 
-    @pytest.mark.xfail(
-        reason="TODO: Fix wiki generator to exclude test directories from module pages",
-        strict=False,
-    )
     def test_modules_no_test_directories(self, wiki_path: Path) -> None:
         """No module page should exist for 'tests' or 'test' directories.
 
@@ -166,7 +162,7 @@ class TestGlossaryQuality:
         return glossary_file.read_text(encoding="utf-8", errors="replace")
 
     @pytest.mark.xfail(
-        reason="TODO: Fix glossary generator to exclude test file entities",
+        reason="Requires wiki rebuild: source_refs now filters test files from footer",
         strict=False,
     )
     def test_glossary_no_test_entities(self, glossary_md: str) -> None:
@@ -198,10 +194,6 @@ class TestGlossaryQuality:
 class TestInheritanceQuality:
     """Tests for the class inheritance page."""
 
-    @pytest.mark.xfail(
-        reason="TODO: Fix inheritance generator to exclude test-only classes (Mock*, Failing*)",
-        strict=False,
-    )
     def test_inheritance_no_test_classes(self, wiki_path: Path) -> None:
         """inheritance.md should not contain Mock*, Failing*, or Test* classes.
 
@@ -240,7 +232,7 @@ class TestCoverageQuality:
     """Tests for the documentation coverage page."""
 
     @pytest.mark.xfail(
-        reason="TODO: Fix coverage generator to exclude test files from coverage report",
+        reason="Requires wiki rebuild: source_refs now filters test files from footer",
         strict=False,
     )
     def test_coverage_no_test_files(self, wiki_path: Path) -> None:
@@ -269,7 +261,7 @@ class TestGlobalQuality:
     """Quality checks applied to all wiki pages."""
 
     @pytest.mark.xfail(
-        reason="TODO: Fix wiki generators — 31 quality issues (None as list items, empty sections)",
+        reason="Requires wiki rebuild: quality scan now skips code blocks for section check; remaining LLM output issues",
         strict=False,
     )
     def test_all_pages_pass_quality_scan(
