@@ -8,7 +8,7 @@ from pathlib import Path
 
 from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.wiki.utils import file_path_to_wiki_path
+from local_deepwiki.generators.wiki.utils import file_path_to_wiki_path, has_wiki_page
 from local_deepwiki.models import ChunkType, IndexStatus
 
 # Minimum characters for a docstring to be considered meaningful
@@ -274,10 +274,13 @@ async def generate_coverage_page(
 
         emoji = _get_coverage_emoji(fc.stats.coverage_percent)
         file_name = Path(fc.file_path).name
-        wiki_link = _get_wiki_link(fc.file_path)
+        if has_wiki_page(fc.file_path):
+            file_col = f"[{file_name}]({_get_wiki_link(fc.file_path)})"
+        else:
+            file_col = file_name
 
         lines.append(
-            f"| {emoji} [{file_name}]({wiki_link}) | "
+            f"| {emoji} {file_col} | "
             f"{fc.stats.documented_entities} | {fc.stats.total_entities} | "
             f"{fc.stats.coverage_percent:.1f}% |"
         )
@@ -300,8 +303,10 @@ async def generate_coverage_page(
 
         for fc in low_coverage_files[:MAX_LOW_COVERAGE_FILES]:  # Top worst
             file_name = Path(fc.file_path).name
-            wiki_link = _get_wiki_link(fc.file_path)
-            lines.append(f"### [{file_name}]({wiki_link})")
+            if has_wiki_page(fc.file_path):
+                lines.append(f"### [{file_name}]({_get_wiki_link(fc.file_path)})")
+            else:
+                lines.append(f"### {file_name}")
             lines.append("")
             lines.append(f"Coverage: {fc.stats.coverage_percent:.1f}%")
             lines.append("")

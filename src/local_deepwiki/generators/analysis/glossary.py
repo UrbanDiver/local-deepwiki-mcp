@@ -8,7 +8,7 @@ from pathlib import Path
 
 from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.wiki.utils import file_path_to_wiki_path
+from local_deepwiki.generators.wiki.utils import file_path_to_wiki_path, has_wiki_page
 from local_deepwiki.models import ChunkType, IndexStatus
 
 
@@ -251,8 +251,12 @@ async def generate_glossary_page(
             else:
                 display_name = entity.name
 
-            # Get wiki link
-            wiki_link = _get_wiki_link(entity.file_path)
+            # Get wiki link (only if the file has a wiki page)
+            wiki_link = (
+                _get_wiki_link(entity.file_path)
+                if has_wiki_page(entity.file_path)
+                else ""
+            )
             file_name = Path(entity.file_path).name
 
             # Type badge (with async indicator)
@@ -280,8 +284,12 @@ async def generate_glossary_page(
             desc = _get_brief_description(entity.docstring)
             desc_part = f" - {desc}" if desc else ""
 
+            if wiki_link:
+                name_part = f"**[`{display_name}`]({wiki_link})**"
+            else:
+                name_part = f"**`{display_name}`**"
             lines.append(
-                f"- {type_badge} **[`{display_name}`]({wiki_link})**{sig_part}{raises_part} "
+                f"- {type_badge} {name_part}{sig_part}{raises_part} "
                 f"(`{file_name}`){desc_part}"
             )
 

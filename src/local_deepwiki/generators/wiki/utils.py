@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from local_deepwiki.core.path_utils import is_test_file
+
 
 def relative_wiki_path(from_path: str, to_path: str) -> str:
     """Calculate relative path between two wiki pages.
@@ -35,6 +37,18 @@ def relative_wiki_path(from_path: str, to_path: str) -> str:
     rel_parts = [".."] * ups + list(to_parts[common_length:])
 
     return "/".join(rel_parts)
+
+
+def has_wiki_page(file_path: str) -> bool:
+    """Check if a source file would get a wiki page.
+
+    Files excluded from wiki generation (test files, ``__init__.py``)
+    do not get wiki pages, so linking to them would produce broken links.
+    """
+    p = Path(file_path)
+    if p.name == "__init__.py":
+        return False
+    return not is_test_file(file_path)
 
 
 def file_path_to_wiki_path(file_path: str) -> str:

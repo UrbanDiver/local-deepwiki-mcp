@@ -9,6 +9,7 @@ from pathlib import Path
 from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.diagrams import sanitize_mermaid_name
+from local_deepwiki.generators.wiki.utils import has_wiki_page
 from local_deepwiki.models import IndexStatus
 
 
@@ -295,8 +296,12 @@ async def generate_inheritance_page(
     for class_name in sorted(classes_with_inheritance.keys()):
         node = classes_with_inheritance[class_name]
         parents_str = ", ".join(f"`{p}`" for p in node.parents) if node.parents else "-"
-        file_link = f"[{Path(node.file_path).name}](files/{node.file_path.replace('.py', '.md')})"
-        lines.append(f"| `{class_name}` | {parents_str} | {file_link} |")
+        file_name = Path(node.file_path).name
+        if has_wiki_page(node.file_path):
+            file_col = f"[{file_name}](files/{node.file_path.replace('.py', '.md')})"
+        else:
+            file_col = file_name
+        lines.append(f"| `{class_name}` | {parents_str} | {file_col} |")
 
     lines.append("")
 
