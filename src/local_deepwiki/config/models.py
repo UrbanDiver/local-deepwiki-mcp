@@ -164,6 +164,13 @@ class WikiConfig(BaseModel):
         description="Maximum concurrent LLM calls for file documentation generation. "
         "Higher values speed up generation but increase memory/API usage.",
     )
+    ollama_max_concurrent: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum concurrent LLM calls when using Ollama (local model). "
+        "Local models run on a single GPU; higher values may cause OOM/thrashing.",
+    )
     use_cloud_for_github: bool = Field(
         default=False,
         description="Use cloud LLM provider (Anthropic Claude) for GitHub repos. "
@@ -776,9 +783,9 @@ class Config(BaseModel):
         """
         base_concurrency = self.wiki.max_concurrent_llm_calls
 
-        # Local models: single GPU, limit to 2-3 to avoid OOM/thrashing
+        # Local models: single GPU, limit concurrency to avoid OOM/thrashing
         if self.llm.provider == LLMProviderType.OLLAMA:
-            return min(base_concurrency, 3)
+            return min(base_concurrency, self.wiki.ollama_max_concurrent)
 
         # Cloud providers: allow higher concurrency, cap at configured limit
         return base_concurrency

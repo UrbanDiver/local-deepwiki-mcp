@@ -15,7 +15,10 @@ from local_deepwiki.core.git_utils import get_repo_info
 from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.analysis.api_docs import get_file_api_docs
-from local_deepwiki.generators.analysis.callgraph import get_file_call_graph, get_file_callers
+from local_deepwiki.generators.analysis.callgraph import (
+    get_file_call_graph,
+    get_file_callers,
+)
 from local_deepwiki.generators.context_builder import (
     build_file_context,
     format_context_for_llm,
@@ -504,6 +507,7 @@ async def generate_file_docs(
     write_callback: WriteCallback | None = None,
     generation_progress: "GenerationProgress | None" = None,
     max_files: int | None = None,
+    semaphore: asyncio.Semaphore | None = None,
 ) -> tuple[list[WikiPage], int, int]:
     """Generate documentation for individual source files.
 
@@ -548,7 +552,7 @@ async def generate_file_docs(
 
     # Use semaphore to limit concurrent LLM calls (provider-aware)
     max_concurrent = config.effective_llm_concurrency
-    semaphore = asyncio.Semaphore(max_concurrent)
+    semaphore = semaphore or asyncio.Semaphore(max_concurrent)
     logger.info(
         "Generating file docs for %d files (max %d concurrent)",
         len(significant_files),

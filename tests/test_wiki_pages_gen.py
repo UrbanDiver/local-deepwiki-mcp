@@ -55,7 +55,9 @@ class TestWritePage:
 
     async def test_writes_page_to_disk(self, tmp_path):
         """Test _write_page writes content to correct path."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
@@ -89,7 +91,9 @@ class TestWritePage:
 
     async def test_creates_parent_directories(self, tmp_path):
         """Test _write_page creates parent directories."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
@@ -128,11 +132,15 @@ class TestModulePageProcessing:
     @pytest.fixture
     def setup_generator(self, tmp_path):
         """Create a WikiGenerator for module tests."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
             config.wiki.import_search_limit = 100
+            config.effective_llm_concurrency = 1
+            config.model_copy.return_value = config
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
@@ -297,11 +305,15 @@ class TestChangelogPageGeneration:
     @pytest.fixture
     def setup_generator(self, tmp_path):
         """Create a WikiGenerator for changelog tests."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
             config.wiki.import_search_limit = 100
+            config.effective_llm_concurrency = 1
+            config.model_copy.return_value = config
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
@@ -454,11 +466,15 @@ class TestAuxiliaryPagesGeneration:
     @pytest.fixture
     def setup_generator(self, tmp_path):
         """Create a WikiGenerator for auxiliary page tests."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
             config.wiki.import_search_limit = 100
+            config.effective_llm_concurrency = 1
+            config.model_copy.return_value = config
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 

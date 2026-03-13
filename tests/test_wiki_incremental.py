@@ -52,7 +52,9 @@ class TestGenerateWikiFunction:
 
     async def test_generate_wiki_uses_default_provider(self, tmp_path):
         """Test generate_wiki uses default LLM provider."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
@@ -86,7 +88,9 @@ class TestGenerateWikiFunction:
 
     async def test_generate_wiki_uses_cloud_for_github(self, tmp_path):
         """Test generate_wiki switches to cloud provider for GitHub repos."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
@@ -127,7 +131,9 @@ class TestGenerateWikiFunction:
 
     async def test_generate_wiki_respects_explicit_provider(self, tmp_path):
         """Test generate_wiki uses explicit provider over auto-switching."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
@@ -162,7 +168,9 @@ class TestGenerateWikiFunction:
 
     async def test_generate_wiki_passes_full_rebuild(self, tmp_path):
         """Test generate_wiki passes full_rebuild flag."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
@@ -209,11 +217,15 @@ class TestIncrementalGeneration:
     @pytest.fixture
     def setup_generator(self, tmp_path):
         """Create a WikiGenerator for incremental tests."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
             config.wiki.import_search_limit = 100
+            config.effective_llm_concurrency = 1
+            config.model_copy.return_value = config
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
@@ -624,11 +636,15 @@ class TestDependenciesIncrementalLogic:
     @pytest.fixture
     def setup_generator(self, tmp_path):
         """Create a WikiGenerator for dependencies tests."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
             config.wiki.import_search_limit = 100
+            config.effective_llm_concurrency = 1
+            config.model_copy.return_value = config
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 

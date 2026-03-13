@@ -86,8 +86,8 @@ def _make_config(
     }
     graph_rag_defaults.update(graph_rag_kwargs)
     config.graph_rag = GraphRAGConfig(**graph_rag_defaults)  # type: ignore[arg-type]
-    config.get_vector_db_path.return_value = Path("/tmp/test/vectors.lance")
-    config.get_wiki_path.return_value = Path("/tmp/test/.deepwiki")
+    config.get_vector_db_path.return_value = Path("/nonexistent/vectors.lance")
+    config.get_wiki_path.return_value = Path("/nonexistent/.deepwiki")
     config.search.reranker_model = None
     return config
 

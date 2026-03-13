@@ -11,6 +11,7 @@ This ensures test patches remain effective without modifying any test files.
 
 from __future__ import annotations
 
+import asyncio
 import time
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
@@ -166,31 +167,30 @@ async def generate_summary_pages(
     progress_callback:
         Optional progress callback.
     """
-    pages_to_generate = [
-        (
-            "index.md",
-            "Generating overview",
-            0,
-            lambda: generator._generate_overview(index_status),
-        ),
-        (
-            "architecture.md",
-            "Generating architecture docs",
-            1,
-            lambda: generator._generate_architecture(index_status),
-        ),
-    ]
-    for page_path, label, step, gen_fn in pages_to_generate:
-        if progress_callback:
-            progress_callback(label, step, 14)
-        page, generated = await _generate_or_load_summary_page(
+    if progress_callback:
+        progress_callback("Generating overview and architecture", 0, 14)
+
+    # Generate overview and architecture pages concurrently — they are independent
+    results = await asyncio.gather(
+        _generate_or_load_summary_page(
             ctx=ctx,
-            page_path=page_path,
-            generator=gen_fn,
+            page_path="index.md",
+            generator=lambda: generator._generate_overview(index_status),
             index_status=index_status,
             status_manager=generator.status_manager,
             write_callback=generator._write_page,
-        )
+        ),
+        _generate_or_load_summary_page(
+            ctx=ctx,
+            page_path="architecture.md",
+            generator=lambda: generator._generate_architecture(index_status),
+            index_status=index_status,
+            status_manager=generator.status_manager,
+            write_callback=generator._write_page,
+        ),
+    )
+
+    for page, generated in results:
         ctx.pages.append(page)
         if generated:
             ctx.pages_generated += 1
@@ -398,8 +398,6 @@ async def generate_auxiliary_pages(
     progress_callback:
         Optional progress callback.
     """
-    import asyncio
-
     # Late imports so test patches at ``generators.wiki.generator.*`` are
     # picked up at call time rather than module-load time.
     from local_deepwiki.generators.wiki import generator as _wiki_gen

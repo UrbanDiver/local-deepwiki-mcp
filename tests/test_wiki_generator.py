@@ -52,7 +52,9 @@ class TestWikiGeneratorInit:
 
     def test_init_with_defaults(self, tmp_path):
         """Test WikiGenerator initialization with default config."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
@@ -118,7 +120,9 @@ class TestWikiGeneratorInit:
 
     def test_init_with_llm_provider_override(self, tmp_path):
         """Test WikiGenerator initialization with LLM provider override."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.llm.provider = "ollama"  # Original provider
@@ -161,7 +165,9 @@ class TestGetMainDefinitionLines:
 
     def test_returns_empty_when_no_table(self, tmp_path):
         """Test returns empty dict when vector store has no table."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
@@ -188,7 +194,9 @@ class TestGetMainDefinitionLines:
 
     def test_returns_class_lines(self, tmp_path):
         """Test returns lines for class definitions."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
@@ -219,7 +227,9 @@ class TestGetMainDefinitionLines:
 
     def test_returns_function_lines_when_no_class(self, tmp_path):
         """Test returns function lines when no class exists."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
@@ -255,11 +265,15 @@ class TestWikiGeneratorGenerate:
     @pytest.fixture
     def mock_generator(self, tmp_path):
         """Create a mocked WikiGenerator."""
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
             config.wiki.import_search_limit = 100
+            config.effective_llm_concurrency = 1
+            config.model_copy.return_value = config
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
@@ -532,13 +546,17 @@ class TestCacheStatisticsLogging:
         """Test that cache statistics are logged when LLM provider has stats."""
         from contextlib import ExitStack
 
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
             config.wiki.max_file_docs = 0
             config.wiki.import_search_limit = 10
             config.wiki.max_concurrent_llm_calls = 1
+            config.effective_llm_concurrency = 1
+            config.model_copy.return_value = config
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
@@ -730,7 +748,9 @@ class TestCacheStatisticsLogging:
                         generated_at=time.time(),
                     )
                     stack.enter_context(
-                        patch("local_deepwiki.generators.wiki.generator.get_cached_manifest")
+                        patch(
+                            "local_deepwiki.generators.wiki.generator.get_cached_manifest"
+                        )
                     )
 
                     # Capture logger calls
@@ -767,13 +787,17 @@ class TestCacheStatisticsLogging:
         """Test that mock stats (non-integer) are handled gracefully."""
         from contextlib import ExitStack
 
-        with patch("local_deepwiki.generators.wiki.generator.get_config") as mock_config:
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
             config.wiki = MagicMock()
             config.wiki.max_file_docs = 0
             config.wiki.import_search_limit = 10
             config.wiki.max_concurrent_llm_calls = 1
+            config.effective_llm_concurrency = 1
+            config.model_copy.return_value = config
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
@@ -965,7 +989,9 @@ class TestCacheStatisticsLogging:
                         generated_at=time.time(),
                     )
                     stack.enter_context(
-                        patch("local_deepwiki.generators.wiki.generator.get_cached_manifest")
+                        patch(
+                            "local_deepwiki.generators.wiki.generator.get_cached_manifest"
+                        )
                     )
 
                     # Should not raise an exception (mock stats are handled gracefully)

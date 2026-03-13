@@ -132,6 +132,11 @@ async def apply_cross_linking(
     if progress_callback:
         progress_callback("Adding cross-links", 10, 14)
 
+    # Snapshot content hashes before cross-linking to detect changes
+    original_hashes = {
+        page.path: hashlib.sha256(page.content.encode()).digest() for page in pages
+    }
+
     pages = add_cross_links(pages, entity_registry)
 
     # Add Relevant Source Files sections with local wiki links
@@ -142,9 +147,19 @@ async def apply_cross_linking(
 
     pages = add_see_also_sections(pages, relationship_analyzer)
 
-    # Re-write pages with cross-links and See Also sections
+    # Re-write only pages whose content actually changed
+    pages_rewritten = 0
     for page in pages:
-        await write_callback(page)
+        new_hash = hashlib.sha256(page.content.encode()).digest()
+        if new_hash != original_hashes.get(page.path):
+            await write_callback(page)
+            pages_rewritten += 1
+
+    logger.debug(
+        "Cross-linking: %d/%d pages rewritten (rest unchanged)",
+        pages_rewritten,
+        len(pages),
+    )
 
     return pages
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
@@ -15,7 +16,9 @@ from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.generators.analysis.coverage import generate_coverage_page
 from local_deepwiki.generators.crosslinks import EntityRegistry
-from local_deepwiki.generators.analysis.dependency_graph import generate_dependency_graph_page
+from local_deepwiki.generators.analysis.dependency_graph import (
+    generate_dependency_graph_page,
+)
 from local_deepwiki.generators.analysis.glossary import generate_glossary_page
 from local_deepwiki.generators.analysis.inheritance import generate_inheritance_page
 from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
@@ -210,12 +213,20 @@ class WikiGenerator:
         # Phase 2: Analyze imports for relationship tracking
         await self._analyze_imports_for_relationships()
 
-        # Phase 3: Generate module documentation
-        await self._generate_module_pages(ctx, index_status, progress_callback)
-
-        # Phase 4: Generate file documentation
-        await self._generate_file_pages(
-            ctx, index_status, progress_callback, max_files=max_file_pages
+        # Phase 3+4: Generate module and file documentation concurrently
+        # Both phases share a semaphore to cap total LLM concurrency
+        shared_semaphore = asyncio.Semaphore(self.config.effective_llm_concurrency)
+        await asyncio.gather(
+            self._generate_module_pages(
+                ctx, index_status, progress_callback, semaphore=shared_semaphore
+            ),
+            self._generate_file_pages(
+                ctx,
+                index_status,
+                progress_callback,
+                max_files=max_file_pages,
+                semaphore=shared_semaphore,
+            ),
         )
 
         # Phase 5: Generate dependencies page
@@ -502,6 +513,7 @@ class WikiGenerator:
         ctx: _GenerationContext,
         index_status: IndexStatus,
         progress_callback: ProgressCallback | None,
+        semaphore: asyncio.Semaphore | None = None,
     ) -> None:
         """Generate module documentation pages."""
         if progress_callback:
@@ -517,6 +529,7 @@ class WikiGenerator:
             status_manager=self.status_manager,
             full_rebuild=ctx.full_rebuild,
             max_chunk_content_chars=self.config.wiki.max_chunk_content_chars,
+            semaphore=semaphore,
         )
         ctx.pages_generated += gen_count
         ctx.pages_skipped += skip_count
@@ -535,6 +548,7 @@ class WikiGenerator:
         index_status: IndexStatus,
         progress_callback: ProgressCallback | None,
         max_files: int | None = None,
+        semaphore: asyncio.Semaphore | None = None,
     ) -> None:
         """Generate file-level documentation pages."""
         if progress_callback:
@@ -553,6 +567,7 @@ class WikiGenerator:
             write_callback=self._write_page,
             generation_progress=self._progress,
             max_files=max_files,
+            semaphore=semaphore,
         )
         ctx.pages_generated += gen_count
         ctx.pages_skipped += skip_count

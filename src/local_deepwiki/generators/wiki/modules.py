@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -27,6 +28,8 @@ async def generate_module_docs(
     status_manager: "WikiStatusManager",
     full_rebuild: bool = False,
     max_chunk_content_chars: int = 15000,
+    max_concurrent: int = 8,
+    semaphore: asyncio.Semaphore | None = None,
 ) -> tuple[list[WikiPage], int, int]:
     """Generate documentation for each module/directory.
 
@@ -38,11 +41,13 @@ async def generate_module_docs(
         status_manager: Wiki status manager for incremental updates.
         full_rebuild: If True, regenerate all pages.
         max_chunk_content_chars: Max characters of chunk content in LLM prompt.
+        max_concurrent: Maximum concurrent LLM calls (ignored if semaphore provided).
+        semaphore: Optional shared semaphore for concurrency control.
 
     Returns:
         Tuple of (pages list, generated count, skipped count).
     """
-    pages = []
+    pages: list[WikiPage] = []
     pages_generated = 0
     pages_skipped = 0
 
@@ -56,7 +61,8 @@ async def generate_module_docs(
             dir_name = "root"
         directories.setdefault(dir_name, []).append(file_info.path)
 
-    # Generate a page for each significant source directory (skip test dirs)
+    # Collect modules to generate (skip test dirs and tiny directories)
+    modules_to_generate: list[tuple[str, list[str]]] = []
     for dir_name, files in directories.items():
         if len(files) < 2:
             continue
@@ -74,20 +80,45 @@ async def generate_module_docs(
                 pages_skipped += 1
                 continue
 
-        page = await generate_single_module_doc(
-            dir_name=dir_name,
-            files=files,
-            vector_store=vector_store,
-            llm=llm,
-            system_prompt=system_prompt,
-            repo_path=Path(index_status.repo_path),
-            max_chunk_content_chars=max_chunk_content_chars,
+        modules_to_generate.append((dir_name, files))
+
+    if modules_to_generate:
+        sem = semaphore or asyncio.Semaphore(max_concurrent)
+        logger.info(
+            "Generating module docs for %d modules (max %d concurrent)",
+            len(modules_to_generate),
+            max_concurrent,
         )
-        if page is None:
-            continue
-        pages.append(page)
-        status_manager.record_page_status(page, files)
-        pages_generated += 1
+
+        async def _gen_with_semaphore(
+            dir_name: str, files: list[str]
+        ) -> tuple[str, list[str], WikiPage | None]:
+            async with sem:
+                page = await generate_single_module_doc(
+                    dir_name=dir_name,
+                    files=files,
+                    vector_store=vector_store,
+                    llm=llm,
+                    system_prompt=system_prompt,
+                    repo_path=Path(index_status.repo_path),
+                    max_chunk_content_chars=max_chunk_content_chars,
+                )
+                return dir_name, files, page
+
+        tasks = [
+            asyncio.create_task(_gen_with_semaphore(dn, fs))
+            for dn, fs in modules_to_generate
+        ]
+
+        for coro in asyncio.as_completed(tasks):
+            try:
+                dir_name, files, page = await coro
+                if page is not None:
+                    pages.append(page)
+                    status_manager.record_page_status(page, files)
+                    pages_generated += 1
+            except Exception:  # noqa: BLE001 — module failure must not abort wiki build
+                logger.exception("Error generating module doc")
 
     # Create modules index — uses structural fingerprint since content only
     # changes when modules are added/removed
