@@ -9,10 +9,7 @@ import pytest
 
 from local_deepwiki.config import ASTCacheConfig, ChunkingConfig, Config, ParsingConfig
 from local_deepwiki.core.index_manager import _migrate_status, _needs_migration
-from local_deepwiki.core.indexer import (
-    CURRENT_SCHEMA_VERSION,
-    RepositoryIndexer,
-)
+from local_deepwiki.core.indexer import CURRENT_SCHEMA_VERSION, RepositoryIndexer
 from local_deepwiki.core.parser import ASTCache
 from local_deepwiki.models import ChunkType, CodeChunk, FileInfo, IndexStatus, Language
 
@@ -127,16 +124,10 @@ def function_{i}_c():
         # Create indexer with mocked vector store
         with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
             mock_store = MagicMock()
-            mock_store.create_or_update_table = AsyncMock(
-                side_effect=mock_create_or_update_table
-            )
+            mock_store.create_or_update_table = AsyncMock(side_effect=mock_create_or_update_table)
             mock_store.add_chunks = AsyncMock(side_effect=mock_add_chunks)
-            mock_store.delete_chunks_by_file = AsyncMock(
-                side_effect=mock_delete_chunks_by_file
-            )
-            mock_store.delete_chunks_by_files = AsyncMock(
-                side_effect=mock_delete_chunks_by_files
-            )
+            mock_store.delete_chunks_by_file = AsyncMock(side_effect=mock_delete_chunks_by_file)
+            mock_store.delete_chunks_by_files = AsyncMock(side_effect=mock_delete_chunks_by_files)
             MockVectorStore.return_value = mock_store
 
             indexer = RepositoryIndexer(repo_path, config)
@@ -152,9 +143,7 @@ def function_{i}_c():
         assert total_batches > 1, "Should have processed chunks in multiple batches"
 
         # First call should be create_or_update_table
-        assert len(create_calls) == 1, (
-            "Should call create_or_update_table once for first batch"
-        )
+        assert len(create_calls) == 1, "Should call create_or_update_table once for first batch"
 
         # Subsequent calls should be add_chunks
         assert len(add_calls) >= 1, "Should call add_chunks for subsequent batches"
@@ -203,16 +192,10 @@ def function_b():
 
         with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
             mock_store = MagicMock()
-            mock_store.create_or_update_table = AsyncMock(
-                side_effect=mock_create_or_update_table
-            )
+            mock_store.create_or_update_table = AsyncMock(side_effect=mock_create_or_update_table)
             mock_store.add_chunks = AsyncMock(side_effect=mock_add_chunks)
-            mock_store.delete_chunks_by_file = AsyncMock(
-                side_effect=mock_delete_chunks_by_file
-            )
-            mock_store.delete_chunks_by_files = AsyncMock(
-                side_effect=mock_delete_chunks_by_files
-            )
+            mock_store.delete_chunks_by_file = AsyncMock(side_effect=mock_delete_chunks_by_file)
+            mock_store.delete_chunks_by_files = AsyncMock(side_effect=mock_delete_chunks_by_files)
             MockVectorStore.return_value = mock_store
 
             indexer = RepositoryIndexer(repo_path, config)
@@ -477,16 +460,12 @@ class TestEmbeddingProviderOverride:
             mock_store = MagicMock()
             MockVectorStore.return_value = mock_store
 
-            with patch(
-                "local_deepwiki.core.indexer.get_embedding_provider"
-            ) as MockGetProvider:
+            with patch("local_deepwiki.core.indexer.get_embedding_provider") as MockGetProvider:
                 mock_provider = MagicMock()
                 MockGetProvider.return_value = mock_provider
 
                 # Create indexer with overridden embedding provider
-                indexer = RepositoryIndexer(
-                    repo_path, config, embedding_provider_name="openai"
-                )
+                indexer = RepositoryIndexer(repo_path, config, embedding_provider_name="openai")
 
                 # The internal config should have "openai" as provider
                 assert indexer.config.embedding.provider == "openai"
@@ -518,9 +497,7 @@ class TestParseFileErrors:
             indexer = RepositoryIndexer(repo_path, config)
 
             # Mock the chunker to raise OSError
-            with patch.object(
-                indexer.chunker, "chunk_file", side_effect=OSError("Test error")
-            ):
+            with patch.object(indexer.chunker, "chunk_file", side_effect=OSError("Test error")):
                 result = indexer._parse_single_file(file_path)
 
                 assert result.error is not None
@@ -765,9 +742,7 @@ class TestSearch:
 
         with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
             mock_store = MagicMock()
-            mock_store.search = AsyncMock(
-                return_value=[MockSearchResult(mock_chunk, 0.95)]
-            )
+            mock_store.search = AsyncMock(return_value=[MockSearchResult(mock_chunk, 0.95)])
             MockVectorStore.return_value = mock_store
 
             indexer = RepositoryIndexer(repo_path, config)
@@ -800,9 +775,7 @@ class TestSearch:
 
             await indexer.search("test query", limit=10, language="python")
 
-            mock_store.search.assert_called_once_with(
-                "test query", limit=10, language="python"
-            )
+            mock_store.search.assert_called_once_with("test query", limit=10, language="python")
 
     async def test_search_truncates_long_content(self, tmp_path):
         """Test that search truncates content longer than 500 chars."""
@@ -832,9 +805,7 @@ class TestSearch:
 
         with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
             mock_store = MagicMock()
-            mock_store.search = AsyncMock(
-                return_value=[MockSearchResult(mock_chunk, 0.9)]
-            )
+            mock_store.search = AsyncMock(return_value=[MockSearchResult(mock_chunk, 0.9)])
             MockVectorStore.return_value = mock_store
 
             indexer = RepositoryIndexer(repo_path, config)
@@ -1067,13 +1038,15 @@ class TestParseFilesParallelErrors:
                 # Return a valid result for good.py
                 chunks = list(indexer.chunker.chunk_file(file_path, repo_path))
                 file_info.chunk_count = len(chunks)
-                return ParseResult(
-                    file_path=file_path, file_info=file_info, chunks=chunks
-                )
+                return ParseResult(file_path=file_path, file_info=file_info, chunks=chunks)
 
             with patch.object(indexer, "_parse_single_file", mock_parse_single_file):
                 files_to_process = [repo_path / "good.py", repo_path / "bad.py"]
-                processed_files, total_chunks = await indexer._parse_files_parallel(
+                (
+                    processed_files,
+                    total_chunks,
+                    _file_chunks,
+                ) = await indexer._parse_files_parallel(
                     files_to_process,
                     full_rebuild=True,
                     progress_callback=progress_callback,
@@ -1104,9 +1077,7 @@ class TestLoadPreviousStatus:
 
             indexer = RepositoryIndexer(repo_path, config)
 
-            status, prev_files, rebuild = indexer._load_previous_status(
-                full_rebuild=True
-            )
+            status, prev_files, rebuild = indexer._load_previous_status(full_rebuild=True)
 
             assert status is None
             assert prev_files == {}
@@ -1126,9 +1097,7 @@ class TestLoadPreviousStatus:
 
             indexer = RepositoryIndexer(repo_path, config)
 
-            status, prev_files, rebuild = indexer._load_previous_status(
-                full_rebuild=False
-            )
+            status, prev_files, rebuild = indexer._load_previous_status(full_rebuild=False)
 
             assert status is None
             assert prev_files == {}
@@ -1154,9 +1123,7 @@ class TestLoadPreviousStatus:
                 "load_with_migration_info",
                 return_value=(None, True),
             ):
-                status, prev_files, rebuild = indexer._load_previous_status(
-                    full_rebuild=False
-                )
+                status, prev_files, rebuild = indexer._load_previous_status(full_rebuild=False)
 
                 assert status is None
                 assert prev_files == {}
@@ -1245,11 +1212,9 @@ class TestDeletedFileCleanup:
                     info.hash = "same_hash"
                 return info
 
-            with patch.object(
-                indexer.parser, "get_file_info", side_effect=patched_get_file_info
-            ):
-                _, files_unchanged, deleted_file_paths = (
-                    indexer._collect_files_to_process(prev_files_by_path, None)
+            with patch.object(indexer.parser, "get_file_info", side_effect=patched_get_file_info):
+                _, files_unchanged, deleted_file_paths = indexer._collect_files_to_process(
+                    prev_files_by_path, None
                 )
 
             assert "module_b.py" in deleted_file_paths
@@ -1298,9 +1263,7 @@ class TestDeletedFileCleanup:
             mock_store = MagicMock()
             mock_store.create_or_update_table = AsyncMock(return_value=1)
             mock_store.add_chunks = AsyncMock(return_value=0)
-            mock_store.delete_chunks_by_files = AsyncMock(
-                side_effect=mock_delete_chunks_by_files
-            )
+            mock_store.delete_chunks_by_files = AsyncMock(side_effect=mock_delete_chunks_by_files)
             MockVectorStore.return_value = mock_store
 
             indexer = RepositoryIndexer(repo_path, config)
@@ -1422,9 +1385,7 @@ class TestDeletedFileCleanup:
 
             with patch("local_deepwiki.core.indexer.logger") as mock_logger:
                 mock_logger.info = MagicMock(
-                    side_effect=lambda msg, *args: log_messages.append(
-                        msg % args if args else msg
-                    )
+                    side_effect=lambda msg, *args: log_messages.append(msg % args if args else msg)
                 )
                 mock_logger.warning = MagicMock()
                 mock_logger.debug = MagicMock()
@@ -1435,9 +1396,7 @@ class TestDeletedFileCleanup:
 
             assert "deleted_module.py" in deleted_file_paths
             # Check that the detection was logged
-            detection_logs = [
-                m for m in log_messages if "Detected" in m and "deleted" in m
-            ]
+            detection_logs = [m for m in log_messages if "Detected" in m and "deleted" in m]
             assert len(detection_logs) == 1
             assert "deleted_module.py" in detection_logs[0]
 
@@ -1509,9 +1468,7 @@ class TestParallelParsingPerformance:
             # Mock logger.info to capture messages
             with patch("local_deepwiki.core.indexer.logger") as mock_logger:
                 mock_logger.info = MagicMock(
-                    side_effect=lambda msg, *args: log_messages.append(
-                        msg % args if args else msg
-                    )
+                    side_effect=lambda msg, *args: log_messages.append(msg % args if args else msg)
                 )
                 mock_logger.warning = MagicMock()
                 mock_logger.debug = MagicMock()
@@ -1556,9 +1513,7 @@ class TestParallelParsingPerformance:
             # Mock logger.info to capture messages
             with patch("local_deepwiki.core.indexer.logger") as mock_logger:
                 mock_logger.info = MagicMock(
-                    side_effect=lambda msg, *args: log_messages.append(
-                        msg % args if args else msg
-                    )
+                    side_effect=lambda msg, *args: log_messages.append(msg % args if args else msg)
                 )
                 mock_logger.warning = MagicMock()
                 mock_logger.debug = MagicMock()
@@ -1592,9 +1547,7 @@ class TestParallelParsingPerformance:
             # Mock logger.info to capture messages
             with patch("local_deepwiki.core.indexer.logger") as mock_logger:
                 mock_logger.info = MagicMock(
-                    side_effect=lambda msg, *args: log_messages.append(
-                        msg % args if args else msg
-                    )
+                    side_effect=lambda msg, *args: log_messages.append(msg % args if args else msg)
                 )
                 mock_logger.warning = MagicMock()
                 mock_logger.debug = MagicMock()
@@ -1645,23 +1598,17 @@ class TestParallelParsingPerformance:
                     )
                 chunks = list(indexer.chunker.chunk_file(file_path, repo_path))
                 file_info.chunk_count = len(chunks)
-                return ParseResult(
-                    file_path=file_path, file_info=file_info, chunks=chunks
-                )
+                return ParseResult(file_path=file_path, file_info=file_info, chunks=chunks)
 
             # Mock logger.info to capture messages
             with patch("local_deepwiki.core.indexer.logger") as mock_logger:
                 mock_logger.info = MagicMock(
-                    side_effect=lambda msg, *args: log_messages.append(
-                        msg % args if args else msg
-                    )
+                    side_effect=lambda msg, *args: log_messages.append(msg % args if args else msg)
                 )
                 mock_logger.warning = MagicMock()
                 mock_logger.debug = MagicMock()
 
-                with patch.object(
-                    indexer, "_parse_single_file", mock_parse_single_file
-                ):
+                with patch.object(indexer, "_parse_single_file", mock_parse_single_file):
                     await indexer.index(full_rebuild=True)
 
         # Check that error count is logged
@@ -1699,9 +1646,7 @@ class TestASTCacheIntegration:
 
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         ast_cache = ASTCacheConfig(enabled=False)
-        config = Config().model_copy(
-            update={"parsing": parsing, "ast_cache": ast_cache}
-        )
+        config = Config().model_copy(update={"parsing": parsing, "ast_cache": ast_cache})
 
         with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
             mock_store = MagicMock()
@@ -1719,9 +1664,7 @@ class TestASTCacheIntegration:
 
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         ast_cache = ASTCacheConfig(enabled=True, max_entries=500, ttl_seconds=1800)
-        config = Config().model_copy(
-            update={"parsing": parsing, "ast_cache": ast_cache}
-        )
+        config = Config().model_copy(update={"parsing": parsing, "ast_cache": ast_cache})
 
         with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
             mock_store = MagicMock()
@@ -1757,9 +1700,7 @@ class TestASTCacheIntegration:
             # Mock logger.info to capture messages
             with patch("local_deepwiki.core.indexer.logger") as mock_logger:
                 mock_logger.info = MagicMock(
-                    side_effect=lambda msg, *args: log_messages.append(
-                        msg % args if args else msg
-                    )
+                    side_effect=lambda msg, *args: log_messages.append(msg % args if args else msg)
                 )
                 mock_logger.warning = MagicMock()
                 mock_logger.debug = MagicMock()

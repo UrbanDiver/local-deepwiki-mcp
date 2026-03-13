@@ -646,6 +646,53 @@ class FuzzySearchConfig(BaseModel):
     )
 
 
+class GraphRAGConfig(BaseModel):
+    """Knowledge graph-augmented retrieval configuration.
+
+    When enabled, entities and relationships are extracted during indexing
+    and stored in LanceDB tables. During queries, graph traversal expands
+    vector search results with structurally related code.
+    """
+
+    model_config = {"frozen": True}
+
+    enabled: bool = Field(
+        default=False,
+        description="Enable GraphRAG knowledge graph extraction and retrieval. "
+        "When disabled (default), no graph tables are created and queries "
+        "use pure vector search.",
+    )
+    max_traversal_depth: int = Field(
+        default=2,
+        ge=1,
+        le=4,
+        description="Maximum BFS depth when expanding search results via the graph.",
+    )
+    max_graph_neighbors: int = Field(
+        default=15,
+        ge=1,
+        le=50,
+        description="Maximum neighbor entities to add from graph expansion.",
+    )
+    relationship_types: list[str] = Field(
+        default=["calls", "imports", "inherits_from", "contains", "references"],
+        description="Relationship types to traverse during graph expansion.",
+    )
+    score_boost_factor: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description="Score multiplier for graph-discovered chunks relative to "
+        "the minimum vector search score. Lower values rank graph results below "
+        "vector results.",
+    )
+    extract_during_index: bool = Field(
+        default=True,
+        description="Extract entities and relationships during indexing. "
+        "If False, graph must be built separately.",
+    )
+
+
 class Config(BaseModel):
     """Main configuration.
 
@@ -672,6 +719,7 @@ class Config(BaseModel):
     deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
     export: ExportBatchConfig = Field(default_factory=ExportBatchConfig)
+    graph_rag: GraphRAGConfig = Field(default_factory=GraphRAGConfig)
     prompts: PromptsConfig = Field(default_factory=PromptsConfig)
     plugins: PluginsConfig = Field(default_factory=PluginsConfig)
     hooks: HooksConfig = Field(default_factory=HooksConfig)

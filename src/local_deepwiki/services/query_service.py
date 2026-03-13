@@ -99,6 +99,13 @@ class QueryService:
                 question, limit=fetch_limit
             )
 
+        # --- Graph expansion (optional) ---
+        from local_deepwiki.services.graph_expansion import expand_with_graph
+
+        search_results = await expand_with_graph(
+            search_results, self._vector_store, self._config, repo_path
+        )
+
         if trace:
             retrieval_ms = (time.monotonic() - t0) * 1000
             trace.record_retrieval(search_results, retrieval_ms)
@@ -194,6 +201,13 @@ class QueryService:
             path_pattern=path_filter,
             use_fuzzy=use_fuzzy,
             fuzzy_weight=fuzzy_weight,
+        )
+
+        # --- Graph expansion (optional) ---
+        from local_deepwiki.services.graph_expansion import expand_with_graph
+
+        results = await expand_with_graph(
+            results, self._vector_store, self._config, repo_path
         )
 
         if not results:

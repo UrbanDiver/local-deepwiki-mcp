@@ -47,6 +47,7 @@ from local_deepwiki.config.models import (
     ExportBatchConfig,
     FuzzySearchConfig,
     GenerationMode,
+    GraphRAGConfig,
     HooksConfig,
     LazyIndexConfig,
     LLMCacheConfig,
@@ -103,6 +104,7 @@ __all__ = [
     "LazyIndexConfig",
     "FuzzySearchConfig",
     "GenerationMode",
+    "GraphRAGConfig",
     "ProviderPromptsConfig",
     "PromptsConfig",
     # Loader functions

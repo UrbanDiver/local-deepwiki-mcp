@@ -54,6 +54,10 @@ class EventType(StrEnum):
     RESEARCH_QUERY = "research.query"
     RESEARCH_COMPLETE = "research.complete"
 
+    # Graph RAG events
+    GRAPH_EXTRACT_START = "graph.extract.start"
+    GRAPH_EXTRACT_COMPLETE = "graph.extract.complete"
+
     # General events
     ERROR = "error"
     WARNING = "warning"
