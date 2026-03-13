@@ -1115,7 +1115,7 @@ class TestQueryPipelineIntegration:
         mock_rl.__aenter__ = AsyncMock()
         mock_rl.__aexit__ = AsyncMock()
         p7 = _patch(
-            "local_deepwiki.handlers.core.get_rate_limiter",
+            "local_deepwiki.services.query_service.get_rate_limiter",
             return_value=mock_rl,
         )
 

@@ -39,6 +39,8 @@ class SearchMixin:
         _adaptive_search_enabled: bool
         _adaptive_searcher: Any
         _lazy_index_manager: Any
+        _default_search_mode: str
+        _bm25_weight: float
         embedding_provider: Any
 
         def _get_table(self) -> Any: ...
@@ -175,116 +177,57 @@ class SearchMixin:
             return None
 
     # -----------------------------------------------------------------
-    # search()
+    # search() extracted helpers
     # -----------------------------------------------------------------
 
-    async def search(
-        self,
-        query: str,
-        limit: int = 10,
-        *,
-        language: str | None = None,
-        chunk_type: str | None = None,
-        path_pattern: str | None = None,
-        use_fuzzy: bool = False,
-        fuzzy_weight: float = 0.3,
-        profile: SearchProfile | str | None = None,
-        min_similarity: float | None = None,
-        auto_suggest: bool = True,
-    ) -> list[SearchResult]:
-        """Search for similar code chunks.
+    @staticmethod
+    def _resolve_search_mode(search_mode: str | None, default: str) -> str:
+        """Resolve the effective search mode from parameter or default.
 
         Args:
-            query: Search query text.
-            limit: Maximum number of results.
-            language: Optional language filter (e.g., "python", "typescript").
-            chunk_type: Optional chunk type filter (e.g., "function", "class", "method").
-            path_pattern: Optional file path pattern filter (e.g., "src/**/*.py").
-            use_fuzzy: Whether to use fuzzy matching to re-rank results.
-            fuzzy_weight: Weight for fuzzy score when use_fuzzy is True (0.0-1.0).
-            profile: Search profile for precision/recall trade-off.
-                Can be SearchProfile enum or string ("fast", "balanced", "thorough").
-                If None, uses the store's default profile.
-            min_similarity: Minimum similarity threshold override.
-                Results below this score are filtered out.
-                If None, uses the profile's default threshold.
-            auto_suggest: Whether to generate "Did you mean?" suggestions when
-                results are poor quality. Defaults to True.
+            search_mode: Explicit mode from caller, or None for default.
+            default: Default search mode from config.
 
         Returns:
-            List of search results with scores. When results are poor quality
-            and auto_suggest is True, the first result will include suggestions
-            in the `suggestions` field.
+            One of "vector", "keyword", or "hybrid".
         """
-        from local_deepwiki.core.fuzzy_search import (
-            extract_highlights,
-            filter_by_path,
-            rerank_with_fuzzy,
-            should_auto_enable_fuzzy,
-        )
+        mode = search_mode or default
+        if mode not in ("vector", "keyword", "hybrid"):
+            logger.warning("Invalid search_mode '%s', falling back to 'vector'", mode)
+            return "vector"
+        return mode
 
-        table = self._get_table()
-        if table is None:
-            logger.debug("No table found for search")
-            return []
+    def _execute_vector_search(
+        self,
+        table: Any,
+        query_embedding: list[float],
+        filters: list[str],
+        fetch_limit: int,
+    ) -> list[dict[str, Any]]:
+        """Execute LanceDB vector search with latency tracking.
 
-        resolved_profile, profile_config = self._resolve_search_profile(profile)
-        effective_min_similarity = (
-            min_similarity
-            if min_similarity is not None
-            else profile_config.min_similarity
-        )
+        Runs the vector search, records latency for lazy index management,
+        and triggers index creation if latency thresholds are exceeded.
 
-        logger.debug(
-            "Searching for: '%s...' limit=%d profile=%s min_sim=%s",
-            query[:50],
-            limit,
-            resolved_profile.value,
-            effective_min_similarity,
-        )
+        Args:
+            table: LanceDB table to search.
+            query_embedding: Query vector.
+            filters: Pre-validated LanceDB filter expressions.
+            fetch_limit: Maximum raw rows to fetch.
 
-        query_embedding = (await self.embedding_provider.embed([query]))[0]
-
-        # Build cache filter key (only cache-relevant filters, not path_pattern/fuzzy)
-        filters = self._build_search_filters(language, chunk_type)
-        cache_filters: dict[str, Any] = {
-            "limit": limit,
-            "profile": resolved_profile.value,
-            "min_similarity": effective_min_similarity,
-        }
-        if language:
-            cache_filters["language"] = language
-        if chunk_type:
-            cache_filters["chunk_type"] = chunk_type
-
-        # Try to get cached results (only for non-fuzzy, non-path-pattern searches)
-        use_cache = not use_fuzzy and not path_pattern
-        if use_cache:
-            cached_results = self._search_cache.get(query_embedding, cache_filters)
-            if cached_results is not None:
-                return cached_results
-
-        fetch_limit = self._compute_fetch_limit(
-            limit,
-            profile_config,
-            query,
-            needs_extra=bool(path_pattern or use_fuzzy),
-        )
-
-        # Build search query
+        Returns:
+            Raw LanceDB result rows.
+        """
         search = table.search(query_embedding).limit(fetch_limit)
         if filters:
             search = search.where(" AND ".join(filters))
 
-        # Execute search with latency tracking for lazy index management
         search_start = time.monotonic()
         results = search.to_list()
         search_latency_ms = (time.monotonic() - search_start) * 1000
 
-        # Record latency for lazy index decision making
         self._lazy_index_manager.record_search_latency(search_latency_ms)
 
-        # Check if we should trigger lazy index creation based on latency
         if self._lazy_index_manager.should_create_index():
             try:
                 task = asyncio.create_task(
@@ -292,21 +235,144 @@ class SearchMixin:
                 )
                 task.add_done_callback(_log_task_exception)
             except RuntimeError:
-                # No event loop running (e.g., in sync context)
                 logger.debug("Cannot schedule lazy index creation: no event loop")
 
-        search_results = self._convert_results_to_search_results(
-            results,
-            effective_min_similarity,
+        return results
+
+    def _execute_fts_search(
+        self,
+        table: Any,
+        query: str,
+        filters: list[str],
+        fetch_limit: int,
+    ) -> list[dict[str, Any]]:
+        """Execute LanceDB full-text (BM25) search.
+
+        Requires a prior ``create_fts_index('content')`` call on the table.
+        Returns an empty list if FTS is unavailable.
+
+        Args:
+            table: LanceDB table to search.
+            query: Text query for BM25 matching.
+            filters: Pre-validated LanceDB filter expressions.
+            fetch_limit: Maximum raw rows to fetch.
+
+        Returns:
+            Raw LanceDB result rows with ``_score`` field (BM25 score).
+        """
+        try:
+            search = table.search(query, query_type="fts").limit(fetch_limit)
+            if filters:
+                search = search.where(" AND ".join(filters))
+            return search.to_list()
+        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
+            logger.warning("FTS search failed (falling back to empty): %s", exc)
+            return []
+
+    def _convert_fts_results(
+        self,
+        rows: list[dict[str, Any]],
+    ) -> list[SearchResult]:
+        """Convert FTS result rows to SearchResult objects with normalized scores.
+
+        BM25 scores are unbounded positive numbers, so we normalize by dividing
+        by the maximum score to produce values in the (0, 1] range.
+
+        Args:
+            rows: Raw LanceDB FTS result rows with ``_score`` field.
+
+        Returns:
+            List of SearchResult objects with normalized scores.
+        """
+        if not rows:
+            return []
+
+        max_score = max(row.get("_score", 0.0) for row in rows)
+        if max_score <= 0:
+            max_score = 1.0
+
+        results: list[SearchResult] = []
+        for row in rows:
+            bm25_score = row.get("_score", 0.0)
+            normalized = bm25_score / max_score
+            chunk = self._row_to_chunk(row)
+            results.append(SearchResult(chunk=chunk, score=normalized, highlights=[]))
+        return results
+
+    @staticmethod
+    def _reciprocal_rank_fusion(
+        vector_rows: list[dict[str, Any]],
+        fts_rows: list[dict[str, Any]],
+        *,
+        k: int = 60,
+        vector_weight: float = 1.0,
+        fts_weight: float = 0.3,
+    ) -> list[tuple[dict[str, Any], float]]:
+        """Merge vector and FTS results using Reciprocal Rank Fusion.
+
+        RRF score for document d = sum(weight_i / (k + rank_i(d)))
+        Scores are normalized to [0, 1] by dividing by the maximum.
+
+        Args:
+            vector_rows: Results from vector search (ordered by distance).
+            fts_rows: Results from FTS search (ordered by BM25 score).
+            k: RRF constant (default 60, standard in literature).
+            vector_weight: Weight for vector search rankings.
+            fts_weight: Weight for FTS search rankings.
+
+        Returns:
+            List of (row_dict, normalized_rrf_score) tuples, sorted by score descending.
+        """
+        scores: dict[str, float] = {}
+        docs: dict[str, dict[str, Any]] = {}
+
+        for rank, row in enumerate(vector_rows):
+            doc_id = row["id"]
+            scores[doc_id] = scores.get(doc_id, 0.0) + vector_weight / (k + rank + 1)
+            docs[doc_id] = row
+
+        for rank, row in enumerate(fts_rows):
+            doc_id = row["id"]
+            scores[doc_id] = scores.get(doc_id, 0.0) + fts_weight / (k + rank + 1)
+            if doc_id not in docs:
+                docs[doc_id] = row
+
+        sorted_pairs = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+        max_score = sorted_pairs[0][1] if sorted_pairs else 1.0
+        return [(docs[doc_id], score / max_score) for doc_id, score in sorted_pairs]
+
+    def _apply_fuzzy_reranking(
+        self,
+        search_results: list[SearchResult],
+        query: str,
+        fuzzy_weight: float,
+        *,
+        use_fuzzy: bool,
+    ) -> tuple[list[SearchResult], bool]:
+        """Apply fuzzy re-ranking if explicitly requested or auto-enabled.
+
+        Checks whether auto-fuzzy should activate (poor result quality),
+        then applies fuzzy re-ranking and highlights if needed.
+
+        Args:
+            search_results: Results from vector search.
+            query: Original search query.
+            fuzzy_weight: Weight for fuzzy vs vector score.
+            use_fuzzy: Whether fuzzy was explicitly requested.
+
+        Returns:
+            Tuple of (possibly reranked results, whether auto-fuzzy was enabled).
+        """
+        from local_deepwiki.core.fuzzy_search import (
+            extract_highlights,
+            rerank_with_fuzzy,
+            should_auto_enable_fuzzy,
         )
 
-        # Apply path pattern filter
-        if path_pattern:
-            search_results = filter_by_path(search_results, path_pattern)
-
-        # Check if auto-fuzzy should be enabled due to poor results
         fuzzy_config = self._fuzzy_search_config
         auto_fuzzy_enabled = False
+
         if (
             fuzzy_config.enable_auto_fuzzy
             and not use_fuzzy
@@ -320,43 +386,215 @@ class SearchMixin:
                 fuzzy_config.auto_fuzzy_threshold,
             )
 
-        # Apply fuzzy re-ranking (either explicit or auto-enabled)
         if (use_fuzzy or auto_fuzzy_enabled) and search_results:
             search_results = rerank_with_fuzzy(search_results, query, fuzzy_weight)
             for result in search_results:
                 result.highlights = extract_highlights(result.chunk.content, query)
 
-        search_results = search_results[:limit]
+        return search_results, auto_fuzzy_enabled
 
-        # Generate "Did you mean?" suggestions if results are poor
-        suggestions: list[str] | None = None
-        if auto_suggest:
-            suggestions = await self._generate_suggestions(query, search_results)
+    def _record_and_cache(
+        self,
+        query: str,
+        query_embedding: list[float],
+        search_results: list[SearchResult],
+        cache_filters: dict[str, Any],
+        *,
+        use_cache: bool,
+        auto_fuzzy_enabled: bool,
+        fetch_limit: int,
+    ) -> None:
+        """Record adaptive search quality and cache results.
 
-        # Attach suggestions to the first result
-        if suggestions and search_results:
-            first_result = search_results[0]
-            search_results[0] = SearchResult(
-                chunk=first_result.chunk,
-                score=first_result.score,
-                highlights=first_result.highlights,
-                suggestions=suggestions,
-            )
-        elif suggestions and not search_results:
-            logger.debug("No results found, but have suggestions: %s", suggestions)
-
-        # Record search for adaptive learning
+        Args:
+            query: Original search query.
+            query_embedding: Query vector (for cache key).
+            search_results: Final search results.
+            cache_filters: Cache key filters.
+            use_cache: Whether caching is enabled for this query.
+            auto_fuzzy_enabled: Whether auto-fuzzy was triggered.
+            fetch_limit: Fetch limit used (for adaptive learning).
+        """
         if self._adaptive_search_enabled and search_results:
             avg_score = sum(r.score for r in search_results) / len(search_results)
             self._adaptive_searcher.record_search_quality(
                 query, avg_score, len(search_results), fetch_limit
             )
 
-        # Cache results (only for non-fuzzy, non-path-pattern, non-auto-fuzzy searches)
         if use_cache and not auto_fuzzy_enabled:
             self._search_cache.set(
                 query, query_embedding, search_results, cache_filters
             )
+
+    # -----------------------------------------------------------------
+    # search()
+    # -----------------------------------------------------------------
+
+    async def search(
+        self,
+        query: str,
+        limit: int = 10,
+        *,
+        search_mode: str | None = None,
+        language: str | None = None,
+        chunk_type: str | None = None,
+        path_pattern: str | None = None,
+        use_fuzzy: bool = False,
+        fuzzy_weight: float = 0.3,
+        profile: SearchProfile | str | None = None,
+        min_similarity: float | None = None,
+        auto_suggest: bool = True,
+    ) -> list[SearchResult]:
+        """Search for similar code chunks.
+
+        Orchestrates the search pipeline: embed query, check cache, execute
+        search (vector, keyword, or hybrid), apply filters/fuzzy/suggestions,
+        record and cache.
+
+        Args:
+            query: Search query text.
+            limit: Maximum number of results.
+            search_mode: Search mode override — ``"vector"`` (semantic),
+                ``"keyword"`` (BM25 full-text), or ``"hybrid"`` (both merged
+                via Reciprocal Rank Fusion). Defaults to the store's
+                configured ``default_search_mode``.
+            language: Optional language filter (e.g., "python", "typescript").
+            chunk_type: Optional chunk type filter (e.g., "function", "class", "method").
+            path_pattern: Optional file path pattern filter (e.g., "src/**/*.py").
+            use_fuzzy: Whether to use fuzzy matching to re-rank results.
+            fuzzy_weight: Weight for fuzzy score when use_fuzzy is True (0.0-1.0).
+            profile: Search profile for precision/recall trade-off.
+            min_similarity: Minimum similarity threshold override.
+            auto_suggest: Whether to generate "Did you mean?" suggestions.
+
+        Returns:
+            List of search results with scores.
+        """
+        from local_deepwiki.core.fuzzy_search import filter_by_path
+
+        table = self._get_table()
+        if table is None:
+            logger.debug("No table found for search")
+            return []
+
+        effective_mode = self._resolve_search_mode(
+            search_mode, self._default_search_mode
+        )
+        resolved_profile, profile_config = self._resolve_search_profile(profile)
+        effective_min_similarity = (
+            min_similarity
+            if min_similarity is not None
+            else profile_config.min_similarity
+        )
+
+        logger.debug(
+            "Searching for: '%s...' limit=%d mode=%s profile=%s min_sim=%s",
+            query[:50],
+            limit,
+            effective_mode,
+            resolved_profile.value,
+            effective_min_similarity,
+        )
+
+        filters = self._build_search_filters(language, chunk_type)
+        cache_filters: dict[str, Any] = {
+            "limit": limit,
+            "profile": resolved_profile.value,
+            "min_similarity": effective_min_similarity,
+            "search_mode": effective_mode,
+        }
+        if language:
+            cache_filters["language"] = language
+        if chunk_type:
+            cache_filters["chunk_type"] = chunk_type
+
+        # Compute embedding (needed for vector/hybrid mode and cache)
+        needs_embedding = effective_mode != "keyword"
+        query_embedding: list[float] = []
+        if needs_embedding:
+            query_embedding = (await self.embedding_provider.embed([query]))[0]
+
+        use_cache = not use_fuzzy and not path_pattern and needs_embedding
+        if use_cache:
+            cached_results = self._search_cache.get(query_embedding, cache_filters)
+            if cached_results is not None:
+                return cached_results
+
+        fetch_limit = self._compute_fetch_limit(
+            limit,
+            profile_config,
+            query,
+            needs_extra=bool(path_pattern or use_fuzzy),
+        )
+
+        # --- Execute search based on mode ---
+        if effective_mode == "keyword":
+            fts_rows = self._execute_fts_search(table, query, filters, fetch_limit)
+            search_results = self._convert_fts_results(fts_rows)
+        elif effective_mode == "hybrid":
+            vector_rows = self._execute_vector_search(
+                table, query_embedding, filters, fetch_limit
+            )
+            fts_rows = self._execute_fts_search(table, query, filters, fetch_limit)
+            if fts_rows:
+                merged = self._reciprocal_rank_fusion(
+                    vector_rows,
+                    fts_rows,
+                    fts_weight=self._bm25_weight,
+                )
+                search_results = [
+                    SearchResult(
+                        chunk=self._row_to_chunk(row), score=score, highlights=[]
+                    )
+                    for row, score in merged
+                ]
+            else:
+                # FTS unavailable — fall back to vector-only
+                search_results = self._convert_results_to_search_results(
+                    vector_rows, effective_min_similarity
+                )
+        else:  # vector (default)
+            raw_rows = self._execute_vector_search(
+                table, query_embedding, filters, fetch_limit
+            )
+            search_results = self._convert_results_to_search_results(
+                raw_rows, effective_min_similarity
+            )
+
+        if path_pattern:
+            search_results = filter_by_path(search_results, path_pattern)
+
+        search_results, auto_fuzzy_enabled = self._apply_fuzzy_reranking(
+            search_results,
+            query,
+            fuzzy_weight,
+            use_fuzzy=use_fuzzy,
+        )
+        search_results = search_results[:limit]
+
+        # Generate and attach "Did you mean?" suggestions
+        if auto_suggest:
+            suggestions = await self._generate_suggestions(query, search_results)
+            if suggestions and search_results:
+                first = search_results[0]
+                search_results[0] = SearchResult(
+                    chunk=first.chunk,
+                    score=first.score,
+                    highlights=first.highlights,
+                    suggestions=suggestions,
+                )
+            elif suggestions:
+                logger.debug("No results but have suggestions: %s", suggestions)
+
+        self._record_and_cache(
+            query,
+            query_embedding,
+            search_results,
+            cache_filters,
+            use_cache=use_cache,
+            auto_fuzzy_enabled=auto_fuzzy_enabled,
+            fetch_limit=fetch_limit,
+        )
 
         return search_results
 

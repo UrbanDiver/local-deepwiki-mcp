@@ -54,6 +54,8 @@ class VectorStore(SearchMixin, StatsMixin, LazyIndexMixin):
         fuzzy_search_config: FuzzySearchConfig | None = None,
         default_search_profile: SearchProfile = SearchProfile.BALANCED,
         adaptive_search_enabled: bool = True,
+        default_search_mode: str = "vector",
+        bm25_weight: float = 0.3,
     ):
         """Initialize the vector store.
 
@@ -108,6 +110,10 @@ class VectorStore(SearchMixin, StatsMixin, LazyIndexMixin):
         # Search profile configuration
         self._default_search_profile = default_search_profile
         self._adaptive_search_enabled = adaptive_search_enabled
+
+        # Hybrid search configuration
+        self._default_search_mode = default_search_mode
+        self._bm25_weight = bm25_weight
 
         # Initialize adaptive searcher
         self._adaptive_searcher = AdaptiveSearcher()

@@ -549,6 +549,26 @@ class SearchConfig(BaseModel):
         le=1.0,
         description="Minimum similarity threshold for 'thorough' profile (0.0-1.0).",
     )
+    reranker_model: str | None = Field(
+        default=None,
+        description="Cross-encoder model for reranking search results "
+        "(e.g. 'cross-encoder/ms-marco-MiniLM-L-6-v2'). "
+        "When None, reranking is disabled.",
+    )
+    default_search_mode: Literal["vector", "keyword", "hybrid"] = Field(
+        default="vector",
+        description="Default search mode for code search. "
+        "'vector' = semantic embedding search (default); "
+        "'keyword' = BM25 full-text search; "
+        "'hybrid' = combined vector + BM25 with Reciprocal Rank Fusion.",
+    )
+    bm25_weight: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="Weight of BM25 results in hybrid search RRF (0.0-1.0). "
+        "Vector weight is always 1.0. Higher values favor keyword matches.",
+    )
 
 
 class LazyIndexConfig(BaseModel):

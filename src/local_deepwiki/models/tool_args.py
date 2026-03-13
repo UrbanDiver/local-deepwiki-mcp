@@ -61,6 +61,10 @@ class AskQuestionArgs(BaseModel):
         default=False,
         description="Enable agentic RAG: grade relevance + auto-rewrite query if needed (default: false)",
     )
+    debug: bool = Field(
+        default=False,
+        description="Include RAG pipeline trace in response for debugging (default: false)",
+    )
 
 
 class DeepResearchArgs(BaseModel):
@@ -572,7 +576,9 @@ class QueryCodebaseArgs(BaseModel):
 class ServeWikiArgs(BaseModel):
     """Arguments for the serve_wiki tool."""
 
-    wiki_path: str = Field(description="Path to the wiki directory (typically {repo}/.deepwiki)")
+    wiki_path: str = Field(
+        description="Path to the wiki directory (typically {repo}/.deepwiki)"
+    )
     host: str = Field(
         default="127.0.0.1",
         max_length=256,

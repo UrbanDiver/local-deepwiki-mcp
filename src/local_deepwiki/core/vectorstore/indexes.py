@@ -27,6 +27,7 @@ def ensure_indexes(table: Table, lazy_index_manager: LazyIndexManager) -> None:
         lazy_index_manager: Manager for lazy vector index creation.
     """
     # Check existing indexes
+    indices: list[object] = []
     try:
         indices = table.list_indices()
         existing_indexes: set[str] = set()
@@ -53,6 +54,25 @@ def ensure_indexes(table: Table, lazy_index_manager: LazyIndexManager) -> None:
     if "file_path_idx" not in existing_indexes:
         create_index_safe(table, "file_path")
 
+    # Ensure FTS index exists for keyword/hybrid search
+    has_fts_index = (
+        any(
+            "fts"
+            in str(
+                getattr(
+                    idx,
+                    "index_type",
+                    idx.get("index_type", "") if isinstance(idx, dict) else "",
+                )
+            ).lower()
+            for idx in indices
+        )
+        if indices
+        else False
+    )
+    if not has_fts_index:
+        create_fts_index_safe(table, "content")
+
     # Handle vector index
     if not has_vector_index:
         try:
@@ -69,6 +89,21 @@ def ensure_indexes(table: Table, lazy_index_manager: LazyIndexManager) -> None:
             logger.debug("Could not check row count for vector indexing: %s", e)
     else:
         lazy_index_manager.mark_index_created()
+
+
+def create_fts_index_safe(table: Table, column: str) -> None:
+    """Safely create a full-text search (BM25) index on a text column.
+
+    Args:
+        table: The LanceDB table.
+        column: The text column name to index.
+    """
+    try:
+        table.create_fts_index(column, replace=True)
+        logger.debug("Created FTS index on '%s' column", column)
+    except (ValueError, RuntimeError, OSError, TypeError, AttributeError) as e:
+        # TypeError/AttributeError: older LanceDB versions without FTS support
+        logger.debug("Could not create FTS index on '%s': %s", column, e)
 
 
 def create_index_safe(table: Table, column: str) -> None:
@@ -90,12 +125,14 @@ def create_scalar_indexes(table: Table) -> None:
 
     Creates indexes on 'id' and 'file_path' columns to optimize
     get_chunk_by_id() and get_chunks_by_file() operations.
+    Also creates a full-text search index on 'content' for BM25 keyword search.
 
     Args:
         table: The LanceDB table.
     """
     create_index_safe(table, "id")
     create_index_safe(table, "file_path")
+    create_fts_index_safe(table, "content")
 
 
 def create_vector_index(

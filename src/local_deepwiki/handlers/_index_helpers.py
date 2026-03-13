@@ -60,7 +60,12 @@ def _create_vector_store(repo_path: Path, config: Any) -> VectorStore:
         Initialized VectorStore instance.
     """
     embedding_provider = get_embedding_provider(config.embedding)
-    return VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+    return VectorStore(
+        config.get_vector_db_path(repo_path),
+        embedding_provider,
+        default_search_mode=config.search.default_search_mode,
+        bm25_weight=config.search.bm25_weight,
+    )
 
 
 def _format_research_results(result: "DeepResearchResult") -> ResearchResult:
