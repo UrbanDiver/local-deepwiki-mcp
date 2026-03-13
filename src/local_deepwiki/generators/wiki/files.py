@@ -72,6 +72,34 @@ __all__ = [
 ]
 
 
+def _adaptive_context_limits(
+    chunk_count: int,
+    max_chunk_content_chars: int,
+    max_chunks_per_file: int,
+) -> tuple[int, int]:
+    """Scale context limits based on file complexity.
+
+    Simple files (few chunks) get smaller prompts for faster LLM generation.
+    Complex files get the full configured limits.
+
+    Args:
+        chunk_count: Number of chunks in the file.
+        max_chunk_content_chars: Configured max chars.
+        max_chunks_per_file: Configured max chunks.
+
+    Returns:
+        Tuple of (effective_chars, effective_chunks).
+    """
+    if chunk_count <= 5:
+        # Simple file: use ~1/3 of limits
+        return max(500, max_chunk_content_chars // 3), min(chunk_count, 10)
+    if chunk_count <= 15:
+        # Medium file: use ~2/3 of limits
+        return max(500, max_chunk_content_chars * 2 // 3), min(max_chunks_per_file, 30)
+    # Complex file: full limits
+    return max_chunk_content_chars, max_chunks_per_file
+
+
 async def _gather_file_context(
     file_info: FileInfo,
     index_status: IndexStatus,
@@ -97,9 +125,14 @@ async def _gather_file_context(
     if not file_chunks:
         return None  # No content to document
 
+    # Scale context limits based on file complexity
+    effective_chars, effective_chunks = _adaptive_context_limits(
+        len(file_chunks), max_chunk_content_chars, max_chunks_per_file
+    )
+
     # Prioritize chunks by documentation value: functions/methods first,
     # then classes, then module summaries, then imports
-    prioritized = _prioritize_chunks(file_chunks, max_chunks_per_file)
+    prioritized = _prioritize_chunks(file_chunks, effective_chunks)
 
     # Build context from prioritized chunks
     context_parts = []
@@ -108,7 +141,7 @@ async def _gather_file_context(
             f"Type: {chunk.chunk_type.value}\n"
             f"Name: {chunk.name}\n"
             f"Lines: {chunk.start_line}-{chunk.end_line}\n"
-            f"```\n{chunk.content[:max_chunk_content_chars]}\n```"
+            f"```\n{chunk.content[:effective_chars]}\n```"
         )
 
     context = "\n\n".join(context_parts)
@@ -274,14 +307,17 @@ def _add_blame_section(
     return ("\n\n" + blame_section) if blame_section else ""
 
 
-def _generate_file_enrichments(
+async def _generate_file_enrichments(
     content: str,
     abs_file_path: Path,
     repo_path: Path,
     file_path: str,
     all_file_chunks: list[CodeChunk],
 ) -> str:
-    """Generate diagrams, call graphs, examples, and blame info.
+    """Generate diagrams, call graphs, examples, and blame info concurrently.
+
+    Each enrichment is independent and involves file I/O or subprocess calls,
+    so they run in parallel via ``asyncio.to_thread``.
 
     Args:
         content: The base documentation content.
@@ -293,15 +329,16 @@ def _generate_file_enrichments(
     Returns:
         The enriched documentation content.
     """
-    return content + "".join(
-        [
-            _add_api_reference_section(abs_file_path),
-            _add_class_diagram_section(all_file_chunks),
-            _add_call_graph_section(abs_file_path, repo_path),
-            _add_examples_section(abs_file_path, repo_path, all_file_chunks),
-            _add_blame_section(repo_path, file_path, all_file_chunks),
-        ]
+    results = await asyncio.gather(
+        asyncio.to_thread(_add_api_reference_section, abs_file_path),
+        asyncio.to_thread(_add_class_diagram_section, all_file_chunks),
+        asyncio.to_thread(_add_call_graph_section, abs_file_path, repo_path),
+        asyncio.to_thread(
+            _add_examples_section, abs_file_path, repo_path, all_file_chunks
+        ),
+        asyncio.to_thread(_add_blame_section, repo_path, file_path, all_file_chunks),
     )
+    return content + "".join(results)
 
 
 async def generate_single_file_doc(
@@ -382,7 +419,7 @@ async def generate_single_file_doc(
 
     # Step 4: Generate enrichments (diagrams, call graphs, examples, blame)
     abs_file_path = repo_path / file_info.path
-    content = _generate_file_enrichments(
+    content = await _generate_file_enrichments(
         content=content,
         abs_file_path=abs_file_path,
         repo_path=repo_path,

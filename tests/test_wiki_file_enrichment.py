@@ -748,7 +748,7 @@ class TestGenerateBlameSectionCoverage:
 class TestGenerateFileEnrichmentsUsedBy:
     """Tests for 'Used By' section in _generate_file_enrichments."""
 
-    def test_adds_used_by_section_when_callers_exist(self, tmp_path):
+    async def test_adds_used_by_section_when_callers_exist(self, tmp_path):
         """Test adds Used By section when file has callers."""
         from local_deepwiki.generators.wiki.files import _generate_file_enrichments
 
@@ -793,7 +793,7 @@ class TestGenerateFileEnrichmentsUsedBy:
             mock_examples.return_value = ""
             mock_blame.return_value = None
 
-            result = _generate_file_enrichments(
+            result = await _generate_file_enrichments(
                 content="## Overview\n\nTest content.",
                 abs_file_path=tmp_path / "main.py",
                 repo_path=tmp_path,
@@ -806,7 +806,7 @@ class TestGenerateFileEnrichmentsUsedBy:
         assert "**`helper`**: called by `utils.format`" in result
         assert "**`main`**: called by `app.run`, `cli.execute`" in result
 
-    def test_skips_used_by_when_no_callers(self, tmp_path):
+    async def test_skips_used_by_when_no_callers(self, tmp_path):
         """Test does not add Used By when callers_map is empty."""
         from local_deepwiki.generators.wiki.files import _generate_file_enrichments
 
@@ -845,7 +845,7 @@ class TestGenerateFileEnrichmentsUsedBy:
             mock_examples.return_value = ""
             mock_blame.return_value = None
 
-            result = _generate_file_enrichments(
+            result = await _generate_file_enrichments(
                 content="## Overview",
                 abs_file_path=tmp_path / "main.py",
                 repo_path=tmp_path,
@@ -855,7 +855,7 @@ class TestGenerateFileEnrichmentsUsedBy:
 
         assert "## Used By" not in result
 
-    def test_skips_used_by_when_callers_are_empty_lists(self, tmp_path):
+    async def test_skips_used_by_when_callers_are_empty_lists(self, tmp_path):
         """Test does not add Used By when all caller lists are empty."""
         from local_deepwiki.generators.wiki.files import _generate_file_enrichments
 
@@ -895,7 +895,7 @@ class TestGenerateFileEnrichmentsUsedBy:
             mock_examples.return_value = ""
             mock_blame.return_value = None
 
-            result = _generate_file_enrichments(
+            result = await _generate_file_enrichments(
                 content="## Overview",
                 abs_file_path=tmp_path / "main.py",
                 repo_path=tmp_path,
@@ -906,7 +906,7 @@ class TestGenerateFileEnrichmentsUsedBy:
         # Should not include Used By when all caller lists are empty
         assert "## Used By" not in result
 
-    def test_adds_blame_section_when_available(self, tmp_path):
+    async def test_adds_blame_section_when_available(self, tmp_path):
         """Test adds blame section when _generate_blame_section returns content."""
         from local_deepwiki.generators.wiki.files import _generate_file_enrichments
 
@@ -951,7 +951,7 @@ class TestGenerateFileEnrichmentsUsedBy:
             mock_examples.return_value = ""
             mock_blame.return_value = blame_content
 
-            result = _generate_file_enrichments(
+            result = await _generate_file_enrichments(
                 content="## Overview",
                 abs_file_path=tmp_path / "main.py",
                 repo_path=tmp_path,
