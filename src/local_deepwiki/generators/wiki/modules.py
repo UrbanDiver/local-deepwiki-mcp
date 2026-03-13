@@ -6,9 +6,10 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.logging import get_logger
-from local_deepwiki.models import IndexStatus, WikiPage
+from local_deepwiki.models import IndexStatus, SearchResult, WikiPage
 from local_deepwiki.providers.base import LLMProvider
 
 if TYPE_CHECKING:
@@ -55,9 +56,11 @@ async def generate_module_docs(
             dir_name = "root"
         directories.setdefault(dir_name, []).append(file_info.path)
 
-    # Generate a page for each significant directory
+    # Generate a page for each significant source directory (skip test dirs)
     for dir_name, files in directories.items():
         if len(files) < 2:
+            continue
+        if is_test_file(dir_name + "/dummy", check_filename=False):
             continue
 
         page_path = f"modules/{dir_name}.md"
@@ -156,10 +159,21 @@ async def generate_single_module_doc(
     """
     page_path = f"modules/{dir_name}.md"
 
-    search_results = await vector_store.search(f"module {dir_name}", limit=40)
-    relevant_chunks = [
-        r for r in search_results if r.chunk.file_path.startswith(dir_name)
-    ]
+    # Fetch chunks directly from known files instead of relying on semantic
+    # search which can return chunks from the wrong directory.
+    all_module_chunks: list[SearchResult] = []
+    for fp in files[:40]:
+        file_chunks = await vector_store.get_chunks_by_file(fp)
+        all_module_chunks.extend(
+            SearchResult(chunk=c, score=1.0, highlights=[]) for c in file_chunks
+        )
+    # Fall back to semantic search only if direct lookup returned nothing
+    if not all_module_chunks:
+        search_results = await vector_store.search(f"module {dir_name}", limit=40)
+        all_module_chunks = [
+            r for r in search_results if r.chunk.file_path.startswith(dir_name)
+        ]
+    relevant_chunks = all_module_chunks
     if not relevant_chunks:
         return None
 

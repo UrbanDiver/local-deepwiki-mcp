@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from operator import attrgetter
 from pathlib import Path
 
+from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.wiki.utils import file_path_to_wiki_path
 from local_deepwiki.models import ChunkType, IndexStatus
@@ -164,6 +165,8 @@ async def analyze_project_coverage(
     file_coverages: list[FileCoverage] = []
 
     for file_info in index_status.files:
+        if is_test_file(file_info.path):
+            continue
         file_coverage = await analyze_file_coverage(file_info.path, vector_store)
         file_coverages.append(file_coverage)
 

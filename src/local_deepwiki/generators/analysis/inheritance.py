@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from operator import itemgetter
 from pathlib import Path
 
+from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.diagrams import sanitize_mermaid_name
 from local_deepwiki.models import IndexStatus
@@ -40,6 +41,8 @@ async def collect_class_hierarchy(
 
     # Single filtered query for all CLASS chunks (instead of N per-file queries)
     for chunk in vector_store.get_all_chunks(chunk_type="class"):
+        if is_test_file(chunk.file_path):
+            continue
         class_name = chunk.name
         if not class_name:
             continue

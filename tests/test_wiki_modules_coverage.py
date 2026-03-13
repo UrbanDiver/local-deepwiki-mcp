@@ -41,6 +41,7 @@ class TestGenerateModuleDocs:
         """Create a mock vector store."""
         mock = MagicMock()
         mock.search = AsyncMock(return_value=[])
+        mock.get_chunks_by_file = AsyncMock(return_value=[])
         return mock
 
     @pytest.fixture
@@ -102,9 +103,15 @@ class TestGenerateModuleDocs:
         # Multiple files in src directory
         chunk1 = make_code_chunk(file_path="src/main.py", name="main")
         chunk2 = make_code_chunk(file_path="src/utils.py", name="utils")
-        mock_vector_store.search = AsyncMock(
-            return_value=[make_search_result(chunk1), make_search_result(chunk2)]
-        )
+
+        async def _get_chunks(fp):
+            if fp == "src/main.py":
+                return [chunk1]
+            if fp == "src/utils.py":
+                return [chunk2]
+            return []
+
+        mock_vector_store.get_chunks_by_file = AsyncMock(side_effect=_get_chunks)
 
         index_status = make_index_status(
             repo_path=str(tmp_path),
@@ -169,7 +176,7 @@ class TestGenerateModuleDocs:
     ):
         """Test generates modules index page."""
         chunk = make_code_chunk(file_path="src/main.py", name="main")
-        mock_vector_store.search = AsyncMock(return_value=[make_search_result(chunk)])
+        mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[chunk])
 
         index_status = make_index_status(
             repo_path=str(tmp_path),
@@ -250,7 +257,7 @@ class TestGenerateModuleDocs:
     ):
         """Test full rebuild regenerates all pages."""
         chunk = make_code_chunk(file_path="src/main.py", name="main")
-        mock_vector_store.search = AsyncMock(return_value=[make_search_result(chunk)])
+        mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[chunk])
         # Even if needs_regeneration returns False, full_rebuild should still generate
         mock_status_manager.needs_regeneration = MagicMock(return_value=False)
 
@@ -278,16 +285,9 @@ class TestGenerateModuleDocs:
     async def test_filters_chunks_by_directory(
         self, mock_llm, mock_vector_store, mock_status_manager, tmp_path
     ):
-        """Test filters search results to chunks from relevant directory."""
-        # Return chunks from different directories
+        """Test only includes chunks from the target directory's files."""
         src_chunk = make_code_chunk(file_path="src/main.py", name="main")
-        other_chunk = make_code_chunk(file_path="other/util.py", name="util")
-        mock_vector_store.search = AsyncMock(
-            return_value=[
-                make_search_result(src_chunk),
-                make_search_result(other_chunk),
-            ]
-        )
+        mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[src_chunk])
 
         index_status = make_index_status(
             repo_path=str(tmp_path),
@@ -344,24 +344,26 @@ class TestGenerateModuleDocs:
     async def test_generates_multiple_modules(
         self, mock_llm, mock_vector_store, mock_status_manager, tmp_path
     ):
-        """Test generates pages for multiple modules."""
+        """Test generates pages for multiple source modules, excludes test dirs."""
         src_chunk = make_code_chunk(file_path="src/main.py", name="main")
-        tests_chunk = make_code_chunk(file_path="tests/test_main.py", name="test_main")
+        lib_chunk = make_code_chunk(file_path="lib/helpers.py", name="helpers")
 
-        async def search_side_effect(query, **_kwargs):
-            if "src" in query:
-                return [make_search_result(src_chunk)]
-            if "tests" in query:
-                return [make_search_result(tests_chunk)]
+        async def _get_chunks(fp):
+            if fp.startswith("src/"):
+                return [src_chunk]
+            if fp.startswith("lib/"):
+                return [lib_chunk]
             return []
 
-        mock_vector_store.search = AsyncMock(side_effect=search_side_effect)
+        mock_vector_store.get_chunks_by_file = AsyncMock(side_effect=_get_chunks)
 
         index_status = make_index_status(
             repo_path=str(tmp_path),
             files=[
                 make_file_info(path="src/main.py"),
                 make_file_info(path="src/utils.py"),
+                make_file_info(path="lib/helpers.py"),
+                make_file_info(path="lib/external.py"),
                 make_file_info(path="tests/test_main.py"),
                 make_file_info(path="tests/test_utils.py"),
             ],
@@ -376,20 +378,21 @@ class TestGenerateModuleDocs:
             full_rebuild=True,
         )
 
-        # Should have index + 2 module pages
+        # Should have index + 2 source module pages (tests dir excluded)
         assert len(pages) == 3
         assert generated == 3  # 2 module pages + modules index
         module_paths = [p.path for p in pages]
         assert "modules/index.md" in module_paths
         assert "modules/src.md" in module_paths
-        assert "modules/tests.md" in module_paths
+        assert "modules/lib.md" in module_paths
+        assert "modules/tests.md" not in module_paths
 
     async def test_records_page_status(
         self, mock_llm, mock_vector_store, mock_status_manager, tmp_path
     ):
         """Test records status for generated pages."""
         chunk = make_code_chunk(file_path="src/main.py", name="main")
-        mock_vector_store.search = AsyncMock(return_value=[make_search_result(chunk)])
+        mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[chunk])
 
         index_status = make_index_status(
             repo_path=str(tmp_path),
@@ -417,7 +420,7 @@ class TestGenerateModuleDocs:
     ):
         """Test truncates file list for many files."""
         chunk = make_code_chunk(file_path="src/main.py", name="main")
-        mock_vector_store.search = AsyncMock(return_value=[make_search_result(chunk)])
+        mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[chunk])
 
         # Create 25 files in src directory (truncation threshold is 20)
         files = [make_file_info(path=f"src/file{i}.py") for i in range(25)]
@@ -543,6 +546,15 @@ class TestModuleDocEnrichment:
         mock.search = AsyncMock(
             return_value=[make_search_result(chunk1), make_search_result(chunk2)]
         )
+
+        async def _get_chunks_by_file(fp):
+            if fp == "src/parser.py":
+                return [chunk1]
+            if fp == "src/indexer.py":
+                return [chunk2]
+            return []
+
+        mock.get_chunks_by_file = AsyncMock(side_effect=_get_chunks_by_file)
         return mock
 
     async def test_file_list_appears_in_prompt(

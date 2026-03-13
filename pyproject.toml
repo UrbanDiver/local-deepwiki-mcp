@@ -90,6 +90,7 @@ testpaths = ["tests"]
 pythonpath = ["tests"]
 markers = [
     "slow: marks tests with timing-sensitive assertions (deselect with '-m \"not slow\"')",
+    "wiki_output: marks tests that validate generated wiki output quality (requires .deepwiki/)",
 ]
 filterwarnings = []
 

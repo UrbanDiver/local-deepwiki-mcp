@@ -435,20 +435,23 @@ class TestSearchWithSearchMode:
 
 
 class TestVectorStoreHybridConfig:
-    def test_default_search_mode_passed_through(self):
+    def test_default_search_mode_passed_through(self, tmp_path):
         from local_deepwiki.core.vectorstore.store import VectorStore
 
         provider = MagicMock()
         store = VectorStore(
-            MagicMock(), provider, default_search_mode="hybrid", bm25_weight=0.5
+            tmp_path / "lancedb",
+            provider,
+            default_search_mode="hybrid",
+            bm25_weight=0.5,
         )
         assert store._default_search_mode == "hybrid"
         assert store._bm25_weight == 0.5
 
-    def test_default_values(self):
+    def test_default_values(self, tmp_path):
         from local_deepwiki.core.vectorstore.store import VectorStore
 
         provider = MagicMock()
-        store = VectorStore(MagicMock(), provider)
+        store = VectorStore(tmp_path / "lancedb", provider)
         assert store._default_search_mode == "vector"
         assert store._bm25_weight == 0.3

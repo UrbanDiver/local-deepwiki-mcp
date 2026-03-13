@@ -6,6 +6,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
+from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.wiki.utils import file_path_to_wiki_path
 from local_deepwiki.models import ChunkType, IndexStatus
@@ -52,6 +53,8 @@ async def collect_all_entities(
 
     for entity_type_str, chunk_type_enum in type_to_entity.items():
         for chunk in vector_store.get_all_chunks(chunk_type=entity_type_str):
+            if is_test_file(chunk.file_path):
+                continue
             metadata = chunk.metadata or {}
             param_types = metadata.get("parameter_types")
             return_type = metadata.get("return_type")
