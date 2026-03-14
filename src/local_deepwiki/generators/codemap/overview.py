@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import json
+import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import PurePosixPath
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,3 +124,141 @@ def compute_module_metadata(
             )
         )
     return result
+
+
+# ---------------------------------------------------------------------------
+# LLM-assisted overview builder
+# ---------------------------------------------------------------------------
+
+_OVERVIEW_PROMPT_TEMPLATE = """\
+You are analyzing a codebase's architecture. Below are the detected modules \
+(directory-level groups) with their files and key functions.
+
+{module_descriptions}
+
+Respond with a JSON object containing:
+- "modules": a mapping of module_id -> one-line description of what the module does
+- "edges": a mapping of "source_id -> target_id" -> description of the relationship \
+(only include edges where modules clearly depend on each other)
+- "summary": a 1-2 sentence summary of the overall architecture
+
+Respond ONLY with valid JSON, no markdown fencing.
+"""
+
+
+def _build_prompt(modules: list[OverviewModule]) -> str:
+    """Build the LLM prompt from computed modules."""
+    parts: list[str] = []
+    for mod in modules:
+        files_str = ", ".join(mod.files) if mod.files else "(no files)"
+        hubs_str = ", ".join(mod.hub_functions) if mod.hub_functions else "(none)"
+        parts.append(
+            f"Module '{mod.id}' (label: {mod.label}): "
+            f"{mod.function_count} functions, files: {files_str}, "
+            f"hub functions: {hubs_str}"
+        )
+    return _OVERVIEW_PROMPT_TEMPLATE.format(module_descriptions="\n".join(parts))
+
+
+def _apply_llm_descriptions(
+    modules: list[OverviewModule],
+    llm_data: dict,
+) -> tuple[tuple[OverviewModule, ...], tuple[OverviewEdge, ...], str]:
+    """Apply LLM-generated descriptions to modules and build edges."""
+    llm_modules = llm_data.get("modules", {})
+    llm_edges = llm_data.get("edges", {})
+    summary = llm_data.get("summary", "")
+
+    enriched: list[OverviewModule] = []
+    for mod in modules:
+        desc = llm_modules.get(mod.id, mod.description)
+        enriched.append(
+            OverviewModule(
+                id=mod.id,
+                label=mod.label,
+                description=str(desc),
+                files=mod.files,
+                function_count=mod.function_count,
+                hub_functions=mod.hub_functions,
+            )
+        )
+
+    edges: list[OverviewEdge] = []
+    for edge_key, edge_desc in llm_edges.items():
+        parts = edge_key.split(" -> ", 1)
+        if len(parts) == 2:
+            edges.append(
+                OverviewEdge(
+                    source=parts[0].strip(),
+                    target=parts[1].strip(),
+                    weight=1,
+                    description=str(edge_desc),
+                )
+            )
+
+    return tuple(enriched), tuple(edges), str(summary)
+
+
+async def build_overview(
+    vector_store: object,
+    repo_path: str,
+    llm: object,
+) -> OverviewResult:
+    """Build a module-level architecture overview with LLM labeling.
+
+    Args:
+        vector_store: VectorStore instance with get_all_chunks().
+        repo_path: Path to the repository root.
+        llm: LLM provider with async generate() method.
+
+    Returns:
+        OverviewResult with modules, edges, and summary.
+    """
+    chunks = vector_store.get_all_chunks()  # type: ignore[union-attr]
+
+    if not chunks:
+        return OverviewResult(modules=(), edges=(), summary="")
+
+    # Build file -> functions mapping and call edges from chunks
+    file_functions: dict[str, list[str]] = defaultdict(list)
+    call_edges: list[dict[str, str]] = []
+
+    chunk_file_map: dict[str, str] = {}
+    for chunk in chunks:
+        if getattr(chunk, "chunk_type", None) and chunk.chunk_type.value == "function":
+            file_functions[chunk.file_path].append(chunk.name)
+            chunk_file_map[chunk.name] = chunk.file_path
+
+    for chunk in chunks:
+        for callee in getattr(chunk, "calls", []):
+            if callee in chunk_file_map:
+                call_edges.append(
+                    {
+                        "source": chunk.name,
+                        "target": callee,
+                        "source_file": chunk.file_path,
+                        "target_file": chunk_file_map[callee],
+                    }
+                )
+
+    # Cluster and compute metadata
+    raw_modules = cluster_files_into_modules(dict(file_functions))
+    modules = compute_module_metadata(raw_modules, dict(file_functions), call_edges)
+
+    # LLM labeling
+    try:
+        prompt = _build_prompt(modules)
+        response = await llm.generate(prompt)  # type: ignore[union-attr]
+        llm_data = json.loads(response)
+        enriched_modules, edges, summary = _apply_llm_descriptions(modules, llm_data)
+    except Exception:
+        logger.warning("LLM labeling failed, returning modules without descriptions")
+        enriched_modules = tuple(modules)
+        edges = ()
+        summary = f"Architecture overview with {len(modules)} modules"
+
+    return OverviewResult(
+        modules=enriched_modules,
+        edges=edges,
+        summary=summary,
+    )

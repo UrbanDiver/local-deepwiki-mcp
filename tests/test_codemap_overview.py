@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import json
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from local_deepwiki.generators.codemap.overview import (
     OverviewEdge,
     OverviewModule,
     OverviewResult,
+    build_overview,
     cluster_files_into_modules,
     compute_module_metadata,
 )
@@ -185,3 +189,104 @@ class TestComputeModuleMetadata:
         result = compute_module_metadata(raw_modules, file_functions, edges)
         assert result[0].hub_functions[0] == "hub"
         assert len(result[0].hub_functions) <= 3
+
+
+def _make_chunk(name, file_path, chunk_type="function", parent_name=None, calls=None):
+    """Create a mock CodeChunk for testing."""
+    chunk = MagicMock()
+    chunk.name = name
+    chunk.file_path = file_path
+    chunk.chunk_type = MagicMock()
+    chunk.chunk_type.value = chunk_type
+    chunk.parent_name = parent_name
+    chunk.content = f"def {name}(): pass"
+    chunk.calls = calls or []
+    return chunk
+
+
+class TestBuildOverview:
+    """Tests for the async build_overview function."""
+
+    async def test_build_overview_returns_result(self):
+        chunks = [
+            _make_chunk("parse", "src/core/parser.py"),
+            _make_chunk("index", "src/core/indexer.py"),
+            _make_chunk("create_app", "src/web/app.py"),
+        ]
+        vs = MagicMock()
+        vs.get_all_chunks.return_value = chunks
+
+        llm_response = json.dumps(
+            {
+                "modules": {
+                    "src/core": "Core parsing and indexing",
+                    "src/web": "Web application",
+                },
+                "edges": {},
+                "summary": "A two-module system",
+            }
+        )
+        llm = AsyncMock()
+        llm.generate.return_value = llm_response
+
+        result = await build_overview(vs, "/repo", llm)
+        assert isinstance(result, OverviewResult)
+        assert len(result.modules) == 2
+        assert result.summary == "A two-module system"
+
+    async def test_build_overview_handles_llm_error(self):
+        chunks = [
+            _make_chunk("parse", "src/core/parser.py"),
+        ]
+        vs = MagicMock()
+        vs.get_all_chunks.return_value = chunks
+
+        llm = AsyncMock()
+        llm.generate.side_effect = RuntimeError("LLM unavailable")
+
+        result = await build_overview(vs, "/repo", llm)
+        assert isinstance(result, OverviewResult)
+        # Should still return modules, just without LLM descriptions
+        assert len(result.modules) >= 1
+        assert result.summary != ""
+
+    async def test_build_overview_empty_repo(self):
+        vs = MagicMock()
+        vs.get_all_chunks.return_value = []
+
+        llm = AsyncMock()
+
+        result = await build_overview(vs, "/repo", llm)
+        assert isinstance(result, OverviewResult)
+        assert len(result.modules) == 0
+        llm.generate.assert_not_called()
+
+    async def test_build_overview_llm_prompt_format(self):
+        chunks = [
+            _make_chunk("parse", "src/core/parser.py"),
+            _make_chunk("create_app", "src/web/app.py"),
+        ]
+        vs = MagicMock()
+        vs.get_all_chunks.return_value = chunks
+
+        llm_response = json.dumps(
+            {
+                "modules": {},
+                "edges": {},
+                "summary": "Test",
+            }
+        )
+        llm = AsyncMock()
+        llm.generate.return_value = llm_response
+
+        await build_overview(vs, "/repo", llm)
+
+        # Verify LLM was called with a prompt containing module info
+        llm.generate.assert_called_once()
+        call_kwargs = llm.generate.call_args
+        prompt = (
+            call_kwargs.kwargs.get("prompt", "") or call_kwargs.args[0]
+            if call_kwargs.args
+            else ""
+        )
+        assert "src/core" in prompt or "core" in prompt

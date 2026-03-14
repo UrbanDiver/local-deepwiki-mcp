@@ -23,6 +23,7 @@ from local_deepwiki.generators.codemap.overview import (
     OverviewEdge,
     OverviewModule,
     OverviewResult,
+    build_overview,
 )
 from local_deepwiki.generators.codemap.models import (
     CodemapEdge,
@@ -52,4 +53,5 @@ __all__ = [
     "OverviewEdge",
     "OverviewModule",
     "OverviewResult",
+    "build_overview",
 ]
