@@ -243,8 +243,8 @@ def api_chat() -> Response | tuple[Response, int]:
             llm_config=llm_config,
         )
 
-        # Search for relevant context
-        search_results = await vector_store.search(question, limit=5)
+        # Search for relevant context — fetch more candidates for better coverage
+        search_results = await vector_store.search(question, limit=15)
 
         # Send sources first
         sources = format_sources(search_results)
