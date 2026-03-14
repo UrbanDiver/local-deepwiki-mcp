@@ -10,6 +10,8 @@ from __future__ import annotations
 import re
 from collections import Counter, defaultdict, deque
 from pathlib import Path
+
+from local_deepwiki.core.path_utils import is_test_file
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -296,18 +298,11 @@ async def generate_codemap(
 
 
 def _is_test_path(file_path: str) -> bool:
-    """Return ``True`` if *file_path* looks like a test/fixture file."""
-    parts = Path(file_path).parts
-    name = Path(file_path).name
-    # Common test directory names
-    if any(p in ("tests", "test", "testing", "spec", "specs") for p in parts):
-        return True
-    # Common test file naming conventions
-    if name.startswith(("test_", "tests_")) or name.endswith(("_test.py", "_spec.py")):
-        return True
-    if name in ("conftest.py", "fixtures.py"):
-        return True
-    return False
+    """Return ``True`` if *file_path* looks like a test/fixture file.
+
+    Delegates to the centralized ``is_test_file`` utility.
+    """
+    return is_test_file(file_path)
 
 
 def _build_combined_call_graph(

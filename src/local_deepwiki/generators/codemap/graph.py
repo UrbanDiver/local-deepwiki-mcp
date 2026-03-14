@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from local_deepwiki.core.vectorstore import VectorStore
 
+from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.generators.codemap.models import (
     BUILTIN_NAMES,
     CALLABLE_CHUNK_TYPES,
@@ -143,7 +144,10 @@ async def discover_entry_points(
         return []
 
     callable_results = [
-        r for r in results if r.chunk.chunk_type.value in CALLABLE_CHUNK_TYPES
+        r
+        for r in results
+        if r.chunk.chunk_type.value in CALLABLE_CHUNK_TYPES
+        and not is_test_file(r.chunk.file_path)
     ]
 
     if entry_point_hint:
@@ -471,6 +475,8 @@ async def _search_cross_file(
     for r in results:
         chunk = r.chunk
         if chunk.chunk_type.value not in CALLABLE_CHUNK_TYPES:
+            continue
+        if is_test_file(chunk.file_path):
             continue
         if chunk.name and chunk.name.lower() == callee_name.lower():
             node = _node_from_chunk(chunk, repo_path)

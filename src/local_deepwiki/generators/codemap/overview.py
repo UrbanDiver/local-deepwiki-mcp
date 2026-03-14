@@ -8,6 +8,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
+from local_deepwiki.core.path_utils import is_test_file
+
 logger = logging.getLogger(__name__)
 
 
@@ -214,7 +216,8 @@ async def build_overview(
     Returns:
         OverviewResult with modules, edges, and summary.
     """
-    chunks = vector_store.get_all_chunks()  # type: ignore[union-attr]
+    all_chunks = vector_store.get_all_chunks()  # type: ignore[union-attr]
+    chunks = [c for c in all_chunks if not is_test_file(c.file_path)]
 
     if not chunks:
         return OverviewResult(modules=(), edges=(), summary="")
