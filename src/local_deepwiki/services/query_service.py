@@ -135,14 +135,16 @@ class QueryService:
             trace.record_context(len(search_results), len(context))
 
         prompt = (
-            f"Based on the following code context, answer this question: {question}\n\n"
-            f"Code Context:\n{context}\n\n"
-            "Provide a clear, accurate answer based only on the code provided. "
-            "If the code doesn't contain enough information to answer fully, say so."
+            f"Question: {question}\n\n"
+            f"Relevant source code:\n{context}\n\n"
+            "Answer the question clearly and accurately. "
+            "Reference specific files and line numbers when possible."
         )
         system_prompt = (
-            "You are a helpful code assistant. "
-            "Answer questions about code clearly and accurately."
+            "You are a knowledgeable assistant for this codebase. "
+            "Answer questions as if you have read the entire repository. "
+            "Never say 'the provided code' or 'the code context' — "
+            "speak as if you naturally know the codebase."
         )
 
         # --- LLM generation ---

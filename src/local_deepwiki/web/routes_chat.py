@@ -126,18 +126,19 @@ def build_prompt_with_history(
 {history_text}
 Current question: {question}
 
-Code context:
+Relevant source code:
 {context}
 
 Answer the current question, taking into account the conversation history if relevant.
-Provide a clear, accurate answer based on the code provided."""
+Reference specific files and line numbers when possible."""
     else:
         return f"""Question: {question}
 
-Code context:
+Relevant source code:
 {context}
 
-Provide a clear, accurate answer based on the code provided."""
+Answer the question clearly and accurately.
+Reference specific files and line numbers when possible."""
 
 
 @chat_bp.route("/chat")
@@ -268,7 +269,10 @@ def api_chat() -> Response | tuple[Response, int]:
         # Build prompt with history
         prompt = build_prompt_with_history(question, history, context)
         system_prompt = (
-            "You are a helpful code assistant. Answer questions about code clearly and accurately. "
+            "You are a knowledgeable assistant for this codebase. "
+            "Answer questions as if you have read the entire repository. "
+            "Never say 'the provided code' or 'the code context' — "
+            "speak as if you naturally know the codebase. "
             "Reference specific files and line numbers when relevant."
         )
 
