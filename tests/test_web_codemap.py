@@ -1051,3 +1051,65 @@ class TestCodemapAdaptiveDetail:
         client = app.test_client()
         response = client.get("/codemap")
         assert b"on('zoom'" in response.data
+
+
+class TestCodemapOverviewEndpoint:
+    """Tests for the /api/codemap/overview endpoint."""
+
+    def test_overview_endpoint_exists(self, wiki_dir):
+        """GET /api/codemap/overview returns 200, not 404."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/api/codemap/overview")
+        assert response.status_code != 404
+
+    def test_overview_returns_json(self, wiki_dir):
+        """GET /api/codemap/overview returns JSON with modules key."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/api/codemap/overview")
+        assert response.content_type.startswith("application/json")
+        data = response.get_json()
+        assert "modules" in data
+        assert "summary" in data
+
+    def test_overview_graceful_for_unindexed(self, wiki_dir):
+        """Overview returns empty modules when repo not indexed."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/api/codemap/overview")
+        data = response.get_json()
+        assert isinstance(data["modules"], list)
+        assert len(data["modules"]) == 0
+
+
+class TestCodemapOverviewUI:
+    """Tests for the overview button and rendering in codemap template."""
+
+    def test_template_has_overview_button(self, wiki_dir):
+        """Template has an overview mode button."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"overview-btn" in response.data
+
+    def test_template_has_render_overview_function(self, wiki_dir):
+        """Template has renderOverview function."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"function renderOverview" in response.data
+
+    def test_template_has_back_to_overview(self, wiki_dir):
+        """Template has back-to-overview breadcrumb element."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"back-to-overview" in response.data
+
+    def test_template_has_overview_container(self, wiki_dir):
+        """Template has a container for overview rendering."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"overview-container" in response.data

@@ -633,6 +633,7 @@
             <label class="query-label">Nodes</label>
             <input type="number" id="nodes-input" class="query-number" value="30" min="5" max="60">
             <button id="generate-btn" class="generate-btn">Generate</button>
+            <button id="overview-btn" class="generate-btn" style="margin-left:8px;background:var(--crossfile-color);" title="Show module-level architecture overview">Overview</button>
         </div>
         <div class="topics-row" id="topics-row">
             <span class="topics-label">Suggested:</span>
@@ -644,6 +645,10 @@
 
     <div class="main-content">
         <div class="graph-panel" id="graph-panel">
+            <div id="back-to-overview" style="display:none;padding:8px 12px;cursor:pointer;color:var(--link-color);font-size:13px;">
+                &#8592; Back to Overview
+            </div>
+            <div id="overview-container" style="display:none;width:100%;height:100%;"></div>
             <div class="graph-placeholder" id="graph-placeholder">
                 <p>Enter a query above or click a suggested topic to generate an interactive codemap.</p>
             </div>
@@ -707,6 +712,11 @@
         var diffFiles = [];
         var diffOverlayActive = false;
 
+        // Overview state
+        var overviewData = null;
+        var overviewCy = null;
+        var overviewMode = false;
+
         // --- DOM ---
         var queryInput = document.getElementById('query-input');
         var focusSelect = document.getElementById('focus-select');
@@ -736,6 +746,9 @@
         var recentCodemaps = document.getElementById('recent-codemaps');
         var collapseAllBtn = document.getElementById('collapse-all-btn');
         var expandAllBtn = document.getElementById('expand-all-btn');
+        var overviewBtn = document.getElementById('overview-btn');
+        var overviewContainer = document.getElementById('overview-container');
+        var backToOverview = document.getElementById('back-to-overview');
 
         // --- Cytoscape Styles ---
         var cytoscapeStyles = [
@@ -2356,6 +2369,169 @@
                 e.preventDefault();
                 if (tracePlaying) { pauseTrace(); } else { startTrace(); }
             }
+        });
+
+        // --- Overview mode ---
+        function renderOverview(data) {
+            overviewData = data;
+            overviewMode = true;
+
+            // Hide detail view, show overview
+            graphPlaceholder.style.display = 'none';
+            cyContainer.style.display = 'none';
+            mermaidFallback.style.display = 'none';
+            narrativePanel.style.display = 'none';
+            zoomControls.style.display = 'none';
+            playControls.style.display = 'none';
+            backToOverview.style.display = 'none';
+            overviewContainer.style.display = 'block';
+
+            var elements = [];
+            var modules = data.modules || [];
+            var edges = data.edges || [];
+
+            for (var i = 0; i < modules.length; i++) {
+                var m = modules[i];
+                var nodeWidth = 140 + Math.min(m.function_count * 3, 120);
+                var nodeHeight = 60 + Math.min(m.function_count, 20);
+                var descLine = m.description ? m.description.substring(0, 60) : '';
+                var displayLabel = m.label + (descLine ? '\n' + descLine : '');
+                elements.push({
+                    group: 'nodes',
+                    data: {
+                        id: m.id,
+                        label: m.label,
+                        displayLabel: displayLabel,
+                        description: m.description,
+                        files: m.files,
+                        function_count: m.function_count,
+                        hub_functions: m.hub_functions,
+                        nodeWidth: nodeWidth,
+                        nodeHeight: nodeHeight,
+                    },
+                });
+            }
+
+            for (var j = 0; j < edges.length; j++) {
+                var e = edges[j];
+                elements.push({
+                    group: 'edges',
+                    data: {
+                        source: e.source,
+                        target: e.target,
+                        weight: e.weight,
+                        label: e.description || '',
+                    },
+                });
+            }
+
+            if (overviewCy) { overviewCy.destroy(); overviewCy = null; }
+
+            var overviewStyles = [
+                { selector: 'node', style: {
+                    'label': 'data(displayLabel)',
+                    'text-valign': 'center',
+                    'text-halign': 'center',
+                    'font-size': '13px',
+                    'color': '#ffffff',
+                    'background-color': 'var(--crossfile-color)',
+                    'width': 'data(nodeWidth)',
+                    'height': 'data(nodeHeight)',
+                    'shape': 'round-rectangle',
+                    'text-wrap': 'wrap',
+                    'text-max-width': '180px',
+                    'border-width': 2,
+                    'border-color': 'var(--border-color)',
+                    'cursor': 'pointer',
+                }},
+                { selector: 'edge', style: {
+                    'width': 2,
+                    'line-color': 'var(--muted-color)',
+                    'target-arrow-color': 'var(--muted-color)',
+                    'target-arrow-shape': 'triangle',
+                    'curve-style': 'bezier',
+                    'label': 'data(label)',
+                    'font-size': '9px',
+                    'color': 'var(--muted-color)',
+                    'text-rotation': 'autorotate',
+                }},
+            ];
+
+            overviewCy = cytoscape({
+                container: overviewContainer,
+                elements: elements,
+                style: overviewStyles,
+                layout: { name: 'preset' },
+                minZoom: 0.2,
+                maxZoom: 3,
+                wheelSensitivity: 0.3,
+            });
+
+            overviewCy.layout({
+                name: 'dagre',
+                rankDir: 'TB',
+                nodeSep: 80,
+                rankSep: 120,
+                padding: 40,
+            }).run();
+
+            // Drill-down: tap a module to generate codemap for its files
+            overviewCy.on('tap', 'node', function(evt) {
+                var node = evt.target;
+                var moduleLabel = node.data('label');
+                queryInput.value = 'How does ' + moduleLabel + ' work?';
+                showDetailView();
+                generateCodemap();
+            });
+
+            // Summary in narrative panel using safe DOM methods
+            if (data.summary) {
+                narrativePanel.style.display = 'block';
+                while (narrativePanel.firstChild) { narrativePanel.removeChild(narrativePanel.firstChild); }
+                var summaryDiv = document.createElement('div');
+                summaryDiv.style.padding = '16px';
+                var h3 = document.createElement('h3');
+                h3.textContent = 'Architecture Overview';
+                var p = document.createElement('p');
+                p.textContent = data.summary;
+                summaryDiv.appendChild(h3);
+                summaryDiv.appendChild(p);
+                narrativePanel.appendChild(summaryDiv);
+            }
+        }
+
+        function showDetailView() {
+            overviewMode = false;
+            overviewContainer.style.display = 'none';
+            if (overviewCy) { overviewCy.destroy(); overviewCy = null; }
+            backToOverview.style.display = overviewData ? 'block' : 'none';
+            narrativePanel.style.display = 'block';
+        }
+
+        function showOverviewFromCache() {
+            if (overviewData) {
+                renderOverview(overviewData);
+            }
+        }
+
+        overviewBtn.addEventListener('click', function() {
+            progressOverlay.style.display = 'flex';
+            progressMessage.textContent = 'Loading architecture overview...';
+
+            fetch('/api/codemap/overview')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    progressOverlay.style.display = 'none';
+                    renderOverview(data);
+                })
+                .catch(function(err) {
+                    progressOverlay.style.display = 'none';
+                    console.error('Overview failed:', err);
+                });
+        });
+
+        backToOverview.addEventListener('click', function() {
+            showOverviewFromCache();
         });
 
         // --- Init ---

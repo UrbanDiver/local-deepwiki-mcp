@@ -49,6 +49,87 @@ def codemap_page() -> Response | str:
     return render_template("codemap.html", wiki_path=str(wiki_path))
 
 
+@codemap_bp.route("/api/codemap/overview")
+def api_codemap_overview() -> Response | tuple[Response, int]:
+    """Return module-level architecture overview as JSON.
+
+    Returns:
+        JSON with modules, edges, and summary keys.
+    """
+    wiki_path = _get_wiki_path()
+    if wiki_path is None:
+        return jsonify({"error": "Wiki path not configured"}), 500
+
+    repo_path = wiki_path.parent
+    if wiki_path.name == ".deepwiki":
+        repo_path = wiki_path.parent
+
+    async def _fetch_overview() -> dict:
+        from local_deepwiki.config import get_config
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.generators.codemap.overview import build_overview
+        from local_deepwiki.providers.embeddings import get_embedding_provider
+        from local_deepwiki.providers.llm import get_cached_llm_provider
+
+        config = get_config()
+        vector_db_path = config.get_vector_db_path(repo_path)
+
+        if not vector_db_path.exists():
+            return {"modules": [], "edges": [], "summary": ""}
+
+        embedding_provider = get_embedding_provider(config.embedding)
+        vector_store = VectorStore(vector_db_path, embedding_provider)
+
+        cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
+        llm_config = config.llm
+        chat_provider = config.wiki.chat_llm_provider
+        if chat_provider != "default":
+            llm_config = llm_config.model_copy(update={"provider": chat_provider})
+
+        llm = get_cached_llm_provider(
+            cache_path=cache_path,
+            embedding_provider=embedding_provider,
+            cache_config=config.llm_cache,
+            llm_config=llm_config,
+        )
+
+        result = await build_overview(vector_store, str(repo_path), llm)
+        return {
+            "modules": [
+                {
+                    "id": m.id,
+                    "label": m.label,
+                    "description": m.description,
+                    "files": list(m.files),
+                    "function_count": m.function_count,
+                    "hub_functions": list(m.hub_functions),
+                }
+                for m in result.modules
+            ],
+            "edges": [
+                {
+                    "source": e.source,
+                    "target": e.target,
+                    "weight": e.weight,
+                    "description": e.description,
+                }
+                for e in result.edges
+            ],
+            "summary": result.summary,
+        }
+
+    loop = asyncio.new_event_loop()
+    try:
+        overview = loop.run_until_complete(_fetch_overview())
+    except Exception:  # noqa: BLE001 - Graceful degradation for overview
+        logger.exception("Failed to generate architecture overview")
+        overview = {"modules": [], "edges": [], "summary": ""}
+    finally:
+        loop.close()
+
+    return jsonify(overview)
+
+
 @codemap_bp.route("/api/codemap/topics")
 def api_codemap_topics() -> Response | tuple[Response, int]:
     """Return suggested codemap topics as JSON.
