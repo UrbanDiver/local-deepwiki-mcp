@@ -395,6 +395,167 @@ class TestDiscoverEntryPoints:
         )
         assert nodes == []
 
+    async def test_prefers_functions_over_leaf_dataclasses(self, tmp_path):
+        """Vague queries should prefer functions with callees over leaf dataclasses.
+
+        Regression test: "tell me everything about how the rag works" returned
+        RAGTrace/QueryResult/SourceEntry (0-callee dataclasses) instead of
+        answer_question (6+ callees orchestrator).
+        """
+        from local_deepwiki.generators.codemap import discover_entry_points
+
+        # Dataclass with high vector similarity but 0 callees
+        dataclass_result = _make_mock_search_result(
+            name="RAGTrace",
+            file_path="src/tracing.py",
+            chunk_type="class",
+            content="class RAGTrace: ...",
+            score=0.95,
+        )
+        # Function with lower similarity but many callees
+        function_result = _make_mock_search_result(
+            name="answer_question",
+            file_path="src/query_service.py",
+            chunk_type="function",
+            content="async def answer_question(question): ...",
+            score=0.75,
+        )
+
+        mock_vs = AsyncMock()
+        mock_vs.search = AsyncMock(return_value=[dataclass_result, function_result])
+
+        # Mock call graph: answer_question calls many, RAGTrace calls none
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor",
+        ) as MockCGE:
+            extractor = MagicMock()
+            extractor.extract_from_file.side_effect = (
+                lambda path, repo: {
+                    "answer_question": [
+                        "search",
+                        "rerank",
+                        "build_context",
+                        "generate",
+                    ],
+                }
+                if "query_service" in str(path)
+                else {
+                    "RAGTrace": [],
+                }
+            )
+            MockCGE.return_value = extractor
+
+            nodes = await discover_entry_points(
+                query="tell me everything about how the rag works",
+                vector_store=mock_vs,
+                repo_path=tmp_path,
+            )
+
+        assert len(nodes) >= 1
+        # answer_question should rank above RAGTrace despite lower vector score
+        assert nodes[0].name == "answer_question"
+
+    async def test_fallback_search_when_all_shallow(self, tmp_path):
+        """When initial search returns only shallow nodes (<=1 callee), a
+        fallback search for functions/methods should find orchestrators.
+
+        Regression: "tell me about RAG" matched RAGTrace methods (1 callee each)
+        instead of answer_question (4+ callees).
+        """
+        from local_deepwiki.generators.codemap import discover_entry_points
+
+        # Initial search: classes (0 callees) + methods with 1 callee
+        initial_results = [
+            _make_mock_search_result(
+                name="RAGTrace",
+                file_path="src/tracing.py",
+                chunk_type="class",
+                score=0.95,
+            ),
+            _make_mock_search_result(
+                name="to_dict",
+                file_path="src/tracing.py",
+                chunk_type="method",
+                parent_name="RAGTrace",
+                score=0.90,
+            ),
+            _make_mock_search_result(
+                name="finish",
+                file_path="src/tracing.py",
+                chunk_type="method",
+                parent_name="RAGTrace",
+                score=0.85,
+            ),
+        ]
+        # Fallback search returns the real pipeline function
+        fallback_function = _make_mock_search_result(
+            name="answer_question",
+            file_path="src/query_service.py",
+            chunk_type="function",
+            score=0.75,
+        )
+        fallback_method = _make_mock_search_result(
+            name="_execute_pipeline",
+            file_path="src/pipeline.py",
+            chunk_type="method",
+            score=0.70,
+        )
+
+        call_count = 0
+
+        async def mock_search(
+            query, *, limit=10, min_similarity=0.0, chunk_type=None, **kwargs
+        ):
+            nonlocal call_count
+            call_count += 1
+            if chunk_type == "function":
+                return [fallback_function]
+            if chunk_type == "method":
+                return [fallback_method]
+            return initial_results
+
+        mock_vs = AsyncMock()
+        mock_vs.search = AsyncMock(side_effect=mock_search)
+
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor",
+        ) as MockCGE:
+            extractor = MagicMock()
+            extractor.extract_from_file.side_effect = (
+                lambda path, repo: {
+                    "answer_question": [
+                        "search",
+                        "rerank",
+                        "build_context",
+                        "generate",
+                    ],
+                }
+                if "query_service" in str(path)
+                else {
+                    "_execute_pipeline": ["step1", "step2", "step3"],
+                }
+                if "pipeline" in str(path)
+                else {
+                    # tracing.py: methods with 0-1 callees
+                    "RAGTrace.to_dict": ["finish"],
+                    "RAGTrace.finish": [],
+                }
+            )
+            MockCGE.return_value = extractor
+
+            nodes = await discover_entry_points(
+                query="tell me everything about how the rag works",
+                vector_store=mock_vs,
+                repo_path=tmp_path,
+            )
+
+        # Should have found orchestrator functions via fallback
+        assert len(nodes) >= 1
+        names = [n.name for n in nodes]
+        assert "answer_question" in names or "_execute_pipeline" in names
+        # Fallback search should have been triggered (3 calls: initial + 2 type filters)
+        assert call_count >= 3
+
 
 class TestBuildCrossFileGraph:
     async def test_single_file(self, tmp_path):
@@ -434,7 +595,9 @@ class TestBuildCrossFileGraph:
             ]
         )
 
-        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
+        ) as MockCGE:
             extractor = MagicMock()
             extractor.extract_from_file.return_value = {
                 "func_a": ["func_b"],
@@ -489,7 +652,9 @@ class TestBuildCrossFileGraph:
             ]
         )
 
-        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
+        ) as MockCGE:
             extractor = MagicMock()
             extractor.extract_from_file.return_value = {"handle": ["query"]}
             MockCGE.return_value = extractor
@@ -531,7 +696,9 @@ class TestBuildCrossFileGraph:
         # Return many levels of nested calls
         mock_vs.search = AsyncMock(return_value=[])
 
-        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
+        ) as MockCGE:
             extractor = MagicMock()
             extractor.extract_from_file.return_value = {"a": ["b", "c", "d"]}
             MockCGE.return_value = extractor
@@ -572,7 +739,9 @@ class TestBuildCrossFileGraph:
         mock_vs = AsyncMock()
         mock_vs.search = AsyncMock(return_value=[])
 
-        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
+        ) as MockCGE:
             extractor = MagicMock()
             # Simulate a huge call graph
             callees = [f"func_{i}" for i in range(100)]
@@ -862,7 +1031,9 @@ class TestSuggestTopics:
             ),
         ]
 
-        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
+        ) as MockCGE:
             extractor = MagicMock()
             extractor.extract_from_file.return_value = {
                 "main": ["handle_request", "process_data", "send_response"],
@@ -922,7 +1093,9 @@ class TestSuggestTopics:
             ),
         ]
 
-        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
+        ) as MockCGE:
             extractor = MagicMock()
 
             # BigDataModel gets 50 raw connections; handle_request gets 16
@@ -1551,7 +1724,9 @@ class TestSuggestTopicsStdlibFiltering:
             ),
         ]
 
-        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
+        ) as MockCGE:
             extractor = MagicMock()
             # Call graph includes stdlib names as callees
             extractor.extract_from_file.return_value = {
@@ -1601,7 +1776,9 @@ class TestSuggestTopicsStdlibFiltering:
             ),
         ]
 
-        with patch("local_deepwiki.generators.analysis.callgraph.CallGraphExtractor") as MockCGE:
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
+        ) as MockCGE:
             extractor = MagicMock()
             extractor.extract_from_file.return_value = {
                 "handle_request": ["validate", "process"],

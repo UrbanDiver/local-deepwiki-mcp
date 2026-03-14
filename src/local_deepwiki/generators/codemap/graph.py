@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import re
 from collections import deque
-from itertools import chain
 from operator import itemgetter
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -20,6 +19,7 @@ from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.generators.codemap.models import (
     BUILTIN_NAMES,
     CALLABLE_CHUNK_TYPES,
+    CHUNK_TYPE_WEIGHTS,
     ENTRY_PATTERNS,
     CodemapEdge,
     CodemapFocus,
@@ -108,9 +108,158 @@ def _extract_param_names(content: str) -> list[str]:
     return []
 
 
+# Filler words stripped when condensing conversational queries into
+# technical search terms (e.g. "tell me everything about how X works"
+# -> "X works").
+_FILLER_WORDS = frozenset(
+    {
+        "tell",
+        "me",
+        "everything",
+        "about",
+        "how",
+        "does",
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "was",
+        "were",
+        "what",
+        "can",
+        "could",
+        "would",
+        "should",
+        "please",
+        "explain",
+        "show",
+        "describe",
+        "give",
+        "all",
+        "detail",
+        "details",
+        "detailed",
+        "in",
+        "of",
+        "for",
+        "with",
+        "to",
+        "do",
+        "i",
+        "want",
+        "know",
+        "understand",
+        "it",
+        "its",
+        "this",
+        "that",
+        "work",
+        "works",
+        "working",
+    }
+)
+
+
+def _condense_query(query: str) -> str:
+    """Strip filler words from a conversational query to improve embedding search.
+
+    Conversational queries like "tell me everything about how the rag works"
+    embed poorly because filler dilutes the signal. Returns a condensed
+    version keeping only technical terms, or the original if nothing remains.
+    """
+    words = query.lower().split()
+    technical = [w for w in words if w not in _FILLER_WORDS and len(w) > 1]
+    if not technical:
+        return query
+    # If condensation left very few words, append "pipeline function" to
+    # give the embedding model enough signal to match code functions
+    if len(technical) <= 2:
+        technical.append("pipeline")
+        technical.append("function")
+    condensed = " ".join(technical)
+    # Only return condensed if it's materially different
+    if len(condensed) < len(query) * 0.9:
+        return condensed
+    return query
+
+
 # ---------------------------------------------------------------------------
 # 1. discover_entry_points
 # ---------------------------------------------------------------------------
+
+
+def _build_file_call_graphs(
+    callable_results: list[object],
+    repo_path: Path,
+    extractor: object,
+    max_files: int = 15,
+) -> dict[str, dict[str, list[str]]]:
+    """Build per-file call graphs for the top *max_files* unique files."""
+    file_call_graphs: dict[str, dict[str, list[str]]] = {}
+    seen_files: set[str] = set()
+    for r in callable_results[:max_files]:
+        fp = r.chunk.file_path  # type: ignore[union-attr]
+        if fp in seen_files:
+            continue
+        seen_files.add(fp)
+        try:
+            abs_path = Path(fp)
+            if not abs_path.is_absolute():
+                abs_path = repo_path / fp
+            cg = extractor.extract_from_file(abs_path, repo_path)  # type: ignore[union-attr]
+            file_call_graphs[fp] = cg
+        except (OSError, ValueError, RuntimeError) as e:
+            logger.debug("Could not extract call graph from %s: %s", fp, e)
+    return file_call_graphs
+
+
+def _score_candidates(
+    callable_results: list[object],
+    file_call_graphs: dict[str, dict[str, list[str]]],
+    repo_path: Path,
+) -> list[tuple[float, CodemapNode]]:
+    """Score candidates by vector similarity, chunk type, and call-graph connectivity."""
+    scored: list[tuple[float, CodemapNode]] = []
+    for r in callable_results:
+        node = _node_from_chunk(r.chunk, repo_path)  # type: ignore[union-attr]
+        score = r.score  # type: ignore[union-attr]
+
+        # Apply chunk-type weight — classes (often dataclasses/containers)
+        # score lower than functions/methods (actual execution flows)
+        score *= CHUNK_TYPE_WEIGHTS.get(
+            r.chunk.chunk_type.value,
+            1.0,  # type: ignore[union-attr]
+        )
+
+        # Score by call-graph connectivity: functions that call many others
+        # are more likely to be orchestrators worth tracing
+        func_key = node.qualified_name
+        short_name = node.name
+        max_callees = 0
+        for cg in file_call_graphs.values():
+            if func_key in cg or short_name in cg:
+                callees = cg.get(func_key, cg.get(short_name, []))
+                max_callees = max(max_callees, len(callees))
+
+        if max_callees >= 3:
+            # Graduated boost: more callees = more likely an orchestrator
+            score *= 1.0 + min(max_callees * 0.15, 1.5)
+        elif max_callees == 0:
+            # Leaf penalty — dataclasses and simple accessors produce
+            # trivial graphs with no edges
+            score *= 0.3
+        elif max_callees == 1:
+            # Mild penalty — single-callee nodes are unlikely orchestrators
+            score *= 0.6
+
+        # Boost for entry-pattern names
+        if ENTRY_PATTERNS.match(node.name):
+            score *= 1.3
+
+        scored.append((score, node))
+
+    return sorted(scored, key=itemgetter(0), reverse=True)
 
 
 async def discover_entry_points(
@@ -126,6 +275,10 @@ async def discover_entry_points(
     If *entry_point_hint* is provided the vector store is searched for that
     specific name; otherwise a semantic search is performed and results are
     scored by relevance, entry-pattern matching, and call-graph root status.
+
+    When the initial search returns only leaf nodes (dataclasses/containers
+    with no outgoing calls), a fallback search is performed filtering to
+    functions and methods only to find actual pipeline orchestrators.
     """
     _CallGraphExtractor: type | None
     try:
@@ -136,9 +289,11 @@ async def discover_entry_points(
         logger.warning("Could not import CallGraphExtractor")
         _CallGraphExtractor = None  # fallback if callgraph module unavailable
 
+    extractor = _CallGraphExtractor() if _CallGraphExtractor is not None else None
+
     search_query = entry_point_hint if entry_point_hint else query
     try:
-        results = await vector_store.search(search_query, limit=20, min_similarity=0.0)
+        results = await vector_store.search(search_query, limit=30, min_similarity=0.0)
     except (OSError, ValueError, RuntimeError):
         logger.exception("Vector search failed for entry point discovery")
         return []
@@ -163,57 +318,94 @@ async def discover_entry_points(
     if not callable_results:
         return []
 
-    # Build per-file call graphs for scoring (root detection)
+    # Build per-file call graphs and score candidates
     file_call_graphs: dict[str, dict[str, list[str]]] = {}
-    if _CallGraphExtractor is not None:
-        extractor = _CallGraphExtractor()
-        seen_files: set[str] = set()
-        for r in callable_results[:10]:
-            fp = r.chunk.file_path
-            if fp in seen_files:
-                continue
-            seen_files.add(fp)
-            try:
-                abs_path = Path(fp)
-                if not abs_path.is_absolute():
-                    abs_path = repo_path / fp
-                cg = extractor.extract_from_file(abs_path, repo_path)
-                file_call_graphs[fp] = cg
-            except (OSError, ValueError, RuntimeError) as e:
-                logger.debug("Could not extract call graph from %s: %s", fp, e)
+    if extractor is not None:
+        file_call_graphs = _build_file_call_graphs(
+            callable_results, repo_path, extractor
+        )
 
-    # Compute all callees across discovered graphs to identify roots
-    all_callees: set[str] = set()
-    for cg in file_call_graphs.values():
-        all_callees.update(chain.from_iterable(cg.values()))
+    scored = _score_candidates(callable_results, file_call_graphs, repo_path)
 
-    scored: list[tuple[float, CodemapNode]] = []
-    for r in callable_results:
-        node = _node_from_chunk(r.chunk, repo_path)
-        score = r.score
+    # Fallback: if top candidates are shallow (≤1 callee each), the query
+    # likely matched a single module's internals (e.g. dataclasses, tracing)
+    # rather than pipeline orchestrators. Re-search with function/method
+    # type filters to find functions with richer call graphs.
+    top_candidates = scored[:max_candidates]
+    all_shallow = all(
+        _max_callees_for(node, file_call_graphs) <= 1 for _, node in top_candidates
+    )
 
-        # Boost if the function is a call-graph root (called by others, or
-        # itself calls many functions)
-        func_key = node.qualified_name
-        short_name = node.name
-        is_root = False
-        for cg in file_call_graphs.values():
-            if func_key in cg or short_name in cg:
-                callees = cg.get(func_key, cg.get(short_name, []))
-                if len(callees) >= 2:
-                    is_root = True
-                    break
-        if is_root:
-            score *= 1.5
+    if all_shallow and not entry_point_hint:
+        logger.debug(
+            "All top candidates are shallow, running fallback search "
+            "for functions and methods"
+        )
+        # Try both the original query and a condensed technical variant
+        # (conversational queries embed poorly; stripping filler helps)
+        queries = [search_query]
+        condensed = _condense_query(search_query)
+        if condensed != search_query:
+            queries.append(condensed)
 
-        # Boost for entry-pattern names
-        if ENTRY_PATTERNS.match(node.name):
-            score *= 1.3
+        fallback_results: list[object] = []
+        seen_chunk_ids: set[str] = set()
+        for fallback_query in queries:
+            for chunk_type in ("function", "method"):
+                try:
+                    type_results = await vector_store.search(
+                        fallback_query,
+                        limit=15,
+                        min_similarity=0.0,
+                        chunk_type=chunk_type,
+                    )
+                    for r in type_results:
+                        if is_test_file(r.chunk.file_path):  # type: ignore[union-attr]
+                            continue
+                        chunk_id = f"{r.chunk.file_path}:{r.chunk.name}"  # type: ignore[union-attr]
+                        if chunk_id not in seen_chunk_ids:
+                            seen_chunk_ids.add(chunk_id)
+                            fallback_results.append(r)
+                except (OSError, ValueError, RuntimeError):
+                    logger.debug(
+                        "Fallback search failed for query=%r chunk_type=%s",
+                        fallback_query,
+                        chunk_type,
+                    )
 
-        scored.append((score, node))
+        if fallback_results:
+            # Build call graphs for the new files
+            if extractor is not None:
+                extra_graphs = _build_file_call_graphs(
+                    fallback_results, repo_path, extractor
+                )
+                file_call_graphs.update(extra_graphs)
 
-    scored = sorted(scored, key=itemgetter(0), reverse=True)
+            fallback_scored = _score_candidates(
+                fallback_results, file_call_graphs, repo_path
+            )
+            # Merge: prefer fallback results that have callees
+            seen_names = {node.qualified_name for _, node in scored}
+            for fb_score, fb_node in fallback_scored:
+                if fb_node.qualified_name not in seen_names:
+                    scored.append((fb_score, fb_node))
+                    seen_names.add(fb_node.qualified_name)
+            scored = sorted(scored, key=itemgetter(0), reverse=True)
+
     return [node for _, node in scored[:max_candidates]]
+
+
+def _max_callees_for(
+    node: CodemapNode,
+    file_call_graphs: dict[str, dict[str, list[str]]],
+) -> int:
+    """Return the maximum callee count for *node* across all call graphs."""
+    max_callees = 0
+    for cg in file_call_graphs.values():
+        if node.qualified_name in cg or node.name in cg:
+            callees = cg.get(node.qualified_name, cg.get(node.name, []))
+            max_callees = max(max_callees, len(callees))
+    return max_callees
 
 
 # ---------------------------------------------------------------------------
