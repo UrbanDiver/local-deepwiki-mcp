@@ -268,6 +268,8 @@ async def build_cross_file_graph(
         current_node, depth = queue.popleft()
         if depth >= max_depth:
             continue
+        if is_test_file(current_node.file_path):
+            continue
 
         abs_path = Path(current_node.file_path)
         if not abs_path.is_absolute():
@@ -332,7 +334,9 @@ async def build_cross_file_graph(
             same_file_node = await _find_in_same_file(
                 callee_name, cg, current_node, repo_path, vector_store
             )
-            if same_file_node is not None:
+            if same_file_node is not None and not is_test_file(
+                same_file_node.file_path
+            ):
                 graph.nodes[same_file_node.qualified_name] = same_file_node
                 graph.edges.append(
                     CodemapEdge(
@@ -350,7 +354,7 @@ async def build_cross_file_graph(
             cross_node = await _search_cross_file(
                 callee_name, vector_store, repo_path, current_node.file_path
             )
-            if cross_node is not None:
+            if cross_node is not None and not is_test_file(cross_node.file_path):
                 graph.nodes[cross_node.qualified_name] = cross_node
                 graph.edges.append(
                     CodemapEdge(
