@@ -19,6 +19,11 @@ from local_deepwiki.generators.codemap.graph import (
     build_cross_file_graph,
     discover_entry_points,
 )
+from local_deepwiki.generators.codemap.overview import (
+    OverviewEdge,
+    OverviewModule,
+    OverviewResult,
+)
 from local_deepwiki.generators.codemap.models import (
     CodemapEdge,
     CodemapGraph,
@@ -44,4 +49,7 @@ __all__ = [
     "read_cache",
     "suggest_topics",
     "write_cache",
+    "OverviewEdge",
+    "OverviewModule",
+    "OverviewResult",
 ]
