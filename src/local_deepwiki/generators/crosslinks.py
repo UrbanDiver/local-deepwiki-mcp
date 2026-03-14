@@ -164,6 +164,38 @@ class EntityRegistry:
             "event",
             "token",
             "Role",
+            # Generic callable names that cause false cross-links
+            "run",
+            "stop",
+            "load",
+            "save",
+            "send",
+            "read",
+            "open",
+            "update",
+            "delete",
+            "create",
+            "handle",
+            "process",
+            "format",
+            "render",
+            "validate",
+            "connect",
+            "execute",
+            "search",
+            "filter",
+            "sort",
+            "merge",
+            "split",
+            "match",
+            "test",
+            "debug",
+            "trace",
+            "walk",
+            "visit",
+            "emit",
+            "wrap",
+            "apply",
         }
 
     def register_entity(
@@ -461,31 +493,56 @@ class CrossLinker:
     def _split_by_code_blocks(content: str) -> list[tuple[str, bool]]:
         """Split content into code and non-code sections.
 
+        Uses line-by-line parsing to correctly handle inline triple-backticks
+        inside code blocks (e.g., Python f-strings containing ```).
+
         Args:
             content: The markdown content.
 
         Returns:
             List of (text, is_code) tuples.
         """
-        # Match fenced code blocks (``` or ~~~) and inline code (`)
-        # We need to handle both
+        lines = content.split("\n")
         parts: list[tuple[str, bool]] = []
+        current_lines: list[str] = []
+        in_code_block = False
 
-        # Pattern for fenced code blocks
-        fenced_pattern = re.compile(r"(```[\s\S]*?```|~~~[\s\S]*?~~~)")
+        for line in lines:
+            stripped = line.lstrip()
+            indent = len(line) - len(stripped)
+            is_fence = False
 
-        last_end = 0
-        for match in fenced_pattern.finditer(content):
-            # Add text before the code block
-            if match.start() > last_end:
-                parts.append((content[last_end : match.start()], False))
-            # Add the code block
-            parts.append((match.group(0), True))
-            last_end = match.end()
+            if indent <= 3 and (
+                stripped.startswith("```") or stripped.startswith("~~~")
+            ):
+                if in_code_block:
+                    # Closing fence: fence chars with optional trailing whitespace only
+                    after = stripped[3:].strip()
+                    if not after:
+                        is_fence = True
+                else:
+                    is_fence = True
 
-        # Add remaining text
-        if last_end < len(content):
-            parts.append((content[last_end:], False))
+            if is_fence:
+                if in_code_block:
+                    # End code block: include the closing fence
+                    current_lines.append(line)
+                    parts.append(("\n".join(current_lines), True))
+                    current_lines = []
+                    in_code_block = False
+                else:
+                    # Start code block: flush non-code text
+                    if current_lines:
+                        parts.append(("\n".join(current_lines), False))
+                        current_lines = []
+                    current_lines.append(line)
+                    in_code_block = True
+            else:
+                current_lines.append(line)
+
+        # Flush remaining lines
+        if current_lines:
+            parts.append(("\n".join(current_lines), in_code_block))
 
         return parts
 
@@ -527,6 +584,8 @@ class CrossLinker:
         text = re.sub(r"\[([^\]]+)\]\([^)]+\)", protect, text)
         # 2. Protect headings
         text = re.sub(r"^(#{1,6}\s+.+)$", protect, text, flags=re.MULTILINE)
+        # 3a. Protect markdown table rows (pipe-delimited lines)
+        text = re.sub(r"^\|.+\|$", protect, text, flags=re.MULTILINE)
 
         # 3. Link backticked entities: `EntityName` or `module.EntityName`
         def backtick_repl(match: re.Match[str]) -> str:

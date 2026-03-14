@@ -15,6 +15,7 @@ from local_deepwiki.generators.crosslinks import add_cross_links
 from local_deepwiki.generators.search import write_full_search_index
 from local_deepwiki.generators.see_also import add_see_also_sections
 from local_deepwiki.generators.source_refs import add_source_refs_sections
+from local_deepwiki.generators.wiki.term_validator import apply_term_corrections
 from local_deepwiki.generators.analysis.stale_detection import (
     generate_stale_report_page,
 )
@@ -131,6 +132,17 @@ async def apply_cross_linking(
     """
     if progress_callback:
         progress_callback("Adding cross-links", 10, 14)
+
+    # Apply term corrections before cross-linking so entity names are consistent
+    pages = [
+        WikiPage(
+            path=page.path,
+            title=page.title,
+            content=apply_term_corrections(page.content),
+            generated_at=page.generated_at,
+        )
+        for page in pages
+    ]
 
     # Snapshot content hashes before cross-linking to detect changes
     original_hashes = {

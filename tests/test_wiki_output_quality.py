@@ -55,10 +55,6 @@ def all_md_files(wiki_path: Path) -> list[Path]:
 class TestOverviewQuality:
     """Tests for the main index.md overview page."""
 
-    @pytest.mark.xfail(
-        reason="Requires wiki rebuild: dir_tree now skips MagicMock dirs, MagicMock dirs deleted",
-        strict=False,
-    )
     def test_overview_no_mock_objects(self, index_md: str) -> None:
         """index.md must not contain MagicMock, Mock, or Python object repr patterns."""
         mock_patterns = [
@@ -78,10 +74,6 @@ class TestOverviewQuality:
             f"  - {v}" for v in violations
         )
 
-    @pytest.mark.xfail(
-        reason="Requires wiki rebuild: dir_tree now skips MagicMock dirs, MagicMock dirs deleted",
-        strict=False,
-    )
     def test_overview_has_directory_structure(self, index_md: str) -> None:
         """index.md should contain a directory tree section with real directories."""
         assert "```" in index_md, (
@@ -161,10 +153,6 @@ class TestGlossaryQuality:
             pytest.skip("glossary.md not found")
         return glossary_file.read_text(encoding="utf-8", errors="replace")
 
-    @pytest.mark.xfail(
-        reason="Requires wiki rebuild: source_refs now filters test files from footer",
-        strict=False,
-    )
     def test_glossary_no_test_entities(self, glossary_md: str) -> None:
         """glossary.md should not contain test file paths (tests/test_*.py).
 
@@ -231,10 +219,6 @@ class TestInheritanceQuality:
 class TestCoverageQuality:
     """Tests for the documentation coverage page."""
 
-    @pytest.mark.xfail(
-        reason="Requires wiki rebuild: source_refs now filters test files from footer",
-        strict=False,
-    )
     def test_coverage_no_test_files(self, wiki_path: Path) -> None:
         """coverage.md should not list test files in coverage metrics.
 
@@ -261,7 +245,7 @@ class TestGlobalQuality:
     """Quality checks applied to all wiki pages."""
 
     @pytest.mark.xfail(
-        reason="Requires wiki rebuild: quality scan now skips code blocks for section check; remaining LLM output issues",
+        reason="2 wiki pages have '- None' artifact after </details> tags; fix in postprocessing Phase 1",
         strict=False,
     )
     def test_all_pages_pass_quality_scan(

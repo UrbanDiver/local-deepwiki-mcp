@@ -183,22 +183,26 @@ Total code chunks: {file_info.chunk_count}
 {context}
 
 Generate documentation that includes:
-1. **File Overview**: Purpose of this file based on the code shown and its dependencies
-2. **Classes**: Document each class visible in the code with its purpose and key methods
-3. **Functions**: Document each function with parameters and return values as shown
-4. **Integration**: How this file fits into the larger codebase (based on imports and callers)
-5. **Usage Examples**: Show how to use the components (based on their actual signatures)
+1. **File Overview**: Purpose, responsibility, and design rationale of this file
+2. **Key Concepts**: Important abstractions, patterns, or algorithms and WHY they were chosen
+3. **Integration**: How this file fits into the larger codebase (based on imports and callers)
+4. **Design Notes**: Trade-offs, edge cases handled, or non-obvious implementation choices
+
+Do NOT include these sections — they are auto-generated from the AST and will be appended:
+- Classes or Functions reference (auto-generated as "API Reference")
+- Class diagrams (auto-generated from AST)
+- Usage examples (auto-extracted from test files)
+- Call graphs (auto-generated from static analysis)
 
 CRITICAL CONSTRAINTS:
-- ONLY document classes, methods, and functions that appear in the code above
+- ONLY describe components that appear in the code above
 - Do NOT invent additional methods or parameters not shown
-- Do NOT fabricate usage examples with APIs not visible in the code
 - Write class names as plain text (e.g., "The WikiGenerator class") for cross-linking
 - Use the dependency and caller information to explain integration, but don't fabricate details
+- Focus on the WHY (design rationale) not just the WHAT (listing classes/functions)
 - Only use backticks for actual code snippets
 
-Format as markdown with clear sections.
-Do NOT include mermaid class diagrams - they will be auto-generated."""
+Format as markdown with clear sections."""
 
 
 async def _generate_and_format_doc(
@@ -218,14 +222,54 @@ async def _generate_and_format_doc(
     """
     content = await llm.generate(prompt, system_prompt=system_prompt)
 
-    # Strip any LLM-generated class diagram sections (we add our own)
-    content = re.sub(
-        r"\n*##\s*Class\s*Diagram\s*\n+```mermaid\s*\n+classDiagram.*?```",
-        "",
-        content,
-        flags=re.DOTALL | re.IGNORECASE,
-    )
+    # Safety-net: strip LLM-generated sections that duplicate AST enrichments.
+    # Even though the prompt says not to generate these, LLMs sometimes do anyway.
+    content = _strip_enrichment_duplicates(content)
 
+    return content
+
+
+# Patterns matching LLM-generated sections that duplicate AST enrichments.
+# Each pattern matches from the section heading to the next heading or end.
+_DUPLICATE_SECTION_PATTERNS: list[re.Pattern[str]] = [
+    # Class diagrams (we generate our own from AST)
+    re.compile(
+        r"\n*##\s*Class\s*Diagram\s*\n+```mermaid\s*\n+classDiagram.*?```",
+        re.DOTALL | re.IGNORECASE,
+    ),
+    # Classes section (duplicates API Reference)
+    re.compile(
+        r"\n*##\s*Classes\s*\n(?:(?!^##\s).)*",
+        re.DOTALL | re.MULTILINE,
+    ),
+    # Functions section (duplicates API Reference)
+    re.compile(
+        r"\n*##\s*Functions\s*\n(?:(?!^##\s).)*",
+        re.DOTALL | re.MULTILINE,
+    ),
+    # Usage Examples section (duplicates test-extracted examples)
+    re.compile(
+        r"\n*##\s*Usage\s+Examples?\s*\n(?:(?!^##\s).)*",
+        re.DOTALL | re.MULTILINE,
+    ),
+    # API Reference (duplicates our AST-generated API Reference)
+    re.compile(
+        r"\n*##\s*API\s+Reference\s*\n(?:(?!^##\s).)*",
+        re.DOTALL | re.MULTILINE,
+    ),
+]
+
+
+def _strip_enrichment_duplicates(content: str) -> str:
+    """Remove LLM-generated sections that duplicate AST enrichments.
+
+    The prompt instructs the LLM not to generate Classes, Functions,
+    Usage Examples, or Class Diagram sections, but LLMs sometimes
+    ignore instructions. This safety net strips those sections so
+    only the authoritative AST-derived versions appear.
+    """
+    for pattern in _DUPLICATE_SECTION_PATTERNS:
+        content = pattern.sub("", content)
     return content
 
 

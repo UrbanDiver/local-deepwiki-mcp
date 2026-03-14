@@ -63,10 +63,6 @@ def all_md_files(wiki_path: Path) -> list[Path]:
 class TestLinkIntegrity:
     """Tests for internal link validity."""
 
-    @pytest.mark.xfail(
-        reason="Requires wiki rebuild: source_refs now filters test files and uses has_wiki_page; link checker now skips code blocks",
-        strict=False,
-    )
     def test_no_broken_internal_links(self, wiki_path: Path) -> None:
         """All internal markdown links should resolve to existing files."""
         broken = find_broken_links(wiki_path)

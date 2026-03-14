@@ -403,19 +403,32 @@ DIRECTORY STRUCTURE:
 CODE CONTEXT:
 {code_context}
 
-Generate documentation that includes:
-1. **System Overview** - Describe how the system works based on the classes and code shown
-2. **Key Components** - For each major class shown in the code, explain its responsibility. Write class names as plain text in sentences (not in backticks) so they can be cross-linked.
-3. **Data Flow** - Explain how data moves through the components based on what you see in the code
-4. **Component Diagram** - Create a Mermaid diagram (```mermaid) showing relationships between the classes you found. Only include classes that actually exist in the code.
-5. **Key Design Decisions** - Describe architectural choices visible in the code
+Generate architecture documentation with these sections:
+
+1. **System Overview** - What problem does this system solve, and what is the high-level approach? Describe the overall architecture in 2-3 paragraphs.
+
+2. **Key Components** - For each major component, explain:
+   - What it does (one sentence)
+   - WHY it exists as a separate component (what would break or become unwieldy without it?)
+   - What it depends on and what depends on it
+   Write class names as plain text in sentences (e.g., "The WikiGenerator class") so they can be cross-linked.
+
+3. **Data Flow** - Trace a concrete request through the system from input to output. Use a specific scenario (e.g., "When a user indexes a repository, the data flows through..."). Name the actual classes and methods involved.
+
+4. **Component Diagram** - Create a Mermaid diagram (```mermaid) showing relationships between the components. Only include components that actually exist in the code. Keep edges minimal — show primary dependencies only, not every possible connection.
+
+5. **Design Decisions and Trade-offs** - For each major architectural choice visible in the code, explain:
+   - What was chosen (e.g., "async throughout", "AST-aware chunking")
+   - WHY this approach over alternatives (e.g., "async because LLM calls are I/O-bound and benefit from concurrent execution")
+   - What trade-offs this creates (e.g., "requires all callers to be async-aware")
 
 CRITICAL CONSTRAINTS:
 - ONLY describe classes and components that are shown in the code above
 - ONLY mention design patterns if you can point to specific classes implementing them
 - Do NOT invent components, patterns, or data flows not shown in the code
 - If you're uncertain about a relationship, omit it rather than guess
-- Write class names as plain text (e.g., "The WikiGenerator class") so they can be cross-linked
+- Write class names as plain text for cross-linking, not in backticks
+- Focus on WHY and trade-offs, not just listing WHAT exists — a reader can see what exists from the code
 
 Format as markdown with clear sections."""
 

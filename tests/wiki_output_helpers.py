@@ -125,6 +125,21 @@ BAD_PATTERNS = [
 ]
 
 
+def _is_none_in_doc_context(content: str, match: re.Match[str]) -> bool:
+    """Check if a '- None' list item is documenting a return value or parameters.
+
+    Returns True if the match is in a legitimate documentation context
+    (e.g., preceded by 'Return', 'Parameters', 'Returns' within 3 lines).
+    """
+    preceding = content[: match.start()]
+    recent_lines = preceding.rsplit("\n", 4)[-4:]
+    context = " ".join(recent_lines).lower()
+    return any(
+        kw in context
+        for kw in ("return", "parameter", "parameters", "returns", "return value")
+    )
+
+
 def scan_page_for_quality_issues(content: str, page_path: str) -> list[str]:
     """Scan a wiki page for common quality issues.
 
@@ -140,7 +155,13 @@ def scan_page_for_quality_issues(content: str, page_path: str) -> list[str]:
     # Check bad patterns (skip content inside code blocks)
     non_code = _strip_code_blocks(content)
     for pattern, description in BAD_PATTERNS:
-        if pattern.search(non_code):
+        if description == "None as list item":
+            # Context-aware: skip when documenting return values or parameters
+            for match in pattern.finditer(non_code):
+                if not _is_none_in_doc_context(non_code, match):
+                    issues.append(f"{page_path}: {description} found in content")
+                    break
+        elif pattern.search(non_code):
             issues.append(f"{page_path}: {description} found in content")
 
     # Check for empty sections (heading followed immediately by heading)
@@ -161,8 +182,32 @@ def scan_page_for_quality_issues(content: str, page_path: str) -> list[str]:
 
 
 def _strip_code_blocks(content: str) -> str:
-    """Remove fenced code blocks from markdown content."""
-    return re.sub(r"```[\s\S]*?```", "", content)
+    """Remove fenced code blocks from markdown content.
+
+    Uses line-by-line parsing instead of regex to correctly handle
+    inline triple-backticks inside code blocks (e.g., f-strings
+    containing ```) that would misalign a regex-based approach.
+    """
+    lines = content.split("\n")
+    result: list[str] = []
+    in_code_block = False
+    for line in lines:
+        stripped = line.lstrip()
+        indent = len(line) - len(stripped)
+        # CommonMark: code fences must start within 0-3 spaces of indentation
+        if indent <= 3 and stripped.startswith("```"):
+            if in_code_block:
+                # Closing fence: ``` with optional trailing whitespace only
+                after = stripped[3:].strip()
+                if not after:
+                    in_code_block = False
+                # else: content inside code block that starts with ```
+            else:
+                in_code_block = True
+            continue
+        if not in_code_block:
+            result.append(line)
+    return "\n".join(result)
 
 
 def extract_markdown_links(content: str) -> list[tuple[str, str]]:
