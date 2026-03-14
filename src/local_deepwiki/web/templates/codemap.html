@@ -1185,11 +1185,15 @@
             rerenderWithCollapseState();
         }
 
+        var skipAutoCollapse = false;
+
         function expandAll() {
             collapsedMode = false;
-            collapseAllBtn.style.display = 'none';
-            expandAllBtn.style.display = 'none';
+            skipAutoCollapse = true;
+            collapseAllBtn.style.display = 'inline-block';
+            expandAllBtn.style.display = 'inline-block';
             if (currentResult) renderGraph(currentResult);
+            skipAutoCollapse = false;
         }
 
         function rerenderWithCollapseState() {
@@ -1246,14 +1250,15 @@
                 container: cyContainer,
                 elements: hybridElements,
                 style: cytoscapeStyles,
-                layout: {
-                    name: 'dagre', rankDir: 'TB', nodeSep: 60, rankSep: 100, edgeSep: 15, padding: 24,
-                    stop: function() { wrapRanks(cy); },
-                },
+                layout: { name: 'preset' },
                 minZoom: 0.2,
                 maxZoom: 3,
                 wheelSensitivity: 0.3,
             });
+            cy.layout({
+                name: 'dagre', rankDir: 'TB', nodeSep: 60, rankSep: 100, edgeSep: 15, padding: 24,
+                stop: function() { wrapRanks(cy); },
+            }).run();
 
             // Tap on collapsed group to expand
             cy.on('tap', 'node.collapsed-group', function(evt) {
@@ -1863,19 +1868,20 @@
                     container: cyContainer,
                     elements: elements,
                     style: cytoscapeStyles,
-                    layout: {
-                        name: 'dagre',
-                        rankDir: 'TB',
-                        nodeSep: 60,
-                        rankSep: 100,
-                        edgeSep: 15,
-                        padding: 24,
-                        stop: function() { wrapRanks(cy); },
-                    },
+                    layout: { name: 'preset' },
                     minZoom: 0.2,
                     maxZoom: 3,
                     wheelSensitivity: 0.3,
                 });
+                cy.layout({
+                    name: 'dagre',
+                    rankDir: 'TB',
+                    nodeSep: 60,
+                    rankSep: 100,
+                    edgeSep: 15,
+                    padding: 24,
+                    stop: function() { wrapRanks(cy); },
+                }).run();
 
                 // Register HTML labels for two-line node display
                 // Node labels are rendered natively via data(displayLabel) with text-wrap: wrap.
@@ -1954,14 +1960,14 @@
 
                 // Auto-collapse: if childless nodes exceed threshold, switch to collapsed view
                 var childlessCount = cy.nodes(':childless').length;
-                if (childlessCount > COLLAPSE_THRESHOLD) {
+                if (childlessCount > COLLAPSE_THRESHOLD && !skipAutoCollapse) {
                     collapsedMode = true;
                     expandedGroups = {};
                     collapseAllBtn.style.display = 'inline-block';
                     expandAllBtn.style.display = 'inline-block';
                     rerenderWithCollapseState();
                     return;
-                } else {
+                } else if (childlessCount <= COLLAPSE_THRESHOLD) {
                     collapsedMode = false;
                     collapseAllBtn.style.display = 'none';
                     expandAllBtn.style.display = 'none';
