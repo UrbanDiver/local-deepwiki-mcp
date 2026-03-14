@@ -552,6 +552,37 @@
         }
         .narrative-welcome h3 { color: var(--heading-color); margin-bottom: 8px; }
 
+        /* Two-line HTML node labels */
+        .cy-node-html {
+            text-align: center;
+            pointer-events: none;
+            user-select: none;
+            line-height: 1.3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .node-label-name {
+            font-weight: 600;
+            font-size: 11px;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+        .node-label-desc {
+            font-weight: 400;
+            font-size: 9px;
+            color: rgba(255, 255, 255, 0.6);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+            margin-top: 2px;
+        }
+
         @media (max-width: 900px) {
             .main-content { flex-direction: column; }
             .graph-panel { border-right: none; border-bottom: 1px solid var(--border-color); min-height: 300px; }
@@ -567,6 +598,7 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape-navigator@2/cytoscape-navigator.min.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cytoscape-navigator@2/cytoscape.js-navigator.css" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-node-html-label@1/dist/cytoscape-node-html-label.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <header class="header">
@@ -640,6 +672,8 @@
                 <button class="zoom-btn" id="zoom-in-btn" title="Zoom in (+)">+</button>
                 <button class="zoom-btn" id="zoom-out-btn" title="Zoom out (-)">-</button>
                 <button class="zoom-btn fit-btn" id="fit-btn" title="Fit to viewport (F)">Fit</button>
+                <button class="zoom-btn" id="collapse-all-btn" title="Collapse all file groups" style="display:none;">&#x25B4;</button>
+                <button class="zoom-btn" id="expand-all-btn" title="Expand all file groups" style="display:none;">&#x25BE;</button>
             </div>
             <div class="shortcuts-hint" id="shortcuts-hint" style="display:none;">
                 <kbd>F</kbd> fit &nbsp; <kbd>+</kbd><kbd>-</kbd> zoom &nbsp; <kbd>Esc</kbd> reset &nbsp; <kbd>L</kbd> legend &nbsp; <kbd>P</kbd> play
@@ -700,20 +734,22 @@
         var diffToggleCb = document.getElementById('diff-toggle-cb');
         var cyMinimap = document.getElementById('cy-minimap');
         var recentCodemaps = document.getElementById('recent-codemaps');
+        var collapseAllBtn = document.getElementById('collapse-all-btn');
+        var expandAllBtn = document.getElementById('expand-all-btn');
 
         // --- Cytoscape Styles ---
         var cytoscapeStyles = [
             { selector: 'node', style: {
-                'label': 'data(label)',
+                'label': 'data(displayLabel)',
                 'text-valign': 'center',
                 'text-halign': 'center',
                 'font-size': '11px',
-                'color': '#c9d1d9',
-                'text-wrap': 'ellipsis',
-                'text-max-width': '120px',
-                'width': 'label',
-                'height': 30,
-                'padding': '8px',
+                'color': '#ffffff',
+                'text-wrap': 'wrap',
+                'text-max-width': 'data(nodeWidth)',
+                'width': 'data(nodeWidth)',
+                'height': 'data(nodeHeight)',
+                'padding': '10px',
                 'shape': 'round-rectangle',
                 'background-color': '#21262d',
                 'border-width': 1,
@@ -738,6 +774,7 @@
                 'color': '#ffffff',
             }},
             { selector: ':parent', style: {
+                'label': 'data(label)',
                 'background-color': '#161b22',
                 'background-opacity': 0.6,
                 'border-color': '#30363d',
@@ -746,15 +783,25 @@
                 'text-halign': 'center',
                 'font-size': '10px',
                 'color': '#8b949e',
-                'padding': '12px',
+                'padding': '16px',
                 'shape': 'round-rectangle',
+            }},
+            { selector: 'node.collapsed-group', style: {
+                'border-width': 2,
+                'border-style': 'dashed',
+                'font-size': '12px',
+                'font-weight': 'bold',
+                'text-wrap': 'wrap',
+                'cursor': 'pointer',
             }},
             { selector: 'edge', style: {
                 'width': 1.5,
                 'line-color': '#8b949e',
                 'target-arrow-color': '#8b949e',
                 'target-arrow-shape': 'triangle',
-                'curve-style': 'bezier',
+                'curve-style': 'taxi',
+                'taxi-direction': 'downward',
+                'taxi-turn-min-distance': 20,
                 'arrow-scale': 0.8,
                 'transition-property': 'opacity, line-color, width',
                 'transition-duration': '0.2s',
@@ -763,7 +810,8 @@
                 'line-color': '#58a6ff',
                 'target-arrow-color': '#58a6ff',
                 'line-style': 'dashed',
-                'width': 2,
+                'width': 3,
+                'curve-style': 'bezier',
             }},
             { selector: 'edge[label]', style: {
                 'label': 'data(label)',
@@ -848,6 +896,24 @@
         ];
 
         // --- Build Cytoscape Elements ---
+        // Sizing constants for degree-based node scaling
+        var NODE_BASE_WIDTH = 140;
+        var NODE_BASE_HEIGHT = 40;
+        var NODE_MAX_EXTRA_WIDTH = 80;
+        var NODE_MAX_EXTRA_HEIGHT = 24;
+        var NODE_DESC_HEIGHT_BONUS = 16;
+        var COLLAPSE_THRESHOLD = 12;  // Auto-collapse file groups when node count exceeds this
+        var MAX_NODES_PER_RANK = 5;   // Max nodes per visual row before wrapping
+        var ZOOM_OVERVIEW_THRESHOLD = 0.4;
+        var ZOOM_DETAIL_THRESHOLD = 0.8;
+
+        function truncateDocstring(docstring) {
+            if (!docstring) return '';
+            var first = docstring.split('\n')[0].trim();
+            if (first.length > 55) return first.substring(0, 52) + '...';
+            return first;
+        }
+
         function buildCytoscapeElements(result) {
             var elements = [];
             var nodeIds = {};
@@ -861,6 +927,18 @@
                 targetNodes[edge.target] = true;
             }
 
+            // Compute degree centrality per node
+            var nodeDegree = {};
+            for (var i = 0; i < result.edges.length; i++) {
+                var edge = result.edges[i];
+                nodeDegree[edge.source] = (nodeDegree[edge.source] || 0) + 1;
+                nodeDegree[edge.target] = (nodeDegree[edge.target] || 0) + 1;
+            }
+            var maxDegree = 1;
+            for (var key in nodeDegree) {
+                if (nodeDegree[key] > maxDegree) maxDegree = nodeDegree[key];
+            }
+
             // Create compound parent nodes per file
             var fileParents = {};
             for (var i = 0; i < result.nodes.length; i++) {
@@ -872,12 +950,12 @@
                     var shortPath = parts.slice(-2).join('/');
                     elements.push({
                         group: 'nodes',
-                        data: { id: fileId, label: shortPath },
+                        data: { id: fileId, label: shortPath, nodeWidth: 1, nodeHeight: 1 },
                     });
                 }
             }
 
-            // Create child nodes
+            // Create child nodes with degree-based sizing and descriptions
             for (var i = 0; i < result.nodes.length; i++) {
                 var node = result.nodes[i];
                 var fileId = 'file:' + node.file_path;
@@ -907,11 +985,39 @@
                     nodeClass = 'crossfile';
                 }
 
+                // Compute description and degree-based dimensions
+                var desc = truncateDocstring(node.docstring);
+                var degree = nodeDegree[qn] || 0;
+                var scaleFactor = Math.min(degree / maxDegree, 1);
+
+                // Width based on text content and degree
+                var nameCharWidth = node.name.length * 7.5;
+                var descCharWidth = desc ? desc.length * 5.8 : 0;
+                var contentWidth = Math.max(nameCharWidth, descCharWidth) + 28;
+                var degreeWidth = NODE_BASE_WIDTH + scaleFactor * NODE_MAX_EXTRA_WIDTH;
+                var nodeWidth = Math.max(contentWidth, degreeWidth);
+                nodeWidth = Math.max(100, Math.min(260, nodeWidth));
+
+                // Height based on whether description exists and degree
+                var degreeHeight = NODE_BASE_HEIGHT + scaleFactor * NODE_MAX_EXTRA_HEIGHT;
+                var nodeHeight = desc ? degreeHeight + NODE_DESC_HEIGHT_BONUS : degreeHeight;
+
+                // Build display label: name + description on separate lines
+                var displayLabel = node.name;
+                if (desc) {
+                    displayLabel = node.name + '\n' + desc;
+                }
+
                 elements.push({
                     group: 'nodes',
                     data: {
                         id: qn,
                         label: node.name,
+                        displayLabel: displayLabel,
+                        description: desc,
+                        degree: degree,
+                        nodeWidth: Math.round(nodeWidth),
+                        nodeHeight: Math.round(nodeHeight),
                         parent: fileId,
                         filePath: node.file_path,
                         startLine: node.start_line,
@@ -950,6 +1056,295 @@
             }
 
             return elements;
+        }
+
+        // --- Collapsible File Groups ---
+        function buildCollapsedElements(result) {
+            var fileData = {};
+            var fileEdges = {};
+
+            var nodeDegree = {};
+            for (var i = 0; i < result.edges.length; i++) {
+                var edge = result.edges[i];
+                nodeDegree[edge.source] = (nodeDegree[edge.source] || 0) + 1;
+                nodeDegree[edge.target] = (nodeDegree[edge.target] || 0) + 1;
+            }
+
+            var sourceNodes = {};
+            var targetNodes = {};
+            for (var i = 0; i < result.edges.length; i++) {
+                sourceNodes[result.edges[i].source] = true;
+                targetNodes[result.edges[i].target] = true;
+            }
+
+            for (var i = 0; i < result.nodes.length; i++) {
+                var node = result.nodes[i];
+                var fileId = 'file:' + node.file_path;
+                if (!fileData[fileId]) {
+                    var parts = node.file_path.split('/');
+                    fileData[fileId] = {
+                        label: parts.slice(-2).join('/'),
+                        filePath: node.file_path,
+                        nodes: [],
+                        totalDegree: 0,
+                        hasEntry: false,
+                        hasCrossFile: false,
+                    };
+                }
+                var fd = fileData[fileId];
+                fd.nodes.push(node);
+                fd.totalDegree += (nodeDegree[node.qualified_name] || 0);
+
+                var qn = node.qualified_name;
+                if (qn === result.entry_point || (sourceNodes[qn] && !targetNodes[qn])) {
+                    fd.hasEntry = true;
+                }
+                for (var j = 0; j < result.edges.length; j++) {
+                    var e = result.edges[j];
+                    if ((e.source === qn || e.target === qn) && e.source_file !== e.target_file) {
+                        fd.hasCrossFile = true;
+                        break;
+                    }
+                }
+            }
+
+            for (var i = 0; i < result.edges.length; i++) {
+                var edge = result.edges[i];
+                if (edge.source_file !== edge.target_file) {
+                    var srcFileId = 'file:' + edge.source_file;
+                    var tgtFileId = 'file:' + edge.target_file;
+                    var edgeKey = srcFileId + '|' + tgtFileId;
+                    fileEdges[edgeKey] = (fileEdges[edgeKey] || 0) + 1;
+                }
+            }
+
+            var maxFileDegree = 1;
+            for (var fid in fileData) {
+                if (fileData[fid].totalDegree > maxFileDegree) {
+                    maxFileDegree = fileData[fid].totalDegree;
+                }
+            }
+
+            var elements = [];
+            for (var fid in fileData) {
+                var fd = fileData[fid];
+                var scaleFactor = Math.min(fd.totalDegree / maxFileDegree, 1);
+                var nodeWidth = 200 + scaleFactor * 100;
+                var nodeClass = fd.hasEntry ? 'entry' : (fd.hasCrossFile ? 'crossfile' : 'leaf');
+                var countLabel = fd.nodes.length + (fd.nodes.length === 1 ? ' function' : ' functions');
+
+                elements.push({
+                    group: 'nodes',
+                    data: {
+                        id: fid,
+                        label: fd.label,
+                        displayLabel: fd.label + '\n' + countLabel,
+                        nodeWidth: Math.round(nodeWidth),
+                        nodeHeight: 56,
+                        filePath: fd.filePath,
+                        functionCount: fd.nodes.length,
+                        isCollapsedGroup: true,
+                        childNodes: fd.nodes,
+                    },
+                    classes: nodeClass + ' collapsed-group',
+                });
+            }
+
+            for (var edgeKey in fileEdges) {
+                var parts = edgeKey.split('|');
+                var count = fileEdges[edgeKey];
+                elements.push({
+                    group: 'edges',
+                    data: {
+                        source: parts[0],
+                        target: parts[1],
+                        weight: count,
+                    },
+                    classes: 'cross-file-edge',
+                });
+            }
+
+            return elements;
+        }
+
+        // State for collapse/expand
+        var expandedGroups = {};
+        var collapsedMode = false;
+
+        function toggleGroup(fileId) {
+            if (expandedGroups[fileId]) {
+                delete expandedGroups[fileId];
+            } else {
+                expandedGroups[fileId] = true;
+            }
+            rerenderWithCollapseState();
+        }
+
+        function collapseAll() {
+            expandedGroups = {};
+            rerenderWithCollapseState();
+        }
+
+        function expandAll() {
+            collapsedMode = false;
+            collapseAllBtn.style.display = 'none';
+            expandAllBtn.style.display = 'none';
+            if (currentResult) renderGraph(currentResult);
+        }
+
+        function rerenderWithCollapseState() {
+            if (!currentResult) return;
+
+            var fullElements = buildCytoscapeElements(currentResult);
+            var collapsedElements = buildCollapsedElements(currentResult);
+
+            var hybridElements = [];
+            var expandedFileIds = {};
+
+            for (var fid in expandedGroups) {
+                expandedFileIds[fid] = true;
+                for (var i = 0; i < fullElements.length; i++) {
+                    var el = fullElements[i];
+                    if (el.group === 'nodes' && (el.data.id === fid || el.data.parent === fid)) {
+                        hybridElements.push(el);
+                    }
+                }
+            }
+
+            for (var i = 0; i < collapsedElements.length; i++) {
+                var el = collapsedElements[i];
+                if (el.group === 'nodes' && !expandedFileIds[el.data.id]) {
+                    hybridElements.push(el);
+                }
+            }
+
+            var nodeIds = {};
+            for (var i = 0; i < hybridElements.length; i++) {
+                nodeIds[hybridElements[i].data.id] = true;
+            }
+
+            for (var i = 0; i < fullElements.length; i++) {
+                var el = fullElements[i];
+                if (el.group === 'edges' && nodeIds[el.data.source] && nodeIds[el.data.target]) {
+                    hybridElements.push(el);
+                }
+            }
+
+            for (var i = 0; i < collapsedElements.length; i++) {
+                var el = collapsedElements[i];
+                if (el.group === 'edges') {
+                    var src = expandedFileIds[el.data.source] ? null : el.data.source;
+                    var tgt = expandedFileIds[el.data.target] ? null : el.data.target;
+                    if (src && tgt && nodeIds[src] && nodeIds[tgt]) {
+                        hybridElements.push(el);
+                    }
+                }
+            }
+
+            if (cy) cy.destroy();
+            cy = cytoscape({
+                container: cyContainer,
+                elements: hybridElements,
+                style: cytoscapeStyles,
+                layout: {
+                    name: 'dagre', rankDir: 'TB', nodeSep: 60, rankSep: 100, edgeSep: 15, padding: 24,
+                    stop: function() { wrapRanks(cy); },
+                },
+                minZoom: 0.2,
+                maxZoom: 3,
+                wheelSensitivity: 0.3,
+            });
+
+            // Tap on collapsed group to expand
+            cy.on('tap', 'node.collapsed-group', function(evt) {
+                toggleGroup(evt.target.id());
+            });
+
+            // Zoom handler for adaptive detail
+            var zoomTimer = null;
+            cy.on('zoom', function() {
+                clearTimeout(zoomTimer);
+                zoomTimer = setTimeout(updateDetailLevel, 100);
+            });
+
+            initMinimap();
+        }
+
+        // --- Rank Wrapping ---
+        function wrapRanks(cyInstance) {
+            var ranks = {};
+            cyInstance.nodes(':childless').forEach(function(node) {
+                var y = Math.round(node.position('y'));
+                var found = false;
+                for (var ry in ranks) {
+                    if (Math.abs(y - parseInt(ry)) < 5) {
+                        ranks[ry].push(node);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    ranks[y] = [node];
+                }
+            });
+
+            for (var ry in ranks) {
+                var nodesAtRank = ranks[ry];
+                if (nodesAtRank.length <= MAX_NODES_PER_RANK) continue;
+
+                nodesAtRank.sort(function(a, b) { return a.position('x') - b.position('x'); });
+
+                var baseY = parseInt(ry);
+                var rowHeight = 120;
+                var totalWidth = 0;
+                nodesAtRank.forEach(function(n) { totalWidth += (n.data('nodeWidth') || 140) + 60; });
+                var avgNodeWidth = totalWidth / nodesAtRank.length;
+
+                for (var i = 0; i < nodesAtRank.length; i++) {
+                    var subRow = Math.floor(i / MAX_NODES_PER_RANK);
+                    var posInRow = i % MAX_NODES_PER_RANK;
+                    var nodesInThisRow = Math.min(MAX_NODES_PER_RANK, nodesAtRank.length - subRow * MAX_NODES_PER_RANK);
+                    var rowWidth = nodesInThisRow * avgNodeWidth;
+                    var startX = -rowWidth / 2 + avgNodeWidth / 2;
+
+                    nodesAtRank[i].position({
+                        x: startX + posInRow * avgNodeWidth,
+                        y: baseY + subRow * rowHeight,
+                    });
+                }
+            }
+        }
+
+        // --- Adaptive Detail ---
+        var currentDetailLevel = 'reading';
+
+        function updateDetailLevel() {
+            if (!cy) return;
+            var zoom = cy.zoom();
+            var newLevel;
+            if (zoom < ZOOM_OVERVIEW_THRESHOLD) {
+                newLevel = 'overview';
+            } else if (zoom > ZOOM_DETAIL_THRESHOLD) {
+                newLevel = 'detail';
+            } else {
+                newLevel = 'reading';
+            }
+
+            if (newLevel === currentDetailLevel) return;
+            currentDetailLevel = newLevel;
+
+            cy.batch(function() {
+                cy.nodes(':childless').forEach(function(node) {
+                    var name = node.data('label');
+                    if (newLevel === 'overview') {
+                        node.style({ 'label': name, 'font-size': '14px' });
+                    } else if (newLevel === 'detail') {
+                        node.style({ 'label': node.data('displayLabel'), 'font-size': '12px' });
+                    } else {
+                        node.style({ 'label': node.data('displayLabel'), 'font-size': '11px' });
+                    }
+                });
+            });
         }
 
         // --- Tooltip ---
@@ -1471,14 +1866,20 @@
                     layout: {
                         name: 'dagre',
                         rankDir: 'TB',
-                        nodeSep: 50,
-                        rankSep: 80,
-                        padding: 20,
+                        nodeSep: 60,
+                        rankSep: 100,
+                        edgeSep: 15,
+                        padding: 24,
+                        stop: function() { wrapRanks(cy); },
                     },
                     minZoom: 0.2,
                     maxZoom: 3,
                     wheelSensitivity: 0.3,
                 });
+
+                // Register HTML labels for two-line node display
+                // Node labels are rendered natively via data(displayLabel) with text-wrap: wrap.
+                // The cytoscape-node-html-label CDN is kept for potential future use.
 
                 // Click handler - path highlighting + navigate
                 cy.on('tap', 'node:childless', function(evt) {
@@ -1550,6 +1951,28 @@
                 if (diffToggleCb.checked && diffFiles.length > 0) {
                     applyDiffOverlay();
                 }
+
+                // Auto-collapse: if childless nodes exceed threshold, switch to collapsed view
+                var childlessCount = cy.nodes(':childless').length;
+                if (childlessCount > COLLAPSE_THRESHOLD) {
+                    collapsedMode = true;
+                    expandedGroups = {};
+                    collapseAllBtn.style.display = 'inline-block';
+                    expandAllBtn.style.display = 'inline-block';
+                    rerenderWithCollapseState();
+                    return;
+                } else {
+                    collapsedMode = false;
+                    collapseAllBtn.style.display = 'none';
+                    expandAllBtn.style.display = 'none';
+                }
+
+                // Zoom handler for adaptive detail
+                var zoomDebounceTimer = null;
+                cy.on('zoom', function() {
+                    clearTimeout(zoomDebounceTimer);
+                    zoomDebounceTimer = setTimeout(updateDetailLevel, 100);
+                });
             } catch (err) {
                 // Fallback to mermaid
                 renderMermaidFallback(result.mermaid_diagram);
@@ -1674,6 +2097,7 @@
         // --- Export PNG ---
         function exportPng() {
             if (!cy) return;
+            // Labels are natively rendered, so cy.png() captures them directly
             var pngData = cy.png({ full: true, scale: 2, bg: getComputedStyle(document.documentElement).getPropertyValue('--bg-color').trim() });
             var link = document.createElement('a');
             var slug = queryInput.value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 40);
@@ -1875,6 +2299,8 @@
         document.getElementById('fit-btn').addEventListener('click', function() {
             if (cy) cy.fit(undefined, 20);
         });
+        collapseAllBtn.addEventListener('click', collapseAll);
+        expandAllBtn.addEventListener('click', expandAll);
 
         // Play controls
         playBtn.addEventListener('click', function() {

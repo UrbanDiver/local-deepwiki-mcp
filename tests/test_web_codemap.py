@@ -900,3 +900,154 @@ class TestCodemapPhase3Compare:
         response = client.get("/codemap")
         assert response.status_code == 200
         assert b"/codemap/compare" in response.data
+
+
+class TestCodemapVisualImprovements:
+    """Tests for the visual-first diagram improvements (Phase 4)."""
+
+    def test_codemap_page_has_node_html_label_script(self, wiki_dir):
+        """Test that the page loads the cytoscape-node-html-label extension."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b"cytoscape-node-html-label" in response.data
+
+    def test_codemap_page_has_node_label_css(self, wiki_dir):
+        """Test that the page has CSS for two-line HTML node labels."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b".node-label-name" in response.data
+        assert b".node-label-desc" in response.data
+        assert b".cy-node-html" in response.data
+
+    def test_codemap_page_has_taxi_edge_style(self, wiki_dir):
+        """Test that same-file edges use taxi (right-angle) curve style."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b"'curve-style': 'taxi'" in response.data
+        assert b"'taxi-direction': 'downward'" in response.data
+
+    def test_codemap_page_has_degree_sizing(self, wiki_dir):
+        """Test that nodes use data-driven width/height for degree-based sizing."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b"nodeDegree" in response.data
+        assert b"nodeWidth" in response.data
+        assert b"nodeHeight" in response.data
+
+    def test_codemap_page_has_native_display_labels(self, wiki_dir):
+        """Test that nodes use native displayLabel with text-wrap for two-line labels."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b"displayLabel" in response.data
+        assert b"'text-wrap': 'wrap'" in response.data
+
+    def test_codemap_page_has_description_data_field(self, wiki_dir):
+        """Test that buildCytoscapeElements creates a description data field."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b"truncateDocstring" in response.data
+        assert b"description: desc" in response.data
+
+    def test_codemap_png_export_captures_labels(self, wiki_dir):
+        """Test that PNG export works with native labels (no workaround needed)."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        # Export uses native labels which are captured by cy.png()
+        assert b"cy.png(" in response.data
+
+
+class TestCodemapCollapsibleGroups:
+    """Tests for collapsible file group functionality."""
+
+    def test_template_has_collapse_threshold_constant(self, wiki_dir):
+        """Template defines COLLAPSE_THRESHOLD for auto-collapse."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"COLLAPSE_THRESHOLD" in response.data
+
+    def test_template_has_toggle_group_function(self, wiki_dir):
+        """Template has toggleGroup function for expand/collapse."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"function toggleGroup" in response.data
+
+    def test_template_has_collapse_all_button(self, wiki_dir):
+        """Template has Collapse All button in toolbar."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"collapse-all-btn" in response.data
+
+    def test_template_has_expand_all_button(self, wiki_dir):
+        """Template has Expand All button in toolbar."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"expand-all-btn" in response.data
+
+    def test_template_has_build_collapsed_elements_function(self, wiki_dir):
+        """Template has function to build collapsed group elements."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"function buildCollapsedElements" in response.data
+
+
+class TestCodemapRankWrapping:
+    """Tests for rank wrapping to prevent horizontal explosion."""
+
+    def test_template_has_max_nodes_per_rank_constant(self, wiki_dir):
+        """Template defines MAX_NODES_PER_RANK."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"MAX_NODES_PER_RANK" in response.data
+
+    def test_template_has_wrap_ranks_function(self, wiki_dir):
+        """Template has wrapRanks post-layout function."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"function wrapRanks" in response.data
+
+
+class TestCodemapAdaptiveDetail:
+    """Tests for zoom-responsive label rendering."""
+
+    def test_template_has_zoom_thresholds(self, wiki_dir):
+        """Template defines zoom threshold constants."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"ZOOM_OVERVIEW_THRESHOLD" in response.data
+        assert b"ZOOM_DETAIL_THRESHOLD" in response.data
+
+    def test_template_has_update_detail_level_function(self, wiki_dir):
+        """Template has updateDetailLevel function for adaptive zoom."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"function updateDetailLevel" in response.data
+
+    def test_template_has_zoom_event_handler(self, wiki_dir):
+        """Template registers a zoom event handler."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert b"on('zoom'" in response.data
