@@ -23,6 +23,32 @@ from local_deepwiki.models import (
 )
 
 
+class TestChunkTypeValues:
+    """Tests for ChunkType enum values."""
+
+    def test_file_summary_exists(self):
+        """FILE_SUMMARY chunk type should exist with correct value."""
+        assert ChunkType.FILE_SUMMARY == "file_summary"
+
+    def test_module_summary_exists(self):
+        """MODULE_SUMMARY chunk type should exist with correct value."""
+        assert ChunkType.MODULE_SUMMARY == "module_summary"
+
+    def test_all_original_values_preserved(self):
+        """All 7 original ChunkType values must still exist."""
+        expected = {
+            "function": ChunkType.FUNCTION,
+            "class": ChunkType.CLASS,
+            "method": ChunkType.METHOD,
+            "module": ChunkType.MODULE,
+            "import": ChunkType.IMPORT,
+            "comment": ChunkType.COMMENT,
+            "other": ChunkType.OTHER,
+        }
+        for value, member in expected.items():
+            assert member.value == value
+
+
 class TestCodeChunkToVectorRecord:
     """Tests for CodeChunk.to_vector_record method."""
 
@@ -247,8 +273,15 @@ class TestModelRepr:
         structure = WikiStructure(
             root="/project/.deepwiki",
             pages=[
-                WikiPage(path="index.md", title="Home", content="# Home", generated_at=1.0),
-                WikiPage(path="arch.md", title="Architecture", content="# Arch", generated_at=1.0),
+                WikiPage(
+                    path="index.md", title="Home", content="# Home", generated_at=1.0
+                ),
+                WikiPage(
+                    path="arch.md",
+                    title="Architecture",
+                    content="# Arch",
+                    generated_at=1.0,
+                ),
             ],
         )
         result = repr(structure)
@@ -410,8 +443,15 @@ class TestWikiStructureToToc:
         structure = WikiStructure(
             root="/project/.deepwiki",
             pages=[
-                WikiPage(path="index.md", title="Home", content="# Home", generated_at=1.0),
-                WikiPage(path="overview.md", title="Overview", content="# Overview", generated_at=1.0),
+                WikiPage(
+                    path="index.md", title="Home", content="# Home", generated_at=1.0
+                ),
+                WikiPage(
+                    path="overview.md",
+                    title="Overview",
+                    content="# Overview",
+                    generated_at=1.0,
+                ),
             ],
         )
         toc = structure.to_toc()
@@ -429,10 +469,20 @@ class TestWikiStructureToToc:
         structure = WikiStructure(
             root="/project/.deepwiki",
             pages=[
-                WikiPage(path="index.md", title="Home", content="# Home", generated_at=1.0),
-                WikiPage(path="files/main.md", title="Main", content="# Main", generated_at=1.0),
                 WikiPage(
-                    path="files/src/utils.md", title="Utils", content="# Utils", generated_at=1.0
+                    path="index.md", title="Home", content="# Home", generated_at=1.0
+                ),
+                WikiPage(
+                    path="files/main.md",
+                    title="Main",
+                    content="# Main",
+                    generated_at=1.0,
+                ),
+                WikiPage(
+                    path="files/src/utils.md",
+                    title="Utils",
+                    content="# Utils",
+                    generated_at=1.0,
                 ),
             ],
         )
@@ -452,7 +502,9 @@ class TestWikiStructureToToc:
         assert any(p["path"] == "files/main.md" for p in files_section["pages"])
 
         # Find the 'src' section inside 'files'
-        src_section = next((s for s in files_section["sections"] if s["name"] == "src"), None)
+        src_section = next(
+            (s for s in files_section["sections"] if s["name"] == "src"), None
+        )
         assert src_section is not None
         assert any(p["path"] == "files/src/utils.md" for p in src_section["pages"])
 
@@ -474,7 +526,9 @@ class TestWikiStructureToToc:
         # Navigate down the nested sections
         current = toc
         for level in ["a", "b", "c", "d"]:
-            section = next((s for s in current.get("sections", []) if s["name"] == level), None)
+            section = next(
+                (s for s in current.get("sections", []) if s["name"] == level), None
+            )
             assert section is not None, f"Section '{level}' not found"
             current = section
 
@@ -487,11 +541,22 @@ class TestWikiStructureToToc:
             root="/project/.deepwiki",
             pages=[
                 WikiPage(
-                    path="files/alpha.md", title="Alpha", content="# Alpha", generated_at=1.0
+                    path="files/alpha.md",
+                    title="Alpha",
+                    content="# Alpha",
+                    generated_at=1.0,
                 ),
-                WikiPage(path="files/beta.md", title="Beta", content="# Beta", generated_at=1.0),
                 WikiPage(
-                    path="files/gamma.md", title="Gamma", content="# Gamma", generated_at=1.0
+                    path="files/beta.md",
+                    title="Beta",
+                    content="# Beta",
+                    generated_at=1.0,
+                ),
+                WikiPage(
+                    path="files/gamma.md",
+                    title="Gamma",
+                    content="# Gamma",
+                    generated_at=1.0,
                 ),
             ],
         )

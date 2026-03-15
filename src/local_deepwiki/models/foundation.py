@@ -113,3 +113,5 @@ class ChunkType(StrEnum):
     IMPORT = "import"
     COMMENT = "comment"
     OTHER = "other"
+    FILE_SUMMARY = "file_summary"
+    MODULE_SUMMARY = "module_summary"
