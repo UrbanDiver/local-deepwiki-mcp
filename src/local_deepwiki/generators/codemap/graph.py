@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from local_deepwiki.core.vectorstore import VectorStore
 
 from local_deepwiki.core.path_utils import is_test_file
+from local_deepwiki.core.query_utils import condense_query as _condense_query
 from local_deepwiki.generators.codemap.models import (
     BUILTIN_NAMES,
     CALLABLE_CHUNK_TYPES,
@@ -106,82 +107,6 @@ def _extract_param_names(content: str) -> list[str]:
                     params.append(name)
             return params
     return []
-
-
-# Filler words stripped when condensing conversational queries into
-# technical search terms (e.g. "tell me everything about how X works"
-# -> "X works").
-_FILLER_WORDS = frozenset(
-    {
-        "tell",
-        "me",
-        "everything",
-        "about",
-        "how",
-        "does",
-        "the",
-        "a",
-        "an",
-        "is",
-        "are",
-        "was",
-        "were",
-        "what",
-        "can",
-        "could",
-        "would",
-        "should",
-        "please",
-        "explain",
-        "show",
-        "describe",
-        "give",
-        "all",
-        "detail",
-        "details",
-        "detailed",
-        "in",
-        "of",
-        "for",
-        "with",
-        "to",
-        "do",
-        "i",
-        "want",
-        "know",
-        "understand",
-        "it",
-        "its",
-        "this",
-        "that",
-        "work",
-        "works",
-        "working",
-    }
-)
-
-
-def _condense_query(query: str) -> str:
-    """Strip filler words from a conversational query to improve embedding search.
-
-    Conversational queries like "tell me everything about how the rag works"
-    embed poorly because filler dilutes the signal. Returns a condensed
-    version keeping only technical terms, or the original if nothing remains.
-    """
-    words = query.lower().split()
-    technical = [w for w in words if w not in _FILLER_WORDS and len(w) > 1]
-    if not technical:
-        return query
-    # If condensation left very few words, append "pipeline function" to
-    # give the embedding model enough signal to match code functions
-    if len(technical) <= 2:
-        technical.append("pipeline")
-        technical.append("function")
-    condensed = " ".join(technical)
-    # Only return condensed if it's materially different
-    if len(condensed) < len(query) * 0.9:
-        return condensed
-    return query
 
 
 # ---------------------------------------------------------------------------
