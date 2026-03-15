@@ -215,7 +215,9 @@ def func3(): pass
         chunker = CodeChunker(config=config)
 
         # Create a class with many methods (will exceed threshold)
-        methods = "\n".join([f"    def method{i}(self):\n        pass\n" for i in range(20)])
+        methods = "\n".join(
+            [f"    def method{i}(self):\n        pass\n" for i in range(20)]
+        )
         code = f'''class LargeClass:
     """A large class."""
 {methods}
@@ -702,7 +704,9 @@ class TestChunkerWithConfig:
         config = ChunkingConfig(class_split_threshold=1000)
         chunker = CodeChunker(config=config)
 
-        methods = "\n".join([f"    def method{i}(self):\n        pass\n" for i in range(5)])
+        methods = "\n".join(
+            [f"    def method{i}(self):\n        pass\n" for i in range(5)]
+        )
         code = f'''class SmallClass:
     """A class."""
 {methods}
@@ -789,10 +793,10 @@ class TestPythonParameterExtraction:
         """
         from local_deepwiki.core.chunker import extract_python_parameter_types
 
-        code = '''
+        code = """
 def func(*args: int) -> None:
     pass
-'''
+"""
         test_file = tmp_path / "test.py"
         test_file.write_text(code)
 
@@ -818,10 +822,10 @@ def func(*args: int) -> None:
         """
         from local_deepwiki.core.chunker import extract_python_parameter_types
 
-        code = '''
+        code = """
 def func(**kwargs: str) -> None:
     pass
-'''
+"""
         test_file = tmp_path / "test.py"
         test_file.write_text(code)
 
@@ -847,10 +851,10 @@ def func(**kwargs: str) -> None:
         """
         from local_deepwiki.core.chunker import extract_python_parameter_types
 
-        code = '''
+        code = """
 def func(*args):
     pass
-'''
+"""
         test_file = tmp_path / "test.py"
         test_file.write_text(code)
 
@@ -876,10 +880,10 @@ def func(*args):
         """
         from local_deepwiki.core.chunker import extract_python_parameter_types
 
-        code = '''
+        code = """
 def func(**kwargs):
     pass
-'''
+"""
         test_file = tmp_path / "test.py"
         test_file.write_text(code)
 
@@ -902,10 +906,10 @@ def func(**kwargs):
         """Test function with mixed regular params, *args, and **kwargs."""
         from local_deepwiki.core.chunker import extract_python_parameter_types
 
-        code = '''
+        code = """
 def func(a: int, b, *args, **kwargs):
     pass
-'''
+"""
         test_file = tmp_path / "test.py"
         test_file.write_text(code)
 
@@ -1035,7 +1039,9 @@ class TestLargeClassWithInheritance:
         chunker = CodeChunker(config=config)
 
         # Create a class with inheritance AND many methods to trigger splitting
-        methods = "\n".join([f"    def method{i}(self):\n        pass\n" for i in range(10)])
+        methods = "\n".join(
+            [f"    def method{i}(self):\n        pass\n" for i in range(10)]
+        )
         code = f'''class LargeChild(Parent, Mixin):
     """A large child class with inheritance."""
 {methods}
@@ -1115,3 +1121,187 @@ def func():
 
         module_chunk = [c for c in chunks if c.chunk_type == ChunkType.MODULE][0]
         assert module_chunk.docstring is None
+
+
+class TestFileSummaryChunks:
+    """Tests for FILE_SUMMARY chunk generation."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.chunker = CodeChunker()
+
+    def test_file_summary_chunk_generated(self, tmp_path):
+        """Each .py file produces a FILE_SUMMARY chunk containing class and function names."""
+        code = '''"""Module docstring."""
+
+import os
+from pathlib import Path
+
+def hello(name: str) -> str:
+    """Say hello."""
+    return f"Hello, {name}!"
+
+class Greeter:
+    """A greeter class."""
+
+    def greet(self, name: str) -> str:
+        return f"Hi, {name}!"
+'''
+        test_file = tmp_path / "example.py"
+        test_file.write_text(code)
+
+        chunks = list(self.chunker.chunk_file(test_file, tmp_path))
+
+        summary_chunks = [c for c in chunks if c.chunk_type == ChunkType.FILE_SUMMARY]
+        assert len(summary_chunks) == 1
+
+        summary = summary_chunks[0]
+        assert summary.file_path == "example.py"
+        assert summary.name == "example"
+        assert "hello" in summary.content
+        assert "Greeter" in summary.content
+        assert summary.chunk_type == ChunkType.FILE_SUMMARY
+
+    def test_file_summary_includes_docstring(self, tmp_path):
+        """FILE_SUMMARY includes the module docstring when present."""
+        code = '''"""This module handles data processing."""
+
+def process():
+    pass
+'''
+        test_file = tmp_path / "processor.py"
+        test_file.write_text(code)
+
+        chunks = list(self.chunker.chunk_file(test_file, tmp_path))
+
+        summary_chunks = [c for c in chunks if c.chunk_type == ChunkType.FILE_SUMMARY]
+        assert len(summary_chunks) == 1
+        summary = summary_chunks[0]
+        assert "data processing" in summary.content
+
+    def test_file_summary_limits_imports_to_10(self, tmp_path):
+        """FILE_SUMMARY only includes first 10 imports."""
+        imports = "\n".join([f"import module{i}" for i in range(15)])
+        code = f"{imports}\n\ndef func(): pass\n"
+
+        test_file = tmp_path / "many_imports.py"
+        test_file.write_text(code)
+
+        chunks = list(self.chunker.chunk_file(test_file, tmp_path))
+
+        summary_chunks = [c for c in chunks if c.chunk_type == ChunkType.FILE_SUMMARY]
+        assert len(summary_chunks) == 1
+        summary = summary_chunks[0]
+        # Should mention truncation
+        assert "more imports" in summary.content
+        # Should contain module0 through module9 but not all 15
+        assert "module0" in summary.content
+        assert "module9" in summary.content
+
+    def test_file_summary_is_last_chunk(self, tmp_path):
+        """FILE_SUMMARY chunk is yielded after all other chunks."""
+        code = '''"""Module doc."""
+
+import os
+
+def hello():
+    pass
+
+class MyClass:
+    pass
+'''
+        test_file = tmp_path / "ordered.py"
+        test_file.write_text(code)
+
+        chunks = list(self.chunker.chunk_file(test_file, tmp_path))
+
+        # FILE_SUMMARY should be the last chunk
+        assert chunks[-1].chunk_type == ChunkType.FILE_SUMMARY
+
+    def test_file_summary_for_empty_file(self, tmp_path):
+        """Empty files still get a FILE_SUMMARY chunk."""
+        test_file = tmp_path / "empty.py"
+        test_file.write_text("")
+
+        chunks = list(self.chunker.chunk_file(test_file, tmp_path))
+
+        summary_chunks = [c for c in chunks if c.chunk_type == ChunkType.FILE_SUMMARY]
+        assert len(summary_chunks) == 1
+
+
+class TestModuleSummaryChunks:
+    """Tests for MODULE_SUMMARY chunk generation for __init__.py files."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.chunker = CodeChunker()
+
+    def test_init_py_produces_module_summary(self, tmp_path):
+        """__init__.py files generate a MODULE_SUMMARY chunk with package name and re-exports."""
+        pkg_dir = tmp_path / "mypackage"
+        pkg_dir.mkdir()
+
+        code = '''"""My package provides utilities."""
+
+from .utils import helper_func
+from .models import DataModel, Config
+'''
+        init_file = pkg_dir / "__init__.py"
+        init_file.write_text(code)
+
+        chunks = list(self.chunker.chunk_file(init_file, tmp_path))
+
+        summary_chunks = [c for c in chunks if c.chunk_type == ChunkType.MODULE_SUMMARY]
+        assert len(summary_chunks) == 1
+
+        summary = summary_chunks[0]
+        assert "mypackage" in summary.content
+        assert "helper_func" in summary.content or "DataModel" in summary.content
+        assert summary.chunk_type == ChunkType.MODULE_SUMMARY
+
+    def test_init_py_includes_docstring(self, tmp_path):
+        """MODULE_SUMMARY includes the package docstring."""
+        pkg_dir = tmp_path / "mypkg"
+        pkg_dir.mkdir()
+
+        code = '''"""This package handles authentication flows."""
+
+from .auth import login, logout
+'''
+        init_file = pkg_dir / "__init__.py"
+        init_file.write_text(code)
+
+        chunks = list(self.chunker.chunk_file(init_file, tmp_path))
+
+        summary_chunks = [c for c in chunks if c.chunk_type == ChunkType.MODULE_SUMMARY]
+        assert len(summary_chunks) == 1
+        assert "authentication" in summary_chunks[0].content
+
+    def test_regular_file_no_module_summary(self, tmp_path):
+        """Regular (non-__init__.py) files do NOT produce MODULE_SUMMARY chunks."""
+        code = '''"""A regular module."""
+
+def func():
+    pass
+'''
+        test_file = tmp_path / "regular.py"
+        test_file.write_text(code)
+
+        chunks = list(self.chunker.chunk_file(test_file, tmp_path))
+
+        summary_chunks = [c for c in chunks if c.chunk_type == ChunkType.MODULE_SUMMARY]
+        assert len(summary_chunks) == 0
+
+    def test_empty_init_py_still_produces_module_summary(self, tmp_path):
+        """Even an empty __init__.py produces a MODULE_SUMMARY."""
+        pkg_dir = tmp_path / "emptypkg"
+        pkg_dir.mkdir()
+
+        init_file = pkg_dir / "__init__.py"
+        init_file.write_text("")
+
+        chunks = list(self.chunker.chunk_file(init_file, tmp_path))
+
+        summary_chunks = [c for c in chunks if c.chunk_type == ChunkType.MODULE_SUMMARY]
+        assert len(summary_chunks) == 1
+        assert "emptypkg" in summary_chunks[0].content
