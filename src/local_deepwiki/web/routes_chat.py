@@ -210,11 +210,8 @@ def api_chat() -> Response | tuple[Response, int]:
         repo_path = wiki_path.parent
 
     async def generate_response() -> AsyncIterator[str]:
-        """Async generator that streams the chat response."""
+        """Async generator that streams the chat response via QueryService."""
         from local_deepwiki.config import get_config
-        from local_deepwiki.core.vectorstore import VectorStore
-        from local_deepwiki.providers.embeddings import get_embedding_provider
-        from local_deepwiki.providers.llm import get_cached_llm_provider
 
         config = get_config()
         vector_db_path = config.get_vector_db_path(repo_path)
@@ -223,70 +220,15 @@ def api_chat() -> Response | tuple[Response, int]:
             yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
             return
 
-        # Setup providers
-        embedding_provider = get_embedding_provider(config.embedding)
-        vector_store = VectorStore(vector_db_path, embedding_provider)
-        cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
+        from local_deepwiki.web.utils import create_query_service
 
-        # Determine LLM config for chat - use chat_llm_provider if set
-        llm_config = config.llm
-        chat_provider = config.wiki.chat_llm_provider
-        if chat_provider != "default":
-            # Override provider for chat
-            llm_config = llm_config.model_copy(update={"provider": chat_provider})
-            logger.info("Using %s provider for chat", chat_provider)
-
-        llm = get_cached_llm_provider(
-            cache_path=cache_path,
-            embedding_provider=embedding_provider,
-            cache_config=config.llm_cache,
-            llm_config=llm_config,
-        )
-
-        # Search for relevant context — fetch more candidates for better coverage
-        search_results = await vector_store.search(question, limit=15)
-
-        # Send sources first
-        sources = format_sources(search_results)
-        yield f"data: {json.dumps({'type': 'sources', 'sources': sources})}\n\n"
-
-        if not search_results:
-            yield f"data: {json.dumps({'type': 'token', 'content': 'No relevant code found for your question.'})}\n\n"
-            yield f"data: {json.dumps({'type': 'done'})}\n\n"
-            return
-
-        # Build context from search results
-        context_parts = []
-        for result in search_results:
-            chunk = result.chunk
-            context_parts.append(
-                f"File: {chunk.file_path} (lines {chunk.start_line}-{chunk.end_line})\n"
-                f"Type: {chunk.chunk_type.value}\n"
-                f"```\n{chunk.content}\n```"
-            )
-        context = "\n\n---\n\n".join(context_parts)
-
-        # Build prompt with history
-        prompt = build_prompt_with_history(question, history, context)
-        system_prompt = (
-            "You are a knowledgeable assistant for this codebase. "
-            "Answer questions as if you have read the entire repository. "
-            "Never say 'the provided code' or 'the code context' — "
-            "speak as if you naturally know the codebase. "
-            "Reference specific files and line numbers when relevant."
-        )
-
-        # Stream the response
-        try:
-            async for text_chunk in llm.generate_stream(
-                prompt, system_prompt=system_prompt, temperature=0.3
-            ):
-                yield f"data: {json.dumps({'type': 'token', 'content': text_chunk})}\n\n"
-        except Exception as e:  # noqa: BLE001 - Report LLM errors to user via SSE
-            logger.exception("Error generating response: %s", e)
-            yield f"data: {json.dumps({'type': 'error', 'message': sanitize_error_message(str(e))})}\n\n"
-
-        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+        service = create_query_service(repo_path)
+        async for chunk in service.answer_question_stream(
+            repo_path=repo_path,
+            question=question,
+            history=history,
+        ):
+            yield f"data: {json.dumps(chunk)}\n\n"
 
     return Response(
         stream_async_generator(generate_response),

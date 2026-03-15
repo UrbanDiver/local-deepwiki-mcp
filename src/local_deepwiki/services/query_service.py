@@ -7,12 +7,14 @@ RBAC permission checks and audit logging remain in the handler layer.
 from __future__ import annotations
 
 import time
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
 from local_deepwiki.config import Config
 from local_deepwiki.core.rate_limiter import get_rate_limiter
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.errors import sanitize_error_message
 from local_deepwiki.logging import get_logger
 from local_deepwiki.providers.base import LLMProvider
 
@@ -179,6 +181,71 @@ class QueryService:
             trace=trace.to_dict() if trace else None,
         )
 
+    async def answer_question_stream(
+        self,
+        repo_path: Path,
+        question: str,
+        *,
+        max_context: int = 15,
+        history: list[dict[str, str]] | None = None,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """Stream RAG results: sources -> tokens -> done.
+
+        Yields dicts suitable for SSE serialization:
+            {"type": "sources", "sources": [...]}
+            {"type": "token", "content": "..."}  (one per LLM chunk)
+            {"type": "done"}
+            {"type": "error", "message": "..."}  (on failure)
+
+        Args:
+            repo_path: Resolved path to the indexed repository.
+            question: The user's natural-language question.
+            max_context: Maximum code chunks for context.
+            history: Optional conversation history for follow-up questions.
+        """
+        # --- Retrieval ---
+        search_results = await self._vector_store.search(question, limit=max_context)
+
+        # Yield sources first (even if empty)
+        sources = _format_sources_for_stream(search_results)
+        yield {"type": "sources", "sources": sources}
+
+        if not search_results:
+            yield {
+                "type": "token",
+                "content": "No relevant code found for your question.",
+            }
+            yield {"type": "done"}
+            return
+
+        # --- Context construction ---
+        context = _build_context(search_results)
+
+        # --- Prompt construction (with optional history) ---
+        prompt = _build_prompt_with_history(question, history or [], context)
+        system_prompt = (
+            "You are a knowledgeable assistant for this codebase. "
+            "Answer questions as if you have read the entire repository. "
+            "Never say 'the provided code' or 'the code context' — "
+            "speak as if you naturally know the codebase. "
+            "Reference specific files and line numbers when relevant."
+        )
+
+        # --- LLM streaming ---
+        try:
+            async for text_chunk in self._llm_provider.generate_stream(
+                prompt, system_prompt=system_prompt, temperature=0.3
+            ):
+                yield {"type": "token", "content": text_chunk}
+        except Exception as e:  # noqa: BLE001 - Report LLM errors to user via stream
+            logger.exception("Error during streaming generation: %s", e)
+            yield {
+                "type": "error",
+                "message": sanitize_error_message(str(e)),
+            }
+
+        yield {"type": "done"}
+
     async def search_code(
         self,
         repo_path: Path,
@@ -288,3 +355,60 @@ def _build_source_entries(
             )
         )
     return tuple(entries)
+
+
+def _format_sources_for_stream(search_results: list[Any]) -> list[dict[str, Any]]:
+    """Format search results as source citations for streaming.
+
+    Returns a JSON-serializable list (not frozen dataclasses) suitable
+    for direct inclusion in SSE payloads.
+    """
+    sources: list[dict[str, Any]] = []
+    for r in search_results:
+        chunk = r.chunk
+        sources.append(
+            {
+                "file": chunk.file_path,
+                "lines": f"{chunk.start_line}-{chunk.end_line}",
+                "type": chunk.chunk_type.value,
+                "name": chunk.name,
+                "score": round(r.score, 3),
+            }
+        )
+    return sources
+
+
+def _build_prompt_with_history(
+    question: str, history: list[dict[str, str]], context: str
+) -> str:
+    """Build a prompt that includes conversation history for follow-up questions.
+
+    Args:
+        question: The current question.
+        history: Previous Q&A exchanges.
+        context: Code context from search results.
+
+    Returns:
+        A prompt string with history and context.
+    """
+    history_text = ""
+    # Include last 3 exchanges for context
+    for exchange in history[-3:]:
+        history_text += f"User: {exchange.get('question', '')}\n"
+        history_text += f"Assistant: {exchange.get('answer', '')}\n\n"
+
+    if history_text:
+        return (
+            f"Previous conversation:\n{history_text}\n"
+            f"Current question: {question}\n\n"
+            f"Relevant source code:\n{context}\n\n"
+            "Answer the current question, taking into account the "
+            "conversation history if relevant.\n"
+            "Reference specific files and line numbers when possible."
+        )
+    return (
+        f"Question: {question}\n\n"
+        f"Relevant source code:\n{context}\n\n"
+        "Answer the question clearly and accurately.\n"
+        "Reference specific files and line numbers when possible."
+    )

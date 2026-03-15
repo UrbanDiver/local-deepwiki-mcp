@@ -290,3 +290,145 @@ class TestQueryPreprocessing:
 
         search_query = vector_store.search.call_args[0][0]
         assert "TOOL_HANDLERS" in search_query or "handle_" in search_query
+
+
+class TestAnswerQuestionStream:
+    """Tests for QueryService.answer_question_stream."""
+
+    async def test_streams_sources_then_tokens_then_done(self, tmp_path: Path):
+        """Streaming should yield sources, then token chunks, then done."""
+        vector_store, llm_provider, config = _make_deps(tmp_path)
+        sr = _make_search_result()
+        vector_store.search = AsyncMock(return_value=[sr])
+
+        # Mock generate_stream to yield tokens
+        async def mock_stream(*args, **kwargs):
+            yield "Hello "
+            yield "world"
+
+        llm_provider.generate_stream = mock_stream
+
+        svc = QueryService(vector_store, llm_provider, config)
+        chunks: list[dict] = []
+        async for chunk in svc.answer_question_stream(
+            repo_path=tmp_path, question="What does hello do?"
+        ):
+            chunks.append(chunk)
+
+        # First chunk should be sources
+        assert chunks[0]["type"] == "sources"
+        assert isinstance(chunks[0]["sources"], list)
+        assert len(chunks[0]["sources"]) == 1
+        assert chunks[0]["sources"][0]["file"] == "src/main.py"
+
+        # Last chunk should be done
+        assert chunks[-1]["type"] == "done"
+
+        # Middle chunks should be tokens
+        token_chunks = [c for c in chunks if c["type"] == "token"]
+        assert len(token_chunks) == 2
+        assert token_chunks[0]["content"] == "Hello "
+        assert token_chunks[1]["content"] == "world"
+
+    async def test_stream_empty_results(self, tmp_path: Path):
+        """When search returns nothing, should yield sources, error token, and done."""
+        vector_store, llm_provider, config = _make_deps(tmp_path)
+        vector_store.search = AsyncMock(return_value=[])
+
+        svc = QueryService(vector_store, llm_provider, config)
+        chunks: list[dict] = []
+        async for chunk in svc.answer_question_stream(
+            repo_path=tmp_path, question="Unknown?"
+        ):
+            chunks.append(chunk)
+
+        # Should yield sources (empty), token with message, and done
+        assert chunks[0]["type"] == "sources"
+        assert chunks[0]["sources"] == []
+
+        token_chunks = [c for c in chunks if c["type"] == "token"]
+        assert any("No relevant code found" in c["content"] for c in token_chunks)
+
+        assert chunks[-1]["type"] == "done"
+
+    async def test_stream_with_history(self, tmp_path: Path):
+        """Streaming with conversation history should include history in prompt."""
+        vector_store, llm_provider, config = _make_deps(tmp_path)
+        sr = _make_search_result()
+        vector_store.search = AsyncMock(return_value=[sr])
+
+        captured_prompt = []
+
+        async def mock_stream(prompt, **kwargs):
+            captured_prompt.append(prompt)
+            yield "Answer"
+
+        llm_provider.generate_stream = mock_stream
+
+        history = [
+            {"question": "What is foo?", "answer": "Foo is a function."},
+        ]
+
+        svc = QueryService(vector_store, llm_provider, config)
+        chunks: list[dict] = []
+        async for chunk in svc.answer_question_stream(
+            repo_path=tmp_path,
+            question="Tell me more",
+            history=history,
+        ):
+            chunks.append(chunk)
+
+        # Prompt should contain history context
+        assert len(captured_prompt) == 1
+        assert "What is foo?" in captured_prompt[0]
+        assert "Foo is a function." in captured_prompt[0]
+        assert "Tell me more" in captured_prompt[0]
+
+    async def test_stream_llm_error_yields_error_chunk(self, tmp_path: Path):
+        """When LLM streaming fails, should yield error chunk and done."""
+        vector_store, llm_provider, config = _make_deps(tmp_path)
+        sr = _make_search_result()
+        vector_store.search = AsyncMock(return_value=[sr])
+
+        async def failing_stream(*args, **kwargs):
+            yield "Starting..."
+            raise RuntimeError("LLM connection failed")
+
+        llm_provider.generate_stream = failing_stream
+
+        svc = QueryService(vector_store, llm_provider, config)
+        chunks: list[dict] = []
+        async for chunk in svc.answer_question_stream(
+            repo_path=tmp_path, question="Test?"
+        ):
+            chunks.append(chunk)
+
+        # Should have sources, at least one token, error, and done
+        assert chunks[0]["type"] == "sources"
+        error_chunks = [c for c in chunks if c["type"] == "error"]
+        assert len(error_chunks) == 1
+        assert "message" in error_chunks[0]
+        assert chunks[-1]["type"] == "done"
+
+    async def test_stream_max_context_parameter(self, tmp_path: Path):
+        """max_context should be passed as limit to vector search."""
+        vector_store, llm_provider, config = _make_deps(tmp_path)
+        sr = _make_search_result()
+        vector_store.search = AsyncMock(return_value=[sr])
+
+        async def mock_stream(*args, **kwargs):
+            yield "Done"
+
+        llm_provider.generate_stream = mock_stream
+
+        svc = QueryService(vector_store, llm_provider, config)
+        chunks: list[dict] = []
+        async for chunk in svc.answer_question_stream(
+            repo_path=tmp_path, question="Test?", max_context=5
+        ):
+            chunks.append(chunk)
+
+        # Should pass max_context as limit to vector store search
+        call_kwargs = vector_store.search.call_args
+        assert call_kwargs[1]["limit"] == 5
+        assert chunks[0]["type"] == "sources"
