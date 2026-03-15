@@ -184,6 +184,9 @@ class ResearchCheckpoint(BaseModel):
     allowing it to be saved after each step and resumed if interrupted.
     """
 
+    schema_version: int = Field(
+        default=1, description="Schema version for checkpoint compatibility"
+    )
     research_id: str = Field(description="UUID for this research session")
     question: str = Field(description="Original research question")
     repo_path: str = Field(description="Path to the repository being researched")

@@ -59,7 +59,7 @@ class MockLLMProvider(LLMProvider):
         self.call_count += 1
         return response
 
-    async def generate_stream(
+    async def _generate_stream_impl(
         self,
         prompt: str,
         system_prompt: str | None = None,
@@ -568,6 +568,107 @@ class TestCheckpointHelperFunctions:
 
         # Verify it's gone
         assert get_research_checkpoint(tmp_path, "delete-test") is None
+
+
+class TestCheckpointSchemaVersion:
+    """Tests for checkpoint schema versioning."""
+
+    @pytest.fixture
+    def checkpoint_manager(self, tmp_path):
+        """Create a checkpoint manager with a temp directory."""
+        return CheckpointManager(tmp_path)
+
+    def test_checkpoint_includes_schema_version(self, checkpoint_manager, tmp_path):
+        """Saved checkpoint has schema_version: 1."""
+        checkpoint = ResearchCheckpoint(
+            research_id="version-test",
+            question="What is versioning?",
+            repo_path=str(tmp_path),
+            started_at=time.time(),
+            updated_at=time.time(),
+            current_step=ResearchCheckpointStep.RETRIEVAL,
+            completed_steps=["decomposition"],
+        )
+        checkpoint_manager.save_checkpoint(checkpoint)
+
+        # Read the raw JSON to verify schema_version is present
+        checkpoint_path = checkpoint_manager._checkpoint_path("version-test")
+        data = json.loads(checkpoint_path.read_text())
+        assert "schema_version" in data
+        assert data["schema_version"] == 1
+
+    def test_loading_incompatible_checkpoint_raises(self, checkpoint_manager, tmp_path):
+        """Checkpoint with schema_version: 999 raises ValueError."""
+        # Write a checkpoint with an incompatible version directly
+        checkpoint_manager._ensure_dir()
+        checkpoint_path = checkpoint_manager._checkpoint_path("bad-version")
+        data = {
+            "schema_version": 999,
+            "research_id": "bad-version",
+            "question": "test",
+            "repo_path": str(tmp_path),
+            "started_at": time.time(),
+            "updated_at": time.time(),
+            "current_step": "retrieval",
+            "completed_steps": [],
+        }
+        checkpoint_path.write_text(json.dumps(data))
+
+        with pytest.raises(ValueError, match="incompatible checkpoint version"):
+            checkpoint_manager.load_checkpoint("bad-version")
+
+    def test_loading_compatible_checkpoint_succeeds(self, checkpoint_manager, tmp_path):
+        """Checkpoint with schema_version: 1 loads successfully."""
+        checkpoint = ResearchCheckpoint(
+            research_id="compat-test",
+            question="Is this compatible?",
+            repo_path=str(tmp_path),
+            started_at=time.time(),
+            updated_at=time.time(),
+            current_step=ResearchCheckpointStep.SYNTHESIS,
+            completed_steps=["decomposition", "retrieval"],
+        )
+        checkpoint_manager.save_checkpoint(checkpoint)
+
+        loaded = checkpoint_manager.load_checkpoint("compat-test")
+        assert loaded is not None
+        assert loaded.schema_version == 1
+        assert loaded.research_id == "compat-test"
+
+    def test_list_checkpoints_skips_incompatible_version(
+        self, checkpoint_manager, tmp_path
+    ):
+        """list_checkpoints should skip checkpoints with incompatible versions."""
+        # Save a valid checkpoint
+        valid = ResearchCheckpoint(
+            research_id="valid-1",
+            question="Valid question",
+            repo_path=str(tmp_path),
+            started_at=time.time(),
+            updated_at=time.time(),
+            current_step=ResearchCheckpointStep.RETRIEVAL,
+            completed_steps=["decomposition"],
+        )
+        checkpoint_manager.save_checkpoint(valid)
+
+        # Write an incompatible checkpoint directly
+        checkpoint_manager._ensure_dir()
+        bad_path = checkpoint_manager._checkpoint_path("bad-version")
+        bad_data = {
+            "schema_version": 999,
+            "research_id": "bad-version",
+            "question": "test",
+            "repo_path": str(tmp_path),
+            "started_at": time.time(),
+            "updated_at": time.time(),
+            "current_step": "retrieval",
+            "completed_steps": [],
+        }
+        bad_path.write_text(json.dumps(bad_data))
+
+        checkpoints = checkpoint_manager.list_checkpoints()
+        assert len(checkpoints) == 1
+        assert checkpoints[0].research_id == "valid-1"
 
 
 class TestSearchResultSerialization:

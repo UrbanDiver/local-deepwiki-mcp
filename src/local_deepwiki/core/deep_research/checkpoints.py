@@ -71,6 +71,9 @@ class CheckpointManager:
 
         Returns:
             The loaded checkpoint, or None if not found.
+
+        Raises:
+            ValueError: If the checkpoint has an incompatible schema version.
         """
         checkpoint_path = self._checkpoint_path(research_id)
         if not checkpoint_path.exists():
@@ -78,8 +81,11 @@ class CheckpointManager:
 
         try:
             data = json.loads(checkpoint_path.read_text())
+            version = data.get("schema_version", 1)
+            if version != 1:
+                raise ValueError("incompatible checkpoint version")
             return ResearchCheckpoint.model_validate(data)
-        except (json.JSONDecodeError, ValueError) as e:
+        except json.JSONDecodeError as e:
             logger.warning("Failed to load checkpoint %s: %s", research_id, e)
             return None
 
@@ -96,6 +102,14 @@ class CheckpointManager:
         for path in self.checkpoint_dir.glob("*.json"):
             try:
                 data = json.loads(path.read_text())
+                version = data.get("schema_version", 1)
+                if version != 1:
+                    logger.warning(
+                        "Skipping checkpoint %s: incompatible schema version %s",
+                        path.name,
+                        version,
+                    )
+                    continue
                 checkpoint = ResearchCheckpoint.model_validate(data)
                 checkpoints.append(checkpoint)
             except (json.JSONDecodeError, ValueError) as e:
