@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -64,6 +65,27 @@ from local_deepwiki.prompts import PromptManager
 from local_deepwiki.providers.llm import get_cached_llm_provider
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class WikiGenerationOptions:
+    """Options for wiki generation, replacing the large function signature.
+
+    Encapsulates all parameters needed by ``generate_wiki()`` into a single
+    frozen dataclass.  The function still accepts individual keyword arguments
+    for backward compatibility, but new callers should prefer passing an
+    ``options`` instance.
+    """
+
+    repo_path: Path
+    wiki_path: Path
+    vector_store: "VectorStore"
+    index_status: "IndexStatus"
+    config: Config | None = None
+    llm_provider: str | None = None
+    progress_callback: ProgressCallback | None = None
+    full_rebuild: bool = False
+    max_file_pages: int | None = None
 
 
 class _GenerationContext:
@@ -758,37 +780,71 @@ class WikiGenerator:
 
 
 async def generate_wiki(
-    repo_path: Path,
-    wiki_path: Path,
-    vector_store: VectorStore,
-    index_status: IndexStatus,
+    repo_path: Path | None = None,
+    wiki_path: Path | None = None,
+    vector_store: VectorStore | None = None,
+    index_status: IndexStatus | None = None,
     *,
+    options: WikiGenerationOptions | None = None,
     config: Config | None = None,
     llm_provider: str | None = None,
     progress_callback: ProgressCallback | None = None,
     full_rebuild: bool = False,
     max_file_pages: int | None = None,
 ) -> WikiStructure:
-    """Convenience function to generate wiki documentation."""
+    """Convenience function to generate wiki documentation.
+
+    Accepts either a ``WikiGenerationOptions`` instance via ``options`` or
+    individual keyword arguments for backward compatibility.  When ``options``
+    is provided, its values take precedence and individual keyword arguments
+    are ignored.
+    """
     from local_deepwiki.core.git_utils import is_github_repo
 
-    config = config or get_config()
+    # Build options from individual kwargs when not provided directly
+    if options is not None:
+        opts = options
+    else:
+        if repo_path is None:
+            raise TypeError("repo_path is required when options is not provided")
+        if wiki_path is None:
+            raise TypeError("wiki_path is required when options is not provided")
+        if vector_store is None:
+            raise TypeError("vector_store is required when options is not provided")
+        if index_status is None:
+            raise TypeError("index_status is required when options is not provided")
+        opts = WikiGenerationOptions(
+            repo_path=repo_path,
+            wiki_path=wiki_path,
+            vector_store=vector_store,
+            index_status=index_status,
+            config=config,
+            llm_provider=llm_provider,
+            progress_callback=progress_callback,
+            full_rebuild=full_rebuild,
+            max_file_pages=max_file_pages,
+        )
+
+    resolved_config = opts.config or get_config()
 
     # Auto-switch to cloud provider for GitHub repos if configured
-    effective_provider = llm_provider
-    if effective_provider is None and config.wiki.use_cloud_for_github:
-        if is_github_repo(repo_path):
-            effective_provider = config.wiki.github_llm_provider
+    effective_provider = opts.llm_provider
+    if effective_provider is None and resolved_config.wiki.use_cloud_for_github:
+        if is_github_repo(opts.repo_path):
+            effective_provider = resolved_config.wiki.github_llm_provider
             logger.info(
                 "GitHub repo detected, using cloud provider: %s", effective_provider
             )
 
     generator = WikiGenerator(
-        wiki_path=wiki_path,
-        vector_store=vector_store,
-        config=config,
+        wiki_path=opts.wiki_path,
+        vector_store=opts.vector_store,
+        config=resolved_config,
         llm_provider_name=effective_provider,
     )
     return await generator.generate(
-        index_status, progress_callback, full_rebuild, max_file_pages=max_file_pages
+        opts.index_status,
+        opts.progress_callback,
+        opts.full_rebuild,
+        max_file_pages=opts.max_file_pages,
     )

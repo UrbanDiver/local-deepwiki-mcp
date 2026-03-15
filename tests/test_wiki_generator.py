@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from local_deepwiki.generators.wiki.generator import WikiGenerationOptions
 from local_deepwiki.models import (
     FileInfo,
     IndexStatus,
@@ -1003,3 +1004,148 @@ class TestCacheStatisticsLogging:
                     # Should complete successfully
                     assert result is not None
                     assert len(result.pages) > 0
+
+
+class TestWikiGenerationOptions:
+    """Tests for the WikiGenerationOptions frozen dataclass."""
+
+    def test_defaults(self):
+        """WikiGenerationOptions should have sensible defaults matching generate_wiki()."""
+        opts = WikiGenerationOptions(
+            repo_path=Path("/repo"),
+            wiki_path=Path("/wiki"),
+            vector_store=MagicMock(),
+            index_status=make_index_status(repo_path="/repo"),
+        )
+        assert opts.repo_path == Path("/repo")
+        assert opts.wiki_path == Path("/wiki")
+        assert opts.config is None
+        assert opts.llm_provider is None
+        assert opts.progress_callback is None
+        assert opts.full_rebuild is False
+        assert opts.max_file_pages is None
+
+    def test_immutable(self):
+        """WikiGenerationOptions should be frozen."""
+        opts = WikiGenerationOptions(
+            repo_path=Path("/repo"),
+            wiki_path=Path("/wiki"),
+            vector_store=MagicMock(),
+            index_status=make_index_status(repo_path="/repo"),
+        )
+        with pytest.raises(AttributeError):
+            opts.repo_path = Path("/other")
+
+    def test_custom_values(self):
+        """WikiGenerationOptions should accept custom values."""
+        mock_vs = MagicMock()
+        mock_config = MagicMock()
+        mock_cb = MagicMock()
+        status = make_index_status(repo_path="/repo")
+        opts = WikiGenerationOptions(
+            repo_path=Path("/repo"),
+            wiki_path=Path("/wiki"),
+            vector_store=mock_vs,
+            index_status=status,
+            config=mock_config,
+            llm_provider="anthropic",
+            progress_callback=mock_cb,
+            full_rebuild=True,
+            max_file_pages=50,
+        )
+        assert opts.config is mock_config
+        assert opts.llm_provider == "anthropic"
+        assert opts.progress_callback is mock_cb
+        assert opts.full_rebuild is True
+        assert opts.max_file_pages == 50
+
+    def test_slots(self):
+        """WikiGenerationOptions should use __slots__ for memory efficiency."""
+        assert hasattr(WikiGenerationOptions, "__slots__")
+
+    @pytest.mark.asyncio
+    async def test_generate_wiki_accepts_options(self, tmp_path):
+        """generate_wiki() should accept a WikiGenerationOptions object."""
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
+            config = MagicMock()
+            config.llm = MagicMock()
+            config.wiki = MagicMock()
+            config.wiki.use_cloud_for_github = False
+            config.model_copy.return_value = config
+            config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
+            mock_config.return_value = config
+
+            with patch(
+                "local_deepwiki.generators.wiki.generator.WikiGenerator"
+            ) as mock_gen_class:
+                mock_generator = MagicMock()
+                mock_generator.generate = AsyncMock(return_value=MagicMock())
+                mock_gen_class.return_value = mock_generator
+
+                from local_deepwiki.generators.wiki.generator import generate_wiki
+
+                mock_vector_store = MagicMock()
+                index_status = make_index_status(repo_path=str(tmp_path))
+
+                opts = WikiGenerationOptions(
+                    repo_path=tmp_path,
+                    wiki_path=tmp_path / ".wiki",
+                    vector_store=mock_vector_store,
+                    index_status=index_status,
+                    full_rebuild=True,
+                )
+
+                await generate_wiki(options=opts)
+
+                mock_gen_class.assert_called_once()
+                mock_generator.generate.assert_called_once()
+                call_kwargs = mock_generator.generate.call_args
+                assert call_kwargs[0][0] is index_status
+                assert (
+                    call_kwargs[1].get(
+                        "full_rebuild",
+                        call_kwargs[0][2] if len(call_kwargs[0]) > 2 else None,
+                    )
+                    is True
+                    or call_kwargs[0][2] is True
+                )
+
+    @pytest.mark.asyncio
+    async def test_generate_wiki_backward_compat(self, tmp_path):
+        """generate_wiki() should still work with individual keyword arguments."""
+        with patch(
+            "local_deepwiki.generators.wiki.generator.get_config"
+        ) as mock_config:
+            config = MagicMock()
+            config.llm = MagicMock()
+            config.wiki = MagicMock()
+            config.wiki.use_cloud_for_github = False
+            config.model_copy.return_value = config
+            config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
+            mock_config.return_value = config
+
+            with patch(
+                "local_deepwiki.generators.wiki.generator.WikiGenerator"
+            ) as mock_gen_class:
+                mock_generator = MagicMock()
+                mock_generator.generate = AsyncMock(return_value=MagicMock())
+                mock_gen_class.return_value = mock_generator
+
+                from local_deepwiki.generators.wiki.generator import generate_wiki
+
+                mock_vector_store = MagicMock()
+                index_status = make_index_status(repo_path=str(tmp_path))
+
+                # Old-style invocation (no options param)
+                await generate_wiki(
+                    repo_path=tmp_path,
+                    wiki_path=tmp_path / ".wiki",
+                    vector_store=mock_vector_store,
+                    index_status=index_status,
+                    full_rebuild=True,
+                )
+
+                mock_gen_class.assert_called_once()
+                mock_generator.generate.assert_called_once()
