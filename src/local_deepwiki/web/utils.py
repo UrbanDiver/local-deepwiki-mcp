@@ -3,10 +3,21 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
+    from local_deepwiki.config import Config
+    from local_deepwiki.core.vectorstore import VectorStore
+    from local_deepwiki.providers.base import LLMProvider
     from local_deepwiki.services.query_service import QueryService
+
+
+class WebProviders(NamedTuple):
+    """Shared providers for web route handlers."""
+
+    vector_store: "VectorStore"
+    llm: "LLMProvider"
+    config: "Config"
 
 
 def get_wiki_path() -> Path | None:
@@ -28,25 +39,23 @@ def get_wiki_path() -> Path | None:
     return _app_module.WIKI_PATH
 
 
-def create_query_service(repo_path: Path) -> "QueryService":
-    """Create a QueryService with providers from config.
+def create_providers(repo_path: Path) -> WebProviders:
+    """Create shared providers from config.
 
-    Encapsulates the repeated provider setup pattern used across
-    chat, codemap, and research routes: get_config -> embedding provider ->
-    vector store -> LLM provider -> QueryService.
+    Encapsulates the repeated provider setup: get_config -> embedding provider ->
+    vector store -> LLM provider. Used by codemap, research, and chat routes.
 
     Args:
         repo_path: Path to the repository root.
 
     Returns:
-        A configured QueryService instance.
+        A WebProviders named tuple with vector_store, llm, and config.
     """
     from local_deepwiki.config import get_config
     from local_deepwiki.core.vectorstore import VectorStore
     from local_deepwiki.logging import get_logger
     from local_deepwiki.providers.embeddings import get_embedding_provider
     from local_deepwiki.providers.llm import get_cached_llm_provider
-    from local_deepwiki.services.query_service import QueryService
 
     logger = get_logger(__name__)
     config = get_config()
@@ -56,12 +65,11 @@ def create_query_service(repo_path: Path) -> "QueryService":
     vector_store = VectorStore(vector_db_path, embedding_provider)
     cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
 
-    # Determine LLM config for chat - use chat_llm_provider if set
     llm_config = config.llm
     chat_provider = config.wiki.chat_llm_provider
     if chat_provider != "default":
         llm_config = llm_config.model_copy(update={"provider": chat_provider})
-        logger.info("Using %s provider for chat", chat_provider)
+        logger.info("Using %s provider", chat_provider)
 
     llm = get_cached_llm_provider(
         cache_path=cache_path,
@@ -70,4 +78,22 @@ def create_query_service(repo_path: Path) -> "QueryService":
         llm_config=llm_config,
     )
 
-    return QueryService(vector_store, llm, config)
+    return WebProviders(vector_store, llm, config)
+
+
+def create_query_service(repo_path: Path) -> "QueryService":
+    """Create a QueryService with providers from config.
+
+    Delegates to :func:`create_providers` for the shared provider setup,
+    then wraps the result in a QueryService.
+
+    Args:
+        repo_path: Path to the repository root.
+
+    Returns:
+        A configured QueryService instance.
+    """
+    from local_deepwiki.services.query_service import QueryService
+
+    providers = create_providers(repo_path)
+    return QueryService(providers.vector_store, providers.llm, providers.config)

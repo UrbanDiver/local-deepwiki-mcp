@@ -65,35 +65,18 @@ def api_codemap_overview() -> Response | tuple[Response, int]:
         repo_path = wiki_path.parent
 
     async def _fetch_overview() -> dict:
-        from local_deepwiki.config import get_config
-        from local_deepwiki.core.vectorstore import VectorStore
         from local_deepwiki.generators.codemap.overview import build_overview
-        from local_deepwiki.providers.embeddings import get_embedding_provider
-        from local_deepwiki.providers.llm import get_cached_llm_provider
+        from local_deepwiki.web.utils import create_providers
 
-        config = get_config()
-        vector_db_path = config.get_vector_db_path(repo_path)
+        providers = create_providers(repo_path)
+        vector_db_path = providers.config.get_vector_db_path(repo_path)
 
         if not vector_db_path.exists():
             return {"modules": [], "edges": [], "summary": ""}
 
-        embedding_provider = get_embedding_provider(config.embedding)
-        vector_store = VectorStore(vector_db_path, embedding_provider)
-
-        cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
-        llm_config = config.llm
-        chat_provider = config.wiki.chat_llm_provider
-        if chat_provider != "default":
-            llm_config = llm_config.model_copy(update={"provider": chat_provider})
-
-        llm = get_cached_llm_provider(
-            cache_path=cache_path,
-            embedding_provider=embedding_provider,
-            cache_config=config.llm_cache,
-            llm_config=llm_config,
+        result = await build_overview(
+            providers.vector_store, str(repo_path), providers.llm
         )
-
-        result = await build_overview(vector_store, str(repo_path), llm)
         return {
             "modules": [
                 {
@@ -149,22 +132,17 @@ def api_codemap_topics() -> Response | tuple[Response, int]:
         repo_path = wiki_path.parent
 
     async def _fetch_topics() -> list[dict]:
-        from local_deepwiki.config import get_config
-        from local_deepwiki.core.vectorstore import VectorStore
         from local_deepwiki.generators.codemap import suggest_topics
-        from local_deepwiki.providers.embeddings import get_embedding_provider
+        from local_deepwiki.web.utils import create_providers
 
-        config = get_config()
-        vector_db_path = config.get_vector_db_path(repo_path)
+        providers = create_providers(repo_path)
+        vector_db_path = providers.config.get_vector_db_path(repo_path)
 
         if not vector_db_path.exists():
             return []
 
-        embedding_provider = get_embedding_provider(config.embedding)
-        vector_store = VectorStore(vector_db_path, embedding_provider)
-
         try:
-            return await suggest_topics(vector_store, repo_path)
+            return await suggest_topics(providers.vector_store, repo_path)
         except Exception:  # noqa: BLE001 - Graceful degradation for topic suggestions
             logger.exception("Failed to generate codemap topics")
             return []
@@ -266,14 +244,11 @@ def api_codemap() -> Response | tuple[Response, int]:
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
             return
 
-        from local_deepwiki.config import get_config
-        from local_deepwiki.core.vectorstore import VectorStore
         from local_deepwiki.generators.codemap import CodemapFocus, generate_codemap
-        from local_deepwiki.providers.embeddings import get_embedding_provider
-        from local_deepwiki.providers.llm import get_cached_llm_provider
+        from local_deepwiki.web.utils import create_providers
 
-        config = get_config()
-        vector_db_path = config.get_vector_db_path(repo_path)
+        providers = create_providers(repo_path)
+        vector_db_path = providers.config.get_vector_db_path(repo_path)
 
         if not vector_db_path.exists():
             yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
@@ -281,21 +256,8 @@ def api_codemap() -> Response | tuple[Response, int]:
 
         yield f"data: {json.dumps({'type': 'progress', 'message': 'Initializing providers...'})}\n\n"
 
-        embedding_provider = get_embedding_provider(config.embedding)
-        vector_store = VectorStore(vector_db_path, embedding_provider)
-        cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
-
-        llm_config = config.llm
-        chat_provider = config.wiki.chat_llm_provider
-        if chat_provider != "default":
-            llm_config = llm_config.model_copy(update={"provider": chat_provider})
-
-        llm = get_cached_llm_provider(
-            cache_path=cache_path,
-            embedding_provider=embedding_provider,
-            cache_config=config.llm_cache,
-            llm_config=llm_config,
-        )
+        vector_store = providers.vector_store
+        llm = providers.llm
 
         yield f"data: {json.dumps({'type': 'progress', 'message': 'Building codemap graph...'})}\n\n"
 

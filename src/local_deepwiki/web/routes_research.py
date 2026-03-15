@@ -61,39 +61,19 @@ def api_research() -> Response | tuple[Response, int]:
 
     async def run_research() -> AsyncIterator[str]:
         """Async generator that runs deep research with progress updates."""
-        from local_deepwiki.config import get_config
         from local_deepwiki.core.deep_research import DeepResearchPipeline
-        from local_deepwiki.core.vectorstore import VectorStore
         from local_deepwiki.models import ResearchProgress
-        from local_deepwiki.providers.embeddings import get_embedding_provider
-        from local_deepwiki.providers.llm import get_cached_llm_provider
+        from local_deepwiki.web.utils import create_providers
 
-        config = get_config()
-        vector_db_path = config.get_vector_db_path(repo_path)
+        providers = create_providers(repo_path)
+        vector_db_path = providers.config.get_vector_db_path(repo_path)
 
         if not vector_db_path.exists():
             yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
             return
 
-        # Setup providers
-        embedding_provider = get_embedding_provider(config.embedding)
-        vector_store = VectorStore(vector_db_path, embedding_provider)
-        cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
-
-        # Determine LLM config for research - use chat_llm_provider if set
-        llm_config = config.llm
-        chat_provider = config.wiki.chat_llm_provider
-        if chat_provider != "default":
-            # Override provider for research
-            llm_config = llm_config.model_copy(update={"provider": chat_provider})
-            logger.info("Using %s provider for deep research", chat_provider)
-
-        llm = get_cached_llm_provider(
-            cache_path=cache_path,
-            embedding_provider=embedding_provider,
-            cache_config=config.llm_cache,
-            llm_config=llm_config,
-        )
+        vector_store = providers.vector_store
+        llm = providers.llm
 
         # Progress callback
         async def on_progress(progress: ResearchProgress) -> None:
@@ -120,7 +100,7 @@ def api_research() -> Response | tuple[Response, int]:
             progress_queue.put(progress_data)
 
         # Create pipeline with config parameters
-        dr_config = config.deep_research
+        dr_config = providers.config.deep_research
         pipeline = DeepResearchPipeline(
             vector_store=vector_store,
             llm_provider=llm,
