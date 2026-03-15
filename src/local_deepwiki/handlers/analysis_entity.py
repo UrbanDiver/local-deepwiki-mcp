@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -110,7 +111,9 @@ async def _collect_inheritance(
 ) -> None:
     """Collect inheritance hierarchy for a class entity."""
     try:
-        from local_deepwiki.generators.analysis.inheritance import collect_class_hierarchy
+        from local_deepwiki.generators.analysis.inheritance import (
+            collect_class_hierarchy,
+        )
 
         classes = await collect_class_hierarchy(index_status, vector_store)
         class_node = classes.get(entity_name)
@@ -382,6 +385,81 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
 # ---------------------------------------------------------------------------
 
 
+def _has_import_of_module(content: str, module_stem: str) -> bool:
+    """Check whether *content* contains an import line referencing *module_stem*.
+
+    Only matches actual ``import`` or ``from ... import`` statements, not
+    arbitrary string mentions of the module name.
+    """
+    # Matches: "from <module_stem> import ..." or "import <module_stem>"
+    # Also matches dotted paths like "from pkg.<module_stem> import ..."
+    pattern = (
+        rf"(?:^|\n)\s*(?:from\s+\S*\.?{re.escape(module_stem)}\s+import"
+        rf"|import\s+\S*\.?{re.escape(module_stem)})\b"
+    )
+    return re.search(pattern, content) is not None
+
+
+def _find_cross_file_callers(
+    extractor: Any,
+    repo_path: Path,
+    target_file: Path,
+    module_stem: str,
+    target_entities: set[str],
+) -> dict[str, list[str]]:
+    """Scan other source files in *repo_path* for callers of *target_entities*.
+
+    Returns a mapping of ``target_entity -> [qualified_caller, ...]`` where
+    each qualified caller is formatted as ``relative/path.py:caller_name``.
+    """
+    from local_deepwiki.core.parser.languages import EXTENSION_MAP
+
+    cross_callers: dict[str, list[str]] = {}
+    resolved_target = target_file.resolve()
+    supported_suffixes = set(EXTENSION_MAP.keys())
+
+    for candidate in repo_path.rglob("*"):
+        if not candidate.is_file():
+            continue
+        if candidate.suffix.lower() not in supported_suffixes:
+            continue
+        if candidate.resolve() == resolved_target:
+            continue
+        # Skip hidden directories and common non-source trees
+        rel_parts = candidate.relative_to(repo_path).parts
+        if any(part.startswith(".") or part == "node_modules" for part in rel_parts):
+            continue
+
+        try:
+            content = candidate.read_text(errors="ignore")
+        except OSError:
+            continue
+
+        if not _has_import_of_module(content, module_stem):
+            continue
+
+        # This file imports the target module — extract its call graph
+        try:
+            cand_call_graph = extractor.extract_from_file(
+                candidate.resolve(), repo_path
+            )
+        except (OSError, ValueError, RuntimeError):
+            continue
+
+        rel_path = str(candidate.relative_to(repo_path))
+
+        for caller_func, callees in cand_call_graph.items():
+            for callee in callees:
+                if callee in target_entities:
+                    qualified = f"{rel_path}:{caller_func}"
+                    if callee not in cross_callers:
+                        cross_callers[callee] = []
+                    if qualified not in cross_callers[callee]:
+                        cross_callers[callee].append(qualified)
+
+    return cross_callers
+
+
 def _collect_reverse_calls(
     result: dict[str, Any],
     full_file: Path,
@@ -391,7 +469,13 @@ def _collect_reverse_calls(
     affected_files: set[str],
     affected_entities: set[str],
 ) -> None:
-    """Extract reverse call graph and update affected sets."""
+    """Extract reverse call graph and update affected sets.
+
+    After building the single-file reverse graph, scans other source files
+    in *repo_path* that import the target module and merges any cross-file
+    callers into the result.  Cross-file callers are qualified as
+    ``relative/path.py:function_name``.
+    """
     try:
         from local_deepwiki.generators.analysis.callgraph import (
             CallGraphExtractor,
@@ -402,6 +486,28 @@ def _collect_reverse_calls(
         call_graph = extractor.extract_from_file(full_file.resolve(), repo_path)
         reverse_graph = build_reverse_call_graph(call_graph)
 
+        # Determine which entities from the target file to look for cross-file
+        target_module_stem = Path(file_path).stem
+        all_target_entities = set(call_graph.keys()) | set(reverse_graph.keys())
+        # Also include entities that are defined but never called within the file
+        # (they only appear in call_graph keys if they call something)
+        # Add the entity_name itself if provided
+        if entity_name:
+            all_target_entities.add(entity_name)
+
+        # Scan cross-file callers
+        cross_callers = _find_cross_file_callers(
+            extractor, repo_path, full_file, target_module_stem, all_target_entities
+        )
+
+        # Merge cross-file callers into reverse_graph
+        for callee, callers in cross_callers.items():
+            if callee not in reverse_graph:
+                reverse_graph[callee] = []
+            for caller in callers:
+                if caller not in reverse_graph[callee]:
+                    reverse_graph[callee].append(caller)
+
         if entity_name:
             reverse_graph = {k: v for k, v in reverse_graph.items() if k == entity_name}
 
@@ -411,7 +517,11 @@ def _collect_reverse_calls(
             affected_entities.add(callee)
             for caller in callers:
                 affected_entities.add(caller)
-                if "." in caller:
+                if ":" in caller:
+                    # Cross-file caller: "relative/path.py:func_name"
+                    rel_file = caller.split(":")[0]
+                    affected_files.add(rel_file)
+                elif "." in caller:
                     affected_files.add(caller.rsplit(".", 1)[0])
     except (OSError, ValueError, RuntimeError) as exc:
         # OSError: file read errors; ValueError: parsing errors; RuntimeError: tree-sitter errors
@@ -435,7 +545,9 @@ async def _collect_inheritance_dependents(
 ) -> None:
     """Collect classes that inherit from classes in *file_path*."""
     try:
-        from local_deepwiki.generators.analysis.inheritance import collect_class_hierarchy
+        from local_deepwiki.generators.analysis.inheritance import (
+            collect_class_hierarchy,
+        )
 
         assert vector_store is not None
         classes = await collect_class_hierarchy(index_status, vector_store)
