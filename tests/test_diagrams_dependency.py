@@ -804,3 +804,203 @@ class TestExternalEdgeFromIdMissing:
         assert len(lines) == 1
         assert "M0" in lines[0]
         assert "E0" in lines[0]
+
+
+class TestCollectDependenciesFallback:
+    """Tests for _collect_dependencies fallback to non-IMPORT chunks."""
+
+    def test_collects_from_import_chunks(self):
+        """Existing behavior: IMPORT chunks are processed normally."""
+        from local_deepwiki.generators.diagrams import _collect_dependencies
+
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content="from myproject.core.chunker import chunk",
+                chunk_type=ChunkType.IMPORT,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=1,
+            ),
+        ]
+        data = _collect_dependencies(
+            chunks, "myproject", show_external=False, exclude_tests=False
+        )
+        parser_deps = data.dependencies.get("core.parser", set())
+        assert "core.chunker" in parser_deps
+
+    def test_fallback_scans_module_chunks_for_imports(self):
+        """When no IMPORT chunks exist for a file, scan MODULE chunk content."""
+        from local_deepwiki.generators.diagrams import _collect_dependencies
+
+        # Only MODULE chunks, no IMPORT chunks at all
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content=(
+                    "from myproject.core.chunker import chunk\n"
+                    "import os\n"
+                    "\n"
+                    "def parse():\n"
+                    "    pass"
+                ),
+                chunk_type=ChunkType.MODULE,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=5,
+            ),
+        ]
+        data = _collect_dependencies(
+            chunks, "myproject", show_external=False, exclude_tests=False
+        )
+        parser_deps = data.dependencies.get("core.parser", set())
+        assert "core.chunker" in parser_deps, (
+            "Fallback should extract imports from MODULE chunks"
+        )
+
+    def test_no_double_counting_when_both_exist(self):
+        """If both IMPORT and MODULE chunks exist for a file, don't double-count."""
+        from local_deepwiki.generators.diagrams import _collect_dependencies
+
+        chunks = [
+            # IMPORT chunk for parser.py
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content="from myproject.core.chunker import chunk",
+                chunk_type=ChunkType.IMPORT,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=1,
+            ),
+            # MODULE chunk for the same file, also contains the import line
+            CodeChunk(
+                id="2",
+                file_path="src/myproject/core/parser.py",
+                content=(
+                    "from myproject.core.chunker import chunk\n"
+                    "from myproject.utils.helpers import clean\n"
+                    "\n"
+                    "def parse():\n"
+                    "    pass"
+                ),
+                chunk_type=ChunkType.MODULE,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=5,
+            ),
+        ]
+        data = _collect_dependencies(
+            chunks, "myproject", show_external=False, exclude_tests=False
+        )
+        parser_deps = data.dependencies.get("core.parser", set())
+        # The IMPORT chunk provides chunker; MODULE chunk should NOT be scanned
+        # because parser.py already has a dedicated IMPORT chunk
+        assert "core.chunker" in parser_deps
+        assert "utils.helpers" not in parser_deps, (
+            "MODULE chunk should not be scanned when IMPORT chunk exists for the same file"
+        )
+
+    def test_fallback_scans_function_chunks_for_imports(self):
+        """Fallback should also work with FUNCTION chunks (not just MODULE)."""
+        from local_deepwiki.generators.diagrams import _collect_dependencies
+
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content=(
+                    "from myproject.core.chunker import chunk\n"
+                    "def parse():\n"
+                    "    return chunk()"
+                ),
+                chunk_type=ChunkType.FUNCTION,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=3,
+            ),
+        ]
+        data = _collect_dependencies(
+            chunks, "myproject", show_external=False, exclude_tests=False
+        )
+        parser_deps = data.dependencies.get("core.parser", set())
+        assert "core.chunker" in parser_deps, (
+            "Fallback should extract imports from FUNCTION chunks"
+        )
+
+    def test_fallback_respects_exclude_tests(self):
+        """Fallback scanning should still respect the exclude_tests flag."""
+        from local_deepwiki.generators.diagrams import _collect_dependencies
+
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="tests/test_parser.py",
+                content=(
+                    "from myproject.core.parser import parse\n"
+                    "def test_parse():\n"
+                    "    pass"
+                ),
+                chunk_type=ChunkType.MODULE,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=3,
+            ),
+        ]
+        data = _collect_dependencies(
+            chunks, "myproject", show_external=False, exclude_tests=True
+        )
+        # Test module should be excluded entirely
+        assert "test_parser" not in data.all_internal_modules
+
+    def test_fallback_collects_external_deps(self):
+        """Fallback scanning should also collect external dependencies."""
+        from local_deepwiki.generators.diagrams import _collect_dependencies
+
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content=("import os\nfrom pathlib import Path\ndef parse():\n    pass"),
+                chunk_type=ChunkType.MODULE,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=4,
+            ),
+        ]
+        data = _collect_dependencies(
+            chunks, "myproject", show_external=True, exclude_tests=False
+        )
+        assert data.external_deps["os"] >= 1
+        assert data.external_deps["pathlib"] >= 1
+
+    def test_fallback_skips_non_import_lines(self):
+        """Fallback scanning should skip lines that aren't import statements."""
+        from local_deepwiki.generators.diagrams import _collect_dependencies
+
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content=(
+                    "from myproject.core.chunker import chunk\n"
+                    "# This is a comment\n"
+                    "x = 42\n"
+                    "def parse():\n"
+                    "    pass"
+                ),
+                chunk_type=ChunkType.MODULE,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=5,
+            ),
+        ]
+        data = _collect_dependencies(
+            chunks, "myproject", show_external=False, exclude_tests=False
+        )
+        parser_deps = data.dependencies.get("core.parser", set())
+        # Should only find chunker, not any false positives from non-import lines
+        assert "core.chunker" in parser_deps
+        assert len(parser_deps) == 1

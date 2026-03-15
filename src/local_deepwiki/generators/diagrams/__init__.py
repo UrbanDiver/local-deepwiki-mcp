@@ -18,6 +18,7 @@ from local_deepwiki.generators.diagrams.class_diagram import (
     generate_class_diagram,
 )
 from local_deepwiki.generators.diagrams.dependency_diagram import (
+    _FALLBACK_CHUNK_TYPES,
     _DependencyData,
     _add_circular_styling,
     _add_edges,
@@ -33,6 +34,7 @@ from local_deepwiki.generators.diagrams.dependency_diagram import (
     _parse_external_import,
     _parse_import_line,
     _path_to_module,
+    _scan_import_lines,
     generate_dependency_graph,
 )
 from local_deepwiki.generators.diagrams.language_pie import (
@@ -62,6 +64,7 @@ __all__ = [
     "_package_from_file_path",
     "generate_class_diagram",
     # dependency_diagram
+    "_FALLBACK_CHUNK_TYPES",
     "_DependencyData",
     "_add_circular_styling",
     "_add_edges",
@@ -77,6 +80,7 @@ __all__ = [
     "_parse_external_import",
     "_parse_import_line",
     "_path_to_module",
+    "_scan_import_lines",
     "generate_dependency_graph",
     # language_pie
     "generate_language_pie_chart",

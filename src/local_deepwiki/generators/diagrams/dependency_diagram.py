@@ -44,6 +44,60 @@ class _DependencyData:
     all_internal_modules: set[str]
 
 
+def _scan_import_lines(
+    content: str,
+    module: str,
+    project_name: str,
+    *,
+    show_external: bool,
+    exclude_tests: bool,
+    dependencies: dict[str, set[str]],
+    external_deps: Counter[str],
+    module_external_deps: dict[str, set[str]],
+    all_internal_modules: set[str],
+) -> None:
+    """Scan content lines for import statements and update dependency data.
+
+    Only lines starting with ``import `` or ``from `` are considered,
+    so non-import content (function bodies, comments, etc.) is safely skipped.
+
+    Args:
+        content: Raw chunk content to scan.
+        module: Module name derived from the chunk's file path.
+        project_name: Project name for filtering internal imports.
+        show_external: Whether to collect external dependencies.
+        exclude_tests: Whether to exclude test module imports.
+        dependencies: Mutable dependency mapping to update.
+        external_deps: Mutable external dependency counter to update.
+        module_external_deps: Mutable per-module external deps to update.
+        all_internal_modules: Mutable set of known internal modules to update.
+    """
+    for line in content.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        # Only consider lines that look like import statements
+        if not (line.startswith("import ") or line.startswith("from ")):
+            continue
+
+        imported = _parse_import_line(line, project_name)
+        if imported:
+            if exclude_tests and imported.startswith("test_"):
+                continue
+            dependencies[module].add(imported)
+            all_internal_modules.add(imported)
+        elif show_external:
+            ext_module = _parse_external_import(line)
+            if ext_module:
+                external_deps[ext_module] += 1
+                module_external_deps[module].add(ext_module)
+
+
+_FALLBACK_CHUNK_TYPES = frozenset(
+    {ChunkType.MODULE, ChunkType.FUNCTION, ChunkType.CLASS}
+)
+
+
 def _collect_dependencies(
     chunks: list,
     project_name: str,
@@ -52,6 +106,11 @@ def _collect_dependencies(
     exclude_tests: bool,
 ) -> _DependencyData:
     """Collect module dependencies from import chunks.
+
+    First pass processes dedicated IMPORT chunks. If a file has no IMPORT
+    chunks, a second pass scans MODULE/FUNCTION/CLASS chunks as a fallback
+    so that repos without dedicated import chunks still produce dependency
+    diagrams.
 
     Args:
         chunks: List of CodeChunk objects.
@@ -67,13 +126,50 @@ def _collect_dependencies(
     module_external_deps: dict[str, set[str]] = defaultdict(set)
     all_internal_modules: set[str] = set()
 
+    # Track which files have dedicated IMPORT chunks
+    files_with_import_chunks: set[str] = set()
+    # Buffer non-import chunks for the fallback pass
+    fallback_chunks: list = []
+
     for chunk in chunks:
         if hasattr(chunk, "chunk"):
             chunk = chunk.chunk
-        if chunk.chunk_type != ChunkType.IMPORT:
-            continue
+
+        if chunk.chunk_type == ChunkType.IMPORT:
+            file_path = chunk.file_path
+            module = _path_to_module(file_path)
+            if not module:
+                continue
+
+            if exclude_tests and _is_test_module(module, file_path):
+                continue
+
+            files_with_import_chunks.add(file_path)
+            all_internal_modules.add(module)
+
+            _scan_import_lines(
+                chunk.content,
+                module,
+                project_name,
+                show_external=show_external,
+                exclude_tests=exclude_tests,
+                dependencies=dependencies,
+                external_deps=external_deps,
+                module_external_deps=module_external_deps,
+                all_internal_modules=all_internal_modules,
+            )
+        elif chunk.chunk_type in _FALLBACK_CHUNK_TYPES:
+            fallback_chunks.append(chunk)
+
+    # Second pass: scan non-import chunks for files without dedicated IMPORT chunks
+    for chunk in fallback_chunks:
+        if hasattr(chunk, "chunk"):
+            chunk = chunk.chunk
 
         file_path = chunk.file_path
+        if file_path in files_with_import_chunks:
+            continue
+
         module = _path_to_module(file_path)
         if not module:
             continue
@@ -83,22 +179,17 @@ def _collect_dependencies(
 
         all_internal_modules.add(module)
 
-        for line in chunk.content.split("\n"):
-            line = line.strip()
-            if not line:
-                continue
-
-            imported = _parse_import_line(line, project_name)
-            if imported:
-                if exclude_tests and imported.startswith("test_"):
-                    continue
-                dependencies[module].add(imported)
-                all_internal_modules.add(imported)
-            elif show_external:
-                ext_module = _parse_external_import(line)
-                if ext_module:
-                    external_deps[ext_module] += 1
-                    module_external_deps[module].add(ext_module)
+        _scan_import_lines(
+            chunk.content,
+            module,
+            project_name,
+            show_external=show_external,
+            exclude_tests=exclude_tests,
+            dependencies=dependencies,
+            external_deps=external_deps,
+            module_external_deps=module_external_deps,
+            all_internal_modules=all_internal_modules,
+        )
 
     return _DependencyData(
         dependencies=dependencies,
@@ -456,16 +547,20 @@ def _path_to_module(file_path: str) -> str | None:
 
     parts = list(p.parts)
 
-    # Find main package (look for src/ or similar patterns)
+    # Strip leading src/ directory if present
     try:
         if "src" in parts:
             idx = parts.index("src")
             parts = parts[idx + 1 :]
-        # Skip the package directory itself
-        if len(parts) > 1:
-            parts = parts[1:]  # Skip e.g. 'local_deepwiki'
     except (ValueError, IndexError):
         logger.debug("Failed to extract module path from %s", file_path, exc_info=True)
+
+    # Skip the top-level package directory (e.g. 'local_deepwiki') only when
+    # there is enough nesting that doing so still leaves a meaningful path.
+    # For shallow layouts like package/file.py the package name is the only
+    # context and must be preserved.
+    if len(parts) > 2:
+        parts = parts[1:]
 
     # Remove .py extension from last part
     if parts:
