@@ -573,6 +573,18 @@ class QueryCodebaseArgs(BaseModel):
     )
 
 
+class GetLayerDependenciesArgs(BaseModel):
+    """Arguments for the get_layer_dependencies tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+
+
+class GetArchitectureSummaryArgs(BaseModel):
+    """Arguments for the get_architecture_summary tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+
+
 class ServeWikiArgs(BaseModel):
     """Arguments for the serve_wiki tool."""
 

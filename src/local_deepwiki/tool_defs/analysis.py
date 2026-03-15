@@ -2,7 +2,8 @@
 
 Tools: search_wiki, get_project_manifest, get_file_context, fuzzy_search,
 get_wiki_stats, explain_entity, impact_analysis, get_complexity_metrics,
-analyze_diff, ask_about_diff.
+analyze_diff, ask_about_diff, get_layer_dependencies,
+get_architecture_summary.
 """
 
 from __future__ import annotations
@@ -330,6 +331,49 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                 },
             },
             "required": ["repo_path", "question"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
+        name="get_layer_dependencies",
+        description=(
+            "Analyze architectural layer dependencies in a Python codebase. "
+            "Categorizes files into layers (web, handlers, services, generators, "
+            "core, providers, models) and detects upward dependency violations "
+            "where lower layers import from higher layers. Returns layer file "
+            "counts, dependency edges, and violations."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository to analyze",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
+        name="get_architecture_summary",
+        description=(
+            "Get a composite architecture overview combining layer dependency "
+            "analysis with file metrics. Returns layer violation counts, file "
+            "counts per layer, total files and lines, largest files, and files "
+            "exceeding 800 lines."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository to analyze",
+                },
+            },
+            "required": ["repo_path"],
         },
         annotations=_READ_ONLY,
     ),
