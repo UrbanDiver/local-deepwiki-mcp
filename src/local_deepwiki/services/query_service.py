@@ -95,8 +95,20 @@ class QueryService:
                         "rewritten_query"
                     )
         else:
+            # --- Query preprocessing ---
+            from local_deepwiki.core.query_utils import (
+                condense_query,
+                expand_project_terms,
+            )
+
+            search_query = condense_query(question)
+            search_query = expand_project_terms(search_query)
+
             search_results = await self._vector_store.search(
-                question, limit=fetch_limit
+                search_query,
+                limit=fetch_limit,
+                use_fuzzy=True,
+                fuzzy_weight=0.3,
             )
 
         # --- Graph expansion (optional) ---

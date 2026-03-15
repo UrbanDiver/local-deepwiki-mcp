@@ -219,3 +219,74 @@ class TestSearchCode:
 
         assert results[0]["preview"].endswith("...")
         assert len(results[0]["preview"]) == 303  # 300 + "..."
+
+
+class TestHybridSearchDefault:
+    """Tests for hybrid search being enabled by default in answer_question."""
+
+    async def test_answer_question_uses_hybrid_search(self, tmp_path: Path):
+        """Non-agentic answer_question should pass use_fuzzy=True to vector search."""
+        vector_store, llm_provider, config = _make_deps(tmp_path)
+        sr = _make_search_result()
+        vector_store.search = AsyncMock(return_value=[sr])
+
+        svc = QueryService(vector_store, llm_provider, config)
+
+        with patch("local_deepwiki.services.query_service.get_rate_limiter") as mock_rl:
+            mock_rl.return_value.__aenter__ = AsyncMock()
+            mock_rl.return_value.__aexit__ = AsyncMock()
+            await svc.answer_question(
+                repo_path=tmp_path, question="What does hello do?"
+            )
+
+        # Verify the vector store search was called with hybrid search params
+        call_kwargs = vector_store.search.call_args[1]
+        assert call_kwargs["use_fuzzy"] is True
+        assert call_kwargs["fuzzy_weight"] == 0.3
+
+
+class TestQueryPreprocessing:
+    """Tests for query preprocessing (filler stripping + term expansion)."""
+
+    async def test_filler_words_stripped(self, tmp_path: Path):
+        """Conversational filler like 'tell' and 'everything' should be stripped
+        from the search query (but preserved in the LLM prompt)."""
+        vector_store, llm_provider, config = _make_deps(tmp_path)
+        sr = _make_search_result()
+        vector_store.search = AsyncMock(return_value=[sr])
+
+        svc = QueryService(vector_store, llm_provider, config)
+
+        with patch("local_deepwiki.services.query_service.get_rate_limiter") as mock_rl:
+            mock_rl.return_value.__aenter__ = AsyncMock()
+            mock_rl.return_value.__aexit__ = AsyncMock()
+            await svc.answer_question(
+                repo_path=tmp_path,
+                question="tell me everything about the parser",
+            )
+
+        # The search query should NOT contain filler words
+        search_query = vector_store.search.call_args[0][0]
+        assert "tell" not in search_query.lower().split()
+        assert "everything" not in search_query.lower().split()
+
+        # The LLM prompt should still use the original question
+        llm_prompt = llm_provider.generate.call_args[0][0]
+        assert "tell me everything about the parser" in llm_prompt
+
+    async def test_project_terms_expanded(self, tmp_path: Path):
+        """Domain terms like 'handler' should be expanded with project-specific
+        synonyms (e.g. 'TOOL_HANDLERS', 'handle_') in the search query."""
+        vector_store, llm_provider, config = _make_deps(tmp_path)
+        sr = _make_search_result()
+        vector_store.search = AsyncMock(return_value=[sr])
+
+        svc = QueryService(vector_store, llm_provider, config)
+
+        with patch("local_deepwiki.services.query_service.get_rate_limiter") as mock_rl:
+            mock_rl.return_value.__aenter__ = AsyncMock()
+            mock_rl.return_value.__aexit__ = AsyncMock()
+            await svc.answer_question(repo_path=tmp_path, question="handler routing")
+
+        search_query = vector_store.search.call_args[0][0]
+        assert "TOOL_HANDLERS" in search_query or "handle_" in search_query
