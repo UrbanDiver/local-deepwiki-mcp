@@ -187,6 +187,61 @@ def _score_candidates(
     return sorted(scored, key=itemgetter(0), reverse=True)
 
 
+async def _run_fallback_search(
+    search_query: str,
+    vector_store: "VectorStore",
+) -> list[object]:
+    """Search for functions/methods when initial candidates are all shallow.
+
+    Tries both the original *search_query* and a condensed technical variant.
+    Results are deduplicated by ``file_path:name``.
+    """
+    queries = [search_query]
+    condensed = _condense_query(search_query)
+    if condensed != search_query:
+        queries.append(condensed)
+
+    fallback_results: list[object] = []
+    seen_chunk_ids: set[str] = set()
+    for fallback_query in queries:
+        for chunk_type in ("function", "method"):
+            try:
+                type_results = await vector_store.search(
+                    fallback_query,
+                    limit=15,
+                    min_similarity=0.0,
+                    chunk_type=chunk_type,
+                )
+                for r in type_results:
+                    if is_test_file(r.chunk.file_path):  # type: ignore[union-attr]
+                        continue
+                    seen_key = f"{r.chunk.file_path}:{r.chunk.name}"  # type: ignore[union-attr]
+                    if seen_key not in seen_chunk_ids:
+                        seen_chunk_ids.add(seen_key)
+                        fallback_results.append(r)
+            except (OSError, ValueError, RuntimeError):
+                logger.debug(
+                    "Fallback search failed for query=%r chunk_type=%s",
+                    fallback_query,
+                    chunk_type,
+                )
+    return fallback_results
+
+
+def _deduplicate_candidates(
+    scored: list[tuple[float, CodemapNode]],
+    extra: list[tuple[float, CodemapNode]],
+) -> list[tuple[float, CodemapNode]]:
+    """Merge *extra* into *scored*, dropping duplicates by ``qualified_name``."""
+    seen_names = {node.qualified_name for _, node in scored}
+    merged = list(scored)
+    for fb_score, fb_node in extra:
+        if fb_node.qualified_name not in seen_names:
+            merged.append((fb_score, fb_node))
+            seen_names.add(fb_node.qualified_name)
+    return sorted(merged, key=itemgetter(0), reverse=True)
+
+
 async def discover_entry_points(
     query: str,
     vector_store: "VectorStore",
@@ -252,10 +307,9 @@ async def discover_entry_points(
 
     scored = _score_candidates(callable_results, file_call_graphs, repo_path)
 
-    # Fallback: if top candidates are shallow (≤1 callee each), the query
+    # Fallback: if top candidates are shallow (<=1 callee each), the query
     # likely matched a single module's internals (e.g. dataclasses, tracing)
-    # rather than pipeline orchestrators. Re-search with function/method
-    # type filters to find functions with richer call graphs.
+    # rather than pipeline orchestrators.
     top_candidates = scored[:max_candidates]
     all_shallow = all(
         _max_callees_for(node, file_call_graphs) <= 1 for _, node in top_candidates
@@ -266,37 +320,7 @@ async def discover_entry_points(
             "All top candidates are shallow, running fallback search "
             "for functions and methods"
         )
-        # Try both the original query and a condensed technical variant
-        # (conversational queries embed poorly; stripping filler helps)
-        queries = [search_query]
-        condensed = _condense_query(search_query)
-        if condensed != search_query:
-            queries.append(condensed)
-
-        fallback_results: list[object] = []
-        seen_chunk_ids: set[str] = set()
-        for fallback_query in queries:
-            for chunk_type in ("function", "method"):
-                try:
-                    type_results = await vector_store.search(
-                        fallback_query,
-                        limit=15,
-                        min_similarity=0.0,
-                        chunk_type=chunk_type,
-                    )
-                    for r in type_results:
-                        if is_test_file(r.chunk.file_path):  # type: ignore[union-attr]
-                            continue
-                        chunk_id = f"{r.chunk.file_path}:{r.chunk.name}"  # type: ignore[union-attr]
-                        if chunk_id not in seen_chunk_ids:
-                            seen_chunk_ids.add(chunk_id)
-                            fallback_results.append(r)
-                except (OSError, ValueError, RuntimeError):
-                    logger.debug(
-                        "Fallback search failed for query=%r chunk_type=%s",
-                        fallback_query,
-                        chunk_type,
-                    )
+        fallback_results = await _run_fallback_search(search_query, vector_store)
 
         if fallback_results:
             # Build call graphs for the new files
@@ -309,13 +333,7 @@ async def discover_entry_points(
             fallback_scored = _score_candidates(
                 fallback_results, file_call_graphs, repo_path
             )
-            # Merge: prefer fallback results that have callees
-            seen_names = {node.qualified_name for _, node in scored}
-            for fb_score, fb_node in fallback_scored:
-                if fb_node.qualified_name not in seen_names:
-                    scored.append((fb_score, fb_node))
-                    seen_names.add(fb_node.qualified_name)
-            scored = sorted(scored, key=itemgetter(0), reverse=True)
+            scored = _deduplicate_candidates(scored, fallback_scored)
 
     return [node for _, node in scored[:max_candidates]]
 
