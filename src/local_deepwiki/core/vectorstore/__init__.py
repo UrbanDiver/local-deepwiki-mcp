@@ -14,6 +14,7 @@ from local_deepwiki.core.vectorstore.cache import (
 )
 from local_deepwiki.core.vectorstore.iterators import ChunkIterator, LazyChunkLoader
 from local_deepwiki.core.vectorstore.maintenance import LazyIndexManager
+from local_deepwiki.core.vectorstore.mixins.search_types import SearchRequest
 from local_deepwiki.core.vectorstore.schema import (
     DEFAULT_MAX_MEMORY_MB,
     ESTIMATED_BYTES_PER_CHUNK,
@@ -39,6 +40,8 @@ from local_deepwiki.core.vectorstore.utils import (
 __all__ = [
     # Core store
     "VectorStore",
+    # Search request
+    "SearchRequest",
     # Schema/data models
     "SearchResultPage",
     "ChunkBatch",
