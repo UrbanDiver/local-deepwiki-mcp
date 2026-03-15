@@ -348,6 +348,26 @@ async def handle_get_complexity_metrics(
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
+    # Detect directory paths early and give a helpful error with suggestions
+    resolved = (repo_path / file_path).resolve()
+    if resolved.is_dir():
+        py_files = sorted(
+            f.name for f in resolved.glob("*.py") if not f.name.startswith("__")
+        )
+        suggestions = py_files[:5]
+        message = (
+            f"Path is a directory, not a file. "
+            f"Files in '{file_path}': {', '.join(suggestions)}"
+            if suggestions
+            else "Path is a directory, not a file."
+        )
+        raise ValidationError(
+            message=message,
+            hint="Provide a path to a specific .py file, not a directory.",
+            field="file_path",
+            value=file_path,
+        )
+
     validate_file_in_repo(repo_path, file_path)
 
     from local_deepwiki.generators.analysis.complexity import compute_complexity_metrics

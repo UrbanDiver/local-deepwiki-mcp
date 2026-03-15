@@ -188,3 +188,50 @@ async def test_complexity_metrics_args_model():
     # Missing file_path should fail
     with pytest.raises(Exception):
         GetComplexityMetricsArgs(repo_path="/some/path")
+
+
+class TestComplexityMetricsPathResolution:
+    """Tests for directory path detection in get_complexity_metrics."""
+
+    async def test_directory_path_gives_clear_error(
+        self, mock_access_control, tmp_path
+    ):
+        """Passing a directory path returns an error mentioning 'directory'."""
+        # Create a directory with some .py files inside
+        sub_dir = tmp_path / "mypackage"
+        sub_dir.mkdir()
+        (sub_dir / "__init__.py").write_text("")
+        (sub_dir / "alpha.py").write_text("def alpha(): pass\n")
+        (sub_dir / "beta.py").write_text("def beta(): pass\n")
+
+        result = await handle_get_complexity_metrics(
+            {"repo_path": str(tmp_path), "file_path": "mypackage"}
+        )
+        text = result[0].text.lower()
+        assert "directory" in text
+        # Should suggest specific files within the directory
+        assert "alpha.py" in text or "beta.py" in text
+
+    async def test_directory_path_no_py_files(self, mock_access_control, tmp_path):
+        """Passing a directory with no .py files gives a clear directory error."""
+        sub_dir = tmp_path / "emptydir"
+        sub_dir.mkdir()
+
+        result = await handle_get_complexity_metrics(
+            {"repo_path": str(tmp_path), "file_path": "emptydir"}
+        )
+        text = result[0].text.lower()
+        assert "directory" in text
+        assert "not a file" in text
+
+    async def test_valid_file_path_works(self, mock_access_control, tmp_path):
+        """A normal .py file path still works after the directory check."""
+        src = tmp_path / "valid.py"
+        src.write_text("def hello(): return 1\n")
+
+        result = await handle_get_complexity_metrics(
+            {"repo_path": str(tmp_path), "file_path": "valid.py"}
+        )
+        data = json.loads(result[0].text)
+        assert data["status"] == "success"
+        assert data["counts"]["functions"] >= 1
