@@ -33,16 +33,19 @@ class DrainStatus:
 
     @property
     def finished(self) -> bool:
+        """Return True if drain has started and no pages remain to generate."""
         return self.started and self.pages_remaining == 0
 
     @property
     def elapsed_seconds(self) -> float | None:
+        """Return seconds elapsed since drain started, or None if not started."""
         if self.started_at is None:
             return None
         end = self.completed_at or time.time()
         return round(end - self.started_at, 1)
 
     def to_dict(self) -> dict:
+        """Serialize drain status to a dict suitable for JSON responses."""
         return {
             "enabled": self.enabled,
             "state": (
@@ -70,10 +73,12 @@ class PriorityLLMSlot:
     """Wraps an asyncio.Semaphore with foreground/background priority."""
 
     def __init__(self, semaphore: asyncio.Semaphore) -> None:
+        """Initialize with an asyncio semaphore for concurrency limiting."""
         self._sem = semaphore
         self._fg_waiting = 0
 
     async def acquire_foreground(self) -> None:
+        """Acquire the LLM slot with foreground priority (never yields to background)."""
         self._fg_waiting += 1
         try:
             await self._sem.acquire()
@@ -81,11 +86,13 @@ class PriorityLLMSlot:
             self._fg_waiting -= 1
 
     async def acquire_background(self) -> None:
+        """Acquire the LLM slot, waiting until no foreground requests are pending."""
         while self._fg_waiting > 0:
             await asyncio.sleep(0.05)
         await self._sem.acquire()
 
     def release(self) -> None:
+        """Release the LLM slot back to the semaphore."""
         self._sem.release()
 
 
@@ -100,6 +107,7 @@ class PrefetchQueue:
         drain_enabled: bool = False,
         drain_idle_seconds: int = 30,
     ) -> None:
+        """Initialize the prefetch queue with worker count, queue size, and drain settings."""
         self._generator = generator
         self._queue: asyncio.PriorityQueue[tuple[int, str]] = asyncio.PriorityQueue(
             maxsize=max_queue
@@ -117,6 +125,7 @@ class PrefetchQueue:
         self.drain_status = DrainStatus(enabled=drain_enabled)
 
     def start(self) -> None:
+        """Spawn background worker tasks to consume the prefetch queue."""
         if self._started:
             return
         self._started = True
@@ -124,6 +133,7 @@ class PrefetchQueue:
             self._workers.append(asyncio.create_task(self._worker(i)))
 
     async def stop(self) -> None:
+        """Cancel all worker tasks and drain task, then wait for cleanup."""
         self._started = False
         if self._drain_task:
             self._drain_task.cancel()
@@ -138,6 +148,7 @@ class PrefetchQueue:
         cross_link_targets: list[str],
         module_siblings: list[str],
     ) -> None:
+        """Enqueue predicted next pages based on cross-links and sibling proximity."""
         scored: list[tuple[int, str]] = []
         for target in cross_link_targets:
             scored.append((2, target))
@@ -161,6 +172,7 @@ class PrefetchQueue:
             self._drain_task = asyncio.create_task(self._maybe_start_drain())
 
     def kickstart_drain(self) -> None:
+        """Immediately schedule drain mode without waiting for the idle timeout."""
         if not self._drain_enabled or self._drain_started:
             return
         if self._drain_task:
@@ -168,6 +180,7 @@ class PrefetchQueue:
         self._drain_task = asyncio.create_task(self._maybe_start_drain())
 
     async def _worker(self, worker_id: int) -> None:
+        """Background worker loop that dequeues and generates pages until stopped."""
         while self._started:
             try:
                 priority, page_path = await asyncio.wait_for(
@@ -222,6 +235,7 @@ class PrefetchQueue:
                 self._queue.task_done()
 
     async def _maybe_start_drain(self) -> None:
+        """Wait for idle period, then enqueue all uncached pages for background generation."""
         if not self._drain_enabled or self._drain_started:
             return
         logger.info(

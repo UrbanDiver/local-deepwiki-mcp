@@ -42,6 +42,7 @@ def generate_sequence_diagram(
     participants: set[str] = {entry_point}
 
     def collect_participants(func: str, depth: int) -> None:
+        """Recursively collect all functions reachable from func up to max_depth."""
         if depth > max_depth:
             return
         for callee in call_graph.get(func, []):
@@ -60,6 +61,7 @@ def generate_sequence_diagram(
     visited: set[tuple[str, str]] = set()
 
     def add_calls(caller: str, depth: int) -> None:
+        """Recursively emit Mermaid call/return arrows for each caller-callee pair."""
         if depth > max_depth:
             return
         safe_caller = sanitize_mermaid_name(caller)

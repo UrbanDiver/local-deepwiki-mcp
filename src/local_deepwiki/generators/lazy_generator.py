@@ -68,6 +68,7 @@ class LazyPageGenerator:
     """
 
     def __init__(self, wiki_path: Path, config: Config | None = None) -> None:
+        """Initialize the lazy generator with wiki output path and optional config."""
         self._wiki_path = wiki_path
         self._config = config or get_config()
         self._repo_path: Path | None = None
@@ -100,12 +101,14 @@ class LazyPageGenerator:
             self._prefetch.start()
 
     def _get_repo_path(self) -> Path:
+        """Return the repository path, loading from index status if needed."""
         if self._repo_path is None:
             idx = self._load_index_status_sync()
             self._repo_path = Path(idx.repo_path)
         return self._repo_path
 
     def _load_index_status_sync(self) -> IndexStatus:
+        """Load and cache IndexStatus from the wiki's index_status.json file."""
         if self._index_status is not None:
             return self._index_status
         status_path = self._wiki_path / "index_status.json"
@@ -115,9 +118,11 @@ class LazyPageGenerator:
         return self._index_status
 
     def _get_index_status(self) -> IndexStatus:
+        """Return cached IndexStatus, loading from disk on first call."""
         return self._load_index_status_sync()
 
     def _get_significant_paths(self) -> set[str]:
+        """Return the set of file paths significant enough for individual wiki pages."""
         if self._significant_paths is None:
             idx = self._get_index_status()
             significant = filter_significant_files(
@@ -127,12 +132,14 @@ class LazyPageGenerator:
         return self._significant_paths
 
     def _get_wiki_to_file(self) -> dict[str, FileInfo]:
+        """Return a mapping from wiki page paths to their source FileInfo."""
         if self._wiki_to_file is None:
             idx = self._get_index_status()
             self._wiki_to_file = {file_path_to_wiki_path(f.path): f for f in idx.files}
         return self._wiki_to_file
 
     async def _get_vector_store(self) -> VectorStore:
+        """Return the vector store, lazily initializing the embedding provider."""
         if self._vector_store is None:
             from local_deepwiki.core.vectorstore import VectorStore as VS
             from local_deepwiki.providers.embeddings import get_embedding_provider
@@ -144,6 +151,7 @@ class LazyPageGenerator:
         return self._vector_store
 
     async def _get_entity_registry(self) -> EntityRegistry:
+        """Load the entity registry from disk or build it from the vector store."""
         if self._entity_registry is None:
             reg_path = self._wiki_path / "entity_registry.json"
             if reg_path.exists():
@@ -159,11 +167,13 @@ class LazyPageGenerator:
         return self._entity_registry
 
     async def _get_cross_linker(self) -> CrossLinker:
+        """Return the cross-linker, initializing from the entity registry if needed."""
         if self._cross_linker is None:
             self._cross_linker = CrossLinker(await self._get_entity_registry())
         return self._cross_linker
 
     def _get_llm(self) -> LLMProvider:
+        """Return a cache-wrapped LLM provider for wiki generation."""
         from local_deepwiki.providers.llm import get_cached_llm_provider
 
         vs = self._vector_store
@@ -178,16 +188,19 @@ class LazyPageGenerator:
         )
 
     def _get_system_prompt(self) -> str:
+        """Build the wiki generation system prompt for the current repository."""
         from local_deepwiki.prompts import PromptManager
 
         pm = PromptManager(custom_dir=None, repo_path=self._get_repo_path())
         return pm.get_wiki_system_prompt(provider=self._config.llm.provider)
 
     def kickstart_drain(self) -> None:
+        """Immediately trigger prefetch drain mode if enabled."""
         if self._prefetch is not None:
             self._prefetch.kickstart_drain()
 
     def get_drain_status(self) -> dict:
+        """Return the current drain status as a serializable dict."""
         if self._prefetch is not None:
             return self._prefetch.drain_status.to_dict()
         return {"enabled": False, "state": "disabled"}
@@ -235,6 +248,7 @@ class LazyPageGenerator:
             logger.debug("Warm failed for %s", page_path, exc_info=True)
 
     def _read_cached(self, page_path: str) -> str | None:
+        """Return cached page content from disk, or None if not yet generated."""
         full = self._wiki_path / page_path
         if full.exists():
             return full.read_text()
@@ -264,6 +278,7 @@ class LazyPageGenerator:
         raise FileNotFoundError(f"Unknown page type: {page_path}")
 
     async def _generate_summary(self, page_path: str, vs: VectorStore) -> WikiPage:
+        """Generate a top-level summary page (overview, architecture, dependencies, or changelog)."""
         idx = self._get_index_status()
         llm = self._get_llm()
         prompt = self._get_system_prompt()
@@ -304,6 +319,7 @@ class LazyPageGenerator:
         raise FileNotFoundError(f"Unknown summary page: {page_path}")
 
     async def _generate_auxiliary_pages(self, vs: VectorStore) -> dict[str, WikiPage]:
+        """Generate and cache all auxiliary pages (glossary, inheritance, coverage, dependency graph)."""
         if self._auxiliary_cache is not None:
             return self._auxiliary_cache
 
@@ -312,7 +328,9 @@ class LazyPageGenerator:
             generate_dependency_graph_page,
         )
         from local_deepwiki.generators.analysis.glossary import generate_glossary_page
-        from local_deepwiki.generators.analysis.inheritance import generate_inheritance_page
+        from local_deepwiki.generators.analysis.inheritance import (
+            generate_inheritance_page,
+        )
 
         idx = self._get_index_status()
         pages: dict[str, WikiPage] = {}
@@ -368,6 +386,7 @@ class LazyPageGenerator:
         return pages
 
     async def _generate_module(self, page_path: str, vs: VectorStore) -> WikiPage:
+        """Generate a module documentation page or the modules index."""
         if page_path == "modules/index.md":
             return self._generate_modules_index_page()
 
@@ -391,6 +410,7 @@ class LazyPageGenerator:
         return page
 
     async def _generate_file(self, page_path: str, vs: VectorStore) -> WikiPage:
+        """Generate a single file documentation page from its source FileInfo."""
         w2f = self._get_wiki_to_file()
         file_info = w2f.get(page_path)
         if file_info is None:
@@ -423,6 +443,7 @@ class LazyPageGenerator:
         return page
 
     def _generate_files_index_page(self) -> WikiPage:
+        """Build the files/index.md page listing all existing file documentation pages."""
         existing_pages = []
         files_dir = self._wiki_path / "files"
         if files_dir.exists():
@@ -452,6 +473,7 @@ class LazyPageGenerator:
         )
 
     def _generate_modules_index_page(self) -> WikiPage:
+        """Build the modules/index.md page listing all existing module documentation pages."""
         existing = []
         mods_dir = self._wiki_path / "modules"
         if mods_dir.exists():
@@ -480,6 +502,7 @@ class LazyPageGenerator:
         )
 
     async def _write_page(self, page: WikiPage) -> None:
+        """Write a generated wiki page to disk, creating parent directories as needed."""
         page_path = self._wiki_path / page.path
 
         def _sync() -> None:
@@ -489,6 +512,7 @@ class LazyPageGenerator:
         await asyncio.to_thread(_sync)
 
     def _append_to_search_index(self, page: WikiPage) -> None:
+        """Append a page entry to the JSON search index for client-side search."""
         idx_path = self._wiki_path / "search_index.json"
         try:
             entries = json.loads(idx_path.read_text()) if idx_path.exists() else []
@@ -504,6 +528,7 @@ class LazyPageGenerator:
         idx_path.write_text(json.dumps(entries))
 
     def _get_module_siblings(self, page_path: str) -> list[str]:
+        """Return wiki paths of sibling pages in the same section directory."""
         parts = Path(page_path).parts
         if len(parts) < 2:
             return []
@@ -588,6 +613,7 @@ def get_active_generators() -> dict[str, LazyPageGenerator]:
 def get_lazy_generator(
     wiki_path: Path, config: Config | None = None
 ) -> LazyPageGenerator:
+    """Return a shared LazyPageGenerator for the given wiki path, creating one if needed."""
     key = str(wiki_path.resolve())
     if key not in _lazy_generators:
         _lazy_generators[key] = LazyPageGenerator(wiki_path, config or get_config())

@@ -63,6 +63,7 @@ async def compute_complexity_metrics(
         comment_line_set: set[int] = set()
 
         def _walk(n: Node) -> None:
+            """Recursively collect line numbers that contain comment nodes."""
             if n.type in ("comment", "line_comment", "block_comment"):
                 for line_no in range(n.start_point[0], n.end_point[0] + 1):
                     comment_line_set.add(line_no)
@@ -135,6 +136,7 @@ async def compute_complexity_metrics(
         logical_ops = frozenset({"and", "or", "&&", "||"})
 
         def _count_branches(n: Node) -> None:
+            """Recursively count branch and logical-operator decision points."""
             nonlocal count
             if n.type in branch_types:
                 count += 1
@@ -153,6 +155,7 @@ async def compute_complexity_metrics(
         return count
 
     def _extract_function_info(node: Node, depth: int) -> dict[str, Any]:
+        """Extract name, line range, parameter count, and complexity from a function node."""
         name = ""
         param_count = 0
         for child in node.children:
@@ -183,6 +186,7 @@ async def compute_complexity_metrics(
         }
 
     def _walk_node(node: Node, depth: int = 0) -> None:
+        """Recursively traverse the AST, collecting function and class metrics."""
         nonlocal max_nesting
         node_type = node.type
 
