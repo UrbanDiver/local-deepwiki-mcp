@@ -1,407 +1,70 @@
-"""Pydantic configuration models."""
+"""Pydantic configuration models.
+
+Domain-specific config classes have been split into submodules:
+- models_llm: LLM caching configuration
+- models_embedding: Embedding caching configuration
+- models_wiki: Wiki generation, research, parsing, and infrastructure configs
+- models_search: Search, fuzzy search, graph RAG, and index configs
+
+This module retains the root Config class and re-exports everything
+for backward compatibility.
+"""
 
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
-from enum import StrEnum
 from pathlib import Path
-from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
+from pydantic import BaseModel, Field, computed_field
 
+from local_deepwiki.config.models_embedding import *  # noqa: F401,F403
+from local_deepwiki.config.models_embedding import EmbeddingCacheConfig
+from local_deepwiki.config.models_llm import *  # noqa: F401,F403
+from local_deepwiki.config.models_llm import LLMCacheConfig
+from local_deepwiki.config.models_search import *  # noqa: F401,F403
+from local_deepwiki.config.models_search import (
+    FuzzySearchConfig,
+    GraphRAGConfig,
+    LazyIndexConfig,
+    SearchCacheConfig,
+    SearchConfig,
+)
+from local_deepwiki.config.models_wiki import *  # noqa: F401,F403
+from local_deepwiki.config.models_wiki import (
+    DeepResearchConfig,
+    HooksConfig,
+    ParsingConfig,
+    PluginsConfig,
+    WikiConfig,
+)
 from local_deepwiki.config.processing_models import (
     ASTCacheConfig,
     ChunkingConfig,
     EmbeddingBatchConfig,
-    _get_default_parallel_workers,
 )
 from local_deepwiki.config.prompts import (
-    RESEARCH_DECOMPOSITION_PROMPTS,
-    RESEARCH_GAP_ANALYSIS_PROMPTS,
-    RESEARCH_SYNTHESIS_PROMPTS,
-    WIKI_ARCHITECTURE_PROMPTS,
-    WIKI_FILE_PROMPTS,
-    WIKI_MODULE_PROMPTS,
-    WIKI_OVERVIEW_PROMPTS,
-    WIKI_SYSTEM_PROMPTS,
+    RESEARCH_DECOMPOSITION_PROMPTS,  # noqa: F401
+    RESEARCH_GAP_ANALYSIS_PROMPTS,  # noqa: F401
+    RESEARCH_SYNTHESIS_PROMPTS,  # noqa: F401
+    WIKI_ARCHITECTURE_PROMPTS,  # noqa: F401
+    WIKI_FILE_PROMPTS,  # noqa: F401
+    WIKI_MODULE_PROMPTS,  # noqa: F401
+    WIKI_OVERVIEW_PROMPTS,  # noqa: F401
+    WIKI_SYSTEM_PROMPTS,  # noqa: F401
     PromptsConfig,
-    ProviderPromptsConfig,
+    ProviderPromptsConfig,  # noqa: F401
 )
 from local_deepwiki.config.provider_models import (
-    AnthropicConfig,
+    AnthropicConfig,  # noqa: F401
     EmbeddingConfig,
     LLMConfig,
-    LocalEmbeddingConfig,
-    OllamaConfig,
-    OpenAIEmbeddingConfig,
-    OpenAILLMConfig,
+    LocalEmbeddingConfig,  # noqa: F401
+    OllamaConfig,  # noqa: F401
+    OpenAIEmbeddingConfig,  # noqa: F401
+    OpenAILLMConfig,  # noqa: F401
 )
 from local_deepwiki.models.provider_types import EmbeddingProviderType, LLMProviderType
-
-
-class ResearchPreset(StrEnum):
-    """Research mode presets for deep research pipeline."""
-
-    QUICK = "quick"
-    DEFAULT = "default"
-    THOROUGH = "thorough"
-
-
-class GenerationMode(StrEnum):
-    """Wiki page generation strategy."""
-
-    EAGER = "eager"
-    LAZY = "lazy"
-    HYBRID = "hybrid"
-
-
-# Preset parameter values for each research mode
-RESEARCH_PRESETS: dict[ResearchPreset, dict[str, Any]] = {
-    ResearchPreset.QUICK: {
-        "max_sub_questions": 2,
-        "chunks_per_subquestion": 3,
-        "max_total_chunks": 15,
-        "max_follow_up_queries": 1,
-        "synthesis_temperature": 0.3,
-        "synthesis_max_tokens": 2048,
-    },
-    ResearchPreset.DEFAULT: {
-        "max_sub_questions": 4,
-        "chunks_per_subquestion": 5,
-        "max_total_chunks": 30,
-        "max_follow_up_queries": 3,
-        "synthesis_temperature": 0.5,
-        "synthesis_max_tokens": 4096,
-    },
-    ResearchPreset.THOROUGH: {
-        "max_sub_questions": 6,
-        "chunks_per_subquestion": 8,
-        "max_total_chunks": 50,
-        "max_follow_up_queries": 5,
-        "synthesis_temperature": 0.5,
-        "synthesis_max_tokens": 8192,
-    },
-}
-
-
-class ParsingConfig(BaseModel):
-    """Code parsing configuration."""
-
-    model_config = {"frozen": True}
-
-    languages: list[str] = Field(
-        default=[
-            "python",
-            "typescript",
-            "javascript",
-            "go",
-            "rust",
-            "java",
-            "c",
-            "cpp",
-            "swift",
-            "ruby",
-            "php",
-            "kotlin",
-            "csharp",
-        ],
-        description="Languages to parse",
-    )
-    max_file_size: int = Field(
-        default=1048576, description="Max file size in bytes (1MB)"
-    )
-    exclude_patterns: list[str] = Field(
-        default=[
-            "node_modules/**",
-            "venv/**",
-            ".venv/**",
-            "__pycache__/**",
-            ".git/**",
-            "*.min.js",
-            "*.min.css",
-            "dist/**",
-            "build/**",
-            ".next/**",
-            "target/**",
-            "vendor/**",
-            "htmlcov/**",
-            ".pytest_cache/**",
-            ".mypy_cache/**",
-            ".ruff_cache/**",
-            ".tox/**",
-            ".nox/**",
-            "coverage/**",
-            ".coverage",
-            "coverage_html/**",
-            "coverage_openai_embeddings/**",
-            ".claude/**",
-            ".windsurf/**",
-            ".cursor/**",
-            ".aider/**",
-            "agents/**",
-            "AGENTS.md",
-        ],
-        description="Glob patterns to exclude",
-    )
-
-
-class WikiConfig(BaseModel):
-    """Wiki generation configuration."""
-
-    model_config = {"frozen": True}
-
-    max_file_docs: int = Field(
-        default=500,
-        description="Maximum number of file-level documentation pages to generate. "
-        "Set to 0 for unlimited.",
-    )
-    max_concurrent_llm_calls: int = Field(
-        default=8,
-        ge=1,
-        le=20,
-        description="Maximum concurrent LLM calls for file documentation generation. "
-        "Higher values speed up generation but increase memory/API usage.",
-    )
-    ollama_max_concurrent: int = Field(
-        default=3,
-        ge=1,
-        le=10,
-        description="Maximum concurrent LLM calls when using Ollama (local model). "
-        "Local models run on a single GPU; higher values may cause OOM/thrashing.",
-    )
-    use_cloud_for_github: bool = Field(
-        default=False,
-        description="Use cloud LLM provider (Anthropic Claude) for GitHub repos. "
-        "Provides faster, higher-quality documentation but requires API key.",
-    )
-    github_llm_provider: Literal["anthropic", "openai"] = Field(
-        default="anthropic",
-        description="Cloud LLM provider to use for GitHub repos when use_cloud_for_github is enabled.",
-    )
-    chat_llm_provider: Literal["default", "anthropic", "openai", "ollama"] = Field(
-        default="default",
-        description="LLM provider for chat Q&A. 'default' uses the main llm.provider setting. "
-        "Set to 'anthropic' or 'openai' for higher-quality chat responses.",
-    )
-    import_search_limit: int = Field(
-        default=200,
-        description="Maximum chunks to search for import/relationship analysis",
-    )
-    context_search_limit: int = Field(
-        default=50,
-        description="Maximum chunks to search for context when generating documentation",
-    )
-    fallback_search_limit: int = Field(
-        default=30, description="Maximum chunks to search in fallback queries"
-    )
-    max_chunk_content_chars: int = Field(
-        default=15000,
-        ge=500,
-        le=50000,
-        description="Maximum characters of chunk content included in LLM prompts "
-        "during wiki generation. Higher values produce more accurate documentation "
-        "for large functions but increase token usage. The previous hardcoded limit "
-        "was 1500.",
-    )
-    max_chunks_per_file: int = Field(
-        default=60,
-        ge=5,
-        le=200,
-        description="Maximum number of code chunks included in the LLM prompt when "
-        "generating file-level documentation. Chunks are prioritized by type "
-        "(functions/methods first, then classes, then module/imports) so the most "
-        "documentation-relevant content is preserved when files exceed this limit.",
-    )
-    codemap_enabled: bool = Field(
-        default=True,
-        description="Enable automatic codemap generation during wiki build. "
-        "Generates execution-flow diagrams for high-value entry points.",
-    )
-    codemap_max_topics: int = Field(
-        default=5,
-        ge=0,
-        le=20,
-        description="Maximum number of codemap topics to auto-generate (0 to disable).",
-    )
-    codemap_max_depth: int = Field(
-        default=4,
-        ge=1,
-        le=10,
-        description="BFS traversal depth for codemap generation.",
-    )
-    codemap_max_nodes: int = Field(
-        default=30,
-        ge=5,
-        le=60,
-        description="Maximum nodes per codemap graph.",
-    )
-    generation_mode: GenerationMode = Field(
-        default=GenerationMode.EAGER,
-        description="Wiki page generation strategy. "
-        "'eager' (default): generate all pages during indexing. "
-        "'lazy': generate pages on first read. "
-        "'hybrid': generate summary pages and top N files at index time, rest on demand.",
-    )
-    hybrid_eager_pages: int = Field(
-        default=10,
-        ge=0,
-        le=50,
-        description="Number of top file pages to eagerly generate in hybrid mode.",
-    )
-    prefetch_workers: int = Field(
-        default=2,
-        ge=0,
-        le=5,
-        description="Background workers for predictive page prefetch (0 disables). "
-        "Only active in lazy and hybrid modes.",
-    )
-    prefetch_max_queue: int = Field(
-        default=20,
-        ge=0,
-        le=100,
-        description="Maximum pages in the prefetch queue.",
-    )
-    prefetch_drain: bool = Field(
-        default=False,
-        description="When true, prefetch workers will eventually generate all "
-        "remaining pages after prediction queue drains and system is idle.",
-    )
-    drain_idle_seconds: int = Field(
-        default=30,
-        ge=5,
-        le=300,
-        description="Seconds of idle time before drain mode starts backfilling.",
-    )
-
-    @field_validator("max_concurrent_llm_calls")
-    @classmethod
-    def validate_max_concurrent_llm_calls(cls, v: int) -> int:
-        """Validate max_concurrent_llm_calls is reasonable."""
-        if v < 1:
-            raise ValueError("max_concurrent_llm_calls must be >= 1")
-        cpu_count = os.cpu_count() or 4
-        return min(v, cpu_count * 2)
-
-    @model_validator(mode="after")
-    def validate_search_limits(self) -> "WikiConfig":
-        """Validate search limits are consistent."""
-        if self.fallback_search_limit > self.context_search_limit:
-            raise ValueError(
-                f"fallback_search_limit ({self.fallback_search_limit}) should not exceed "
-                f"context_search_limit ({self.context_search_limit})"
-            )
-        return self
-
-
-class DeepResearchConfig(BaseModel):
-    """Deep research pipeline configuration."""
-
-    model_config = {"frozen": True}
-
-    max_sub_questions: int = Field(
-        default=4,
-        ge=1,
-        le=10,
-        description="Maximum sub-questions generated from query decomposition",
-    )
-    chunks_per_subquestion: int = Field(
-        default=5,
-        ge=1,
-        le=20,
-        description="Code chunks retrieved per sub-question",
-    )
-    max_total_chunks: int = Field(
-        default=30,
-        ge=10,
-        le=100,
-        description="Maximum total chunks used in synthesis",
-    )
-    max_follow_up_queries: int = Field(
-        default=3,
-        ge=0,
-        le=10,
-        description="Maximum follow-up queries from gap analysis",
-    )
-    synthesis_temperature: float = Field(
-        default=0.5,
-        ge=0.0,
-        le=2.0,
-        description="LLM temperature for synthesis (higher = more creative)",
-    )
-    synthesis_max_tokens: int = Field(
-        default=4096,
-        ge=512,
-        le=16000,
-        description="Maximum tokens in synthesis response",
-    )
-
-    def with_preset(self, preset: ResearchPreset | str | None) -> "DeepResearchConfig":
-        """Return a new config with preset values applied.
-
-        The preset values override the current config values. If preset is None
-        or "default", returns a copy of the current config unchanged.
-
-        Args:
-            preset: The research preset to apply ("quick", "default", "thorough").
-
-        Returns:
-            A new DeepResearchConfig with preset values applied.
-        """
-        if preset is None:
-            return self.model_copy()
-
-        # Convert string to enum if needed
-        if isinstance(preset, str):
-            try:
-                preset = ResearchPreset(preset.lower())
-            except ValueError:
-                # Invalid preset name, return unchanged
-                return self.model_copy()
-
-        if preset == ResearchPreset.DEFAULT:
-            return self.model_copy()
-
-        # Get preset values and merge with current config
-        preset_values = RESEARCH_PRESETS.get(preset, {})
-        return self.model_copy(update=preset_values)
-
-
-class PluginsConfig(BaseModel):
-    """Plugin system configuration."""
-
-    model_config = {"frozen": True}
-
-    enabled: bool = Field(default=True, description="Enable plugin system")
-    custom_dir: str | None = Field(
-        default=None,
-        description="Custom plugins directory path. Plugins in this directory "
-        "are loaded in addition to repo and user plugins.",
-    )
-    disable_entry_points: bool = Field(
-        default=False,
-        description="Disable loading plugins from setuptools entry points",
-    )
-
-
-class HooksConfig(BaseModel):
-    """Event hooks configuration."""
-
-    model_config = {"frozen": True}
-
-    enabled: bool = Field(default=True, description="Enable event hooks system")
-    scripts_dir: str | None = Field(
-        default=None,
-        description="Directory containing hook scripts. Scripts are named by event type "
-        "(e.g., index.complete.sh, wiki.page.complete.py).",
-    )
-    timeout_seconds: int = Field(
-        default=30,
-        ge=1,
-        le=300,
-        description="Maximum execution time for hook scripts in seconds",
-    )
 
 
 class ExportBatchConfig(BaseModel):
@@ -437,266 +100,6 @@ class OutputConfig(BaseModel):
     wiki_dir: str = Field(default=".deepwiki", description="Wiki output directory name")
     vector_db_name: str = Field(
         default="vectors.lance", description="Vector DB filename"
-    )
-
-
-class EmbeddingCacheConfig(BaseModel):
-    """Embedding cache configuration."""
-
-    model_config = {"frozen": True}
-
-    enabled: bool = Field(default=True, description="Enable embedding caching")
-    ttl_seconds: int = Field(
-        default=604800,  # 7 days
-        ge=60,
-        le=2592000,  # 30 days max
-        description="Cache TTL in seconds (default: 7 days)",
-    )
-    max_entries: int = Field(
-        default=100000,
-        ge=1000,
-        le=1000000,
-        description="Maximum cache entries before cleanup (default: 100k)",
-    )
-
-
-class LLMCacheConfig(BaseModel):
-    """LLM response caching configuration."""
-
-    model_config = {"frozen": True}
-
-    enabled: bool = Field(default=True, description="Enable LLM response caching")
-    ttl_seconds: int = Field(
-        default=604800,  # 7 days
-        ge=60,
-        le=2592000,  # 30 days max
-        description="Cache TTL in seconds (default: 7 days)",
-    )
-    max_entries: int = Field(
-        default=10000,
-        ge=100,
-        le=100000,
-        description="Maximum cache entries before eviction",
-    )
-    similarity_threshold: float = Field(
-        default=0.95,
-        ge=0.0,
-        le=1.0,
-        description="Minimum similarity score for cache hit (0.0-1.0)",
-    )
-    max_cacheable_temperature: float = Field(
-        default=0.3,
-        ge=0.0,
-        le=2.0,
-        description="Maximum temperature to cache (higher = non-deterministic)",
-    )
-
-
-class SearchCacheConfig(BaseModel):
-    """Search result caching configuration for vector store."""
-
-    model_config = {"frozen": True}
-
-    enabled: bool = Field(default=True, description="Enable search result caching")
-    ttl_seconds: int = Field(
-        default=3600,  # 1 hour
-        ge=60,
-        le=86400,  # 24 hours max
-        description="Cache TTL in seconds (default: 1 hour)",
-    )
-    max_entries: int = Field(
-        default=1000,
-        ge=100,
-        le=10000,
-        description="Maximum cache entries before eviction",
-    )
-    similarity_threshold: float = Field(
-        default=0.95,
-        ge=0.0,
-        le=1.0,
-        description="Minimum similarity score for semantic cache hit (0.0-1.0)",
-    )
-
-
-class SearchConfig(BaseModel):
-    """Search behavior configuration for precision/recall trade-offs.
-
-    Controls search profiles and adaptive search depth estimation.
-    """
-
-    model_config = {"frozen": True}
-
-    default_profile: Literal["fast", "balanced", "thorough"] = Field(
-        default="balanced",
-        description="Default search profile for precision/recall trade-off. "
-        "'fast' = fewer candidates, faster response; "
-        "'balanced' = default behavior, good balance; "
-        "'thorough' = exhaustive search, best recall but slower.",
-    )
-    adaptive_search_enabled: bool = Field(
-        default=True,
-        description="Enable adaptive search depth estimation. "
-        "When enabled, search depth adjusts based on query complexity and history.",
-    )
-    fast_min_similarity: float = Field(
-        default=0.3,
-        ge=0.0,
-        le=1.0,
-        description="Minimum similarity threshold for 'fast' profile (0.0-1.0).",
-    )
-    balanced_min_similarity: float = Field(
-        default=0.2,
-        ge=0.0,
-        le=1.0,
-        description="Minimum similarity threshold for 'balanced' profile (0.0-1.0).",
-    )
-    thorough_min_similarity: float = Field(
-        default=0.1,
-        ge=0.0,
-        le=1.0,
-        description="Minimum similarity threshold for 'thorough' profile (0.0-1.0).",
-    )
-    reranker_model: str | None = Field(
-        default=None,
-        description="Cross-encoder model for reranking search results "
-        "(e.g. 'cross-encoder/ms-marco-MiniLM-L-6-v2'). "
-        "When None, reranking is disabled.",
-    )
-    default_search_mode: Literal["vector", "keyword", "hybrid"] = Field(
-        default="vector",
-        description="Default search mode for code search. "
-        "'vector' = semantic embedding search (default); "
-        "'keyword' = BM25 full-text search; "
-        "'hybrid' = combined vector + BM25 with Reciprocal Rank Fusion.",
-    )
-    bm25_weight: float = Field(
-        default=0.3,
-        ge=0.0,
-        le=1.0,
-        description="Weight of BM25 results in hybrid search RRF (0.0-1.0). "
-        "Vector weight is always 1.0. Higher values favor keyword matches.",
-    )
-
-
-class LazyIndexConfig(BaseModel):
-    """Lazy vector index configuration for deferred index creation.
-
-    When enabled, vector indexes are not created immediately when the table
-    reaches the minimum row threshold. Instead, index creation is scheduled
-    as a background task after initial indexing completes, or triggered
-    on-demand when search latency exceeds the threshold.
-    """
-
-    model_config = {"frozen": True}
-
-    enabled: bool = Field(
-        default=True,
-        description="Enable lazy/deferred vector index creation. "
-        "When enabled, indexes are created in the background after initial indexing.",
-    )
-    latency_threshold_ms: int = Field(
-        default=500,
-        ge=50,
-        le=5000,
-        description="Search latency threshold in milliseconds. "
-        "If average latency exceeds this, index creation is triggered automatically.",
-    )
-    min_rows: int = Field(
-        default=1000,
-        ge=100,
-        le=100000,
-        description="Minimum number of rows before considering index creation. "
-        "Tables smaller than this threshold use brute-force search.",
-    )
-    latency_window_size: int = Field(
-        default=10,
-        ge=3,
-        le=100,
-        description="Number of recent searches to consider for latency calculation.",
-    )
-
-
-class FuzzySearchConfig(BaseModel):
-    """Fuzzy search configuration for typo-tolerant code search.
-
-    When semantic search results have low similarity scores, fuzzy matching
-    can be automatically enabled to provide "Did you mean?" suggestions
-    based on function/class names in the codebase.
-    """
-
-    model_config = {"frozen": True}
-
-    auto_fuzzy_threshold: float = Field(
-        default=0.5,
-        ge=0.0,
-        le=1.0,
-        description="Similarity score threshold below which fuzzy matching is auto-enabled. "
-        "When the best result has a score below this threshold, fuzzy suggestions are generated.",
-    )
-    suggestion_threshold: float = Field(
-        default=0.6,
-        ge=0.0,
-        le=1.0,
-        description="Minimum fuzzy similarity score (0.0-1.0) for a name to be included "
-        "in 'Did you mean?' suggestions.",
-    )
-    max_suggestions: int = Field(
-        default=3,
-        ge=1,
-        le=10,
-        description="Maximum number of 'Did you mean?' suggestions to return.",
-    )
-    enable_auto_fuzzy: bool = Field(
-        default=True,
-        description="Enable automatic fuzzy fallback when semantic results are poor. "
-        "When disabled, fuzzy matching is only used if explicitly requested.",
-    )
-
-
-class GraphRAGConfig(BaseModel):
-    """Knowledge graph-augmented retrieval configuration.
-
-    When enabled, entities and relationships are extracted during indexing
-    and stored in LanceDB tables. During queries, graph traversal expands
-    vector search results with structurally related code.
-    """
-
-    model_config = {"frozen": True}
-
-    enabled: bool = Field(
-        default=False,
-        description="Enable GraphRAG knowledge graph extraction and retrieval. "
-        "When disabled (default), no graph tables are created and queries "
-        "use pure vector search.",
-    )
-    max_traversal_depth: int = Field(
-        default=2,
-        ge=1,
-        le=4,
-        description="Maximum BFS depth when expanding search results via the graph.",
-    )
-    max_graph_neighbors: int = Field(
-        default=15,
-        ge=1,
-        le=50,
-        description="Maximum neighbor entities to add from graph expansion.",
-    )
-    relationship_types: list[str] = Field(
-        default=["calls", "imports", "inherits_from", "contains", "references"],
-        description="Relationship types to traverse during graph expansion.",
-    )
-    score_boost_factor: float = Field(
-        default=0.7,
-        ge=0.0,
-        le=1.0,
-        description="Score multiplier for graph-discovered chunks relative to "
-        "the minimum vector search score. Lower values rank graph results below "
-        "vector results.",
-    )
-    extract_during_index: bool = Field(
-        default=True,
-        description="Extract entities and relationships during indexing. "
-        "If False, graph must be built separately.",
     )
 
 
