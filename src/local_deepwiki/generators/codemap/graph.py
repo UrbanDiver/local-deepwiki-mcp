@@ -338,6 +338,123 @@ def _max_callees_for(
 # ---------------------------------------------------------------------------
 
 
+def _edge_type_for(focus: CodemapFocus, target_node: CodemapNode | None) -> str:
+    """Compute edge label: ``"calls"`` or ``"passes(param, ...)"`` for data-flow."""
+    if focus != CodemapFocus.DATA_FLOW or target_node is None:
+        return "calls"
+    params = _extract_param_names(target_node.content_preview)
+    if params:
+        return f"passes({', '.join(params)})"
+    return "calls"
+
+
+def _ensure_file_call_graph(
+    file_key: str,
+    abs_path: Path,
+    repo_path: Path,
+    extractor: object | None,
+    file_call_graphs: dict[str, dict[str, list[str]]],
+) -> dict[str, list[str]]:
+    """Lazily populate *file_call_graphs* for *file_key* and return the graph."""
+    if file_key not in file_call_graphs and extractor is not None:
+        try:
+            file_call_graphs[file_key] = extractor.extract_from_file(  # type: ignore[union-attr]
+                abs_path, repo_path
+            )
+        except (OSError, ValueError, RuntimeError) as e:
+            logger.debug("Could not extract call graph for %s: %s", file_key, e)
+            file_call_graphs[file_key] = {}
+    return file_call_graphs.get(file_key, {})
+
+
+async def _resolve_callees_for_node(
+    current_node: CodemapNode,
+    depth: int,
+    graph: CodemapGraph,
+    queue: deque[tuple[CodemapNode, int]],
+    vector_store: "VectorStore",
+    repo_path: Path,
+    file_call_graphs: dict[str, dict[str, list[str]]],
+    extractor: object | None,
+    focus: CodemapFocus,
+    max_nodes: int,
+) -> None:
+    """Process a single BFS node: find callees and add edges/nodes to *graph*."""
+    abs_path = Path(current_node.file_path)
+    if not abs_path.is_absolute():
+        abs_path = repo_path / current_node.file_path
+
+    file_key = current_node.file_path
+    cg = _ensure_file_call_graph(
+        file_key, abs_path, repo_path, extractor, file_call_graphs
+    )
+
+    # Determine callees for the current function
+    qn = current_node.qualified_name
+    sn = current_node.name
+    callees = list(cg.get(qn, cg.get(sn, [])))
+
+    if focus == CodemapFocus.DEPENDENCY_CHAIN:
+        callees = await _import_based_callees(
+            current_node, vector_store, repo_path, callees
+        )
+
+    for callee_name in callees:
+        if _is_noise(callee_name):
+            continue
+        if len(graph.nodes) >= max_nodes:
+            break
+
+        # Already tracked?
+        if callee_name in graph.nodes:
+            target_node = graph.nodes[callee_name]
+            graph.edges.append(
+                CodemapEdge(
+                    source=current_node.qualified_name,
+                    target=callee_name,
+                    edge_type=_edge_type_for(focus, target_node),
+                    source_file=current_node.file_path,
+                    target_file=target_node.file_path,
+                )
+            )
+            continue
+
+        # Check same file first
+        same_file_node = await _find_in_same_file(
+            callee_name, cg, current_node, repo_path, vector_store
+        )
+        if same_file_node is not None and not is_test_file(same_file_node.file_path):
+            graph.nodes[same_file_node.qualified_name] = same_file_node
+            graph.edges.append(
+                CodemapEdge(
+                    source=current_node.qualified_name,
+                    target=same_file_node.qualified_name,
+                    edge_type=_edge_type_for(focus, same_file_node),
+                    source_file=current_node.file_path,
+                    target_file=same_file_node.file_path,
+                )
+            )
+            queue.append((same_file_node, depth + 1))
+            continue
+
+        # Search vector store for cross-file definition
+        cross_node = await _search_cross_file(
+            callee_name, vector_store, repo_path, current_node.file_path
+        )
+        if cross_node is not None and not is_test_file(cross_node.file_path):
+            graph.nodes[cross_node.qualified_name] = cross_node
+            graph.edges.append(
+                CodemapEdge(
+                    source=current_node.qualified_name,
+                    target=cross_node.qualified_name,
+                    edge_type=_edge_type_for(focus, cross_node),
+                    source_file=current_node.file_path,
+                    target_file=cross_node.file_path,
+                )
+            )
+            queue.append((cross_node, depth + 1))
+
+
 async def build_cross_file_graph(
     entry_nodes: list[CodemapNode],
     vector_store: "VectorStore",
@@ -388,101 +505,18 @@ async def build_cross_file_graph(
         if is_test_file(current_node.file_path):
             continue
 
-        abs_path = Path(current_node.file_path)
-        if not abs_path.is_absolute():
-            abs_path = repo_path / current_node.file_path
-
-        # Retrieve call graph for the current file
-        file_key = current_node.file_path
-        if file_key not in file_call_graphs and extractor is not None:
-            try:
-                file_call_graphs[file_key] = extractor.extract_from_file(
-                    abs_path, repo_path
-                )
-            except (OSError, ValueError, RuntimeError) as e:
-                logger.debug("Could not extract call graph for %s: %s", file_key, e)
-                file_call_graphs[file_key] = {}
-
-        cg = file_call_graphs.get(file_key, {})
-
-        # Determine callees for the current function
-        callees: list[str] = []
-        qn = current_node.qualified_name
-        sn = current_node.name
-        callees = list(cg.get(qn, cg.get(sn, [])))
-
-        if focus == CodemapFocus.DEPENDENCY_CHAIN:
-            # Supplement with import-based edges
-            callees = await _import_based_callees(
-                current_node, vector_store, repo_path, callees
-            )
-
-        for callee_name in callees:
-            if _is_noise(callee_name):
-                continue
-            if len(graph.nodes) >= max_nodes:
-                break
-
-            # For DATA_FLOW, compute a descriptive edge type from the
-            # target function's parameter signature.
-            def _edge_type_for(target_node: CodemapNode | None) -> str:
-                if focus != CodemapFocus.DATA_FLOW or target_node is None:
-                    return "calls"
-                params = _extract_param_names(target_node.content_preview)
-                if params:
-                    return f"passes({', '.join(params)})"
-                return "calls"
-
-            # Already tracked?
-            if callee_name in graph.nodes:
-                target_node = graph.nodes[callee_name]
-                graph.edges.append(
-                    CodemapEdge(
-                        source=current_node.qualified_name,
-                        target=callee_name,
-                        edge_type=_edge_type_for(target_node),
-                        source_file=current_node.file_path,
-                        target_file=target_node.file_path,
-                    )
-                )
-                continue
-
-            # Check same file first
-            same_file_node = await _find_in_same_file(
-                callee_name, cg, current_node, repo_path, vector_store
-            )
-            if same_file_node is not None and not is_test_file(
-                same_file_node.file_path
-            ):
-                graph.nodes[same_file_node.qualified_name] = same_file_node
-                graph.edges.append(
-                    CodemapEdge(
-                        source=current_node.qualified_name,
-                        target=same_file_node.qualified_name,
-                        edge_type=_edge_type_for(same_file_node),
-                        source_file=current_node.file_path,
-                        target_file=same_file_node.file_path,
-                    )
-                )
-                queue.append((same_file_node, depth + 1))
-                continue
-
-            # Search vector store for cross-file definition
-            cross_node = await _search_cross_file(
-                callee_name, vector_store, repo_path, current_node.file_path
-            )
-            if cross_node is not None and not is_test_file(cross_node.file_path):
-                graph.nodes[cross_node.qualified_name] = cross_node
-                graph.edges.append(
-                    CodemapEdge(
-                        source=current_node.qualified_name,
-                        target=cross_node.qualified_name,
-                        edge_type=_edge_type_for(cross_node),
-                        source_file=current_node.file_path,
-                        target_file=cross_node.file_path,
-                    )
-                )
-                queue.append((cross_node, depth + 1))
+        await _resolve_callees_for_node(
+            current_node,
+            depth,
+            graph,
+            queue,
+            vector_store,
+            repo_path,
+            file_call_graphs,
+            extractor,
+            focus,
+            max_nodes,
+        )
 
     return graph
 
