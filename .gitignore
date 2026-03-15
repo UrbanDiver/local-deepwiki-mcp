@@ -94,3 +94,4 @@ logs/
 
 # Ruff
 .ruff_cache/
+.worktrees/
