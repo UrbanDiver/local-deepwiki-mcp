@@ -288,7 +288,7 @@ class OpenAILLMProvider(LLMProvider):
             self._handle_api_error(e)
             raise
 
-    async def generate_stream(
+    async def _generate_stream_impl(
         self,
         prompt: str,
         system_prompt: str | None = None,

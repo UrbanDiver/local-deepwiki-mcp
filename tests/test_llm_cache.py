@@ -65,7 +65,7 @@ class MockLLMProvider(LLMProvider):
         )
         return f"Response to: {prompt[:50]}"
 
-    async def generate_stream(
+    async def _generate_stream_impl(
         self,
         prompt: str,
         system_prompt: str | None = None,

@@ -57,7 +57,7 @@ class DeterministicLLMProvider(LLMProvider):
             )
         return "## Documentation\n\nGenerated content."
 
-    async def generate_stream(
+    async def _generate_stream_impl(
         self,
         prompt: str,
         system_prompt: str | None = None,

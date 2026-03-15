@@ -569,7 +569,6 @@ class LLMProvider(ABC):
         """
         pass
 
-    @abstractmethod
     async def generate_stream(
         self,
         prompt: str,
@@ -578,6 +577,10 @@ class LLMProvider(ABC):
         temperature: float = 0.7,
     ) -> AsyncIterator[str]:
         """Generate text from a prompt with streaming.
+
+        Checks ``self.capabilities.supports_streaming`` before delegating to
+        :meth:`_generate_stream_impl`.  Subclasses should override
+        ``_generate_stream_impl`` rather than this method.
 
         Args:
             prompt: The user prompt.
@@ -589,10 +592,42 @@ class LLMProvider(ABC):
             Generated text chunks.
 
         Raises:
+            NotImplementedError: If the provider does not support streaming.
             ProviderConnectionError: If the provider cannot be reached.
             ProviderRateLimitError: If rate limited by the provider.
             ProviderAuthenticationError: If authentication fails.
             ProviderModelNotFoundError: If the model is not available.
+        """
+        if not self.capabilities.supports_streaming:
+            raise NotImplementedError(
+                f"{type(self).__name__} does not support streaming"
+            )
+        async for chunk in self._generate_stream_impl(
+            prompt, system_prompt, max_tokens, temperature
+        ):
+            yield chunk
+
+    @abstractmethod
+    async def _generate_stream_impl(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> AsyncIterator[str]:
+        """Implement streaming generation.
+
+        Subclasses must override this method to provide streaming support.
+        It is only called after the streaming capability check passes.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Yields:
+            Generated text chunks.
         """
         # Make this an async generator for proper typing
         if False:  # pragma: no cover

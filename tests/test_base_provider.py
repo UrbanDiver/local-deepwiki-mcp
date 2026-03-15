@@ -2,7 +2,12 @@
 
 import pytest
 
-from local_deepwiki.providers.base import EmbeddingProvider, LLMProvider, with_retry
+from local_deepwiki.providers.base import (
+    EmbeddingProvider,
+    LLMProvider,
+    LLMProviderCapabilities,
+    with_retry,
+)
 
 
 class TestEmbeddingProviderAbstractMethods:
@@ -152,7 +157,7 @@ class TestLLMProviderAbstractMethods:
                 )
                 return "test response"
 
-            async def generate_stream(
+            async def _generate_stream_impl(
                 self,
                 prompt: str,
                 system_prompt: str | None = None,
@@ -169,8 +174,8 @@ class TestLLMProviderAbstractMethods:
         result = await provider.generate("test prompt")
         assert result == "test response"
 
-    async def test_generate_stream_raises_not_implemented(self):
-        """Test that base generate_stream raises NotImplementedError."""
+    async def test_generate_stream_impl_raises_not_implemented(self):
+        """Test that base _generate_stream_impl raises NotImplementedError."""
 
         class TestLLMProvider(LLMProvider):
             """Test implementation."""
@@ -184,15 +189,15 @@ class TestLLMProviderAbstractMethods:
             ) -> str:
                 return "test"
 
-            async def generate_stream(
+            async def _generate_stream_impl(
                 self,
                 prompt: str,
                 system_prompt: str | None = None,
                 max_tokens: int = 4096,
                 temperature: float = 0.7,
             ):
-                # Call parent's generate_stream which raises NotImplementedError
-                async for chunk in LLMProvider.generate_stream(
+                # Call parent's _generate_stream_impl which raises NotImplementedError
+                async for chunk in LLMProvider._generate_stream_impl(
                     self, prompt, system_prompt, max_tokens, temperature
                 ):
                     yield chunk
@@ -221,7 +226,7 @@ class TestLLMProviderAbstractMethods:
             ) -> str:
                 return "test"
 
-            async def generate_stream(
+            async def _generate_stream_impl(
                 self,
                 prompt: str,
                 system_prompt: str | None = None,
@@ -252,7 +257,7 @@ class TestLLMProviderAbstractMethods:
             ) -> str:
                 return "test"
 
-            async def generate_stream(
+            async def _generate_stream_impl(
                 self,
                 prompt: str,
                 system_prompt: str | None = None,
@@ -419,3 +424,178 @@ class TestWithRetryFallbackPath:
         result = await overloaded_no_jitter()
         assert result == "success"
         assert call_count == 2
+
+
+class TestStreamingCapabilityGuard:
+    """Tests for the streaming capability enforcement guard."""
+
+    async def test_generate_stream_raises_if_not_supported(self):
+        """Providers that don't support streaming should raise NotImplementedError."""
+
+        class NonStreamingProvider(LLMProvider):
+            """A provider that does not support streaming."""
+
+            async def generate(
+                self,
+                prompt: str,
+                system_prompt: str | None = None,
+                max_tokens: int = 4096,
+                temperature: float = 0.7,
+            ) -> str:
+                return "response"
+
+            async def _generate_stream_impl(
+                self,
+                prompt: str,
+                system_prompt: str | None = None,
+                max_tokens: int = 4096,
+                temperature: float = 0.7,
+            ):
+                yield "should not reach"
+
+            @property
+            def name(self) -> str:
+                return "non-streaming"
+
+            @property
+            def capabilities(self) -> LLMProviderCapabilities:
+                return LLMProviderCapabilities(supports_streaming=False)
+
+        provider = NonStreamingProvider()
+        with pytest.raises(NotImplementedError, match="does not support streaming"):
+            async for _ in provider.generate_stream("test"):
+                pass
+
+    async def test_generate_stream_delegates_when_supported(self):
+        """Providers that support streaming should delegate to _generate_stream_impl."""
+
+        class StreamingProvider(LLMProvider):
+            """A provider that supports streaming."""
+
+            async def generate(
+                self,
+                prompt: str,
+                system_prompt: str | None = None,
+                max_tokens: int = 4096,
+                temperature: float = 0.7,
+            ) -> str:
+                return "response"
+
+            async def _generate_stream_impl(
+                self,
+                prompt: str,
+                system_prompt: str | None = None,
+                max_tokens: int = 4096,
+                temperature: float = 0.7,
+            ):
+                yield "chunk1"
+                yield "chunk2"
+
+            @property
+            def name(self) -> str:
+                return "streaming"
+
+            @property
+            def capabilities(self) -> LLMProviderCapabilities:
+                return LLMProviderCapabilities(supports_streaming=True)
+
+        provider = StreamingProvider()
+        chunks = []
+        async for chunk in provider.generate_stream("test"):
+            chunks.append(chunk)
+        assert chunks == ["chunk1", "chunk2"]
+
+    async def test_generate_stream_passes_all_arguments(self):
+        """The guard should forward all arguments to _generate_stream_impl."""
+
+        class TrackingProvider(LLMProvider):
+            """A provider that tracks arguments passed to _generate_stream_impl."""
+
+            def __init__(self):
+                self.received_args: dict = {}
+
+            async def generate(
+                self,
+                prompt: str,
+                system_prompt: str | None = None,
+                max_tokens: int = 4096,
+                temperature: float = 0.7,
+            ) -> str:
+                return "response"
+
+            async def _generate_stream_impl(
+                self,
+                prompt: str,
+                system_prompt: str | None = None,
+                max_tokens: int = 4096,
+                temperature: float = 0.7,
+            ):
+                self.received_args = {
+                    "prompt": prompt,
+                    "system_prompt": system_prompt,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                }
+                yield "ok"
+
+            @property
+            def name(self) -> str:
+                return "tracking"
+
+            @property
+            def capabilities(self) -> LLMProviderCapabilities:
+                return LLMProviderCapabilities(supports_streaming=True)
+
+        provider = TrackingProvider()
+        chunks = []
+        async for chunk in provider.generate_stream(
+            "my prompt", system_prompt="sys", max_tokens=2048, temperature=0.5
+        ):
+            chunks.append(chunk)
+
+        assert chunks == ["ok"]
+        assert provider.received_args == {
+            "prompt": "my prompt",
+            "system_prompt": "sys",
+            "max_tokens": 2048,
+            "temperature": 0.5,
+        }
+
+    async def test_generate_stream_error_message_includes_class_name(self):
+        """The NotImplementedError message should include the provider class name."""
+
+        class MyCustomProvider(LLMProvider):
+            """Custom provider without streaming."""
+
+            async def generate(
+                self,
+                prompt: str,
+                system_prompt: str | None = None,
+                max_tokens: int = 4096,
+                temperature: float = 0.7,
+            ) -> str:
+                return "response"
+
+            async def _generate_stream_impl(
+                self,
+                prompt: str,
+                system_prompt: str | None = None,
+                max_tokens: int = 4096,
+                temperature: float = 0.7,
+            ):
+                yield "nope"
+
+            @property
+            def name(self) -> str:
+                return "custom"
+
+            @property
+            def capabilities(self) -> LLMProviderCapabilities:
+                return LLMProviderCapabilities(supports_streaming=False)
+
+        provider = MyCustomProvider()
+        with pytest.raises(
+            NotImplementedError, match="MyCustomProvider does not support streaming"
+        ):
+            async for _ in provider.generate_stream("test"):
+                pass

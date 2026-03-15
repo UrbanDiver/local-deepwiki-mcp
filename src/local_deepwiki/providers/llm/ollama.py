@@ -275,7 +275,7 @@ class OllamaProvider(LLMProvider):
             self._health_checked = False  # Reset health check
             raise OllamaConnectionError(self._base_url, e) from e
 
-    async def generate_stream(
+    async def _generate_stream_impl(
         self,
         prompt: str,
         system_prompt: str | None = None,

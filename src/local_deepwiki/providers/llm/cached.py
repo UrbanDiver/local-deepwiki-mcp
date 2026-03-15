@@ -99,7 +99,7 @@ class CachingLLMProvider(LLMProvider):
 
         return response
 
-    async def generate_stream(
+    async def _generate_stream_impl(
         self,
         prompt: str,
         system_prompt: str | None = None,
