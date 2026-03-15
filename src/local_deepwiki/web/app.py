@@ -360,6 +360,105 @@ def _try_lazy_generate(page_path: str, wiki_path: Path) -> str | None:
         return None
 
 
+def _compute_etag(file_path: Path) -> str | None:
+    """Compute an ETag from file mtime and size, or None on error."""
+    try:
+        stat = file_path.stat()
+        return hashlib.md5(f"{stat.st_mtime_ns}:{stat.st_size}".encode()).hexdigest()
+    except OSError:
+        return None
+
+
+def _resolve_page_content(wiki_path: Path, path: str) -> tuple[str, Path, str | None]:
+    """Resolve wiki page path, read or lazily generate content.
+
+    Handles path validation, traversal prevention, lazy generation for
+    missing pages, and file reading.
+
+    Args:
+        wiki_path: Resolved .deepwiki directory path.
+        path: Relative wiki page path (e.g. 'modules/src.md').
+
+    Returns:
+        Tuple of (markdown_content, resolved_file_path, etag_or_none).
+        etag is None when content was freshly generated rather than read
+        from disk.
+
+    Raises:
+        Werkzeug abort(403) on path traversal attempts.
+        Werkzeug abort(404) when the page cannot be found or generated.
+        Werkzeug abort(500) on file read errors.
+    """
+    file_path = (wiki_path / path).resolve()
+    if not file_path.is_relative_to(wiki_path):
+        logger.warning("Path traversal attempt blocked: %s", path)
+        abort(403, "Invalid path")
+
+    # If the page doesn't exist on disk, attempt lazy generation
+    if not file_path.exists() or not file_path.is_file():
+        content = _try_lazy_generate(path, wiki_path)
+        if content is None:
+            logger.warning("Page not found: %s", path)
+            abort(404, f"Page not found: {path}")
+        return content, file_path, None
+
+    # Read existing file
+    try:
+        etag = _compute_etag(file_path)
+        content = file_path.read_text()
+        return content, file_path, etag
+    except (OSError, UnicodeDecodeError) as e:
+        from local_deepwiki.errors import sanitize_error_message
+
+        abort(500, sanitize_error_message(str(e)))
+
+
+def _build_page_response(
+    wiki_path: Path, path: str, html_content: str, file_path: Path
+) -> Response:
+    """Build the full page response with sidebar, breadcrumb, and cache headers.
+
+    Args:
+        wiki_path: Resolved .deepwiki directory path.
+        path: Relative wiki page path.
+        html_content: Already-rendered HTML content.
+        file_path: Resolved file path (may not exist for freshly generated pages).
+
+    Returns:
+        Flask Response with rendered template and cache headers.
+    """
+    pages, sections, toc_entries = get_wiki_structure(wiki_path)
+
+    # After lazy generation the file now exists on disk
+    title = (
+        extract_title(file_path)
+        if file_path.exists()
+        else path.split("/")[-1].replace(".md", "").replace("_", " ").title()
+    )
+
+    breadcrumb = build_breadcrumb(wiki_path, path)
+
+    response = Response(
+        render_template(
+            "page.html",
+            content=html_content,
+            title=title,
+            pages=pages,
+            sections=sections,
+            toc_entries=toc_entries,
+            current_path=path,
+            breadcrumb=breadcrumb,
+        )
+    )
+
+    # Set caching headers — use ETag if file exists on disk
+    etag = _compute_etag(file_path) if file_path.exists() else None
+    if etag is not None:
+        response.headers["ETag"] = etag
+    response.headers["Cache-Control"] = "private, max-age=60"
+    return response
+
+
 @app.route("/wiki/<path:path>")
 def view_page(path: str) -> Response | str:
     """View a wiki page."""
@@ -375,78 +474,14 @@ def view_page(path: str) -> Response | str:
         logger.info("Wiki not indexed yet, showing onboarding page")
         return render_template("onboarding.html", wiki_path=str(WIKI_PATH.parent))
 
-    file_path = (WIKI_PATH / path).resolve()
-    if not file_path.is_relative_to(WIKI_PATH):
-        logger.warning("Path traversal attempt blocked: %s", path)
-        abort(403, "Invalid path")
+    content, file_path, etag = _resolve_page_content(WIKI_PATH, path)
 
-    # If the page doesn't exist on disk, attempt lazy generation
-    if not file_path.exists() or not file_path.is_file():
-        content = _try_lazy_generate(path, WIKI_PATH)
-        if content is None:
-            logger.warning("Page not found: %s", path)
-            abort(404, f"Page not found: {path}")
-    else:
-        content = None
+    # Conditional request: return 304 if client has current version
+    if etag is not None and request.if_none_match and etag in request.if_none_match:
+        return Response(status=304)
 
-    try:
-        if content is not None:
-            # Page was just generated — no ETag yet
-            html_content = render_markdown(content)
-        else:
-            # ETag based on file mtime + size for conditional requests
-            stat = file_path.stat()
-            etag = hashlib.md5(
-                f"{stat.st_mtime_ns}:{stat.st_size}".encode()
-            ).hexdigest()
-
-            if request.if_none_match and etag in request.if_none_match:
-                return Response(status=304)
-
-            content = file_path.read_text()
-            html_content = render_markdown(content)
-    except (OSError, UnicodeDecodeError) as e:
-        from local_deepwiki.errors import sanitize_error_message
-
-        abort(500, sanitize_error_message(str(e)))
-
-    pages, sections, toc_entries = get_wiki_structure(WIKI_PATH)
-
-    # After lazy generation the file now exists on disk
-    title = (
-        extract_title(file_path)
-        if file_path.exists()
-        else path.split("/")[-1].replace(".md", "").replace("_", " ").title()
-    )
-
-    # Build breadcrumb navigation
-    breadcrumb = build_breadcrumb(WIKI_PATH, path)
-
-    response = Response(
-        render_template(
-            "page.html",
-            content=html_content,
-            title=title,
-            pages=pages,
-            sections=sections,
-            toc_entries=toc_entries,
-            current_path=path,
-            breadcrumb=breadcrumb,
-        )
-    )
-
-    # Set caching headers — use ETag if we read from disk, skip for freshly generated
-    if file_path.exists():
-        try:
-            stat = file_path.stat()
-            fresh_etag = hashlib.md5(
-                f"{stat.st_mtime_ns}:{stat.st_size}".encode()
-            ).hexdigest()
-            response.headers["ETag"] = fresh_etag
-        except OSError:
-            pass
-    response.headers["Cache-Control"] = "private, max-age=60"
-    return response
+    html_content = render_markdown(content)
+    return _build_page_response(WIKI_PATH, path, html_content, file_path)
 
 
 # ---------------------------------------------------------------------------
