@@ -10,7 +10,7 @@ import re
 from collections import deque
 from operator import itemgetter
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from local_deepwiki.core.vectorstore import VectorStore
@@ -115,16 +115,16 @@ def _extract_param_names(content: str) -> list[str]:
 
 
 def _build_file_call_graphs(
-    callable_results: list[object],
+    callable_results: list[Any],
     repo_path: Path,
-    extractor: object,
+    extractor: Any,
     max_files: int = 15,
 ) -> dict[str, dict[str, list[str]]]:
     """Build per-file call graphs for the top *max_files* unique files."""
     file_call_graphs: dict[str, dict[str, list[str]]] = {}
     seen_files: set[str] = set()
     for r in callable_results[:max_files]:
-        fp = r.chunk.file_path  # type: ignore[union-attr]
+        fp = r.chunk.file_path
         if fp in seen_files:
             continue
         seen_files.add(fp)
@@ -132,7 +132,7 @@ def _build_file_call_graphs(
             abs_path = Path(fp)
             if not abs_path.is_absolute():
                 abs_path = repo_path / fp
-            cg = extractor.extract_from_file(abs_path, repo_path)  # type: ignore[union-attr]
+            cg = extractor.extract_from_file(abs_path, repo_path)
             file_call_graphs[fp] = cg
         except (OSError, ValueError, RuntimeError) as e:
             logger.debug("Could not extract call graph from %s: %s", fp, e)
@@ -140,21 +140,21 @@ def _build_file_call_graphs(
 
 
 def _score_candidates(
-    callable_results: list[object],
+    callable_results: list[Any],
     file_call_graphs: dict[str, dict[str, list[str]]],
     repo_path: Path,
 ) -> list[tuple[float, CodemapNode]]:
     """Score candidates by vector similarity, chunk type, and call-graph connectivity."""
     scored: list[tuple[float, CodemapNode]] = []
     for r in callable_results:
-        node = _node_from_chunk(r.chunk, repo_path)  # type: ignore[union-attr]
-        score = r.score  # type: ignore[union-attr]
+        node = _node_from_chunk(r.chunk, repo_path)
+        score = r.score
 
         # Apply chunk-type weight — classes (often dataclasses/containers)
         # score lower than functions/methods (actual execution flows)
         score *= CHUNK_TYPE_WEIGHTS.get(
             r.chunk.chunk_type.value,
-            1.0,  # type: ignore[union-attr]
+            1.0,
         )
 
         # Score by call-graph connectivity: functions that call many others
@@ -201,7 +201,7 @@ async def _run_fallback_search(
     if condensed != search_query:
         queries.append(condensed)
 
-    fallback_results: list[object] = []
+    fallback_results: list[Any] = []
     seen_chunk_ids: set[str] = set()
     for fallback_query in queries:
         for chunk_type in ("function", "method"):
@@ -213,9 +213,9 @@ async def _run_fallback_search(
                     chunk_type=chunk_type,
                 )
                 for r in type_results:
-                    if is_test_file(r.chunk.file_path):  # type: ignore[union-attr]
+                    if is_test_file(r.chunk.file_path):
                         continue
-                    seen_key = f"{r.chunk.file_path}:{r.chunk.name}"  # type: ignore[union-attr]
+                    seen_key = f"{r.chunk.file_path}:{r.chunk.name}"
                     if seen_key not in seen_chunk_ids:
                         seen_chunk_ids.add(seen_key)
                         fallback_results.append(r)
@@ -370,13 +370,13 @@ def _ensure_file_call_graph(
     file_key: str,
     abs_path: Path,
     repo_path: Path,
-    extractor: object | None,
+    extractor: Any | None,
     file_call_graphs: dict[str, dict[str, list[str]]],
 ) -> dict[str, list[str]]:
     """Lazily populate *file_call_graphs* for *file_key* and return the graph."""
     if file_key not in file_call_graphs and extractor is not None:
         try:
-            file_call_graphs[file_key] = extractor.extract_from_file(  # type: ignore[union-attr]
+            file_call_graphs[file_key] = extractor.extract_from_file(
                 abs_path, repo_path
             )
         except (OSError, ValueError, RuntimeError) as e:
@@ -393,7 +393,7 @@ async def _resolve_callees_for_node(
     vector_store: "VectorStore",
     repo_path: Path,
     file_call_graphs: dict[str, dict[str, list[str]]],
-    extractor: object | None,
+    extractor: Any | None,
     focus: CodemapFocus,
     max_nodes: int,
 ) -> None:
