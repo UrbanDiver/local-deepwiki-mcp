@@ -15,6 +15,7 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
+    # Core (always required)
     "mcp>=1.2.0,<2.0.0",  # Pinned: API stability
     "rapidfuzz>=3.0,<4.0.0",  # Pinned: Security-critical string matching
     "tree-sitter>=0.23",  # Not pinned: version inconsistencies across Python versions
@@ -33,23 +34,33 @@ dependencies = [
     "tree-sitter-c-sharp>=0.23",
     "lancedb>=0.15,<1.0.0",  # Pinned: Vector store API stability
     "sentence-transformers>=3.0,<4.0.0",  # Pinned: Embedding model compatibility
-    "openai>=1.0,<2.0.0",  # Pinned: Critical for API provider
-    "anthropic>=0.40,<1.0.0",  # Pinned: Critical for API provider
-    "ollama>=0.4,<1.0.0",  # Pinned: Local LLM provider
     "pydantic>=2.0,<3.0.0",  # Pinned: Core validation library
     "pyyaml>=6.0,<7.0.0",  # Pinned: Config parsing with safety
     "rich>=13.0,<14.0.0",  # Pinned: CLI output formatting
     "pandas>=2.0,<3.0.0",  # Pinned: Data processing
-    "flask>=3.0,<4.0.0",  # Pinned: Web server
     "markdown>=3.0,<4.0.0",  # Pinned: Markdown parsing
     "nh3>=0.2.14,<1.0.0",  # Pinned: HTML sanitization (Rust-based)
     "watchdog>=4.0,<5.0.0",  # Pinned: File system monitoring
-    "weasyprint>=68.0,<69.0.0",  # Pinned: PDF generation
     "psutil>=5.0,<6.0.0",  # Pinned: System utilities
 ]
 
 [project.optional-dependencies]
+web = [
+    "flask>=3.0,<4.0.0",  # Web UI server
+]
+pdf = [
+    "weasyprint>=68.0,<69.0.0",  # PDF export
+]
+cloud = [
+    "openai>=1.0,<2.0.0",  # OpenAI LLM provider
+    "anthropic>=0.40,<1.0.0",  # Anthropic LLM provider
+    "ollama>=0.4,<1.0.0",  # Local LLM provider
+]
+all = [
+    "local-deepwiki[web,pdf,cloud]",
+]
 dev = [
+    "local-deepwiki[all]",
     "pytest>=8.0",
     "pytest-asyncio>=0.24,<1.0.0",
     "pre-commit>=3.0",
