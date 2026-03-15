@@ -781,6 +781,157 @@ class TestBuildCrossFileGraph:
         assert graph.entry_point is None
 
 
+class TestMinSimilarityFloor:
+    """Tests that codemap cross-file search applies a min_similarity floor."""
+
+    async def test_low_similarity_results_filtered_from_cross_file_graph(
+        self, tmp_path
+    ):
+        """Low-similarity vector search results (score < 0.3) should not
+        appear in the cross-file graph because min_similarity=0.3 is passed
+        to the vector store search call.
+        """
+        from local_deepwiki.generators.codemap import (
+            CodemapFocus,
+            CodemapNode,
+            build_cross_file_graph,
+        )
+
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        (src_dir / "main.py").write_text("def main():\n    helper()\n")
+        (src_dir / "utils.py").write_text("def helper():\n    pass\n")
+
+        entry = [
+            CodemapNode(
+                name="main",
+                qualified_name="main.main",
+                file_path="src/main.py",
+                start_line=1,
+                end_line=2,
+                chunk_type="function",
+            ),
+        ]
+
+        async def search_with_similarity_filter(
+            query, *, limit=10, min_similarity=0.0, **kwargs
+        ):
+            """Mock that respects min_similarity like the real VectorStore."""
+            low_score_result = _make_mock_search_result(
+                name="helper",
+                file_path="src/utils.py",
+                start_line=1,
+                end_line=2,
+                content="def helper():\n    pass",
+                score=0.1,  # Below the 0.3 floor
+            )
+            return [r for r in [low_score_result] if r.score >= min_similarity]
+
+        mock_vs = AsyncMock()
+        mock_vs.search = AsyncMock(side_effect=search_with_similarity_filter)
+
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
+        ) as MockCGE:
+            extractor = MagicMock()
+            extractor.extract_from_file.return_value = {"main": ["helper"]}
+            MockCGE.return_value = extractor
+
+            graph = await build_cross_file_graph(
+                entry_nodes=entry,
+                vector_store=mock_vs,
+                repo_path=tmp_path,
+                max_depth=3,
+                max_nodes=10,
+                focus=CodemapFocus.EXECUTION_FLOW,
+            )
+
+        # Only the entry node should be in the graph; the low-similarity
+        # "helper" result should have been filtered out by the vector store
+        assert "main.main" in graph.nodes
+        cross_file_nodes = [
+            n for qn, n in graph.nodes.items() if n.file_path != "src/main.py"
+        ]
+        assert len(cross_file_nodes) == 0, (
+            "Low-similarity results (score < 0.3) should be filtered out"
+        )
+
+    async def test_high_similarity_results_kept_in_cross_file_graph(self, tmp_path):
+        """Results with score >= 0.3 should still be included in the graph."""
+        from local_deepwiki.generators.codemap import (
+            CodemapFocus,
+            CodemapNode,
+            build_cross_file_graph,
+        )
+
+        src_dir = tmp_path / "src"
+        src_dir.mkdir()
+        (src_dir / "main.py").write_text("def main():\n    helper()\n")
+        (src_dir / "utils.py").write_text("def helper():\n    pass\n")
+
+        entry = [
+            CodemapNode(
+                name="main",
+                qualified_name="main.main",
+                file_path="src/main.py",
+                start_line=1,
+                end_line=2,
+                chunk_type="function",
+            ),
+        ]
+
+        mock_vs = AsyncMock()
+        mock_vs.search = AsyncMock(
+            return_value=[
+                _make_mock_search_result(
+                    name="helper",
+                    file_path="src/utils.py",
+                    start_line=1,
+                    end_line=2,
+                    content="def helper():\n    pass",
+                    score=0.8,  # Above the 0.3 floor
+                ),
+            ]
+        )
+
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
+        ) as MockCGE:
+            extractor = MagicMock()
+            extractor.extract_from_file.return_value = {"main": ["helper"]}
+            MockCGE.return_value = extractor
+
+            graph = await build_cross_file_graph(
+                entry_nodes=entry,
+                vector_store=mock_vs,
+                repo_path=tmp_path,
+                max_depth=3,
+                max_nodes=10,
+                focus=CodemapFocus.EXECUTION_FLOW,
+            )
+
+        # The high-similarity helper should be found in the graph
+        cross_file_nodes = [
+            n for qn, n in graph.nodes.items() if n.file_path != "src/main.py"
+        ]
+        assert len(cross_file_nodes) >= 1, (
+            "High-similarity results (score >= 0.3) should be kept"
+        )
+
+    async def test_search_called_with_min_similarity_0_3(self, tmp_path):
+        """Verify that vector_store.search is called with min_similarity=0.3."""
+        from local_deepwiki.generators.codemap.graph import _search_cross_file
+
+        mock_vs = AsyncMock()
+        mock_vs.search = AsyncMock(return_value=[])
+
+        await _search_cross_file("some_func", mock_vs, tmp_path, "src/caller.py")
+
+        mock_vs.search.assert_called_once_with(
+            "def some_func", limit=5, min_similarity=0.3
+        )
+
+
 class TestGenerateCodemapDiagram:
     def test_basic_diagram(self):
         from local_deepwiki.generators.codemap import (

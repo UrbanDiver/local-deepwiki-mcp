@@ -209,7 +209,7 @@ async def _run_fallback_search(
                 type_results = await vector_store.search(
                     fallback_query,
                     limit=15,
-                    min_similarity=0.0,
+                    min_similarity=0.3,
                     chunk_type=chunk_type,
                 )
                 for r in type_results:
@@ -273,7 +273,7 @@ async def discover_entry_points(
 
     search_query = entry_point_hint if entry_point_hint else query
     try:
-        results = await vector_store.search(search_query, limit=30, min_similarity=0.0)
+        results = await vector_store.search(search_query, limit=30, min_similarity=0.3)
     except (OSError, ValueError, RuntimeError):
         logger.exception("Vector search failed for entry point discovery")
         return []
@@ -607,7 +607,7 @@ async def _find_in_same_file(
 
     try:
         for query in queries:
-            results = await vector_store.search(query, limit=10, min_similarity=0.0)
+            results = await vector_store.search(query, limit=10, min_similarity=0.3)
             for r in results:
                 chunk = r.chunk
                 if chunk.chunk_type.value not in CALLABLE_CHUNK_TYPES:
@@ -639,7 +639,7 @@ async def _search_cross_file(
     """Search the vector store for *callee_name* in a different file."""
     try:
         results = await vector_store.search(
-            f"def {callee_name}", limit=5, min_similarity=0.0
+            f"def {callee_name}", limit=5, min_similarity=0.3
         )
     except (OSError, ValueError, RuntimeError) as e:
         logger.debug("Cross-file search failed for %s: %s", callee_name, e)
