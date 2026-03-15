@@ -18,11 +18,14 @@ import pytest
 from mcp.types import TextContent
 
 from local_deepwiki.server import (
+    PROGRESS_ENABLED_TOOLS,
     TOOL_HANDLERS,
+    _validate_tool_handler_consistency,
     call_tool,
     list_tools,
     server,
 )
+from local_deepwiki.server_tool_defs import TOOL_DEFINITIONS
 
 
 class TestServer:
@@ -726,3 +729,45 @@ class TestToolDescriptions:
         pdf_tool = next(t for t in tools if t.name == "export_wiki_pdf")
         assert "pdf" in pdf_tool.description.lower()
         assert "export" in pdf_tool.description.lower()
+
+
+class TestToolHandlerConsistency:
+    """Tests that TOOL_HANDLERS + PROGRESS_ENABLED_TOOLS stay in sync with TOOL_DEFINITIONS."""
+
+    def test_tool_handler_names_match_definitions(self):
+        """Every TOOL_DEFINITION must have a handler (dispatch or progress-enabled)."""
+        handler_names = set(TOOL_HANDLERS.keys()) | set(PROGRESS_ENABLED_TOOLS)
+        definition_names = {t.name for t in TOOL_DEFINITIONS}
+
+        missing_handlers = definition_names - handler_names
+        extra_handlers = handler_names - definition_names
+
+        assert not missing_handlers, (
+            f"Tool definitions without a handler: {sorted(missing_handlers)}"
+        )
+        assert not extra_handlers, (
+            f"Handlers without a tool definition: {sorted(extra_handlers)}"
+        )
+
+    def test_validate_tool_handler_consistency_passes(self):
+        """Runtime validation function should not raise when state is consistent."""
+        _validate_tool_handler_consistency()
+
+    def test_validate_tool_handler_consistency_detects_missing_handler(self):
+        """Runtime validation should raise RuntimeError on missing handler."""
+        from unittest.mock import patch as _patch
+
+        # Remove one handler to simulate drift
+        reduced = {k: v for k, v in TOOL_HANDLERS.items() if k != "ask_question"}
+        with _patch.dict("local_deepwiki.server.TOOL_HANDLERS", reduced, clear=True):
+            with pytest.raises(RuntimeError, match="ask_question"):
+                _validate_tool_handler_consistency()
+
+    def test_validate_tool_handler_consistency_detects_extra_handler(self):
+        """Runtime validation should raise RuntimeError on extra handler."""
+        from unittest.mock import patch as _patch
+
+        augmented = {**TOOL_HANDLERS, "ghost_tool": AsyncMock()}
+        with _patch.dict("local_deepwiki.server.TOOL_HANDLERS", augmented, clear=True):
+            with pytest.raises(RuntimeError, match="ghost_tool"):
+                _validate_tool_handler_consistency()

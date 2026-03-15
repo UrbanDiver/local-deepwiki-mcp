@@ -135,6 +135,33 @@ PROGRESS_ENABLED_TOOLS = frozenset(
 )
 
 
+def _validate_tool_handler_consistency() -> None:
+    """Verify that every tool definition has a handler and vice-versa.
+
+    Raises ``RuntimeError`` at startup if the sets diverge, preventing
+    silent regressions where a new tool is defined but never dispatched
+    (or a handler exists for a tool that was removed).
+    """
+    handler_names = set(TOOL_HANDLERS.keys()) | set(PROGRESS_ENABLED_TOOLS)
+    definition_names = {t.name for t in TOOL_DEFINITIONS}
+
+    missing_handlers = definition_names - handler_names
+    extra_handlers = handler_names - definition_names
+
+    errors: list[str] = []
+    if missing_handlers:
+        errors.append(f"Tool definitions without a handler: {sorted(missing_handlers)}")
+    if extra_handlers:
+        errors.append(f"Handlers without a tool definition: {sorted(extra_handlers)}")
+    if errors:
+        raise RuntimeError(
+            "Tool-handler consistency check failed:\n  " + "\n  ".join(errors)
+        )
+    logger.debug(
+        "Tool-handler consistency OK: %d tools validated", len(definition_names)
+    )
+
+
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Handle tool calls."""
@@ -183,6 +210,7 @@ def _log_security_posture() -> None:
 def main() -> None:
     """Main entry point for the MCP server."""
     logger.info("Starting local-deepwiki MCP server")
+    _validate_tool_handler_consistency()
     _log_security_posture()
 
     async def run() -> None:
