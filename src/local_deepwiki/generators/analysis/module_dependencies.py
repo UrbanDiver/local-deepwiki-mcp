@@ -15,6 +15,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from local_deepwiki.generators.analysis.source_filter import iter_python_files
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -100,20 +101,7 @@ def analyze_cross_module_dependencies(
     edge_counts: dict[tuple[str, str], int] = defaultdict(int)
     edge_imports: dict[tuple[str, str], list[str]] = defaultdict(list)
 
-    py_files = sorted(repo_path.rglob("*.py"))
-
-    for py_file in py_files:
-        try:
-            rel_path = py_file.relative_to(repo_path)
-        except ValueError:
-            continue
-
-        if any(
-            part.startswith(".") or part in ("__pycache__", "node_modules")
-            for part in rel_path.parts
-        ):
-            continue
-
+    for py_file, rel_path in iter_python_files(repo_path, exclude_tests=False):
         src_module = _module_label(rel_path)
         if module_filter and not src_module.startswith(module_filter):
             continue

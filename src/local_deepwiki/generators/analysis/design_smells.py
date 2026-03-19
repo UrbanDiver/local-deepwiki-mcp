@@ -14,13 +14,12 @@ No LLM or external service calls — pure filesystem + AST analysis.
 
 from __future__ import annotations
 
-import os
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.core.parser import CodeParser
-from local_deepwiki.core.parser.languages import EXTENSION_MAP
+from local_deepwiki.generators.analysis.source_filter import iter_source_files
 from local_deepwiki.logging import get_logger
 
 if TYPE_CHECKING:
@@ -105,19 +104,9 @@ _BRANCH_TYPES = frozenset(
     }
 )
 
-_TEST_DIR_NAMES = frozenset({"tests", "test", "__tests__", "spec"})
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _is_test_file(rel_path: Path) -> bool:
-    name = rel_path.name
-    if name.startswith("test_") or name.endswith("_test.py") or name == "conftest.py":
-        return True
-    return any(part in _TEST_DIR_NAMES for part in rel_path.parts)
 
 
 def _node_text(node: Node) -> str:
@@ -484,31 +473,13 @@ def analyze_design_smells(
             ),
         }
 
-    supported_extensions = set(EXTENSION_MAP.keys())
-
     all_smells: list[dict[str, Any]] = []
 
-    for root, dirs, files in os.walk(repo_path):
-        dirs[:] = [
-            d
-            for d in dirs
-            if not d.startswith(".")
-            and d not in ("node_modules", "__pycache__", ".deepwiki", "dist", "build")
-        ]
-        for fname in files:
-            full_path = Path(root) / fname
-            try:
-                rel_path = full_path.relative_to(repo_path)
-            except ValueError:
-                continue
-
-            if full_path.suffix not in supported_extensions:
-                continue
-            if exclude_tests and _is_test_file(rel_path):
-                continue
-
-            file_smells = _analyze_file(full_path, rel_path, severity_threshold)
-            all_smells.extend(file_smells)
+    for full_path, rel_path in iter_source_files(
+        repo_path, exclude_tests=exclude_tests
+    ):
+        file_smells = _analyze_file(full_path, rel_path, severity_threshold)
+        all_smells.extend(file_smells)
 
     # Sort: severity descending, then file, then line.
     all_smells.sort(

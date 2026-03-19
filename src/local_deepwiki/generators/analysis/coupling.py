@@ -20,6 +20,7 @@ from local_deepwiki.core.parser import CodeParser
 from local_deepwiki.generators.analysis.module_dependencies import (
     analyze_cross_module_dependencies,
 )
+from local_deepwiki.generators.analysis.source_filter import iter_python_files
 from local_deepwiki.logging import get_logger
 
 if TYPE_CHECKING:
@@ -96,7 +97,6 @@ def _compute_abstractness(
 
     # We need to map each module label back to the files that belong to it.
     # We re-walk the repo since we don't persist the file->module mapping.
-    py_files = sorted(repo_path.rglob("*.py"))
     module_names = {m["name"] for m in modules}
 
     from local_deepwiki.generators.analysis.module_dependencies import _module_label
@@ -104,16 +104,7 @@ def _compute_abstractness(
     module_total: dict[str, int] = {m: 0 for m in module_names}
     module_abstract: dict[str, int] = {m: 0 for m in module_names}
 
-    for py_file in py_files:
-        try:
-            rel_path = py_file.relative_to(repo_path)
-        except ValueError:
-            continue
-        if any(
-            part.startswith(".") or part in ("__pycache__", "node_modules")
-            for part in rel_path.parts
-        ):
-            continue
+    for py_file, rel_path in iter_python_files(repo_path, exclude_tests=False):
         label = _module_label(rel_path)
         if label not in module_names:
             continue

@@ -9,6 +9,7 @@ from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
 from local_deepwiki.errors import path_not_found_error
+from local_deepwiki.generators.analysis.source_filter import iter_python_files
 from local_deepwiki.handlers._error_handling import handle_tool_errors
 from local_deepwiki.handlers._response import make_tool_text_content
 from local_deepwiki.logging import get_logger
@@ -89,20 +90,7 @@ def _collect_file_metrics(repo_path: Path) -> dict[str, Any]:
     total_lines = 0
     files_over_threshold = 0
 
-    for py_file in sorted(repo_path.rglob("*.py")):
-        try:
-            rel_path = py_file.relative_to(repo_path)
-        except ValueError:
-            continue
-
-        # Skip hidden dirs and common non-source trees
-        rel_parts = rel_path.parts
-        if any(
-            part.startswith(".") or part in ("node_modules", "__pycache__")
-            for part in rel_parts
-        ):
-            continue
-
+    for py_file, rel_path in iter_python_files(repo_path, exclude_tests=False):
         try:
             content = py_file.read_text(encoding="utf-8", errors="replace")
         except OSError:

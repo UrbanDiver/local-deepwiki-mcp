@@ -6,12 +6,11 @@ tree-sitter AST parsing.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.core.parser import CodeParser
-from local_deepwiki.core.parser.languages import EXTENSION_MAP
+from local_deepwiki.generators.analysis.source_filter import iter_source_files
 from local_deepwiki.logging import get_logger
 
 if TYPE_CHECKING:
@@ -65,16 +64,6 @@ _FUNCTION_TYPES = frozenset(
         "function_item",
     }
 )
-
-_TEST_DIR_NAMES = frozenset({"tests", "test", "__tests__", "spec"})
-
-
-def _is_test_file(rel_path: Path) -> bool:
-    """Return True if the file looks like a test file."""
-    name = rel_path.name
-    if name.startswith("test_") or name.endswith("_test.py") or name == "conftest.py":
-        return True
-    return any(part in _TEST_DIR_NAMES for part in rel_path.parts)
 
 
 def _estimate_cyclomatic(node: Node) -> int:
@@ -195,32 +184,13 @@ def analyze_hotspots(
     all_functions: list[dict[str, Any]] = []
     files_scanned = 0
 
-    supported_extensions = set(EXTENSION_MAP.keys())
-
-    for root, dirs, files in os.walk(repo_path):
-        # Skip hidden dirs and common non-source trees in-place.
-        dirs[:] = [
-            d
-            for d in dirs
-            if not d.startswith(".")
-            and d not in ("node_modules", "__pycache__", ".deepwiki", "dist", "build")
-        ]
-        for fname in files:
-            full_path = Path(root) / fname
-            try:
-                rel_path = full_path.relative_to(repo_path)
-            except ValueError:
-                continue
-
-            if full_path.suffix not in supported_extensions:
-                continue
-            if exclude_tests and _is_test_file(rel_path):
-                continue
-
-            rows = _parse_file_functions(full_path, rel_path)
-            if rows:
-                all_functions.extend(rows)
-            files_scanned += 1
+    for full_path, rel_path in iter_source_files(
+        repo_path, exclude_tests=exclude_tests
+    ):
+        rows = _parse_file_functions(full_path, rel_path)
+        if rows:
+            all_functions.extend(rows)
+        files_scanned += 1
 
     # Apply threshold filter.
     if min_threshold is not None:
