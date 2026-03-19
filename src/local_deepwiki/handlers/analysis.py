@@ -29,6 +29,7 @@ from local_deepwiki.handlers.analysis_metadata import (
     handle_get_complexity_metrics,
     handle_get_file_context,
     handle_get_project_manifest,
+    handle_get_status,
     handle_get_wiki_stats,
 )
 from local_deepwiki.handlers.analysis_search import (
@@ -46,6 +47,7 @@ __all__ = [
     "handle_ask_about_diff",
     "handle_get_project_manifest",
     "handle_get_file_context",
+    "handle_get_status",
     "handle_get_wiki_stats",
     "handle_get_complexity_metrics",
     "handle_get_layer_dependencies",

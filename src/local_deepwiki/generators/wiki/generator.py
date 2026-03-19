@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-import time
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -14,7 +13,6 @@ if TYPE_CHECKING:
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.generators.analysis.coverage import generate_coverage_page
 from local_deepwiki.generators.crosslinks import EntityRegistry
 from local_deepwiki.generators.analysis.dependency_graph import (
@@ -22,11 +20,11 @@ from local_deepwiki.generators.analysis.dependency_graph import (
 )
 from local_deepwiki.generators.analysis.glossary import generate_glossary_page
 from local_deepwiki.generators.analysis.inheritance import generate_inheritance_page
-from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
-from local_deepwiki.generators.progress_tracker import GenerationProgress
+from local_deepwiki.generators.manifest import ProjectManifest
+from local_deepwiki.generators.manifest import get_cached_manifest  # noqa: F401 — test patch target
 from local_deepwiki.generators.see_also import RelationshipAnalyzer
-from local_deepwiki.generators.wiki.files import generate_file_docs
-from local_deepwiki.generators.wiki.modules import generate_module_docs
+from local_deepwiki.generators.wiki.files import generate_file_docs  # noqa: F401 — test patch target
+from local_deepwiki.generators.wiki.modules import generate_module_docs  # noqa: F401 — test patch target
 from local_deepwiki.generators.wiki.pages import (
     generate_architecture_page,
     generate_changelog_page,
@@ -42,15 +40,7 @@ from local_deepwiki.generators.wiki.phases import (
     generate_summary_pages,
 )
 from local_deepwiki.generators.wiki.plugin_runner import (
-    run_plugin_generators,
     sort_generators_by_dependencies,
-)
-from local_deepwiki.generators.wiki.postprocessing import (
-    apply_cross_linking,
-    build_wiki_status,
-    generate_codemap_pages_phase,
-    generate_freshness_and_finalize,
-    generate_search_and_toc,
 )
 from local_deepwiki.generators.wiki.status import WikiStatusManager
 from local_deepwiki.logging import get_logger
@@ -209,114 +199,20 @@ class WikiGenerator:
         full_rebuild: bool = False,
         max_file_pages: int | None = None,
     ) -> WikiStructure:
-        """Generate wiki documentation for the indexed repository."""
-        logger.info("Starting wiki generation for %s", index_status.repo_path)
-        logger.debug(
-            "Full rebuild: %s, Total files: %s", full_rebuild, index_status.total_files
+        """Generate wiki documentation for the indexed repository.
+
+        Delegates the full multi-phase pipeline to
+        :func:`~local_deepwiki.generators.wiki.pipeline.run_generation_pipeline`.
+        """
+        from local_deepwiki.generators.wiki.pipeline import run_generation_pipeline
+
+        return await run_generation_pipeline(
+            generator=self,
+            index_status=index_status,
+            progress_callback=progress_callback,
+            full_rebuild=full_rebuild,
+            max_file_pages=max_file_pages,
         )
-
-        # Emit WIKI_START event
-        emitter = get_event_emitter()
-        await emitter.emit(
-            EventType.WIKI_START,
-            {
-                "repo_path": index_status.repo_path,
-                "full_rebuild": full_rebuild,
-                "total_files": index_status.total_files,
-            },
-        )
-
-        # Initialize generation context
-        ctx = await self._init_generation_context(index_status, full_rebuild)
-
-        # Phase 1: Generate summary pages (overview, architecture)
-        await generate_summary_pages(ctx, self, index_status, progress_callback)
-
-        # Phase 2: Analyze imports for relationship tracking
-        await self._analyze_imports_for_relationships()
-
-        # Phase 3+4: Generate module and file documentation concurrently
-        # Both phases share a semaphore to cap total LLM concurrency
-        shared_semaphore = asyncio.Semaphore(self.config.effective_llm_concurrency)
-        await asyncio.gather(
-            self._generate_module_pages(
-                ctx, index_status, progress_callback, semaphore=shared_semaphore
-            ),
-            self._generate_file_pages(
-                ctx,
-                index_status,
-                progress_callback,
-                max_files=max_file_pages,
-                semaphore=shared_semaphore,
-            ),
-        )
-
-        # Phase 5: Generate dependencies page
-        await generate_dependencies_page_phase(
-            ctx, self, index_status, progress_callback
-        )
-
-        # Phase 6: Generate changelog
-        await generate_changelog_phase(ctx, self, index_status, progress_callback)
-
-        # Phase 7: Generate auxiliary pages (inheritance, glossary, coverage)
-        await _phases_generate_auxiliary_pages(
-            ctx, self, index_status, progress_callback
-        )
-
-        # Phase 7b: Run wiki generator plugins
-        await self._run_plugin_generators(ctx, index_status, progress_callback)
-
-        # Phase 7c: Generate codemap pages
-        await self._generate_codemap_pages(ctx, index_status, progress_callback)
-
-        # Phase 8: Apply cross-links and see-also sections
-        ctx.pages = await self._apply_cross_linking(ctx.pages, progress_callback)
-
-        # Phase 9: Generate search index and TOC
-        await self._generate_search_and_toc(ctx.pages, index_status, progress_callback)
-
-        # Phase 10: Generate freshness report and finalize
-        wiki_status = self._build_wiki_status(ctx, index_status)
-        await self._generate_freshness_and_finalize(
-            ctx, wiki_status, index_status, progress_callback
-        )
-
-        logger.info(
-            "Wiki generation complete: %d pages generated, %d pages unchanged, %d total pages",
-            ctx.pages_generated,
-            ctx.pages_skipped,
-            len(ctx.pages),
-        )
-
-        # Log any generation warnings
-        if ctx.warnings:
-            logger.warning(
-                "Wiki generation completed with %s warning(s)", len(ctx.warnings)
-            )
-            for warning in ctx.warnings:
-                logger.warning("  - %s", warning)
-                self._progress._log(f"WARNING: {warning}")
-
-        # Log LLM cache statistics if available
-        self._log_cache_stats()
-
-        # Finalize progress tracker and log summary
-        summary = self._progress.finalize(success=True, warnings=ctx.warnings)
-        logger.info(summary)
-
-        # Emit WIKI_COMPLETE event
-        await emitter.emit(
-            EventType.WIKI_COMPLETE,
-            {
-                "repo_path": index_status.repo_path,
-                "total_pages": len(ctx.pages),
-                "pages_generated": ctx.pages_generated,
-                "pages_skipped": ctx.pages_skipped,
-            },
-        )
-
-        return WikiStructure(root=str(self.wiki_path), pages=ctx.pages)
 
     def _log_cache_stats(self) -> None:
         """Log LLM cache statistics if available."""
@@ -337,63 +233,15 @@ class WikiGenerator:
                 hit_rate,
             )
         except (TypeError, ValueError, AttributeError):
-            # Skip logging if stats are not properly available (e.g., mock objects)
             pass
 
     async def _init_generation_context(
         self, index_status: IndexStatus, full_rebuild: bool
     ) -> _GenerationContext:
         """Initialize the generation context with tracking state."""
-        # Initialize live progress tracker
-        self._progress = GenerationProgress(wiki_path=self.wiki_path)
-        self._progress.start_phase("initializing", total=0)
+        from local_deepwiki.generators.wiki.pipeline import init_generation_context
 
-        # Store repo path and parse manifest for grounded generation (with caching)
-        self._repo_path = Path(index_status.repo_path)
-        self._manifest = get_cached_manifest(self._repo_path, cache_dir=self.wiki_path)
-
-        # Update prompt manager with repo path for per-project prompts
-        self._prompt_manager.loader.repo_path = self._repo_path
-        self._prompt_manager.loader.clear_cache()  # Clear cache to pick up repo prompts
-        # Reload system prompt and page-type prompts in case repo has custom prompts
-        self._system_prompt = self._prompt_manager.get_wiki_system_prompt(
-            provider=self.config.llm.provider,
-        )
-        self._page_prompts = self._build_page_prompts()
-
-        # Build file hash map for incremental generation
-        self.status_manager.file_hashes = {f.path: f.hash for f in index_status.files}
-        all_source_files = list(self.status_manager.file_hashes.keys())
-
-        # Load previous wiki status for incremental updates
-        if not full_rebuild:
-            await self.status_manager.load_status()
-
-            # Log regeneration summary for incremental updates
-            summary = self.status_manager.get_regeneration_summary()
-            if summary["is_full_rebuild"]:
-                logger.info("No previous wiki status found, performing full generation")
-            else:
-                logger.info(
-                    "Incremental update: %d files changed, %d pages to regenerate, %d pages unchanged",
-                    summary["changed_file_count"],
-                    summary["affected_page_count"],
-                    summary["unchanged_page_count"],
-                )
-                if summary["changed_file_count"] <= 5:
-                    for f in summary["changed_files"]:
-                        logger.debug("  Changed: %s", f)
-
-        # Pre-compute line info for source files (for source refs with line numbers)
-        self.status_manager.file_line_info = self._get_main_definition_lines()
-
-        return _GenerationContext(
-            pages=[],
-            pages_generated=0,
-            pages_skipped=0,
-            all_source_files=all_source_files,
-            full_rebuild=full_rebuild,
-        )
+        return await init_generation_context(self, index_status, full_rebuild)
 
     # ------------------------------------------------------------------
     # Thin delegation methods – kept so that tests calling
@@ -521,14 +369,11 @@ class WikiGenerator:
 
     async def _analyze_imports_for_relationships(self) -> None:
         """Collect import chunks for relationship analysis (See Also sections)."""
-        import_results = await self.vector_store.search(
-            "import require include",
-            limit=self.config.wiki.import_search_limit,
+        from local_deepwiki.generators.wiki.pipeline import (
+            analyze_imports_for_relationships,
         )
-        import_chunks = [
-            r.chunk for r in import_results if r.chunk.chunk_type.value == "import"
-        ]
-        self.relationship_analyzer.analyze_chunks(import_chunks)
+
+        await analyze_imports_for_relationships(self)
 
     async def _generate_module_pages(
         self,
@@ -538,31 +383,11 @@ class WikiGenerator:
         semaphore: asyncio.Semaphore | None = None,
     ) -> None:
         """Generate module documentation pages."""
-        if progress_callback:
-            progress_callback("Generating module documentation", 2, 14)
+        from local_deepwiki.generators.wiki.pipeline import generate_module_pages
 
-        self._progress.start_phase("modules", total=0)
-
-        module_pages, gen_count, skip_count = await generate_module_docs(
-            index_status=index_status,
-            vector_store=self.vector_store,
-            llm=self.llm,
-            system_prompt=self._page_prompts.get("module", self._system_prompt),
-            status_manager=self.status_manager,
-            full_rebuild=ctx.full_rebuild,
-            max_chunk_content_chars=self.config.wiki.max_chunk_content_chars,
-            semaphore=semaphore,
+        await generate_module_pages(
+            self, ctx, index_status, progress_callback, semaphore=semaphore
         )
-        ctx.pages_generated += gen_count
-        ctx.pages_skipped += skip_count
-
-        # Update module stats and write pages
-        self._progress._phase_stats["modules"].items_completed = len(module_pages)
-        self._progress.complete_phase()
-
-        for page in module_pages:
-            ctx.pages.append(page)
-            await self._write_page(page)
 
     async def _generate_file_pages(
         self,
@@ -573,27 +398,16 @@ class WikiGenerator:
         semaphore: asyncio.Semaphore | None = None,
     ) -> None:
         """Generate file-level documentation pages."""
-        if progress_callback:
-            progress_callback("Generating file documentation", 3, 14)
+        from local_deepwiki.generators.wiki.pipeline import generate_file_pages
 
-        file_pages, gen_count, skip_count = await generate_file_docs(
-            index_status=index_status,
-            vector_store=self.vector_store,
-            llm=self.llm,
-            system_prompt=self._page_prompts.get("file", self._system_prompt),
-            status_manager=self.status_manager,
-            entity_registry=self.entity_registry,
-            config=self.config,
-            progress_callback=progress_callback,
-            full_rebuild=ctx.full_rebuild,
-            write_callback=self._write_page,
-            generation_progress=self._progress,
+        await generate_file_pages(
+            self,
+            ctx,
+            index_status,
+            progress_callback,
             max_files=max_files,
             semaphore=semaphore,
         )
-        ctx.pages_generated += gen_count
-        ctx.pages_skipped += skip_count
-        ctx.pages.extend(file_pages)
 
     @staticmethod
     def _sort_generators_by_dependencies(
@@ -609,20 +423,9 @@ class WikiGenerator:
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Run registered wiki generator plugins."""
-        new_pages, pages_generated = await run_plugin_generators(
-            pages=ctx.pages,
-            all_source_files=ctx.all_source_files,
-            index_status=index_status,
-            vector_store=self.vector_store,
-            llm=self.llm,
-            config=self.config,
-            wiki_path=self.wiki_path,
-            status_manager=self.status_manager,
-            write_callback=self._write_page,
-            progress_callback=progress_callback,
-        )
-        ctx.pages.extend(new_pages)
-        ctx.pages_generated += pages_generated
+        from local_deepwiki.generators.wiki.pipeline import run_wiki_plugin_generators
+
+        await run_wiki_plugin_generators(self, ctx, index_status, progress_callback)
 
     async def _generate_codemap_pages(
         self,
@@ -631,30 +434,9 @@ class WikiGenerator:
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Generate codemap pages for auto-discovered entry points."""
-        assert self._repo_path is not None, (
-            "Repository path must be set before generating codemaps"
-        )
+        from local_deepwiki.generators.wiki.pipeline import generate_codemap_pages
 
-        (
-            codemap_pages,
-            ctx.pages_generated,
-            ctx.pages_skipped,
-        ) = await generate_codemap_pages_phase(
-            pages=ctx.pages,
-            pages_generated=ctx.pages_generated,
-            pages_skipped=ctx.pages_skipped,
-            full_rebuild=ctx.full_rebuild,
-            repo_path=self._repo_path,
-            wiki_path=self.wiki_path,
-            wiki_config=self.config.wiki,
-            vector_store=self.vector_store,
-            llm=self.llm,
-            status_manager=self.status_manager,
-            progress=self._progress,
-            write_callback=self._write_page,
-            progress_callback=progress_callback,
-        )
-        ctx.pages.extend(codemap_pages)
+        await generate_codemap_pages(self, ctx, index_status, progress_callback)
 
     async def _apply_cross_linking(
         self,
@@ -662,15 +444,9 @@ class WikiGenerator:
         progress_callback: ProgressCallback | None,
     ) -> list[WikiPage]:
         """Apply cross-links, source refs, and see-also sections to pages."""
-        return await apply_cross_linking(
-            pages=pages,
-            entity_registry=self.entity_registry,
-            relationship_analyzer=self.relationship_analyzer,
-            status_manager=self.status_manager,
-            wiki_path=self.wiki_path,
-            write_callback=self._write_page,
-            progress_callback=progress_callback,
-        )
+        from local_deepwiki.generators.wiki.pipeline import apply_cross_linking_phase
+
+        return await apply_cross_linking_phase(self, pages, progress_callback)
 
     async def _generate_search_and_toc(
         self,
@@ -679,12 +455,12 @@ class WikiGenerator:
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Generate search index and table of contents."""
-        await generate_search_and_toc(
-            pages=pages,
-            index_status=index_status,
-            vector_store=self.vector_store,
-            wiki_path=self.wiki_path,
-            progress_callback=progress_callback,
+        from local_deepwiki.generators.wiki.pipeline import (
+            generate_search_and_toc_phase,
+        )
+
+        await generate_search_and_toc_phase(
+            self, pages, index_status, progress_callback
         )
 
     def _build_wiki_status(
@@ -693,11 +469,11 @@ class WikiGenerator:
         index_status: IndexStatus,
     ) -> WikiGenerationStatus:
         """Build the wiki generation status object."""
-        return build_wiki_status(
-            pages=ctx.pages,
-            index_status=index_status,
-            page_statuses=self.status_manager.page_statuses,
+        from local_deepwiki.generators.wiki.pipeline import (
+            build_wiki_status_from_context,
         )
+
+        return build_wiki_status_from_context(self, ctx, index_status)
 
     async def _generate_freshness_and_finalize(
         self,
@@ -707,22 +483,17 @@ class WikiGenerator:
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Generate freshness report and finalize wiki status."""
-        assert self._repo_path is not None, (
-            "Repository path must be set before generating wiki"
+        from local_deepwiki.generators.wiki.pipeline import (
+            generate_freshness_and_finalize_phase,
         )
-        freshness_page, ctx.pages_generated = await generate_freshness_and_finalize(
-            pages=ctx.pages,
-            all_source_files=ctx.all_source_files,
-            pages_generated=ctx.pages_generated,
-            pages_skipped=ctx.pages_skipped,
-            repo_path=self._repo_path,
-            wiki_status=wiki_status,
-            index_status=index_status,
-            status_manager=self.status_manager,
-            write_callback=self._write_page,
-            progress_callback=progress_callback,
+
+        await generate_freshness_and_finalize_phase(
+            self,
+            ctx,
+            wiki_status,
+            index_status,
+            progress_callback,
         )
-        ctx.pages.append(freshness_page)
 
     async def _generate_overview(self, index_status: IndexStatus) -> WikiPage:
         """Generate the main overview/index page with grounded facts."""

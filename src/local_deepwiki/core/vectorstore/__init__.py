@@ -30,6 +30,7 @@ from local_deepwiki.core.vectorstore.schema import (
     SearchProfileConfig,
     SearchResultPage,
 )
+from local_deepwiki.core.vectorstore.search_engine import SearchEngine
 from local_deepwiki.core.vectorstore.store import VectorStore
 from local_deepwiki.core.vectorstore.utils import (
     RateLimiter,
@@ -40,6 +41,7 @@ from local_deepwiki.core.vectorstore.utils import (
 __all__ = [
     # Core store
     "VectorStore",
+    "SearchEngine",
     # Search request
     "SearchRequest",
     # Schema/data models

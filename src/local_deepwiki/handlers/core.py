@@ -28,8 +28,9 @@ from local_deepwiki.models import (
     ReadWikiStructureArgs,
     SearchCodeArgs,
 )
-from local_deepwiki.providers.embeddings import get_embedding_provider
+from local_deepwiki.providers.embeddings import get_embedding_provider  # noqa: F401
 from local_deepwiki.security import Permission, get_access_controller
+from local_deepwiki.services.provider_factory import ProviderFactory
 from local_deepwiki.validation import (
     validate_chunk_type,
     validate_language,
@@ -79,11 +80,8 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     _index_status, wiki_path, config = await _load_index_status(repo_path)
     vector_store = _create_vector_store(repo_path, config)
 
-    from local_deepwiki.providers.llm import get_cached_llm_provider
-
-    cache_path = wiki_path / "llm_cache.lance"
-    llm = get_cached_llm_provider(
-        cache_path=cache_path,
+    llm = ProviderFactory.create_cached_llm_provider(
+        cache_path=wiki_path / "llm_cache.lance",
         embedding_provider=get_embedding_provider(config.embedding),
         cache_config=config.llm_cache,
         llm_config=config.llm,
