@@ -142,7 +142,20 @@ class AuditLogger:
         # Use a unique logger name to avoid conflicts
         audit_logger = logging.getLogger("deepwiki.audit")
 
-        # Prevent duplicate handlers if logger is reinitialized
+        # Remove any existing handlers that point to stale/different log dirs
+        # to ensure this instance writes to the correct log_dir
+        expected_log_file = str(self.log_dir / "audit.log")
+        stale_handlers = [
+            h
+            for h in audit_logger.handlers
+            if isinstance(h, logging.handlers.TimedRotatingFileHandler)
+            and h.baseFilename != expected_log_file
+        ]
+        for h in stale_handlers:
+            h.close()
+            audit_logger.removeHandler(h)
+
+        # Prevent duplicate handlers if logger is reinitialized with same dir
         if audit_logger.handlers:
             return audit_logger
 
