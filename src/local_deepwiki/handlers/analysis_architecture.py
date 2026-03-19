@@ -14,12 +14,15 @@ from local_deepwiki.handlers._error_handling import handle_tool_errors
 from local_deepwiki.handlers._response import make_tool_text_content
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
+    CompareArchitectureArgs,
+    GetArchitectureHealthArgs,
     GetArchitectureSummaryArgs,
     GetCouplingMetricsArgs,
     GetCrossModuleDependenciesArgs,
     GetDesignSmellsArgs,
     GetHotspotsArgs,
     GetLayerDependenciesArgs,
+    GetModuleHealthArgs,
 )
 from local_deepwiki.security import Permission, get_access_controller
 
@@ -322,3 +325,130 @@ async def handle_get_design_smells(
         repo_path,
     )
     return make_tool_text_content("get_design_smells", result)
+
+
+@handle_tool_errors
+async def handle_get_architecture_health(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_architecture_health tool call.
+
+    Runs all architecture analyses (hotspots, coupling, design smells, layer
+    dependencies) in a single call and returns a scored health summary with
+    an overall grade (A-F).
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetArchitectureHealthArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.architecture_health import (
+        analyze_architecture_health,
+    )
+    from local_deepwiki.generators.manifest import get_cached_manifest
+
+    manifest = get_cached_manifest(repo_path)
+    project_name = manifest.name or repo_path.name
+
+    result = analyze_architecture_health(
+        repo_path,
+        project_name,
+        top_findings=validated.top_findings,
+    )
+
+    logger.info(
+        "Architecture health: %s (%s) in %s",
+        result.get("overall", {}).get("grade"),
+        result.get("overall", {}).get("score"),
+        repo_path,
+    )
+    return make_tool_text_content("get_architecture_health", result)
+
+
+@handle_tool_errors
+async def handle_compare_architecture(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle compare_architecture tool call.
+
+    Compares architecture health metrics between two git refs using
+    git worktree for safe non-destructive analysis.
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = CompareArchitectureArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.architecture_compare import (
+        compare_architecture,
+    )
+    from local_deepwiki.generators.manifest import get_cached_manifest
+
+    manifest = get_cached_manifest(repo_path)
+    project_name = manifest.name or repo_path.name
+
+    result = compare_architecture(
+        repo_path,
+        project_name,
+        base_ref=validated.base_ref,
+        head_ref=validated.head_ref,
+    )
+
+    logger.info(
+        "Architecture comparison %s..%s in %s",
+        validated.base_ref,
+        validated.head_ref,
+        repo_path,
+    )
+    return make_tool_text_content("compare_architecture", result)
+
+
+@handle_tool_errors
+async def handle_get_module_health(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_module_health tool call.
+
+    Runs a deep health analysis of a single module: complexity, smells,
+    coupling metrics, dependents, dependencies, and refactoring risk.
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetModuleHealthArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.module_health import analyze_module_health
+
+    result = analyze_module_health(repo_path, validated.module_name)
+
+    logger.info(
+        "Module health for %s: score=%s in %s",
+        validated.module_name,
+        result.get("health", {}).get("score"),
+        repo_path,
+    )
+    return make_tool_text_content("get_module_health", result)
