@@ -35,9 +35,8 @@ class CredentialManager:
         if not key:
             return None
 
-        # Validate key format (basic check) - allow short test keys
-        # Real API keys are much longer, but we need to support testing
-        if len(key) < 4:
+        # Validate key format (basic check)
+        if len(key) < 8:
             raise ValueError(f"{provider} API key appears invalid (too short)")
 
         # Don't store in memory, validate and return

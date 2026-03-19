@@ -40,7 +40,7 @@ class TestGetApiKey:
             assert result is None
 
     def test_get_api_key_raises_for_too_short_key(self):
-        """Test that get_api_key raises ValueError for keys shorter than 4 chars."""
+        """Test that get_api_key raises ValueError for keys shorter than 8 chars."""
         with patch.dict(os.environ, {"SHORT_API_KEY": "abc"}):
             with pytest.raises(ValueError) as exc_info:
                 CredentialManager.get_api_key("SHORT_API_KEY", "my-provider")
@@ -48,11 +48,18 @@ class TestGetApiKey:
             assert "my-provider" in str(exc_info.value)
             assert "too short" in str(exc_info.value)
 
-    def test_get_api_key_accepts_exactly_4_char_key(self):
-        """Test that get_api_key accepts keys with exactly 4 characters."""
-        with patch.dict(os.environ, {"FOUR_CHAR_KEY": "abcd"}):
-            result = CredentialManager.get_api_key("FOUR_CHAR_KEY", "test-provider")
-            assert result == "abcd"
+    def test_get_api_key_rejects_short_keys_under_8_chars(self):
+        """Test that get_api_key rejects keys shorter than 8 characters."""
+        with patch.dict(os.environ, {"SHORT_KEY": "abcd"}):
+            with pytest.raises(ValueError) as exc_info:
+                CredentialManager.get_api_key("SHORT_KEY", "test-provider")
+            assert "too short" in str(exc_info.value)
+
+    def test_get_api_key_accepts_exactly_8_char_key(self):
+        """Test that get_api_key accepts keys with exactly 8 characters."""
+        with patch.dict(os.environ, {"EIGHT_CHAR_KEY": "abcdefgh"}):
+            result = CredentialManager.get_api_key("EIGHT_CHAR_KEY", "test-provider")
+            assert result == "abcdefgh"
 
     def test_get_api_key_accepts_long_key(self):
         """Test that get_api_key accepts long keys."""

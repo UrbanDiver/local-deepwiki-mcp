@@ -14,14 +14,22 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import re as _re
 import sys
 from pathlib import Path
 
-import html
-
 import markdown
+from markupsafe import Markup
 
 from local_deepwiki.logging import get_logger
+
+try:
+    import nh3 as _nh3
+
+    _HAS_NH3 = True
+except ImportError:
+    _nh3 = None  # type: ignore[assignment]
+    _HAS_NH3 = False
 
 logger = get_logger(__name__)
 
@@ -78,6 +86,22 @@ if _HAS_FLASK:
 
 
 # ---------------------------------------------------------------------------
+# CSRF protection (Origin header check on mutating requests)
+# ---------------------------------------------------------------------------
+@app.before_request
+def csrf_check() -> Response | None:
+    """Block cross-origin mutating requests without a matching Origin header."""
+    if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+        origin = request.headers.get("Origin")
+        if origin:
+            host = request.host_url.rstrip("/")
+            if not origin.startswith(host):
+                logger.warning("CSRF blocked: Origin=%s Host=%s", origin, host)
+                abort(403, "Cross-origin request blocked")
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Security headers (applied to all responses including blueprint routes)
 # ---------------------------------------------------------------------------
 @app.after_request
@@ -107,6 +131,9 @@ def add_security_headers(response: Response) -> Response:
         "frame-ancestors 'none'"
     )
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = (
+        "camera=(), microphone=(), geolocation=(), payment=()"
+    )
     return response
 
 
@@ -184,10 +211,8 @@ def render_markdown(content: str) -> str:
         ]
     )
     raw_html = md.convert(content)
-    try:
-        import nh3
-
-        return nh3.clean(
+    if _HAS_NH3:
+        return _nh3.clean(
             raw_html,
             attributes={
                 "code": {"class"},
@@ -197,28 +222,33 @@ def render_markdown(content: str) -> str:
                 "summary": set(),
             },
         )
-    except ImportError:
-        return raw_html
+    # nh3 unavailable: strip HTML tags as a safety fallback
+    return _re.sub(r"<[^>]+>", "", raw_html)
 
 
-def build_breadcrumb(wiki_path: Path, current_path: str) -> str:
+def build_breadcrumb(wiki_path: Path, current_path: str) -> Markup:
     """Build breadcrumb navigation HTML with clickable links.
 
     For a path like 'files/src/local_deepwiki/core/chunker.md', generates:
     Home > Files > src > local_deepwiki > core > chunker
 
     Each segment links to its index.md if one exists in that folder.
+
+    Returns a ``Markup`` object so Jinja2 auto-escaping tracks safety.
+    User-derived strings are passed through ``markupsafe.escape()``
+    automatically via ``Markup.format()``, making XSS impossible by
+    construction.
     """
     parts = current_path.split("/")
 
     # Root pages don't need breadcrumbs (or just show Home)
     if len(parts) == 1:
-        return ""
+        return Markup("")
 
-    breadcrumb_items = []
+    breadcrumb_items: list[Markup] = []
 
     # Always start with Home
-    breadcrumb_items.append('<a href="/">Home</a>')
+    breadcrumb_items.append(Markup('<a href="/">Home</a>'))
 
     # Build path progressively and check for index.md at each level
     cumulative_path = ""
@@ -230,23 +260,29 @@ def build_breadcrumb(wiki_path: Path, current_path: str) -> str:
 
         # Check if there's an index.md in this folder
         index_path = wiki_path / cumulative_path / "index.md"
-        display_name = html.escape(part.replace("_", " ").replace("-", " ").title())
+        display_name = part.replace("_", " ").replace("-", " ").title()
 
         if index_path.exists():
             link_path = f"{cumulative_path}/index.md"
-            breadcrumb_items.append(f'<a href="/wiki/{link_path}">{display_name}</a>')
+            # Markup.format() auto-escapes non-Markup arguments
+            breadcrumb_items.append(
+                Markup('<a href="/wiki/{}">{}</a>').format(link_path, display_name)
+            )
         else:
             # No index.md, just show as text
-            breadcrumb_items.append(f"<span>{display_name}</span>")
+            breadcrumb_items.append(Markup("<span>{}</span>").format(display_name))
 
     # Add current page name (no link, it's the current page)
     current_page = parts[-1]
     if current_page.endswith(".md"):
         current_page = current_page[:-3]
-    current_page = html.escape(current_page.replace("_", " ").replace("-", " ").title())
-    breadcrumb_items.append(f'<span class="current">{current_page}</span>')
+    current_page = current_page.replace("_", " ").replace("-", " ").title()
+    breadcrumb_items.append(
+        Markup('<span class="current">{}</span>').format(current_page)
+    )
 
-    return ' <span class="separator">›</span> '.join(breadcrumb_items)
+    separator = Markup(' <span class="separator">\u203a</span> ')
+    return separator.join(breadcrumb_items)
 
 
 # ---------------------------------------------------------------------------
@@ -509,6 +545,13 @@ def run_server(
     debug: bool = False,
 ) -> None:
     """Run the wiki web server."""
+    if debug and host not in ("127.0.0.1", "localhost", "::1"):
+        logger.warning(
+            "Debug mode is not recommended on non-localhost host %s. "
+            "Forcing debug=False for safety.",
+            host,
+        )
+        debug = False
     flask_app = create_app(wiki_path)
     logger.info("Starting DeepWiki server at http://%s:%s", host, port)
     logger.info("Serving wiki from: %s", wiki_path)
