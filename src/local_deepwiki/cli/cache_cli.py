@@ -206,6 +206,55 @@ def cmd_stats(args: argparse.Namespace) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------
+# cmd_clear helpers
+# ---------------------------------------------------------------------------
+
+
+def _clear_embedding_cache(console: Console) -> bool:
+    """Delete all entries from the embedding SQLite cache.
+
+    Returns True if the cache was found and cleared, False if not found.
+    Prints an error message to *console* on failure.
+    """
+    if not EMBEDDING_CACHE_DB.exists():
+        console.print("[dim]Embedding cache not found (nothing to clear)[/dim]")
+        return False
+
+    try:
+        conn = sqlite3.connect(str(EMBEDDING_CACHE_DB))
+        try:
+            conn.execute("DELETE FROM embeddings")
+            conn.commit()
+        finally:
+            conn.close()
+        return True
+    except sqlite3.Error as e:
+        console.print(f"[red]Failed to clear embedding cache: {e}[/red]")
+        return False
+
+
+def _clear_llm_cache(repo: str, console: Console) -> bool:
+    """Delete the LLM LanceDB cache directory for *repo*.
+
+    Returns True if the cache was found and cleared, False if not found.
+    Prints an error message to *console* on failure.
+    """
+    cache_path = _resolve_llm_cache_path(repo)
+    if not cache_path.exists():
+        console.print("[dim]LLM cache not found (nothing to clear)[/dim]")
+        return False
+
+    try:
+        import shutil
+
+        shutil.rmtree(cache_path)
+        return True
+    except OSError as e:
+        console.print(f"[red]Failed to clear LLM cache: {e}[/red]")
+        return False
+
+
 def cmd_clear(args: argparse.Namespace) -> int:
     """Clear cache entries."""
     console = Console()
@@ -220,33 +269,11 @@ def cmd_clear(args: argparse.Namespace) -> int:
 
     cleared = []
 
-    if clear_embedding:
-        if EMBEDDING_CACHE_DB.exists():
-            try:
-                conn = sqlite3.connect(str(EMBEDDING_CACHE_DB))
-                try:
-                    conn.execute("DELETE FROM embeddings")
-                    conn.commit()
-                finally:
-                    conn.close()
-                cleared.append("embedding")
-            except sqlite3.Error as e:
-                console.print(f"[red]Failed to clear embedding cache: {e}[/red]")
-        else:
-            console.print("[dim]Embedding cache not found (nothing to clear)[/dim]")
+    if clear_embedding and _clear_embedding_cache(console):
+        cleared.append("embedding")
 
-    if clear_llm:
-        cache_path = _resolve_llm_cache_path(repo)
-        if cache_path.exists():
-            try:
-                import shutil
-
-                shutil.rmtree(cache_path)
-                cleared.append("LLM")
-            except OSError as e:
-                console.print(f"[red]Failed to clear LLM cache: {e}[/red]")
-        else:
-            console.print("[dim]LLM cache not found (nothing to clear)[/dim]")
+    if clear_llm and _clear_llm_cache(repo, console):
+        cleared.append("LLM")
 
     if cleared:
         console.print(f"[green]Cleared: {', '.join(cleared)} cache(s)[/green]")

@@ -18,11 +18,13 @@ from local_deepwiki.config import Config
 from local_deepwiki.models.provider_types import EmbeddingProviderType, LLMProviderType
 
 
-def display_config(config: Config, console: Console) -> None:
-    """Display the effective configuration using rich formatting."""
-    tree = Tree("[bold blue]Configuration[/bold blue]")
+# ---------------------------------------------------------------------------
+# display_config helpers
+# ---------------------------------------------------------------------------
 
-    # LLM Settings
+
+def _format_llm_section(tree: Tree, config: Config) -> None:
+    """Add the LLM configuration branch to *tree*."""
     llm_branch = tree.add("[bold cyan]LLM[/bold cyan]")
     llm_branch.add(f"Provider: [green]{config.llm.provider}[/green]")
     if config.llm.provider == LLMProviderType.OLLAMA:
@@ -41,7 +43,9 @@ def display_config(config: Config, console: Console) -> None:
             f"API Key: {'[green]set[/green]' if key else '[red]not set[/red]'}"
         )
 
-    # Embedding Settings
+
+def _format_embedding_section(tree: Tree, config: Config) -> None:
+    """Add the Embedding configuration branch to *tree*."""
     embed_branch = tree.add("[bold cyan]Embedding[/bold cyan]")
     embed_branch.add(f"Provider: [green]{config.embedding.provider}[/green]")
     if config.embedding.provider == EmbeddingProviderType.LOCAL:
@@ -49,7 +53,9 @@ def display_config(config: Config, console: Console) -> None:
     else:
         embed_branch.add(f"Model: {config.embedding.openai.model}")
 
-    # Parsing Settings
+
+def _format_parsing_section(tree: Tree, config: Config) -> None:
+    """Add the Parsing configuration branch to *tree*."""
     parse_branch = tree.add("[bold cyan]Parsing[/bold cyan]")
     parse_branch.add(f"Languages: {len(config.parsing.languages)} configured")
     parse_branch.add(
@@ -57,21 +63,27 @@ def display_config(config: Config, console: Console) -> None:
     )
     parse_branch.add(f"Exclude patterns: {len(config.parsing.exclude_patterns)}")
 
-    # Chunking Settings
+
+def _format_chunking_section(tree: Tree, config: Config) -> None:
+    """Add the Chunking configuration branch to *tree*."""
     chunk_branch = tree.add("[bold cyan]Chunking[/bold cyan]")
     chunk_branch.add(f"Max tokens: {config.chunking.max_chunk_tokens}")
     chunk_branch.add(f"Overlap: {config.chunking.overlap_tokens}")
     chunk_branch.add(f"Parallel workers: {config.chunking.parallel_workers}")
     chunk_branch.add(f"Batch size: {config.chunking.batch_size}")
 
-    # Wiki Settings
+
+def _format_wiki_section(tree: Tree, config: Config) -> None:
+    """Add the Wiki Generation configuration branch to *tree*."""
     wiki_branch = tree.add("[bold cyan]Wiki Generation[/bold cyan]")
     wiki_branch.add(f"Max file docs: {config.wiki.max_file_docs or 'unlimited'}")
     wiki_branch.add(f"Concurrent LLM calls: {config.wiki.max_concurrent_llm_calls}")
     wiki_branch.add(f"Cloud for GitHub: {config.wiki.use_cloud_for_github}")
     wiki_branch.add(f"Chat provider: {config.wiki.chat_llm_provider}")
 
-    # Deep Research Settings
+
+def _format_research_section(tree: Tree, config: Config) -> None:
+    """Add the Deep Research configuration branch to *tree*."""
     research_branch = tree.add("[bold cyan]Deep Research[/bold cyan]")
     research_branch.add(f"Max sub-questions: {config.deep_research.max_sub_questions}")
     research_branch.add(
@@ -79,7 +91,9 @@ def display_config(config: Config, console: Console) -> None:
     )
     research_branch.add(f"Max total chunks: {config.deep_research.max_total_chunks}")
 
-    # Cache Settings
+
+def _format_cache_section(tree: Tree, config: Config) -> None:
+    """Add the Caching configuration branch to *tree*."""
     cache_branch = tree.add("[bold cyan]Caching[/bold cyan]")
     embed_cache = config.embedding_cache
     cache_branch.add(
@@ -97,10 +111,26 @@ def display_config(config: Config, console: Console) -> None:
         cache_branch.add(f"  TTL: {llm_cache.ttl_seconds // 3600} hours")
         cache_branch.add(f"  Similarity threshold: {llm_cache.similarity_threshold}")
 
-    # Output Settings
+
+def _format_output_section(tree: Tree, config: Config) -> None:
+    """Add the Output configuration branch to *tree*."""
     output_branch = tree.add("[bold cyan]Output[/bold cyan]")
     output_branch.add(f"Wiki directory: {config.output.wiki_dir}")
     output_branch.add(f"Vector DB: {config.output.vector_db_name}")
+
+
+def display_config(config: Config, console: Console) -> None:
+    """Display the effective configuration using rich formatting."""
+    tree = Tree("[bold blue]Configuration[/bold blue]")
+
+    _format_llm_section(tree, config)
+    _format_embedding_section(tree, config)
+    _format_parsing_section(tree, config)
+    _format_chunking_section(tree, config)
+    _format_wiki_section(tree, config)
+    _format_research_section(tree, config)
+    _format_cache_section(tree, config)
+    _format_output_section(tree, config)
 
     console.print(tree)
 
@@ -213,45 +243,41 @@ def cmd_show(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_health_check(args: argparse.Namespace) -> int:
-    """Health check command to verify system readiness."""
-    console = Console()
+# ---------------------------------------------------------------------------
+# cmd_health_check helpers
+# ---------------------------------------------------------------------------
 
-    console.print("\n[bold]Running system health checks...[/bold]\n")
+_CheckResult = dict  # {"name": str, "passed": bool, "details": str, "requirement": str, "suggestion": str | None}
 
-    checks = []
-    all_passed = True
 
-    # Check 1: Python version
-    import sys
-
+def _check_python_version() -> tuple[_CheckResult, bool]:
+    """Check that Python >= 3.10 is in use."""
     py_version = sys.version_info
-    py_check_passed = py_version >= (3, 10)
-    checks.append(
-        {
-            "name": "Python version",
-            "passed": py_check_passed,
-            "details": f"{py_version.major}.{py_version.minor}.{py_version.micro}",
-            "requirement": ">=3.10",
-            "suggestion": "Upgrade to Python 3.10 or higher"
-            if not py_check_passed
-            else None,
-        }
-    )
-    if not py_check_passed:
-        all_passed = False
+    passed = py_version >= (3, 10)
+    result: _CheckResult = {
+        "name": "Python version",
+        "passed": passed,
+        "details": f"{py_version.major}.{py_version.minor}.{py_version.micro}",
+        "requirement": ">=3.10",
+        "suggestion": "Upgrade to Python 3.10 or higher" if not passed else None,
+    }
+    return result, passed
 
-    # Check 2: Required packages
+
+def _check_required_packages() -> tuple[list[_CheckResult], bool]:
+    """Check that required packages are importable."""
     required_packages = {
         "lancedb": "lancedb",
         "tree_sitter": "tree-sitter",
         "sentence_transformers": "sentence-transformers",
     }
+    results: list[_CheckResult] = []
+    all_passed = True
 
     for module_name, package_name in required_packages.items():
         try:
             __import__(module_name)
-            checks.append(
+            results.append(
                 {
                     "name": f"Package: {package_name}",
                     "passed": True,
@@ -261,7 +287,7 @@ def cmd_health_check(args: argparse.Namespace) -> int:
                 }
             )
         except ImportError:
-            checks.append(
+            results.append(
                 {
                     "name": f"Package: {package_name}",
                     "passed": False,
@@ -272,134 +298,107 @@ def cmd_health_check(args: argparse.Namespace) -> int:
             )
             all_passed = False
 
-    # Check 3: LLM provider configuration
-    config_path = Path(args.config) if args.config else None
-    try:
-        config = Config.load(config_path)
-        llm_provider = config.llm.provider
+    return results, all_passed
 
-        if llm_provider == "anthropic":
-            api_key = os.environ.get("ANTHROPIC_API_KEY")
-            if api_key:
-                checks.append(
-                    {
-                        "name": "LLM provider (Anthropic)",
-                        "passed": True,
-                        "details": "API key configured",
-                        "requirement": "required",
-                        "suggestion": None,
-                    }
-                )
-            else:
-                checks.append(
-                    {
-                        "name": "LLM provider (Anthropic)",
-                        "passed": False,
-                        "details": "API key not set",
-                        "requirement": "required",
-                        "suggestion": "Set ANTHROPIC_API_KEY environment variable",
-                    }
-                )
-                all_passed = False
-        elif llm_provider == "openai":
-            api_key = os.environ.get("OPENAI_API_KEY")
-            if api_key:
-                checks.append(
-                    {
-                        "name": "LLM provider (OpenAI)",
-                        "passed": True,
-                        "details": "API key configured",
-                        "requirement": "required",
-                        "suggestion": None,
-                    }
-                )
-            else:
-                checks.append(
-                    {
-                        "name": "LLM provider (OpenAI)",
-                        "passed": False,
-                        "details": "API key not set",
-                        "requirement": "required",
-                        "suggestion": "Set OPENAI_API_KEY environment variable",
-                    }
-                )
-                all_passed = False
-        else:  # ollama
-            checks.append(
-                {
-                    "name": "LLM provider (Ollama)",
-                    "passed": True,
-                    "details": f"configured at {config.llm.ollama.base_url}",
-                    "requirement": "required",
-                    "suggestion": "Ensure Ollama is running: ollama serve",
-                }
-            )
-    except Exception as e:  # noqa: BLE001 — CLI top-level handler: config errors shown to user as health-check results
-        checks.append(
+
+def _check_llm_provider(config: Config) -> tuple[_CheckResult, bool]:
+    """Check the configured LLM provider is accessible."""
+    llm_provider = config.llm.provider
+
+    if llm_provider == "anthropic":
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        passed = bool(api_key)
+        return (
             {
-                "name": "LLM provider",
-                "passed": False,
-                "details": f"config error: {e}",
+                "name": "LLM provider (Anthropic)",
+                "passed": passed,
+                "details": "API key configured" if passed else "API key not set",
                 "requirement": "required",
-                "suggestion": "Fix configuration file or create one",
-            }
+                "suggestion": None
+                if passed
+                else "Set ANTHROPIC_API_KEY environment variable",
+            },
+            passed,
         )
-        all_passed = False
-        config = None
 
-    # Check 4: Embedding provider
-    if config:
-        embed_provider = config.embedding.provider
+    if llm_provider == "openai":
+        api_key = os.environ.get("OPENAI_API_KEY")
+        passed = bool(api_key)
+        return (
+            {
+                "name": "LLM provider (OpenAI)",
+                "passed": passed,
+                "details": "API key configured" if passed else "API key not set",
+                "requirement": "required",
+                "suggestion": None
+                if passed
+                else "Set OPENAI_API_KEY environment variable",
+            },
+            passed,
+        )
 
-        if embed_provider == "openai":
-            api_key = os.environ.get("OPENAI_API_KEY")
-            if api_key:
-                checks.append(
-                    {
-                        "name": "Embedding provider (OpenAI)",
-                        "passed": True,
-                        "details": "API key configured",
-                        "requirement": "required",
-                        "suggestion": None,
-                    }
-                )
-            else:
-                checks.append(
-                    {
-                        "name": "Embedding provider (OpenAI)",
-                        "passed": False,
-                        "details": "API key not set",
-                        "requirement": "required",
-                        "suggestion": "Set OPENAI_API_KEY or switch to local embeddings",
-                    }
-                )
-                all_passed = False
-        else:  # local
-            try:
-                __import__("sentence_transformers")
-                checks.append(
-                    {
-                        "name": "Embedding provider (local)",
-                        "passed": True,
-                        "details": f"model: {config.embedding.local.model}",
-                        "requirement": "required",
-                        "suggestion": None,
-                    }
-                )
-            except ImportError:
-                checks.append(
-                    {
-                        "name": "Embedding provider (local)",
-                        "passed": False,
-                        "details": "sentence-transformers not installed",
-                        "requirement": "required",
-                        "suggestion": "Install with: pip install sentence-transformers",
-                    }
-                )
-                all_passed = False
+    # ollama
+    return (
+        {
+            "name": "LLM provider (Ollama)",
+            "passed": True,
+            "details": f"configured at {config.llm.ollama.base_url}",
+            "requirement": "required",
+            "suggestion": "Ensure Ollama is running: ollama serve",
+        },
+        True,
+    )
 
-    # Check 5: Config file validity
-    config_locations = []
+
+def _check_embedding_provider(config: Config) -> tuple[_CheckResult, bool]:
+    """Check the configured embedding provider is accessible."""
+    embed_provider = config.embedding.provider
+
+    if embed_provider == "openai":
+        api_key = os.environ.get("OPENAI_API_KEY")
+        passed = bool(api_key)
+        return (
+            {
+                "name": "Embedding provider (OpenAI)",
+                "passed": passed,
+                "details": "API key configured" if passed else "API key not set",
+                "requirement": "required",
+                "suggestion": None
+                if passed
+                else "Set OPENAI_API_KEY or switch to local embeddings",
+            },
+            passed,
+        )
+
+    # local
+    try:
+        __import__("sentence_transformers")
+        return (
+            {
+                "name": "Embedding provider (local)",
+                "passed": True,
+                "details": f"model: {config.embedding.local.model}",
+                "requirement": "required",
+                "suggestion": None,
+            },
+            True,
+        )
+    except ImportError:
+        return (
+            {
+                "name": "Embedding provider (local)",
+                "passed": False,
+                "details": "sentence-transformers not installed",
+                "requirement": "required",
+                "suggestion": "Install with: pip install sentence-transformers",
+            },
+            False,
+        )
+
+
+def _check_config_file(config_path: Path | None) -> tuple[_CheckResult, bool]:
+    """Check that the config file (if found) is valid YAML."""
+    config_locations: list[Path] = []
     if config_path:
         config_locations.append(config_path)
     else:
@@ -410,114 +409,111 @@ def cmd_health_check(args: argparse.Namespace) -> int:
             Path.home() / ".local-deepwiki.yaml",
         ]
 
-    found_config = None
+    found_config: Path | None = None
     for path in config_locations:
         if path.exists():
             found_config = path
             break
 
-    if found_config:
-        try:
-            with open(found_config) as f:
-                content = f.read()
-                if content.strip():
-                    yaml.safe_load(content)
-                    checks.append(
-                        {
-                            "name": "Config file",
-                            "passed": True,
-                            "details": f"valid at {found_config}",
-                            "requirement": "optional",
-                            "suggestion": None,
-                        }
-                    )
-                else:
-                    checks.append(
-                        {
-                            "name": "Config file",
-                            "passed": True,
-                            "details": f"empty (using defaults) at {found_config}",
-                            "requirement": "optional",
-                            "suggestion": None,
-                        }
-                    )
-        except yaml.YAMLError as e:
-            checks.append(
-                {
-                    "name": "Config file",
-                    "passed": False,
-                    "details": f"invalid YAML: {e}",
-                    "requirement": "optional",
-                    "suggestion": "Fix YAML syntax errors in config file",
-                }
-            )
-            all_passed = False
-        except OSError as e:
-            checks.append(
-                {
-                    "name": "Config file",
-                    "passed": False,
-                    "details": f"cannot read: {e}",
-                    "requirement": "optional",
-                    "suggestion": "Check file permissions",
-                }
-            )
-            all_passed = False
-    else:
-        checks.append(
+    if found_config is None:
+        return (
             {
                 "name": "Config file",
                 "passed": True,
                 "details": "not found (will use defaults)",
                 "requirement": "optional",
                 "suggestion": None,
-            }
+            },
+            True,
         )
 
-    # Check 6: Write permissions on default wiki output directory
-    if config:
-        wiki_dir = Path(config.output.wiki_dir)
-        try:
-            # Try to create the directory if it doesn't exist
-            wiki_dir.mkdir(parents=True, exist_ok=True)
-            # Try to write a test file
-            test_file = wiki_dir / ".deepwiki_health_check"
-            test_file.write_text("health check")
-            test_file.unlink()
-            checks.append(
-                {
-                    "name": "Wiki output directory",
-                    "passed": True,
-                    "details": f"writable at {wiki_dir}",
-                    "requirement": "required",
-                    "suggestion": None,
-                }
-            )
-        except OSError as e:
-            checks.append(
-                {
-                    "name": "Wiki output directory",
-                    "passed": False,
-                    "details": f"not writable: {e}",
-                    "requirement": "required",
-                    "suggestion": f"Check permissions on {wiki_dir}",
-                }
-            )
-            all_passed = False
-    else:
-        # If config failed to load, skip this check
-        checks.append(
+    try:
+        with open(found_config) as f:
+            content = f.read()
+            if content.strip():
+                yaml.safe_load(content)
+                details = f"valid at {found_config}"
+            else:
+                details = f"empty (using defaults) at {found_config}"
+        return (
+            {
+                "name": "Config file",
+                "passed": True,
+                "details": details,
+                "requirement": "optional",
+                "suggestion": None,
+            },
+            True,
+        )
+    except yaml.YAMLError as e:
+        return (
+            {
+                "name": "Config file",
+                "passed": False,
+                "details": f"invalid YAML: {e}",
+                "requirement": "optional",
+                "suggestion": "Fix YAML syntax errors in config file",
+            },
+            False,
+        )
+    except OSError as e:
+        return (
+            {
+                "name": "Config file",
+                "passed": False,
+                "details": f"cannot read: {e}",
+                "requirement": "optional",
+                "suggestion": "Check file permissions",
+            },
+            False,
+        )
+
+
+def _check_wiki_output_dir(config: Config | None) -> tuple[_CheckResult, bool]:
+    """Check that the wiki output directory is writable."""
+    if config is None:
+        return (
             {
                 "name": "Wiki output directory",
                 "passed": False,
                 "details": "cannot verify (config not loaded)",
                 "requirement": "required",
                 "suggestion": "Fix configuration first",
-            }
+            },
+            False,
         )
-        all_passed = False
 
-    # Display results
+    wiki_dir = Path(config.output.wiki_dir)
+    try:
+        wiki_dir.mkdir(parents=True, exist_ok=True)
+        test_file = wiki_dir / ".deepwiki_health_check"
+        test_file.write_text("health check")
+        test_file.unlink()
+        return (
+            {
+                "name": "Wiki output directory",
+                "passed": True,
+                "details": f"writable at {wiki_dir}",
+                "requirement": "required",
+                "suggestion": None,
+            },
+            True,
+        )
+    except OSError as e:
+        return (
+            {
+                "name": "Wiki output directory",
+                "passed": False,
+                "details": f"not writable: {e}",
+                "requirement": "required",
+                "suggestion": f"Check permissions on {wiki_dir}",
+            },
+            False,
+        )
+
+
+def _display_health_results(checks: list[_CheckResult], console: Console) -> None:
+    """Render the health-check table and summary."""
     table = Table(title="Health Check Results", show_header=True, header_style="bold")
     table.add_column("Status", style="bold", width=8)
     table.add_column("Check", width=25)
@@ -537,10 +533,72 @@ def cmd_health_check(args: argparse.Namespace) -> int:
 
     console.print(table)
 
-    # Summary
     passed = sum(1 for c in checks if c["passed"])
     total = len(checks)
     console.print(f"\n[bold]Summary:[/bold] {passed}/{total} checks passed\n")
+
+
+def cmd_health_check(args: argparse.Namespace) -> int:
+    """Health check command to verify system readiness."""
+    console = Console()
+    console.print("\n[bold]Running system health checks...[/bold]\n")
+
+    checks: list[_CheckResult] = []
+    all_passed = True
+
+    # Check 1: Python version
+    py_result, py_ok = _check_python_version()
+    checks.append(py_result)
+    if not py_ok:
+        all_passed = False
+
+    # Check 2: Required packages
+    pkg_results, pkgs_ok = _check_required_packages()
+    checks.extend(pkg_results)
+    if not pkgs_ok:
+        all_passed = False
+
+    # Check 3: LLM provider
+    config_path = Path(args.config) if args.config else None
+    config: Config | None = None
+    try:
+        config = Config.load(config_path)
+        llm_result, llm_ok = _check_llm_provider(config)
+        checks.append(llm_result)
+        if not llm_ok:
+            all_passed = False
+    except Exception as e:  # noqa: BLE001 — CLI top-level handler: config errors shown as health-check results
+        checks.append(
+            {
+                "name": "LLM provider",
+                "passed": False,
+                "details": f"config error: {e}",
+                "requirement": "required",
+                "suggestion": "Fix configuration file or create one",
+            }
+        )
+        all_passed = False
+
+    # Check 4: Embedding provider
+    if config is not None:
+        embed_result, embed_ok = _check_embedding_provider(config)
+        checks.append(embed_result)
+        if not embed_ok:
+            all_passed = False
+
+    # Check 5: Config file validity
+    cfg_result, cfg_ok = _check_config_file(config_path)
+    checks.append(cfg_result)
+    if not cfg_ok:
+        all_passed = False
+
+    # Check 6: Wiki output directory
+    wiki_result, wiki_ok = _check_wiki_output_dir(config)
+    checks.append(wiki_result)
+    if not wiki_ok:
+        all_passed = False
+
+    _display_health_results(checks, console)
 
     if all_passed:
         console.print(

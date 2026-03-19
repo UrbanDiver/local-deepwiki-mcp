@@ -237,6 +237,78 @@ def write_config(config_dict: dict, dest: Path) -> None:
     dest.write_text(yaml.dump(config_dict, default_flow_style=False, sort_keys=False))
 
 
+# ── Wizard section helpers ────────────────────────────────────────────
+
+
+def _prompt_llm_config(
+    console: Console,
+    providers: dict[str, bool],
+    *,
+    non_interactive: bool,
+    provider_flag: str | None,
+) -> str:
+    """Prompt the user to select an LLM provider and return the selection."""
+    console.print("\n[bold]LLM providers:[/bold]")
+    for name, available in providers.items():
+        console.print(f"  {name}: {_provider_status(available)}")
+
+    if non_interactive:
+        if provider_flag:
+            return provider_flag
+        return next(
+            (p for p in ("ollama", "anthropic", "openai") if providers.get(p)),
+            "ollama",
+        )
+
+    default_provider = next(
+        (p for p in ("ollama", "anthropic", "openai") if providers.get(p)),
+        "ollama",
+    )
+    return Prompt.ask(
+        "\nLLM provider",
+        choices=["ollama", "anthropic", "openai"],
+        default=default_provider,
+    )
+
+
+def _prompt_embedding_config(
+    console: Console,
+    *,
+    non_interactive: bool,
+    embedding_flag: str | None,
+) -> str:
+    """Prompt the user to select an embedding provider and return the selection."""
+    if non_interactive:
+        return embedding_flag or "local"
+
+    console.print("\n[bold]Embedding providers:[/bold]")
+    console.print("  local: sentence-transformers (free, slower first run)")
+    console.print("  openai: OpenAI embeddings (fast, costs money)")
+    return Prompt.ask(
+        "\nEmbedding provider",
+        choices=["local", "openai"],
+        default="local",
+    )
+
+
+def _prompt_wiki_config(
+    console: Console,
+    lang_counts: dict[str, int],
+) -> list[str]:
+    """Display detected languages and return the list to use in the config."""
+    if lang_counts:
+        table = Table(show_header=True, header_style="bold cyan")
+        table.add_column("Language", style="green", width=15)
+        table.add_column("Files", justify="right", width=8)
+        for lang, count in lang_counts.items():
+            table.add_row(lang, str(count))
+        console.print(table)
+    else:
+        console.print("[dim]No recognised source files found.[/dim]")
+
+    return list(lang_counts.keys()) if lang_counts else _ALL_LANGUAGES
+
+
 # ── Main wizard flow ─────────────────────────────────────────────────
 
 
@@ -274,59 +346,23 @@ def run_wizard(
     # ── Step 2: Detect languages ──────────────────────────────────
     console.print(f"[bold]Scanning[/bold] {repo_path.resolve()} for source files...")
     lang_counts = detect_languages(repo_path)
-
-    if lang_counts:
-        table = Table(show_header=True, header_style="bold cyan")
-        table.add_column("Language", style="green", width=15)
-        table.add_column("Files", justify="right", width=8)
-        for lang, count in lang_counts.items():
-            table.add_row(lang, str(count))
-        console.print(table)
-    else:
-        console.print("[dim]No recognised source files found.[/dim]")
-
-    detected_languages = list(lang_counts.keys()) if lang_counts else _ALL_LANGUAGES
+    detected_languages = _prompt_wiki_config(console, lang_counts)
 
     # ── Step 3: Choose LLM provider ──────────────────────────────
     providers = detect_providers()
-
-    console.print("\n[bold]LLM providers:[/bold]")
-    for name, available in providers.items():
-        console.print(f"  {name}: {_provider_status(available)}")
-
-    if non_interactive:
-        if provider_flag:
-            llm_provider = provider_flag
-        else:
-            # Pick first available, preferring ollama → anthropic → openai
-            llm_provider = next(
-                (p for p in ("ollama", "anthropic", "openai") if providers.get(p)),
-                "ollama",
-            )
-    else:
-        # Build default from first available provider
-        default_provider = next(
-            (p for p in ("ollama", "anthropic", "openai") if providers.get(p)),
-            "ollama",
-        )
-        llm_provider = Prompt.ask(
-            "\nLLM provider",
-            choices=["ollama", "anthropic", "openai"],
-            default=default_provider,
-        )
+    llm_provider = _prompt_llm_config(
+        console,
+        providers,
+        non_interactive=non_interactive,
+        provider_flag=provider_flag,
+    )
 
     # ── Step 4: Choose embedding provider ─────────────────────────
-    if non_interactive:
-        embedding_provider = embedding_flag or "local"
-    else:
-        console.print("\n[bold]Embedding providers:[/bold]")
-        console.print("  local: sentence-transformers (free, slower first run)")
-        console.print("  openai: OpenAI embeddings (fast, costs money)")
-        embedding_provider = Prompt.ask(
-            "\nEmbedding provider",
-            choices=["local", "openai"],
-            default="local",
-        )
+    embedding_provider = _prompt_embedding_config(
+        console,
+        non_interactive=non_interactive,
+        embedding_flag=embedding_flag,
+    )
 
     # ── Step 5: Build config ──────────────────────────────────────
     config = build_config(llm_provider, embedding_provider, detected_languages)  # type: ignore[arg-type]

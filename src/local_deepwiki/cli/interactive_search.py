@@ -449,6 +449,59 @@ class InteractiveSearch:
 
         return True
 
+    # ---------------------------------------------------------------------------
+    # _handle_filter_mode helpers
+    # ---------------------------------------------------------------------------
+
+    async def _apply_language_filter(self) -> None:
+        """Prompt for and apply a language filter."""
+        self._console.clear()
+        languages = [lang.value for lang in Language]
+        self._console.print(f"[dim]Available: {', '.join(languages)}[/dim]")
+        value = self._console.input("[yellow]Language: [/yellow]").strip().lower()
+        if value:
+            if value in languages:
+                self._state.filters.language = value
+            else:
+                self._state.error_message = f"Invalid language: {value}"
+
+    async def _apply_type_filter(self) -> None:
+        """Prompt for and apply a chunk type filter."""
+        self._console.clear()
+        types = [ct.value for ct in ChunkType]
+        self._console.print(f"[dim]Available: {', '.join(types)}[/dim]")
+        value = self._console.input("[yellow]Type: [/yellow]").strip().lower()
+        if value:
+            if value in types:
+                self._state.filters.chunk_type = value
+            else:
+                self._state.error_message = f"Invalid type: {value}"
+
+    async def _apply_path_filter(self) -> None:
+        """Prompt for and apply a file-path pattern filter."""
+        self._console.clear()
+        value = self._console.input("[yellow]File pattern: [/yellow]").strip()
+        if value:
+            self._state.filters.file_pattern = value
+
+    async def _apply_score_filter(self) -> None:
+        """Prompt for and apply a minimum similarity score filter."""
+        self._console.clear()
+        value = self._console.input(
+            "[yellow]Minimum score (0.0-1.0): [/yellow]"
+        ).strip()
+        if value:
+            try:
+                score = float(value)
+                if 0.0 <= score <= 1.0:
+                    self._state.filters.min_similarity = score
+                else:
+                    self._state.error_message = "Score must be between 0.0 and 1.0"
+            except (ValueError, TypeError):
+                # ValueError: Invalid numeric string
+                # TypeError: Invalid input type
+                self._state.error_message = f"Invalid score: {value}"
+
     async def _handle_filter_mode(self, key: str) -> None:
         """Handle keyboard input in filter mode.
 
@@ -465,57 +518,16 @@ class InteractiveSearch:
             return
 
         if key == readchar.key.ENTER:
-            # Prompt for filter value based on mode
             mode = self._state.input_mode
 
             if mode == "filter_language":
-                self._console.clear()
-                languages = [lang.value for lang in Language]
-                self._console.print(f"[dim]Available: {', '.join(languages)}[/dim]")
-                value = (
-                    self._console.input("[yellow]Language: [/yellow]").strip().lower()
-                )
-                if value:
-                    if value in languages:
-                        self._state.filters.language = value
-                    else:
-                        self._state.error_message = f"Invalid language: {value}"
-
+                await self._apply_language_filter()
             elif mode == "filter_type":
-                self._console.clear()
-                types = [ct.value for ct in ChunkType]
-                self._console.print(f"[dim]Available: {', '.join(types)}[/dim]")
-                value = self._console.input("[yellow]Type: [/yellow]").strip().lower()
-                if value:
-                    if value in types:
-                        self._state.filters.chunk_type = value
-                    else:
-                        self._state.error_message = f"Invalid type: {value}"
-
+                await self._apply_type_filter()
             elif mode == "filter_path":
-                self._console.clear()
-                value = self._console.input("[yellow]File pattern: [/yellow]").strip()
-                if value:
-                    self._state.filters.file_pattern = value
-
+                await self._apply_path_filter()
             elif mode == "filter_score":
-                self._console.clear()
-                value = self._console.input(
-                    "[yellow]Minimum score (0.0-1.0): [/yellow]"
-                ).strip()
-                if value:
-                    try:
-                        score = float(value)
-                        if 0.0 <= score <= 1.0:
-                            self._state.filters.min_similarity = score
-                        else:
-                            self._state.error_message = (
-                                "Score must be between 0.0 and 1.0"
-                            )
-                    except (ValueError, TypeError):
-                        # ValueError: Invalid numeric string
-                        # TypeError: Invalid input type
-                        self._state.error_message = f"Invalid score: {value}"
+                await self._apply_score_filter()
 
             # Re-apply filters and re-search if needed
             if self._state.query:
@@ -604,8 +616,13 @@ async def run_search(
         )
 
 
-def main() -> int:
-    """Main entry point for the interactive search CLI."""
+# ---------------------------------------------------------------------------
+# main helpers
+# ---------------------------------------------------------------------------
+
+
+def _parse_search_args() -> argparse.Namespace:
+    """Build the argument parser and parse sys.argv."""
     parser = argparse.ArgumentParser(
         prog="deepwiki-search",
         description="Interactive code search for local-deepwiki indexed repositories",
@@ -674,8 +691,11 @@ def main() -> int:
         help="Show preview of first result in non-interactive mode",
     )
 
-    args = parser.parse_args()
+    return parser.parse_args()
 
+
+def _run_search_loop(args: argparse.Namespace) -> int:
+    """Validate args and run the search loop; return exit code."""
     # Validate min_score
     if not 0.0 <= args.min_score <= 1.0:
         print("Error: --min-score must be between 0.0 and 1.0", file=sys.stderr)
@@ -711,6 +731,12 @@ def main() -> int:
         print(f"Error: {e}", file=sys.stderr)
         logger.exception("Search failed")
         return 1
+
+
+def main() -> int:
+    """Main entry point for the interactive search CLI."""
+    args = _parse_search_args()
+    return _run_search_loop(args)
 
 
 if __name__ == "__main__":

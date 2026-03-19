@@ -57,6 +57,55 @@ def _count_wiki_pages(wiki_path: Path) -> int:
     return sum(1 for f in wiki_path.rglob("*.md") if f.is_file())
 
 
+# ---------------------------------------------------------------------------
+# _scan_current_files helpers
+# ---------------------------------------------------------------------------
+
+
+def _compute_file_hash_safe(file_path: Path) -> str | None:
+    """Return the SHA-256 hash of *file_path*, or None on OSError."""
+    from local_deepwiki.core.parser import _compute_file_hash
+
+    try:
+        return _compute_file_hash(file_path)
+    except OSError:
+        return None
+
+
+def _categorize_file_change(
+    file_path: Path,
+    rel_path: str,
+    compiled_patterns: list,
+    max_size: int,
+    ext_to_lang: dict[str, str],
+    configured_languages: set[str],
+) -> str | None:
+    """Return the hash for *file_path* if it should be included, else None.
+
+    Applies the same exclusion rules as the indexer's ``_find_source_files``:
+    compiled file-pattern matching, size limit, extension recognition, and
+    configured-language membership.
+    """
+    if any(p.match(rel_path) for p in compiled_patterns):
+        return None
+
+    try:
+        if file_path.stat().st_size > max_size:
+            return None
+    except OSError:
+        return None
+
+    ext = file_path.suffix.lower()
+    lang_name = ext_to_lang.get(ext)
+    if lang_name is None:
+        return None
+
+    if lang_name not in configured_languages:
+        return None
+
+    return _compute_file_hash_safe(file_path)
+
+
 def _scan_current_files(repo_path: Path) -> dict[str, str]:
     """Scan a repository for source files and compute their hashes.
 
@@ -78,7 +127,7 @@ def _scan_current_files(repo_path: Path) -> dict[str, str]:
     import re
 
     from local_deepwiki.config import Config
-    from local_deepwiki.core.parser import EXTENSION_MAP, _compute_file_hash
+    from local_deepwiki.core.parser import EXTENSION_MAP
 
     config = Config.load()
 
@@ -124,33 +173,96 @@ def _scan_current_files(repo_path: Path) -> dict[str, str]:
             file_path = root_path / filename
             rel_path = str(file_path.relative_to(repo_path))
 
-            # Check against compiled file patterns
-            if any(p.match(rel_path) for p in compiled_patterns):
-                continue
-
-            # Check file size
-            try:
-                if file_path.stat().st_size > max_size:
-                    continue
-            except OSError:
-                continue
-
-            # Check if extension is recognised
-            ext = file_path.suffix.lower()
-            lang_name = ext_to_lang.get(ext)
-            if lang_name is None:
-                continue
-
-            # Check if language is in configured list
-            if lang_name not in configured_languages:
-                continue
-
-            try:
-                current_files[rel_path] = _compute_file_hash(file_path)
-            except OSError:
-                pass
+            file_hash = _categorize_file_change(
+                file_path,
+                rel_path,
+                compiled_patterns,
+                max_size,
+                ext_to_lang,
+                configured_languages,
+            )
+            if file_hash is not None:
+                current_files[rel_path] = file_hash
 
     return current_files
+
+
+# ---------------------------------------------------------------------------
+# collect_status helpers
+# ---------------------------------------------------------------------------
+
+
+def _build_index_summary(status: object, wiki_path: Path) -> dict:
+    """Build the repository/index/wiki sub-dicts from *status*.
+
+    Returns a partial result dict containing ``repository``, ``index``,
+    and ``wiki`` keys.
+    """
+    page_count = _count_wiki_pages(wiki_path)
+    disk_usage = _dir_size(wiki_path)
+
+    return {
+        "repository": {
+            "path": status.repo_path,
+            "indexed_at": status.indexed_at,
+            "indexed_at_human": _format_timestamp(status.indexed_at),
+            "schema_version": status.schema_version,
+        },
+        "index": {
+            "total_files": status.total_files,
+            "total_chunks": status.total_chunks,
+            "languages": status.languages,
+        },
+        "wiki": {
+            "page_count": page_count,
+            "disk_usage_bytes": disk_usage,
+            "disk_usage_human": _format_size(disk_usage),
+        },
+    }
+
+
+def _build_freshness_info(
+    repo_path: Path,
+    status: object,
+    manager: object,
+    *,
+    verbose: bool,
+) -> dict:
+    """Build the freshness sub-dict by scanning the current repository files.
+
+    Returns a ``freshness`` dict suitable for inclusion in the status result.
+    """
+    if not repo_path.is_dir():
+        return {
+            "status": "Repository not found",
+            "new_count": 0,
+            "modified_count": 0,
+            "deleted_count": 0,
+        }
+
+    current_files = _scan_current_files(repo_path)
+    new_files, modified_files, deleted_files = manager.get_files_needing_reindex(
+        status, current_files
+    )
+    total_changed = len(new_files) + len(modified_files) + len(deleted_files)
+
+    freshness_label = (
+        "Fresh" if total_changed == 0 else f"Stale ({total_changed} files changed)"
+    )
+
+    freshness: dict = {
+        "status": freshness_label,
+        "new_count": len(new_files),
+        "modified_count": len(modified_files),
+        "deleted_count": len(deleted_files),
+    }
+
+    if verbose:
+        freshness["new_files"] = sorted(new_files)
+        freshness["modified_files"] = sorted(modified_files)
+        freshness["deleted_files"] = sorted(deleted_files)
+
+    return freshness
 
 
 def collect_status(
@@ -176,78 +288,28 @@ def collect_status(
         return {"indexed": False}
 
     repo_path = Path(status.repo_path)
-    page_count = _count_wiki_pages(wiki_path)
-    disk_usage = _dir_size(wiki_path)
 
-    result: dict = {
-        "indexed": True,
-        "repository": {
-            "path": status.repo_path,
-            "indexed_at": status.indexed_at,
-            "indexed_at_human": _format_timestamp(status.indexed_at),
-            "schema_version": status.schema_version,
-        },
-        "index": {
-            "total_files": status.total_files,
-            "total_chunks": status.total_chunks,
-            "languages": status.languages,
-        },
-        "wiki": {
-            "page_count": page_count,
-            "disk_usage_bytes": disk_usage,
-            "disk_usage_human": _format_size(disk_usage),
-        },
-    }
+    result: dict = {"indexed": True}
+    result.update(_build_index_summary(status, wiki_path))
 
-    # Freshness check
-    if repo_path.is_dir():
-        current_files = _scan_current_files(repo_path)
-        new_files, modified_files, deleted_files = manager.get_files_needing_reindex(
-            status, current_files
-        )
-        total_changed = len(new_files) + len(modified_files) + len(deleted_files)
+    result["freshness"] = _build_freshness_info(
+        repo_path, status, manager, verbose=verbose
+    )
 
-        if total_changed == 0:
-            freshness_label = "Fresh"
-        else:
-            freshness_label = f"Stale ({total_changed} files changed)"
-
-        freshness: dict = {
-            "status": freshness_label,
-            "new_count": len(new_files),
-            "modified_count": len(modified_files),
-            "deleted_count": len(deleted_files),
-        }
-
-        if verbose:
-            freshness["new_files"] = sorted(new_files)
-            freshness["modified_files"] = sorted(modified_files)
-            freshness["deleted_files"] = sorted(deleted_files)
-
-        result["freshness"] = freshness
-    else:
-        result["freshness"] = {
-            "status": "Repository not found",
-            "new_count": 0,
-            "modified_count": 0,
-            "deleted_count": 0,
-        }
-
+    page_count = result["wiki"]["page_count"]
     if page_count == 0 and status.total_files > 0:
         result["note"] = "Indexed but wiki not generated"
 
     return result
 
 
-def display_status(data: dict, console: Console) -> None:
-    """Render status data as Rich panels and tables."""
-    if not data.get("indexed"):
-        console.print(
-            "[yellow]Not indexed yet.[/yellow] Run: [bold]deepwiki update[/bold]"
-        )
-        return
+# ---------------------------------------------------------------------------
+# display_status helpers
+# ---------------------------------------------------------------------------
 
-    # Repository section
+
+def _render_repository_section(data: dict, console: Console) -> None:
+    """Render the Repository panel."""
     repo = data["repository"]
     repo_lines = [
         f"[bold]Path:[/bold]           {repo['path']}",
@@ -256,14 +318,10 @@ def display_status(data: dict, console: Console) -> None:
     ]
     console.print(Panel("\n".join(repo_lines), title="Repository", border_style="blue"))
 
-    # Index section
-    idx = data["index"]
-    lang_table = Table(show_header=True, header_style="bold cyan", padding=(0, 1))
-    lang_table.add_column("Language", style="green")
-    lang_table.add_column("Files", justify="right")
-    for lang, count in sorted(idx["languages"].items(), key=lambda x: -x[1]):
-        lang_table.add_row(lang, str(count))
 
+def _render_index_section(data: dict, console: Console) -> None:
+    """Render the Index panel and language table."""
+    idx = data["index"]
     console.print(
         Panel(
             f"[bold]Files:[/bold]  {idx['total_files']}   [bold]Chunks:[/bold] {idx['total_chunks']}",
@@ -272,9 +330,16 @@ def display_status(data: dict, console: Console) -> None:
         )
     )
     if idx["languages"]:
+        lang_table = Table(show_header=True, header_style="bold cyan", padding=(0, 1))
+        lang_table.add_column("Language", style="green")
+        lang_table.add_column("Files", justify="right")
+        for lang, count in sorted(idx["languages"].items(), key=lambda x: -x[1]):
+            lang_table.add_row(lang, str(count))
         console.print(lang_table)
 
-    # Wiki section
+
+def _render_wiki_section(data: dict, console: Console) -> None:
+    """Render the Wiki panel."""
     wiki = data["wiki"]
     console.print(
         Panel(
@@ -284,7 +349,9 @@ def display_status(data: dict, console: Console) -> None:
         )
     )
 
-    # Freshness section
+
+def _render_freshness_section(data: dict, console: Console) -> None:
+    """Render the Freshness panel."""
     freshness = data.get("freshness", {})
     status_label = freshness.get("status", "Unknown")
     if status_label == "Fresh":
@@ -319,6 +386,20 @@ def display_status(data: dict, console: Console) -> None:
     console.print(
         Panel("\n".join(freshness_lines), title="Freshness", border_style="blue")
     )
+
+
+def display_status(data: dict, console: Console) -> None:
+    """Render status data as Rich panels and tables."""
+    if not data.get("indexed"):
+        console.print(
+            "[yellow]Not indexed yet.[/yellow] Run: [bold]deepwiki update[/bold]"
+        )
+        return
+
+    _render_repository_section(data, console)
+    _render_index_section(data, console)
+    _render_wiki_section(data, console)
+    _render_freshness_section(data, console)
 
     # Note
     if "note" in data:

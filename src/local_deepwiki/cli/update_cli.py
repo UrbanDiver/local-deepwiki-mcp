@@ -93,6 +93,113 @@ def _run_dry_run(
     return 0
 
 
+# ---------------------------------------------------------------------------
+# _run_update_async helpers
+# ---------------------------------------------------------------------------
+
+
+async def _setup_indexer(
+    repo_path: Path,
+    wiki_path: Path,
+    *,
+    full_rebuild: bool,
+    no_progress: bool,
+    console: Console,
+    progress: object,
+) -> tuple[object, object]:
+    """Initialise the indexer and run the indexing phase.
+
+    Returns a tuple of ``(index_status, indexer)`` after the indexing phase
+    completes.  The indexer's vector store is stabilised before returning.
+    """
+    from local_deepwiki.cli_progress import MultiPhaseProgress  # noqa: F401 — type hint only
+    from local_deepwiki.config import Config
+    from local_deepwiki.core.indexer import RepositoryIndexer
+
+    config = Config.load()
+    indexer = RepositoryIndexer(repo_path=repo_path, config=config)
+
+    # Override wiki_path if user specified one
+    if wiki_path != repo_path / ".deepwiki":
+        indexer.wiki_path = wiki_path
+
+    progress.add_phase("indexing", "Indexing repository", total=0)
+    index_callback = progress.get_callback("indexing")
+
+    def indexing_progress(msg: str, current: int, total: int) -> None:
+        if index_callback:
+            index_callback(msg, current, total)
+        elif not no_progress:
+            if total > 0:
+                console.print(f"  [{current}/{total}] {msg}")
+            else:
+                console.print(f"  {msg}")
+
+    index_status = await indexer.index(
+        full_rebuild=full_rebuild,
+        progress_callback=indexing_progress,
+    )
+
+    progress.complete_phase("indexing")
+    console.print(
+        f"[green]Indexed {index_status.total_files} files, "
+        f"{index_status.total_chunks} chunks[/green]"
+    )
+
+    # LanceDB 0.26: compact all dataset versions into a single stable
+    # snapshot so concurrent wiki-generation reads don't collide with
+    # deferred fragment compaction.
+    indexer.vector_store.stabilize()
+
+    return index_status, indexer
+
+
+async def _run_indexing_with_progress(
+    repo_path: Path,
+    wiki_path: Path,
+    indexer: object,
+    index_status: object,
+    *,
+    full_rebuild: bool,
+    no_progress: bool,
+    console: Console,
+    progress: object,
+) -> object:
+    """Run the wiki generation phase with progress tracking.
+
+    Returns the wiki structure produced by ``generate_wiki``.
+    """
+    from local_deepwiki.config import Config
+    from local_deepwiki.generators.wiki import generate_wiki
+
+    config = Config.load()
+
+    progress.add_phase("wiki", "Generating wiki", total=0)
+    wiki_callback = progress.get_callback("wiki")
+
+    def wiki_progress(msg: str, current: int, total: int) -> None:
+        if wiki_callback:
+            wiki_callback(msg, current, total)
+        elif not no_progress:
+            if total > 0:
+                console.print(f"  [{current}/{total}] {msg}")
+            else:
+                console.print(f"  {msg}")
+
+    wiki_structure = await generate_wiki(
+        repo_path=repo_path,
+        wiki_path=indexer.wiki_path,
+        vector_store=indexer.vector_store,
+        index_status=index_status,
+        config=config,
+        progress_callback=wiki_progress,
+        full_rebuild=full_rebuild,
+    )
+
+    progress.complete_phase("wiki")
+    return wiki_structure
+
+
 async def _run_update_async(
     repo_path: Path,
     wiki_path: Path,
@@ -114,73 +221,31 @@ async def _run_update_async(
         Exit code (0 = success).
     """
     from local_deepwiki.cli_progress import MultiPhaseProgress
-    from local_deepwiki.config import Config
-    from local_deepwiki.core.indexer import RepositoryIndexer
-    from local_deepwiki.generators.wiki import generate_wiki
-
-    config = Config.load()
-    indexer = RepositoryIndexer(repo_path=repo_path, config=config)
-
-    # Override wiki_path if user specified one
-    if wiki_path != repo_path / ".deepwiki":
-        indexer.wiki_path = wiki_path
 
     start_time = time.time()
 
     with MultiPhaseProgress(disable=no_progress) as progress:
         # Phase 1: Indexing
-        progress.add_phase("indexing", "Indexing repository", total=0)
-        index_callback = progress.get_callback("indexing")
-
-        def indexing_progress(msg: str, current: int, total: int) -> None:
-            if index_callback:
-                index_callback(msg, current, total)
-            elif not no_progress:
-                if total > 0:
-                    console.print(f"  [{current}/{total}] {msg}")
-                else:
-                    console.print(f"  {msg}")
-
-        status = await indexer.index(
+        index_status, indexer = await _setup_indexer(
+            repo_path,
+            wiki_path,
             full_rebuild=full_rebuild,
-            progress_callback=indexing_progress,
+            no_progress=no_progress,
+            console=console,
+            progress=progress,
         )
-
-        progress.complete_phase("indexing")
-        console.print(
-            f"[green]Indexed {status.total_files} files, "
-            f"{status.total_chunks} chunks[/green]"
-        )
-
-        # LanceDB 0.26: compact all dataset versions into a single stable
-        # snapshot so concurrent wiki-generation reads don't collide with
-        # deferred fragment compaction.
-        indexer.vector_store.stabilize()
 
         # Phase 2: Wiki generation
-        progress.add_phase("wiki", "Generating wiki", total=0)
-        wiki_callback = progress.get_callback("wiki")
-
-        def wiki_progress(msg: str, current: int, total: int) -> None:
-            if wiki_callback:
-                wiki_callback(msg, current, total)
-            elif not no_progress:
-                if total > 0:
-                    console.print(f"  [{current}/{total}] {msg}")
-                else:
-                    console.print(f"  {msg}")
-
-        wiki_structure = await generate_wiki(
-            repo_path=repo_path,
-            wiki_path=indexer.wiki_path,
-            vector_store=indexer.vector_store,
-            index_status=status,
-            config=config,
-            progress_callback=wiki_progress,
+        wiki_structure = await _run_indexing_with_progress(
+            repo_path,
+            wiki_path,
+            indexer,
+            index_status,
             full_rebuild=full_rebuild,
+            no_progress=no_progress,
+            console=console,
+            progress=progress,
         )
-
-        progress.complete_phase("wiki")
 
     elapsed = time.time() - start_time
     console.print(f"[green]Generated {len(wiki_structure.pages)} wiki pages[/green]")
