@@ -396,12 +396,14 @@ GENERATOR_TOOLS: tuple[Tool, ...] = (
         },
         annotations=_READ_ONLY,
     ),
+    # Backward-compatible alias for get_status(scope='index')
     Tool(
         name="get_index_status",
         description=(
             "Get index statistics for a repository without re-indexing. "
             "Shows file count, chunk count, languages, and when it was "
             "last indexed."
+            "\n\nNote: This is an alias for get_status with scope='index'."
             "\n\nRequires: index_repository must be called first."
         ),
         inputSchema={

@@ -132,11 +132,39 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         annotations=_READ_ONLY,
     ),
     Tool(
+        name="get_status",
+        description=(
+            "Get repository index status and/or wiki health dashboard.\n"
+            "- scope='all' (default): Returns both index status and wiki stats.\n"
+            "- scope='index': Index stats only (file count, chunks, languages).\n"
+            "- scope='wiki': Wiki health dashboard (pages, coverage, staleness).\n"
+            "\nRequires: index_repository must be called first."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the indexed repository",
+                },
+                "scope": {
+                    "type": "string",
+                    "enum": ["all", "index", "wiki"],
+                    "description": "What to return: 'all' (default), 'index' (index status only), 'wiki' (wiki stats only)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    # Backward-compatible alias for get_status(scope='wiki')
+    Tool(
         name="get_wiki_stats",
         description=(
             "Get a wiki health dashboard with index stats, page counts, "
             "search index size, coverage data, and wiki status - all in "
             "a single call."
+            "\n\nNote: This is an alias for get_status with scope='wiki'."
             "\n\nRequires: index_repository must be called first."
         ),
         inputSchema={
@@ -268,10 +296,13 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
     Tool(
         name="analyze_diff",
         description=(
-            "Analyze git diff between two refs and map changed files to "
-            "affected wiki pages and code entities. Helps understand "
-            "documentation impact of code changes."
-            "\n\nNo prior indexing required."
+            "Analyze git diff between two refs. Supports two modes:\n"
+            "- mode='structured' (default): Map changed files to affected wiki "
+            "pages and code entities. Returns structured analysis.\n"
+            "- mode='question': Ask questions about the diff using RAG. Combines "
+            "git diff with vector search context and LLM synthesis. Requires "
+            "'question' parameter.\n"
+            "\nNo prior indexing required."
         ),
         inputSchema={
             "type": "object",
@@ -279,6 +310,15 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                 "repo_path": {
                     "type": "string",
                     "description": "Path to the repository (must be a git repo)",
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["structured", "question"],
+                    "description": "Analysis mode: 'structured' for file/entity mapping, 'question' for natural-language Q&A (default: structured)",
+                },
+                "question": {
+                    "type": "string",
+                    "description": "Question about the code changes (required when mode='question')",
                 },
                 "base_ref": {
                     "type": "string",
@@ -290,13 +330,18 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                 },
                 "include_content": {
                     "type": "boolean",
-                    "description": "Include diff content for each file (default: false)",
+                    "description": "Include diff content for each file (default: false, only for mode='structured')",
+                },
+                "max_context": {
+                    "type": "integer",
+                    "description": "Maximum code chunks for context (default: 10, max: 30, only for mode='question')",
                 },
             },
             "required": ["repo_path"],
         },
         annotations=_READ_ONLY,
     ),
+    # Backward-compatible alias for analyze_diff(mode='question')
     Tool(
         name="ask_about_diff",
         description=(
@@ -304,6 +349,7 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
             "diff with vector search context and LLM synthesis to answer "
             "questions like 'What changed?', 'Are there any bugs?', or "
             "'What's the impact?'."
+            "\n\nNote: This is an alias for analyze_diff with mode='question'."
             "\n\nNo prior indexing required."
         ),
         inputSchema={
