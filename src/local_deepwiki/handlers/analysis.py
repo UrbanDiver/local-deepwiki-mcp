@@ -7,13 +7,21 @@ All analysis handlers have been split into focused submodules:
   - analysis_metadata: handle_get_project_manifest, handle_get_file_context,
                        handle_get_wiki_stats, handle_get_complexity_metrics
   - analysis_architecture: handle_get_layer_dependencies,
-                           handle_get_architecture_summary
+                           handle_get_architecture_summary,
+                           handle_get_hotspots,
+                           handle_get_cross_module_dependencies,
+                           handle_get_coupling_metrics,
+                           handle_get_design_smells
 """
 
 from __future__ import annotations
 
 from local_deepwiki.handlers.analysis_architecture import (
     handle_get_architecture_summary,
+    handle_get_coupling_metrics,
+    handle_get_cross_module_dependencies,
+    handle_get_design_smells,
+    handle_get_hotspots,
     handle_get_layer_dependencies,
 )
 from local_deepwiki.handlers.analysis_diff import (
@@ -52,4 +60,8 @@ __all__ = [
     "handle_get_complexity_metrics",
     "handle_get_layer_dependencies",
     "handle_get_architecture_summary",
+    "handle_get_hotspots",
+    "handle_get_cross_module_dependencies",
+    "handle_get_coupling_metrics",
+    "handle_get_design_smells",
 ]

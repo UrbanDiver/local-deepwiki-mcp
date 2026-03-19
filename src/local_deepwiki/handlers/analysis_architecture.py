@@ -12,7 +12,14 @@ from local_deepwiki.errors import path_not_found_error
 from local_deepwiki.handlers._error_handling import handle_tool_errors
 from local_deepwiki.handlers._response import make_tool_text_content
 from local_deepwiki.logging import get_logger
-from local_deepwiki.models import GetArchitectureSummaryArgs, GetLayerDependenciesArgs
+from local_deepwiki.models import (
+    GetArchitectureSummaryArgs,
+    GetCouplingMetricsArgs,
+    GetCrossModuleDependenciesArgs,
+    GetDesignSmellsArgs,
+    GetHotspotsArgs,
+    GetLayerDependenciesArgs,
+)
 from local_deepwiki.security import Permission, get_access_controller
 
 logger = get_logger(__name__)
@@ -170,3 +177,160 @@ async def handle_get_architecture_summary(
         repo_path,
     )
     return make_tool_text_content("get_architecture_summary", result)
+
+
+@handle_tool_errors
+async def handle_get_hotspots(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_hotspots tool call.
+
+    Ranks all functions in the repository by a chosen complexity metric
+    (cyclomatic complexity, parameter count, line length, or nesting depth).
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetHotspotsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.hotspots import analyze_hotspots
+
+    result = analyze_hotspots(
+        repo_path=repo_path,
+        metric=validated.metric,
+        top_n=validated.top_n,
+        min_threshold=validated.min_threshold,
+        exclude_tests=validated.exclude_tests,
+    )
+
+    logger.info(
+        "Hotspots: %d results for metric=%s in %s",
+        len(result.get("hotspots", [])),
+        validated.metric,
+        repo_path,
+    )
+    return make_tool_text_content("get_hotspots", result)
+
+
+@handle_tool_errors
+async def handle_get_cross_module_dependencies(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_cross_module_dependencies tool call.
+
+    Builds the inter-module import graph for the repository and returns
+    module nodes, weighted edges, stats, and a Mermaid diagram.
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetCrossModuleDependenciesArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.module_dependencies import (
+        analyze_cross_module_dependencies,
+    )
+
+    result = analyze_cross_module_dependencies(
+        repo_path=repo_path,
+        module_filter=validated.module_filter,
+        include_external=validated.include_external,
+        min_edge_weight=validated.min_edge_weight,
+    )
+
+    logger.info(
+        "Cross-module deps: %d modules, %d edges in %s",
+        result.get("stats", {}).get("total_modules", 0),
+        result.get("stats", {}).get("total_edges", 0),
+        repo_path,
+    )
+    return make_tool_text_content("get_cross_module_dependencies", result)
+
+
+@handle_tool_errors
+async def handle_get_coupling_metrics(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_coupling_metrics tool call.
+
+    Computes Robert C. Martin coupling metrics (Ca, Ce, I, A, D) per module.
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetCouplingMetricsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.coupling import analyze_coupling_metrics
+
+    result = analyze_coupling_metrics(
+        repo_path=repo_path,
+        module_filter=validated.module_filter,
+    )
+
+    logger.info(
+        "Coupling metrics: %d modules analyzed in %s",
+        result.get("stats", {}).get("total_modules", 0),
+        repo_path,
+    )
+    return make_tool_text_content("get_coupling_metrics", result)
+
+
+@handle_tool_errors
+async def handle_get_design_smells(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_design_smells tool call.
+
+    Detects design smells (God Class, Long Method, Feature Envy, etc.) using
+    heuristic AST-based thresholds.
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetDesignSmellsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.design_smells import analyze_design_smells
+
+    result = analyze_design_smells(
+        repo_path=repo_path,
+        severity_threshold=validated.severity_threshold,
+        exclude_tests=validated.exclude_tests,
+    )
+
+    logger.info(
+        "Design smells: %d smells found in %s",
+        result.get("summary", {}).get("total", 0),
+        repo_path,
+    )
+    return make_tool_text_content("get_design_smells", result)

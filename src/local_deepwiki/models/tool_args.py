@@ -585,6 +585,73 @@ class GetArchitectureSummaryArgs(BaseModel):
     repo_path: str = Field(max_length=4096, description="Path to the repository")
 
 
+class GetHotspotsArgs(BaseModel):
+    """Arguments for the get_hotspots tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    metric: str = Field(
+        default="complexity",
+        description="Metric to rank by: complexity, params, length, nesting",
+    )
+    top_n: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Number of top results to return (1-100)",
+    )
+    min_threshold: float | None = Field(
+        default=None,
+        description="Minimum metric value to include",
+    )
+    exclude_tests: bool = Field(
+        default=True,
+        description="Exclude test files from analysis",
+    )
+
+
+class GetCrossModuleDependenciesArgs(BaseModel):
+    """Arguments for the get_cross_module_dependencies tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    module_filter: str | None = Field(
+        default=None,
+        description="Filter to modules whose label starts with this prefix",
+    )
+    include_external: bool = Field(
+        default=False,
+        description="Include third-party and stdlib imports",
+    )
+    min_edge_weight: int = Field(
+        default=1,
+        ge=1,
+        description="Minimum import count for an edge to be included",
+    )
+
+
+class GetCouplingMetricsArgs(BaseModel):
+    """Arguments for the get_coupling_metrics tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    module_filter: str | None = Field(
+        default=None,
+        description="Filter to modules whose label starts with this prefix",
+    )
+
+
+class GetDesignSmellsArgs(BaseModel):
+    """Arguments for the get_design_smells tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    severity_threshold: str = Field(
+        default="medium",
+        description="Minimum severity to include: low, medium, high",
+    )
+    exclude_tests: bool = Field(
+        default=True,
+        description="Exclude test files from analysis",
+    )
+
+
 class ServeWikiArgs(BaseModel):
     """Arguments for the serve_wiki tool."""
 

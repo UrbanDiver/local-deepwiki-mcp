@@ -423,4 +423,142 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         },
         annotations=_READ_ONLY,
     ),
+    Tool(
+        name="get_hotspots",
+        description=(
+            "Rank functions across an entire repository by a chosen complexity "
+            "metric (cyclomatic complexity, parameter count, line length, or "
+            "nesting depth). Returns top-N hotspots with full detail breakdown. "
+            "Useful for prioritising refactoring efforts."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "metric": {
+                    "type": "string",
+                    "enum": ["complexity", "params", "length", "nesting"],
+                    "description": (
+                        "Metric to rank by: 'complexity' (cyclomatic), "
+                        "'params' (parameter count), 'length' (line count), "
+                        "'nesting' (nesting depth). Default: complexity."
+                    ),
+                },
+                "top_n": {
+                    "type": "integer",
+                    "description": "Number of top results to return (1-100, default: 20)",
+                },
+                "min_threshold": {
+                    "type": "number",
+                    "description": "Minimum metric value to include (optional)",
+                },
+                "exclude_tests": {
+                    "type": "boolean",
+                    "description": "Exclude test files (default: true)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
+        name="get_cross_module_dependencies",
+        description=(
+            "Build an inter-module import graph for a Python repository. "
+            "Returns module nodes (with file counts and line counts), weighted "
+            "directed edges, most-depended-on and most-dependent modules, and "
+            "a Mermaid graph LR diagram."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "module_filter": {
+                    "type": "string",
+                    "description": (
+                        "Restrict to modules whose label starts with this prefix "
+                        "(e.g. 'core' to scope to the core package)"
+                    ),
+                },
+                "include_external": {
+                    "type": "boolean",
+                    "description": "Include third-party and stdlib imports (default: false)",
+                },
+                "min_edge_weight": {
+                    "type": "integer",
+                    "description": "Minimum import count for an edge to appear (default: 1)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
+        name="get_coupling_metrics",
+        description=(
+            "Compute Robert C. Martin package-level coupling metrics per module: "
+            "afferent coupling (Ca), efferent coupling (Ce), instability "
+            "(I = Ce/(Ca+Ce)), abstractness (A = abstract_classes/total_classes), "
+            "and distance from the main sequence (D = |A+I-1|). "
+            "Modules with high distance are either too concrete-and-stable or "
+            "too abstract-and-unstable."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "module_filter": {
+                    "type": "string",
+                    "description": "Restrict to modules whose label starts with this prefix",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
+        name="get_design_smells",
+        description=(
+            "Detect common design smells using heuristic AST-based thresholds: "
+            "God Class (>15 methods AND >500 lines), Long Method (>80 lines OR "
+            "cyclomatic complexity >15), Long Parameter List (>6 params), "
+            "Feature Envy (>3 calls to another class's methods), Large File "
+            "(>800 lines), Deep Nesting (>4 levels), Data Clump (3+ functions "
+            "share 3+ identical parameter names). Returns smells with severity, "
+            "file location, entity name, description, and refactoring suggestion."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "severity_threshold": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high"],
+                    "description": "Minimum severity to include (default: medium)",
+                },
+                "exclude_tests": {
+                    "type": "boolean",
+                    "description": "Exclude test files (default: true)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
 )
