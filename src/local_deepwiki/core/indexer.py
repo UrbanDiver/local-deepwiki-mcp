@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import fnmatch
-import os
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -18,6 +17,11 @@ from local_deepwiki.core.index_manager import (
     CURRENT_SCHEMA_VERSION,
     INDEX_STATUS_FILE,
     IndexStatusManager,
+)
+from local_deepwiki.core.indexer_files import (
+    compute_files_to_process,
+    detect_deleted_files,
+    find_source_files,
 )
 from local_deepwiki.core.parser import ASTCache, CodeParser
 from local_deepwiki.core.parsing_pipeline import FileParsingPipeline, ParseResult
@@ -255,29 +259,22 @@ class RepositoryIndexer:
                 "Found source files", len(source_files), len(source_files)
             )
 
-        files_to_process: list[Path] = []
-        files_unchanged: list[FileInfo] = []
+        files_to_process, files_unchanged = compute_files_to_process(
+            source_files=source_files,
+            parser=self.parser,
+            repo_path=self.repo_path,
+            prev_files_by_path=prev_files_by_path,
+        )
 
-        # Track current file paths for deleted file detection
+        # Build the set of current relative paths for deleted file detection
         current_file_paths: set[str] = set()
-
         for file_path in source_files:
             file_info = self.parser.get_file_info(file_path, self.repo_path)
             current_file_paths.add(file_info.path)
 
-            if prev_files_by_path:
-                # Check if file has changed using O(1) dict lookup
-                prev_file = prev_files_by_path.get(file_info.path)
-                if prev_file and prev_file.hash == file_info.hash:
-                    files_unchanged.append(prev_file)
-                    continue
-
-            files_to_process.append(file_path)
-
-        # Detect files that existed in the previous index but no longer exist on disk
-        deleted_file_paths = [
-            path for path in prev_files_by_path if path not in current_file_paths
-        ]
+        deleted_file_paths = detect_deleted_files(
+            prev_files_by_path, current_file_paths
+        )
 
         if deleted_file_paths:
             logger.info(
@@ -797,51 +794,14 @@ class RepositoryIndexer:
         Returns:
             List of paths to source files.
         """
-        files = []
-        max_size = self.config.parsing.max_file_size
-        skip_dirs = self._exclude_skip_dirs
-        compiled_patterns = self._exclude_compiled
-
-        for root, dirs, filenames in os.walk(self.repo_path):
-            root_path = Path(root)
-            rel_root = root_path.relative_to(self.repo_path)
-
-            # Early directory filtering - modify dirs in-place to skip subdirs
-            dirs[:] = [
-                d
-                for d in dirs
-                if d not in skip_dirs
-                and str(rel_root / d) not in skip_dirs
-                and not d.startswith(".")  # Skip hidden directories
-            ]
-
-            for filename in filenames:
-                file_path = root_path / filename
-                rel_path = str(file_path.relative_to(self.repo_path))
-
-                # Check against pre-compiled file patterns
-                if any(p.match(rel_path) for p in compiled_patterns):
-                    continue
-
-                # Check file size
-                try:
-                    if file_path.stat().st_size > max_size:
-                        continue
-                except OSError:
-                    continue
-
-                # Check if language is supported
-                language = self.parser.detect_language(file_path)
-                if language is None:
-                    continue
-
-                # Check if language is in configured list
-                if language.value not in self.config.parsing.languages:
-                    continue
-
-                files.append(file_path)
-
-        return files
+        return find_source_files(
+            repo_path=self.repo_path,
+            parser=self.parser,
+            max_file_size=self.config.parsing.max_file_size,
+            skip_dirs=self._exclude_skip_dirs,
+            compiled_patterns=self._exclude_compiled,
+            languages=self.config.parsing.languages,
+        )
 
     def _load_status(self) -> tuple[IndexStatus | None, bool]:
         """Load previous indexing status and check for migration needs.

@@ -16,6 +16,11 @@ from local_deepwiki.generators.crosslinks import (
     EntityRegistry,
     build_entity_registry_from_store,
 )
+from local_deepwiki.generators.lazy_cache import (
+    append_to_search_index as _append_to_search_index_fn,
+    read_cached_page,
+    write_page as _write_page_fn,
+)
 from local_deepwiki.generators.wiki.utils import file_path_to_wiki_path
 from local_deepwiki.generators.wiki.files import (
     FileDocContext,
@@ -249,10 +254,7 @@ class LazyPageGenerator:
 
     def _read_cached(self, page_path: str) -> str | None:
         """Return cached page content from disk, or None if not yet generated."""
-        full = self._wiki_path / page_path
-        if full.exists():
-            return full.read_text()
-        return None
+        return read_cached_page(self._wiki_path, page_path)
 
     async def _generate_page(self, page_path: str) -> WikiPage:
         """Route to the correct generator based on page path."""
@@ -503,29 +505,11 @@ class LazyPageGenerator:
 
     async def _write_page(self, page: WikiPage) -> None:
         """Write a generated wiki page to disk, creating parent directories as needed."""
-        page_path = self._wiki_path / page.path
-
-        def _sync() -> None:
-            page_path.parent.mkdir(parents=True, exist_ok=True)
-            page_path.write_text(page.content)
-
-        await asyncio.to_thread(_sync)
+        await _write_page_fn(self._wiki_path, page)
 
     def _append_to_search_index(self, page: WikiPage) -> None:
         """Append a page entry to the JSON search index for client-side search."""
-        idx_path = self._wiki_path / "search_index.json"
-        try:
-            entries = json.loads(idx_path.read_text()) if idx_path.exists() else []
-        except (json.JSONDecodeError, OSError):
-            entries = []
-        entries.append(
-            {
-                "path": page.path,
-                "title": page.title,
-                "summary": page.content[:200],
-            }
-        )
-        idx_path.write_text(json.dumps(entries))
+        _append_to_search_index_fn(self._wiki_path, page)
 
     def _get_module_siblings(self, page_path: str) -> list[str]:
         """Return wiki paths of sibling pages in the same section directory."""

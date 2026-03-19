@@ -11,8 +11,6 @@ so that ``VectorStore`` keeps its existing public API.
 
 from __future__ import annotations
 
-import asyncio
-import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -28,7 +26,22 @@ from .schema import (
     SearchProfile,
     SearchResultPage,
 )
-from .utils import _log_task_exception
+from .search_pipeline import (
+    dispatch_search as _dispatch_search,
+    execute_fts_search as _execute_fts_search,
+    execute_vector_search as _execute_vector_search,
+    convert_fts_results as _convert_fts_results,
+    reciprocal_rank_fusion as _reciprocal_rank_fusion,
+    run_keyword_pipeline as _run_keyword_pipeline,
+    run_hybrid_pipeline as _run_hybrid_pipeline,
+    run_vector_pipeline as _run_vector_pipeline,
+)
+from .search_postprocess import (
+    apply_fuzzy_reranking as _apply_fuzzy_reranking,
+    apply_post_filters as _apply_post_filters,
+    attach_suggestions as _attach_suggestions,
+    generate_suggestions as _generate_suggestions,
+)
 
 if TYPE_CHECKING:
     from local_deepwiki.config import FuzzySearchConfig
@@ -240,30 +253,13 @@ class SearchEngine:
             search_results: Current search results.
             store: The VectorStore instance (needed by FuzzySearchHelper).
         """
-        fuzzy_config = self._fuzzy_search_config
-        from local_deepwiki.core.fuzzy_search import should_auto_enable_fuzzy
-
-        if not (
-            fuzzy_config.enable_auto_fuzzy
-            and should_auto_enable_fuzzy(
-                search_results, fuzzy_config.auto_fuzzy_threshold
-            )
-        ):
-            return None
-        try:
-            fuzzy_helper = await self.get_fuzzy_helper(store)
-            suggestions = fuzzy_helper.generate_suggestions(
-                query,
-                search_results,
-                threshold=fuzzy_config.suggestion_threshold,
-                max_suggestions=fuzzy_config.max_suggestions,
-            )
-            if suggestions:
-                logger.debug("Generated suggestions: %s", suggestions)
-            return suggestions or None
-        except (RuntimeError, OSError, ValueError, KeyError) as e:
-            logger.warning("Failed to generate suggestions: %s", e)
-            return None
+        return await _generate_suggestions(
+            query,
+            search_results,
+            store,
+            self._fuzzy_search_config,
+            self.get_fuzzy_helper,
+        )
 
     # -----------------------------------------------------------------
     # Auto-adjust search limit based on repo size
@@ -309,26 +305,9 @@ class SearchEngine:
         fetch_limit: int,
     ) -> list[dict[str, Any]]:
         """Execute LanceDB vector search with latency tracking."""
-        search = table.search(query_embedding).limit(fetch_limit)
-        if filters:
-            search = search.where(" AND ".join(filters))
-
-        search_start = time.monotonic()
-        results = search.to_list()
-        search_latency_ms = (time.monotonic() - search_start) * 1000
-
-        self._lazy_index_manager.record_search_latency(search_latency_ms)
-
-        if self._lazy_index_manager.should_create_index():
-            try:
-                task = asyncio.create_task(
-                    self._lazy_index_manager.schedule_index_creation()
-                )
-                task.add_done_callback(_log_task_exception)
-            except RuntimeError:
-                logger.debug("Cannot schedule lazy index creation: no event loop")
-
-        return results
+        return _execute_vector_search(
+            table, query_embedding, filters, fetch_limit, self._lazy_index_manager
+        )
 
     def execute_fts_search(
         self,
@@ -338,34 +317,14 @@ class SearchEngine:
         fetch_limit: int,
     ) -> list[dict[str, Any]]:
         """Execute LanceDB full-text (BM25) search."""
-        try:
-            search = table.search(query, query_type="fts").limit(fetch_limit)
-            if filters:
-                search = search.where(" AND ".join(filters))
-            return search.to_list()
-        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            logger.warning("FTS search failed (falling back to empty): %s", exc)
-            return []
+        return _execute_fts_search(table, query, filters, fetch_limit)
 
     def convert_fts_results(
         self,
         rows: list[dict[str, Any]],
     ) -> list[SearchResult]:
         """Convert FTS result rows to SearchResult objects with normalized scores."""
-        if not rows:
-            return []
-
-        max_score = max(row.get("_score", 0.0) for row in rows)
-        if max_score <= 0:
-            max_score = 1.0
-
-        results: list[SearchResult] = []
-        for row in rows:
-            bm25_score = row.get("_score", 0.0)
-            normalized = bm25_score / max_score
-            chunk = self._row_to_chunk(row)
-            results.append(SearchResult(chunk=chunk, score=normalized, highlights=[]))
-        return results
+        return _convert_fts_results(rows, self._row_to_chunk)
 
     @staticmethod
     def reciprocal_rank_fusion(
@@ -377,24 +336,13 @@ class SearchEngine:
         fts_weight: float = 0.3,
     ) -> list[tuple[dict[str, Any], float]]:
         """Merge vector and FTS results using Reciprocal Rank Fusion."""
-        scores: dict[str, float] = {}
-        docs: dict[str, dict[str, Any]] = {}
-
-        for rank, row in enumerate(vector_rows):
-            doc_id = row["id"]
-            scores[doc_id] = scores.get(doc_id, 0.0) + vector_weight / (k + rank + 1)
-            docs[doc_id] = row
-
-        for rank, row in enumerate(fts_rows):
-            doc_id = row["id"]
-            scores[doc_id] = scores.get(doc_id, 0.0) + fts_weight / (k + rank + 1)
-            if doc_id not in docs:
-                docs[doc_id] = row
-
-        sorted_pairs = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-
-        max_score = sorted_pairs[0][1] if sorted_pairs else 1.0
-        return [(docs[doc_id], score / max_score) for doc_id, score in sorted_pairs]
+        return _reciprocal_rank_fusion(
+            vector_rows,
+            fts_rows,
+            k=k,
+            vector_weight=vector_weight,
+            fts_weight=fts_weight,
+        )
 
     def apply_fuzzy_reranking(
         self,
@@ -405,34 +353,13 @@ class SearchEngine:
         use_fuzzy: bool,
     ) -> tuple[list[SearchResult], bool]:
         """Apply fuzzy re-ranking if explicitly requested or auto-enabled."""
-        from local_deepwiki.core.fuzzy_search import (
-            extract_highlights,
-            rerank_with_fuzzy,
-            should_auto_enable_fuzzy,
+        return _apply_fuzzy_reranking(
+            search_results,
+            query,
+            fuzzy_weight,
+            use_fuzzy=use_fuzzy,
+            fuzzy_config=self._fuzzy_search_config,
         )
-
-        fuzzy_config = self._fuzzy_search_config
-        auto_fuzzy_enabled = False
-
-        if (
-            fuzzy_config.enable_auto_fuzzy
-            and not use_fuzzy
-            and should_auto_enable_fuzzy(
-                search_results, fuzzy_config.auto_fuzzy_threshold
-            )
-        ):
-            auto_fuzzy_enabled = True
-            logger.debug(
-                "Auto-enabling fuzzy search due to poor results (best score below %s)",
-                fuzzy_config.auto_fuzzy_threshold,
-            )
-
-        if (use_fuzzy or auto_fuzzy_enabled) and search_results:
-            search_results = rerank_with_fuzzy(search_results, query, fuzzy_weight)
-            for result in search_results:
-                result.highlights = extract_highlights(result.chunk.content, query)
-
-        return search_results, auto_fuzzy_enabled
 
     def record_and_cache(
         self,
@@ -469,8 +396,9 @@ class SearchEngine:
         fetch_limit: int,
     ) -> list[SearchResult]:
         """Execute the keyword-only (BM25) search pipeline."""
-        fts_rows = self.execute_fts_search(table, query, filters, fetch_limit)
-        return self.convert_fts_results(fts_rows)
+        return _run_keyword_pipeline(
+            table, query, filters, fetch_limit, self._row_to_chunk
+        )
 
     def run_hybrid_pipeline(
         self,
@@ -482,23 +410,17 @@ class SearchEngine:
         min_similarity: float,
     ) -> list[SearchResult]:
         """Execute the hybrid (vector + BM25 with RRF) search pipeline."""
-        vector_rows = self.execute_vector_search(
-            table, query_embedding, filters, fetch_limit
+        return _run_hybrid_pipeline(
+            table,
+            query,
+            query_embedding,
+            filters,
+            fetch_limit,
+            min_similarity,
+            self._bm25_weight,
+            self._row_to_chunk,
+            self._lazy_index_manager,
         )
-        fts_rows = self.execute_fts_search(table, query, filters, fetch_limit)
-
-        if not fts_rows:
-            return self.convert_results_to_search_results(vector_rows, min_similarity)
-
-        merged = self.reciprocal_rank_fusion(
-            vector_rows,
-            fts_rows,
-            fts_weight=self._bm25_weight,
-        )
-        return [
-            SearchResult(chunk=self._row_to_chunk(row), score=score, highlights=[])
-            for row, score in merged
-        ]
 
     def run_vector_pipeline(
         self,
@@ -509,10 +431,15 @@ class SearchEngine:
         min_similarity: float,
     ) -> list[SearchResult]:
         """Execute the vector-only (semantic) search pipeline."""
-        raw_rows = self.execute_vector_search(
-            table, query_embedding, filters, fetch_limit
+        return _run_vector_pipeline(
+            table,
+            query_embedding,
+            filters,
+            fetch_limit,
+            min_similarity,
+            self._row_to_chunk,
+            self._lazy_index_manager,
         )
-        return self.convert_results_to_search_results(raw_rows, min_similarity)
 
     @staticmethod
     def apply_post_filters(
@@ -520,11 +447,7 @@ class SearchEngine:
         path_pattern: str | None,
     ) -> list[SearchResult]:
         """Apply post-retrieval filters (path pattern) to search results."""
-        if not path_pattern:
-            return results
-        from local_deepwiki.core.fuzzy_search import filter_by_path
-
-        return filter_by_path(results, path_pattern)
+        return _apply_post_filters(results, path_pattern)
 
     async def attach_suggestions(
         self,
@@ -533,22 +456,13 @@ class SearchEngine:
         store: Any,
     ) -> list[SearchResult]:
         """Generate and attach 'Did you mean?' suggestions to the first result."""
-        suggestions = await self.generate_suggestions(query, search_results, store)
-        if not suggestions:
-            return search_results
-        if search_results:
-            first = search_results[0]
-            return [
-                SearchResult(
-                    chunk=first.chunk,
-                    score=first.score,
-                    highlights=first.highlights,
-                    suggestions=suggestions,
-                ),
-                *search_results[1:],
-            ]
-        logger.debug("No results but have suggestions: %s", suggestions)
-        return search_results
+        return await _attach_suggestions(
+            query,
+            search_results,
+            store,
+            self._fuzzy_search_config,
+            self.get_fuzzy_helper,
+        )
 
     # -----------------------------------------------------------------
     # Cache filter builder
@@ -587,23 +501,17 @@ class SearchEngine:
         min_similarity: float,
     ) -> list[SearchResult]:
         """Dispatch to the appropriate search pipeline based on mode."""
-        if mode == "keyword":
-            return self.run_keyword_pipeline(table, query, filters, fetch_limit)
-        if mode == "hybrid":
-            return self.run_hybrid_pipeline(
-                table,
-                query,
-                query_embedding,
-                filters,
-                fetch_limit,
-                min_similarity,
-            )
-        return self.run_vector_pipeline(
+        return _dispatch_search(
+            mode,
             table,
+            query,
             query_embedding,
             filters,
             fetch_limit,
             min_similarity,
+            self._bm25_weight,
+            self._row_to_chunk,
+            self._lazy_index_manager,
         )
 
     # -----------------------------------------------------------------
