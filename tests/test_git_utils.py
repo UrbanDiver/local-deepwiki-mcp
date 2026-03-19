@@ -1086,7 +1086,9 @@ class TestGetFileLastModified:
         assert result is not None
         assert isinstance(result, datetime)
         # Should be within the last minute
-        assert (datetime.now() - result).total_seconds() < 60
+        from datetime import timezone
+
+        assert (datetime.now(tz=timezone.utc) - result).total_seconds() < 60
 
     def test_returns_none_for_non_git_dir(self, tmp_path: Path) -> None:
         """Test returns None for non-git directory."""

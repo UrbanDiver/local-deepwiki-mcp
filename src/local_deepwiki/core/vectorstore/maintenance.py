@@ -257,7 +257,7 @@ class LazyIndexManager:
 
             # Run the actual index creation
             # This is CPU-bound, so we run it in an executor
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             await loop.run_in_executor(
                 None,
                 lambda: table.create_index(

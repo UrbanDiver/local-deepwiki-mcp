@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from local_deepwiki.logging import get_logger
@@ -374,7 +374,7 @@ def get_file_last_modified(repo_path: Path, file_path: str) -> datetime | None:
         )
         if result.returncode == 0 and result.stdout.strip():
             timestamp = int(result.stdout.strip())
-            return datetime.fromtimestamp(timestamp)
+            return datetime.fromtimestamp(timestamp, tz=timezone.utc)
     except (
         subprocess.TimeoutExpired,
         FileNotFoundError,
@@ -452,7 +452,7 @@ def check_page_staleness(
     if not source_files:
         return None
 
-    doc_date = datetime.fromtimestamp(generated_at)
+    doc_date = datetime.fromtimestamp(generated_at, tz=timezone.utc)
     mod_dates = get_files_last_modified(repo_path, source_files)
 
     if not mod_dates:

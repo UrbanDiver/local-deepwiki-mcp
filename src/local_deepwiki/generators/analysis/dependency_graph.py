@@ -25,6 +25,8 @@ from local_deepwiki.generators.analysis.dependency_graph_data import (  # noqa: 
     _get_directory_module,
     _is_test_path,
     _sanitize_mermaid_name,
+    find_circular_dependencies,
+    infer_package_name,
 )
 
 if TYPE_CHECKING:
@@ -197,41 +199,15 @@ class DependencyGraphGenerator:
     ) -> list[list[str]]:
         """Find all circular dependency cycles using DFS.
 
+        Delegates to the standalone ``find_circular_dependencies`` helper.
+
         Args:
             graph: Adjacency list mapping module to its dependencies.
 
         Returns:
             List of cycles, where each cycle is a list of module names.
         """
-        cycles: list[list[str]] = []
-        visited: set[str] = set()
-        rec_stack: set[str] = set()
-
-        def dfs(node: str, path: list[str]) -> None:
-            visited.add(node)
-            rec_stack.add(node)
-            path.append(node)
-
-            for neighbor in graph.get(node, set()):
-                if neighbor not in visited:
-                    dfs(neighbor, path.copy())
-                elif neighbor in rec_stack:
-                    # Found a cycle
-                    cycle_start = path.index(neighbor) if neighbor in path else -1
-                    if cycle_start >= 0:
-                        cycle = path[cycle_start:] + [neighbor]
-                        # Normalize cycle to avoid duplicates
-                        normalized = self._normalize_cycle(cycle)
-                        if normalized not in cycles:
-                            cycles.append(normalized)
-
-            rec_stack.remove(node)
-
-        for node in graph:
-            if node not in visited:
-                dfs(node, [])
-
-        return cycles
+        return find_circular_dependencies(graph)
 
     @staticmethod
     def _normalize_cycle(cycle: list[str]) -> list[str]:
@@ -729,8 +705,7 @@ async def generate_dependency_graph_page(
         ]
     )
 
-    # Add recommendations if cycles exist
-    adj_list: dict[str, list[str]] = {}  # Placeholder for cycle detection
+    # Add recommendations
     content_parts.extend(
         [
             "## Best Practices",

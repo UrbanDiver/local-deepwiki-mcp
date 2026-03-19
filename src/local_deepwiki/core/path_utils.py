@@ -101,6 +101,8 @@ def is_test_file(path: str, *, check_filename: bool = True) -> bool:
             name.startswith("test_")
             or name.endswith("_test.py")
             or name.startswith("conftest")
+            or ".test." in name
+            or ".spec." in name
         ):
             return True
     return False

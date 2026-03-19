@@ -2,7 +2,7 @@
 
 import subprocess
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -56,7 +56,7 @@ class TestGetFileLastModified:
         assert result is not None
         assert isinstance(result, datetime)
         # Should be within the last minute
-        assert (datetime.now() - result).total_seconds() < 60
+        assert (datetime.now(tz=timezone.utc) - result).total_seconds() < 60
 
     def test_returns_none_for_untracked_file(self, tmp_path: Path) -> None:
         """Test returns None for files not in git."""

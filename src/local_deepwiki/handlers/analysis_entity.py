@@ -26,6 +26,7 @@ from local_deepwiki.handlers._response import make_tool_text_content
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ExplainEntityArgs, ImpactAnalysisArgs
 from local_deepwiki.security import Permission, get_access_controller
+from local_deepwiki.services.analysis_service import AnalysisService
 
 logger = get_logger(__name__)
 
@@ -318,6 +319,7 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
 
     index_status, wiki_path, config = await _load_index_status(repo_path)
 
+    # Check entity existence before creating vector store (avoids unnecessary work)
     entity_info = await _lookup_entity_in_search_index(wiki_path, entity_name)
     if entity_info is None:
         result = {
@@ -332,20 +334,6 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
         return make_tool_text_content("explain_entity", result)
 
     entity_type = entity_info.get("entity_type", "unknown")
-    entity_file = entity_info.get("file", "")
-
-    result: dict[str, Any] = {
-        "status": "success",
-        "entity_name": entity_name,
-        "entity_found": True,
-        "entity_info": {
-            "type": entity_type,
-            "file": entity_file,
-            "signature": entity_info.get("signature", ""),
-            "description": entity_info.get("description", ""),
-        },
-    }
-
     needs_vector_store = (
         validated.include_inheritance and entity_type == "class"
     ) or validated.include_test_examples
@@ -353,28 +341,19 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
         _create_vector_store(repo_path, config) if needs_vector_store else None
     )
 
-    if validated.include_call_graph and entity_file:
-        _collect_call_graph(result, repo_path, entity_name, entity_file)
-
-    if (
-        validated.include_inheritance
-        and entity_type == "class"
-        and vector_store is not None
-    ):
-        await _collect_inheritance(result, entity_name, index_status, vector_store)
-
-    if validated.include_test_examples and vector_store is not None:
-        await _collect_test_examples(
-            result,
-            entity_name,
-            entity_type,
-            validated.max_test_examples,
-            repo_path,
-            vector_store,
-        )
-
-    if validated.include_api_docs and entity_file:
-        _collect_api_docs(result, repo_path, entity_name, entity_type, entity_file)
+    svc = AnalysisService()
+    result = await svc.explain_entity(
+        entity_name,
+        repo_path,
+        index_status,
+        wiki_path,
+        vector_store,
+        include_call_graph=validated.include_call_graph,
+        include_inheritance=validated.include_inheritance,
+        include_test_examples=validated.include_test_examples,
+        include_api_docs=validated.include_api_docs,
+        max_test_examples=validated.max_test_examples,
+    )
 
     logger.info("Explain entity: '%s' in %s", entity_name, repo_path)
     return make_tool_text_content("explain_entity", result)
@@ -549,7 +528,8 @@ async def _collect_inheritance_dependents(
             collect_class_hierarchy,
         )
 
-        assert vector_store is not None
+        if vector_store is None:
+            raise ValueError("Vector store required for inheritance analysis")
         classes = await collect_class_hierarchy(index_status, vector_store)
 
         inheritance_dependents: dict[str, list[str]] = {}
@@ -591,7 +571,8 @@ async def _collect_file_dependents(
     try:
         from local_deepwiki.generators.context_builder import build_file_context
 
-        assert vector_store is not None
+        if vector_store is None:
+            raise ValueError("Vector store required for file dependents analysis")
         chunks = await vector_store.get_chunks_by_file(file_path)
 
         if not chunks:
@@ -692,65 +673,33 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
 
     index_status, wiki_path, config = await _load_index_status(repo_path)
 
-    result: dict[str, Any] = {
-        "status": "success",
-        "file_path": file_path,
-        "entity_name": entity_name,
-    }
-
-    affected_files: set[str] = set()
-    affected_entities: set[str] = set()
-
     needs_vector_store = validated.include_inheritance or validated.include_dependents
     vector_store = (
         _create_vector_store(repo_path, config) if needs_vector_store else None
     )
 
-    if validated.include_reverse_calls:
-        _collect_reverse_calls(
-            result,
-            full_file,
-            repo_path,
-            file_path,
-            entity_name,
-            affected_files,
-            affected_entities,
-        )
+    svc = AnalysisService()
+    result = await svc.impact_analysis(
+        file_path,
+        full_file,
+        repo_path,
+        index_status,
+        wiki_path,
+        vector_store,
+        entity_name=entity_name,
+        include_reverse_calls=validated.include_reverse_calls,
+        include_inheritance=validated.include_inheritance,
+        include_dependents=validated.include_dependents,
+        include_wiki_pages=validated.include_wiki_pages,
+    )
 
-    if validated.include_inheritance:
-        await _collect_inheritance_dependents(
-            result,
-            file_path,
-            entity_name,
-            index_status,
-            vector_store,
-            affected_files,
-            affected_entities,
-        )
-
-    if validated.include_dependents:
-        await _collect_file_dependents(
-            result,
-            file_path,
-            repo_path,
-            vector_store,
-            affected_files,
-        )
-
-    if validated.include_wiki_pages:
-        await _collect_affected_wiki_pages(result, wiki_path, file_path)
-
-    risk_level = _compute_risk_level(len(affected_files))
-    result["impact_summary"] = {
-        "total_affected_files": len(affected_files),
-        "total_affected_entities": len(affected_entities),
-        "risk_level": risk_level,
-    }
+    risk_level = result.get("impact_summary", {}).get("risk_level", "unknown")
+    affected_count = result.get("impact_summary", {}).get("total_affected_files", 0)
 
     logger.info(
         "Impact analysis: %s -> %d files, risk=%s",
         file_path,
-        len(affected_files),
+        affected_count,
         risk_level,
     )
     return make_tool_text_content("impact_analysis", result)

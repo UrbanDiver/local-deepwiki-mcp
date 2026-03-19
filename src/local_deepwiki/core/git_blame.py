@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import subprocess
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from local_deepwiki.core.git_utils import (
@@ -231,7 +231,7 @@ def _parse_all_porcelain_blame(output: str) -> list[BlameInfo]:
                     BlameInfo(
                         author=author,
                         author_email=author_email,
-                        date=datetime.fromtimestamp(author_time),
+                        date=datetime.fromtimestamp(author_time, tz=timezone.utc),
                         commit_hash=commit_hash,
                         summary=summary,
                     )
@@ -384,7 +384,7 @@ def _parse_line_blame_map(output: str) -> dict[int, BlameInfo]:
                 blame_info = BlameInfo(
                     author=author,
                     author_email=author_email,
-                    date=datetime.fromtimestamp(author_time),
+                    date=datetime.fromtimestamp(author_time, tz=timezone.utc),
                     commit_hash=commit_hash,
                     summary=summary,
                 )
@@ -408,7 +408,10 @@ def format_blame_date(dt: datetime) -> str:
     Returns:
         Formatted date string like "Jan 15, 2025" or "2 days ago" for recent dates.
     """
-    now = datetime.now()
+    now = datetime.now(tz=timezone.utc)
+    # Handle naive datetimes by assuming UTC
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
     diff = now - dt
 
     if diff.days == 0:

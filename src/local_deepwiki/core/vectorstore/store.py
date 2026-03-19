@@ -33,6 +33,7 @@ from .schema import (
     EmbeddingProgress,
     SearchProfile,
 )
+from .search_engine import SearchEngine
 from .utils import RateLimiter, _log_task_exception, _sanitize_string_value
 
 logger = get_logger(__name__)
@@ -119,6 +120,22 @@ class VectorStore(SearchMixin, StatsMixin, LazyIndexMixin):
         self._adaptive_searcher = AdaptiveSearcher()
         self._adaptive_searcher.set_store(self)
 
+        # Build the composition-based SearchEngine with explicit deps.
+        # SearchMixin methods delegate to this instance.
+        self._search_engine = SearchEngine(
+            get_table=self._get_table,
+            row_to_chunk=self._row_to_chunk,
+            embedding_provider=self.embedding_provider,
+            get_search_cache=lambda: self._search_cache,
+            fuzzy_search_config=self._fuzzy_search_config,
+            adaptive_searcher=self._adaptive_searcher,
+            lazy_index_manager=self._lazy_index_manager,
+            default_search_profile=default_search_profile,
+            adaptive_search_enabled=adaptive_search_enabled,
+            default_search_mode=default_search_mode,
+            bm25_weight=bm25_weight,
+        )
+
     def stabilize(self) -> None:
         """Force eager index creation and fully reopen the DB connection.
 
@@ -194,6 +211,7 @@ class VectorStore(SearchMixin, StatsMixin, LazyIndexMixin):
             self._table = None
             self._db = None
             self._fuzzy_search_helper = None
+            self._search_engine.fuzzy_search_helper = None
             self._search_cache.invalidate()
             self._adaptive_searcher.reset()
 
@@ -387,20 +405,12 @@ class VectorStore(SearchMixin, StatsMixin, LazyIndexMixin):
         # Create scalar indexes for efficient lookups
         self._create_scalar_indexes()
 
-        # Handle vector index creation based on lazy index config
+        # Eagerly create the vector index after bulk table creation.
+        # Why eager even when lazy indexing is enabled: create_or_update_table
+        # is always a bulk operation. If deferred, concurrent searches trigger
+        # lazy index creation mid-wiki-generation, causing IO errors.
         num_rows = len(data)
-        if self._lazy_index_manager.config.enabled:
-            # Lazy indexing: mark as pending if table is large enough
-            if num_rows >= self._lazy_index_manager.config.min_rows:
-                self._lazy_index_manager.mark_index_pending()
-                logger.info(
-                    "Vector index creation deferred (lazy mode): %d rows. "
-                    "Index will be created in background or on-demand.",
-                    num_rows,
-                )
-        else:
-            # Eager indexing: create immediately
-            self._create_vector_index(num_rows)
+        self._create_vector_index(num_rows)
 
         return len(data)
 
@@ -439,7 +449,7 @@ class VectorStore(SearchMixin, StatsMixin, LazyIndexMixin):
         # Invalidate search cache since index has changed
         self._search_cache.invalidate()
 
-        # Mark vector index as needing rebuild after data changes
+        # Lazy path for incremental additions
         num_rows = table.count_rows()
         if (
             self._lazy_index_manager.config.enabled

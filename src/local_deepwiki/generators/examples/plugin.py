@@ -291,20 +291,19 @@ def get_examples_for_api_page(
 
     # Get examples from extractor (runs async)
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # Can't use run_until_complete in running loop
-            # Return docstring examples only
-            logger.debug(
-                "Event loop already running, skipping async example extraction"
-            )
-        else:
+        asyncio.get_running_loop()
+        logger.debug("Event loop already running, skipping async example extraction")
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        try:
             extracted = loop.run_until_complete(
                 extractor.extract_examples_for_function(entity_name, max_examples=3)
             )
             examples.extend(extracted)
-    except (RuntimeError, OSError, ValueError, TypeError) as e:
-        logger.debug("Failed to extract examples for %s: %s", entity_name, e)
+        except (RuntimeError, OSError, ValueError, TypeError) as e:
+            logger.debug("Failed to extract examples for %s: %s", entity_name, e)
+        finally:
+            loop.close()
 
     # Add docstring examples
     if docstring:

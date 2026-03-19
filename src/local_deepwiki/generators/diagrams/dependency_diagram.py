@@ -2,21 +2,28 @@
 
 from __future__ import annotations
 
-import logging
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
+from local_deepwiki.core.path_utils import is_test_file
+from local_deepwiki.generators.analysis.dependency_graph_data import (
+    find_circular_dependency_edges,
+    infer_package_name,
+)
+from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType
 
 from ._utils import sanitize_mermaid_name
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def _is_test_module(module: str, file_path: str) -> bool:
     """Check if a module is a test module.
+
+    Delegates to the canonical ``is_test_file`` helper in ``path_utils``.
 
     Args:
         module: Module name like 'test_parser' or 'core.indexer'.
@@ -25,13 +32,7 @@ def _is_test_module(module: str, file_path: str) -> bool:
     Returns:
         True if this is a test module.
     """
-    # Check module name
-    if module.startswith("test_") or ".test_" in module:
-        return True
-    # Check file path
-    if "/tests/" in file_path or file_path.startswith("tests/"):
-        return True
-    return False
+    return is_test_file(file_path) or module.startswith("test_") or ".test_" in module
 
 
 @dataclass(slots=True)
@@ -498,36 +499,15 @@ def _module_to_wiki_path(module: str, project_name: str) -> str:
 def _find_circular_dependencies(deps: dict[str, set[str]]) -> set[tuple[str, str]]:
     """Find circular dependencies in a dependency graph.
 
+    Delegates to the canonical ``find_circular_dependency_edges`` helper.
+
     Args:
         deps: Mapping of module to its dependencies.
 
     Returns:
         Set of (from, to) tuples that form circular dependencies.
     """
-    circular: set[tuple[str, str]] = set()
-
-    def dfs(node: str, path: list[str], visited: set[str]) -> None:
-        if node in path:
-            # Found a cycle - mark all edges in the cycle
-            cycle_start = path.index(node)
-            cycle = path[cycle_start:] + [node]
-            for src, tgt in zip(cycle, cycle[1:]):
-                circular.add((src, tgt))
-            return
-
-        if node in visited:
-            return
-
-        visited.add(node)
-        path.append(node)
-
-        for dep in deps.get(node, []):
-            dfs(dep, path.copy(), visited)
-
-    for module in deps:
-        dfs(module, [], set())
-
-    return circular
+    return find_circular_dependency_edges(deps)
 
 
 def _path_to_module(file_path: str) -> str | None:

@@ -36,8 +36,15 @@ from local_deepwiki.models import (
     ListIndexedReposArgs,
 )
 from local_deepwiki.security import Permission, get_access_controller
+from local_deepwiki.services.generator_service import GeneratorService
 
 logger = get_logger(__name__)
+
+
+def _build_generator_service(repo_path: Path, config: Any) -> GeneratorService:
+    """Create a GeneratorService with a vector store for the given repo."""
+    vector_store = _create_vector_store(repo_path, config)
+    return GeneratorService(vector_store, config)
 
 
 @handle_tool_errors
@@ -52,55 +59,26 @@ async def handle_get_glossary(args: dict[str, Any]) -> list[TextContent]:
         raise ValueError(str(e)) from e
 
     repo_path = Path(validated.repo_path).resolve()
-    search_term = validated.search
 
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = await _load_index_status(repo_path)
+    index_status, _wiki_path, config = await _load_index_status(repo_path)
+    svc = _build_generator_service(repo_path, config)
 
-    from local_deepwiki.generators.analysis.glossary import collect_all_entities
-
-    vector_store = _create_vector_store(repo_path, config)
-
-    entities = await collect_all_entities(index_status, vector_store)
-
-    if search_term:
-        search_lower = search_term.lower()
-        entities = [
-            e
-            for e in entities
-            if search_lower in e.name.lower()
-            or (e.docstring and search_lower in e.docstring.lower())
-        ]
-
-    if validated.file_path:
-        filter_path = validated.file_path
-        entities = [e for e in entities if e.file_path.endswith(filter_path)]
-
-    total_entities = len(entities)
-    entities = entities[validated.offset : validated.offset + validated.limit]
-
-    result = {
-        "status": "success",
-        "total_entities": total_entities,
-        "returned": len(entities),
-        "offset": validated.offset,
-        "limit": validated.limit,
-        "has_more": validated.offset + validated.limit < total_entities,
-        "entities": [
-            {
-                "name": e.name,
-                "type": e.entity_type,
-                "file_path": e.file_path,
-                "docstring": e.docstring,
-            }
-            for e in entities
-        ],
-    }
+    result = await svc.generate_glossary(
+        index_status,
+        search=validated.search,
+        file_path=validated.file_path,
+        offset=validated.offset,
+        limit=validated.limit,
+    )
 
     logger.info(
-        "Glossary: %s/%s entities for %s", len(entities), total_entities, repo_path
+        "Glossary: %s/%s entities for %s",
+        result.get("returned", 0),
+        result.get("total_entities", 0),
+        repo_path,
     )
     return make_tool_text_content("get_glossary", result)
 
@@ -117,82 +95,21 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
         raise ValueError(str(e)) from e
 
     repo_path = Path(validated.repo_path).resolve()
-    diagram_type = validated.diagram_type
-    entry_point = validated.entry_point
 
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = await _load_index_status(repo_path)
+    index_status, _wiki_path, config = await _load_index_status(repo_path)
+    svc = _build_generator_service(repo_path, config)
 
-    from local_deepwiki.generators.analysis.callgraph import CallGraphExtractor
-    from local_deepwiki.generators.diagrams import (
-        generate_class_diagram,
-        generate_dependency_graph,
-        generate_language_pie_chart,
-        generate_module_overview,
-        generate_sequence_diagram,
+    result = await svc.generate_diagrams(
+        index_status,
+        repo_path,
+        validated.diagram_type.value,
+        entry_point=validated.entry_point,
     )
 
-    vector_store = _create_vector_store(repo_path, config)
-
-    # Collect chunks from vector store for diagram generation
-    all_chunks = list(vector_store.get_all_chunks())
-
-    project_name = Path(repo_path).name.lower().replace("-", "_")
-
-    # Lazy dict dispatch — only the requested generator runs
-    simple_generators: dict[str, Callable[[], str | None]] = {
-        "class": lambda: generate_class_diagram(all_chunks),
-        "dependency": lambda: generate_dependency_graph(
-            all_chunks,
-            project_name=project_name,
-            detect_circular=True,
-            exclude_tests=True,
-        ),
-        "module": lambda: generate_module_overview(index_status),
-        "language_pie": lambda: generate_language_pie_chart(index_status),
-    }
-
-    dtype = diagram_type.value
-    generator = simple_generators.get(dtype)
-    if generator is not None:
-        diagram = generator()
-    elif dtype == "sequence":
-        if not entry_point:
-            raise ValidationError(
-                message="entry_point is required for sequence diagrams",
-                hint="Provide the name of the function to use as the sequence diagram entry point.",
-                field="entry_point",
-            )
-        # Build call graph first
-        extractor = CallGraphExtractor()
-        combined_graph: dict[str, list[str]] = {}
-        for file_info in index_status.files:
-            file_path = repo_path / file_info.path
-            if file_path.exists():
-                graph = extractor.extract_from_file(file_path, repo_path)
-                for k, v in graph.items():
-                    combined_graph.setdefault(k, []).extend(v)
-        diagram = generate_sequence_diagram(combined_graph, entry_point=entry_point)
-    else:
-        diagram = None
-
-    if diagram is None:
-        return make_tool_text_content(
-            "get_diagrams",
-            {
-                "message": f"No {diagram_type.value} diagram could be generated (no relevant data found)",
-            },
-        )
-
-    result = {
-        "status": "success",
-        "diagram_type": diagram_type.value,
-        "mermaid": diagram,
-    }
-
-    logger.info("Generated %s diagram for %s", diagram_type.value, repo_path)
+    logger.info("Generated %s diagram for %s", validated.diagram_type.value, repo_path)
     return make_tool_text_content("get_diagrams", result)
 
 
@@ -212,60 +129,21 @@ async def handle_get_inheritance(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = await _load_index_status(repo_path)
+    index_status, _wiki_path, config = await _load_index_status(repo_path)
+    svc = _build_generator_service(repo_path, config)
 
-    from local_deepwiki.generators.analysis.inheritance import (
-        collect_class_hierarchy,
-        generate_inheritance_diagram,
+    result = await svc.generate_inheritance(
+        index_status,
+        search=validated.search,
+        offset=validated.offset,
+        limit=validated.limit,
     )
 
-    vector_store = _create_vector_store(repo_path, config)
-
-    classes = await collect_class_hierarchy(index_status, vector_store)
-
-    if not classes:
-        return make_tool_text_content(
-            "get_inheritance",
-            {
-                "message": "No class hierarchies found in the codebase",
-                "classes": [],
-            },
-        )
-
-    diagram = generate_inheritance_diagram(classes)
-
-    class_list = list(classes.values())
-
-    if validated.search:
-        search_lower = validated.search.lower()
-        class_list = [c for c in class_list if search_lower in c.name.lower()]
-
-    total_classes = len(class_list)
-    class_list = class_list[validated.offset : validated.offset + validated.limit]
-
-    result = {
-        "status": "success",
-        "total_classes": total_classes,
-        "returned": len(class_list),
-        "offset": validated.offset,
-        "limit": validated.limit,
-        "has_more": validated.offset + validated.limit < total_classes,
-        "classes": [
-            {
-                "name": node.name,
-                "file_path": node.file_path,
-                "parents": node.parents,
-                "children": node.children,
-                "is_abstract": node.is_abstract,
-                "docstring": node.docstring,
-            }
-            for node in class_list
-        ],
-        "mermaid_diagram": diagram,
-    }
-
     logger.info(
-        "Inheritance: %d/%d classes for %s", len(class_list), total_classes, repo_path
+        "Inheritance: %d/%d classes for %s",
+        result.get("returned", 0),
+        result.get("total_classes", 0),
+        repo_path,
     )
     return make_tool_text_content("get_inheritance", result)
 
@@ -296,32 +174,16 @@ async def handle_get_call_graph(args: dict[str, Any]) -> list[TextContent]:
 
     if file_path:
         target = validate_file_in_repo(repo_path, file_path)
-
         graph = extractor.extract_from_file(target, repo_path)
         diagram = generate_call_graph_diagram(graph, title=file_path)
+        if diagram is None:
+            result: dict[str, Any] = {"message": "No call relationships found"}
+        else:
+            result = {"status": "success", "mermaid": diagram, "scope": file_path}
     else:
-        # Build combined call graph for entire repo
-        index_status, wiki_path, config = await _load_index_status(repo_path)
-        combined_graph: dict[str, list[str]] = {}
-        for file_info in index_status.files:
-            fp = repo_path / file_info.path
-            if fp.exists():
-                graph = extractor.extract_from_file(fp, repo_path)
-                for k, v in graph.items():
-                    combined_graph.setdefault(k, []).extend(v)
-        diagram = generate_call_graph_diagram(combined_graph)
-
-    if diagram is None:
-        return make_tool_text_content(
-            "get_call_graph",
-            {"message": "No call relationships found"},
-        )
-
-    result = {
-        "status": "success",
-        "mermaid": diagram,
-        "scope": file_path or "full_repository",
-    }
+        index_status, _wiki_path, config = await _load_index_status(repo_path)
+        svc = _build_generator_service(repo_path, config)
+        result = await svc.generate_call_graph(repo_path, index_status=index_status)
 
     logger.info("Call graph generated for %s", file_path or repo_path)
     return make_tool_text_content("get_call_graph", result)
@@ -343,34 +205,16 @@ async def handle_get_coverage(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = await _load_index_status(repo_path)
+    index_status, _wiki_path, config = await _load_index_status(repo_path)
+    svc = _build_generator_service(repo_path, config)
 
-    from local_deepwiki.generators.analysis.coverage import analyze_project_coverage
+    result = await svc.generate_coverage(index_status)
 
-    vector_store = _create_vector_store(repo_path, config)
-
-    stats, file_coverages = await analyze_project_coverage(index_status, vector_store)
-
-    result = {
-        "status": "success",
-        "overall": {
-            "total_entities": stats.total_entities,
-            "documented": stats.documented_entities,
-            "undocumented": stats.total_entities - stats.documented_entities,
-            "coverage_percent": round(stats.coverage_percent, 1),
-        },
-        "files": [
-            {
-                "file_path": fc.file_path,
-                "coverage_percent": round(fc.stats.coverage_percent, 1),
-                "undocumented": fc.undocumented,
-            }
-            for fc in file_coverages
-            if fc.undocumented  # Only include files with gaps
-        ],
-    }
-
-    logger.info("Coverage: %.1f%% for %s", stats.coverage_percent, repo_path)
+    logger.info(
+        "Coverage: %.1f%% for %s",
+        result.get("overall", {}).get("coverage_percent", 0),
+        repo_path,
+    )
     return make_tool_text_content("get_coverage", result)
 
 
@@ -391,45 +235,17 @@ async def handle_detect_stale_docs(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    _index_status, wiki_path, _config = await _load_index_status(repo_path)
+    _index_status, wiki_path, config = await _load_index_status(repo_path)
+    svc = _build_generator_service(repo_path, config)
 
-    from local_deepwiki.generators.analysis.stale_detection import analyze_staleness
-    from local_deepwiki.generators.wiki.status import WikiStatusManager
-
-    manager = WikiStatusManager(wiki_path)
-    wiki_status = await manager.load_status()
-
-    if wiki_status is None:
-        return make_tool_text_content(
-            "detect_stale_docs",
-            {
-                "message": "No wiki generation status found. Run index_repository first.",
-                "stale_pages": [],
-            },
-        )
-
-    report = analyze_staleness(repo_path, wiki_status, threshold_days)
-
-    result = {
-        "status": "success",
-        "total_pages": report.total_pages,
-        "stale_count": report.stale_pages,
-        "stale_pages": [
-            {
-                "page_path": info.page_path,
-                "days_stale": info.days_stale,
-                "source_files": info.source_files,
-                "newest_source_date": info.newest_source_date.isoformat(),
-                "generated_at": info.generated_at.isoformat(),
-            }
-            for info in report.stale_info
-        ],
-    }
+    result = await svc.detect_stale_docs(
+        repo_path, wiki_path, threshold_days=validated.threshold_days
+    )
 
     logger.info(
         "Stale detection: %d/%d stale for %s",
-        report.stale_pages,
-        report.total_pages,
+        result.get("stale_count", 0),
+        result.get("total_pages", 0),
         repo_path,
     )
     return make_tool_text_content("detect_stale_docs", result)
@@ -452,22 +268,8 @@ async def handle_get_changelog(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    from local_deepwiki.generators.changelog import generate_changelog_content
-
-    content = await asyncio.to_thread(
-        generate_changelog_content, repo_path, max_commits
-    )
-
-    if content is None:
-        return make_tool_text_content(
-            "get_changelog",
-            {"message": "No git history found. Is this a git repository?"},
-        )
-
-    result = {
-        "status": "success",
-        "changelog": content,
-    }
+    svc = GeneratorService.__new__(GeneratorService)
+    result = await svc.generate_changelog(repo_path, max_commits=max_commits)
 
     logger.info("Changelog generated for %s", repo_path)
     return make_tool_text_content("get_changelog", result)
@@ -497,49 +299,16 @@ async def handle_detect_secrets(args: dict[str, Any]) -> list[TextContent]:
             value=str(repo_path),
         )
 
-    from local_deepwiki.core.secret_detector import scan_repository_for_secrets
-
-    findings_by_file = await asyncio.to_thread(scan_repository_for_secrets, repo_path)
-
-    if validated.exclude_tests:
-        findings_by_file = {
-            path: findings
-            for path, findings in findings_by_file.items()
-            if not _is_test_file(path)
-        }
-
-    total_findings = sum(len(findings) for findings in findings_by_file.values())
-
-    result: SecretScanResult = {
-        "status": "success",
-        "files_with_secrets": len(findings_by_file),
-        "total_findings": total_findings,
-        "exclude_tests": validated.exclude_tests,
-        "findings": [
-            {
-                "file_path": file_path,
-                "is_test_file": _is_test_file(file_path),
-                "secrets": [
-                    {
-                        "type": f.secret_type.value,
-                        "line": f.line_number,
-                        "confidence": round(f.confidence, 2),
-                        "recommendation": f.recommendation,
-                    }
-                    for f in findings
-                ],
-            }
-            for file_path, findings in findings_by_file.items()
-        ],
-    }
+    svc = GeneratorService.__new__(GeneratorService)
+    result = await svc.detect_secrets(repo_path, exclude_tests=validated.exclude_tests)
 
     logger.info(
         "Secret scan: %d findings in %d files for %s",
-        total_findings,
-        len(findings_by_file),
+        result.get("total_findings", 0),
+        result.get("files_with_secrets", 0),
         repo_path,
     )
-    return make_tool_text_content("detect_secrets", dict(result))
+    return make_tool_text_content("detect_secrets", result)
 
 
 @handle_tool_errors
@@ -560,50 +329,18 @@ async def handle_get_test_examples(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = await _load_index_status(repo_path)
+    _index_status, _wiki_path, config = await _load_index_status(repo_path)
+    svc = _build_generator_service(repo_path, config)
 
-    from local_deepwiki.generators.examples.orchestrator import CodeExampleExtractor
-
-    vector_store = _create_vector_store(repo_path, config)
-
-    extractor = CodeExampleExtractor(vector_store, repo_path=repo_path)
-
-    # Try function first, then class
-    examples = await extractor.extract_examples_for_function(
-        entity_name, max_examples=max_examples
+    result = await svc.generate_test_examples(
+        repo_path, entity_name, max_examples=max_examples
     )
-    if not examples:
-        examples = await extractor.extract_examples_for_class(
-            entity_name, max_examples=max_examples
-        )
-
-    if not examples:
-        return make_tool_text_content(
-            "get_test_examples",
-            {
-                "message": f"No test examples found for '{entity_name}'",
-                "examples": [],
-            },
-        )
-
-    result = {
-        "status": "success",
-        "entity_name": entity_name,
-        "total_examples": len(examples),
-        "examples": [
-            {
-                "source": e.source,
-                "code": e.code,
-                "description": e.description,
-                "test_file": e.test_file,
-                "language": e.language,
-            }
-            for e in examples
-        ],
-    }
 
     logger.info(
-        "Test examples: %s for '%s' in %s", len(examples), entity_name, repo_path
+        "Test examples: %s for '%s' in %s",
+        result.get("total_examples", 0),
+        entity_name,
+        repo_path,
     )
     return make_tool_text_content("get_test_examples", result)
 
@@ -625,25 +362,8 @@ async def handle_get_api_docs(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    target = validate_file_in_repo(repo_path, file_path)
-
-    from local_deepwiki.generators.analysis.api_docs import get_file_api_docs
-
-    api_docs = await asyncio.to_thread(get_file_api_docs, target)
-
-    if api_docs is None:
-        return make_tool_text_content(
-            "get_api_docs",
-            {
-                "message": f"No API documentation could be extracted from '{file_path}'",
-            },
-        )
-
-    result = {
-        "status": "success",
-        "file_path": file_path,
-        "api_docs": api_docs,
-    }
+    svc = GeneratorService.__new__(GeneratorService)
+    result = await svc.get_api_docs(repo_path, file_path)
 
     logger.info("API docs generated for %s", file_path)
     return make_tool_text_content("get_api_docs", result)
@@ -667,32 +387,12 @@ async def handle_list_indexed_repos(args: dict[str, Any]) -> list[TextContent]:
     if not base_path.exists():
         raise path_not_found_error(str(base_path), "directory")
 
-    from local_deepwiki.core.index_manager import IndexStatusManager
+    svc = GeneratorService.__new__(GeneratorService)
+    result = await svc.list_indexed_repos(base_path)
 
-    manager = IndexStatusManager()
-    repos: list[dict[str, Any]] = []
-
-    for deepwiki_dir in find_deepwiki_dirs(base_path):
-        status = manager.load(deepwiki_dir)
-        if status is not None:
-            repos.append(
-                {
-                    "repo_path": status.repo_path,
-                    "wiki_path": str(deepwiki_dir),
-                    "total_files": status.total_files,
-                    "total_chunks": status.total_chunks,
-                    "languages": status.languages,
-                    "indexed_at": status.indexed_at,
-                }
-            )
-
-    result = {
-        "status": "success",
-        "total_repos": len(repos),
-        "repos": repos,
-    }
-
-    logger.info("Found %s indexed repos under %s", len(repos), base_path)
+    logger.info(
+        "Found %s indexed repos under %s", result.get("total_repos", 0), base_path
+    )
     return make_tool_text_content("list_indexed_repos", result)
 
 
@@ -712,21 +412,10 @@ async def handle_get_index_status(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = await _load_index_status(repo_path)
+    index_status, wiki_path, _config = await _load_index_status(repo_path)
 
-    from datetime import datetime
-
-    result = {
-        "status": "success",
-        "repo_path": index_status.repo_path,
-        "wiki_path": str(wiki_path),
-        "indexed_at": index_status.indexed_at,
-        "indexed_at_human": datetime.fromtimestamp(index_status.indexed_at).isoformat(),
-        "total_files": index_status.total_files,
-        "total_chunks": index_status.total_chunks,
-        "languages": index_status.languages,
-        "schema_version": index_status.schema_version,
-    }
+    svc = GeneratorService.__new__(GeneratorService)
+    result = await svc.get_index_status(index_status, wiki_path)
 
     logger.info(
         "Index status: %d files, %d chunks for %s",

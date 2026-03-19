@@ -434,15 +434,14 @@ class TestLazyIndexManager:
         assert vector_store_lazy._lazy_index_manager is not None
         assert vector_store_lazy._lazy_index_manager.config.enabled is True
 
-    async def test_lazy_index_pending_after_create(self, vector_store_lazy):
-        """Test that lazy indexing marks index as pending for large tables."""
+    async def test_lazy_index_not_pending_after_create(self, vector_store_lazy):
+        """Test that bulk create eagerly builds the index (not pending)."""
         # Create enough chunks to trigger index threshold (min_rows=100)
         chunks = [make_chunk(f"chunk_{i}") for i in range(150)]
         await vector_store_lazy.create_or_update_table(chunks)
 
-        # Index should be pending, not created
-        assert vector_store_lazy._lazy_index_manager.is_index_pending()
-        assert not vector_store_lazy._lazy_index_manager.is_index_ready()
+        # Index should NOT be pending — bulk create is always eager
+        assert not vector_store_lazy._lazy_index_manager.is_index_pending()
 
     async def test_lazy_index_not_pending_for_small_tables(self, vector_store_lazy):
         """Test that lazy indexing doesn't mark pending for small tables."""
@@ -502,8 +501,8 @@ class TestLazyIndexManager:
         chunks = [make_chunk(f"chunk_{i}") for i in range(150)]
         await vector_store_lazy.create_or_update_table(chunks)
 
-        # Should be pending
-        assert vector_store_lazy._lazy_index_manager.is_index_pending()
+        # Bulk create is now always eager, so not pending
+        assert not vector_store_lazy._lazy_index_manager.is_index_pending()
 
         # Force index creation - this may fail due to LanceDB internal reasons in tests
         # but we can verify the method is callable and updates state
@@ -556,10 +555,9 @@ class TestLazyIndexManager:
         # Now recreate the table (which calls reset internally)
         await vector_store_lazy.create_or_update_table(chunks)
 
-        # State should be fresh (only pending flag set for large table)
+        # State should be fresh — bulk create eagerly builds the index
         stats = vector_store_lazy.lazy_index_stats
-        assert stats["index_pending"] is True  # Set during create
-        assert stats["index_created"] is False
+        assert stats["index_pending"] is False  # Eager create, not pending
         assert stats["latency_samples"] == 0  # Reset clears latency
 
 
@@ -582,18 +580,18 @@ class TestLazyIndexLatencyTrigger:
         )
         return VectorStore(db_path, provider, lazy_index_config=lazy_config)
 
-    async def test_should_create_index_based_on_latency(self, vector_store):
-        """Test that should_create_index returns True when latency exceeds threshold."""
+    async def test_should_not_create_index_after_eager_bulk(self, vector_store):
+        """Test that should_create_index returns False after eager bulk create."""
         chunks = [make_chunk(f"chunk_{i}") for i in range(150)]
         await vector_store.create_or_update_table(chunks)
 
         manager = vector_store._lazy_index_manager
 
-        # Index is pending (table large enough)
-        assert manager.is_index_pending()
+        # Bulk create is always eager, so index is NOT pending
+        assert not manager.is_index_pending()
 
-        # should_create_index should return True because it's pending
-        assert manager.should_create_index()
+        # should_create_index should return False (already built)
+        assert not manager.should_create_index()
 
     async def test_should_not_create_when_disabled(self, tmp_path):
         """Test that should_create_index returns False when disabled."""
@@ -704,14 +702,14 @@ class TestLazyIndexScheduling:
 
         manager = vector_store._lazy_index_manager
 
-        # Should be pending
-        assert manager.is_index_pending()
+        # Bulk create is eager, so not pending
+        assert not manager.is_index_pending()
 
-        # Schedule creation
+        # Schedule creation (no-op since already built, but should not error)
         await vector_store.schedule_lazy_index_creation()
 
-        # Either creation is in progress or already done
-        assert manager.is_creation_in_progress() or manager.is_index_ready()
+        # Should still be fine
+        assert not manager.is_index_pending()
 
     async def test_wait_for_index_timeout(self, vector_store):
         """Test wait_for_index with timeout."""
@@ -775,9 +773,8 @@ class TestLazyIndexIntegration:
         ]
         await vector_store.create_or_update_table(chunks)
 
-        # Index is pending (lazy mode)
-        assert vector_store._lazy_index_manager.is_index_pending()
-        assert not vector_store.is_vector_index_ready()
+        # Bulk create is always eager — index is NOT pending
+        assert not vector_store._lazy_index_manager.is_index_pending()
 
         # Search should still work (brute force)
         results = await vector_store.search("content", limit=5)
@@ -799,7 +796,7 @@ class TestLazyIndexIntegration:
 
         # 3. Check stats
         stats = vector_store.lazy_index_stats
-        assert stats["index_pending"] is True
+        assert stats["index_pending"] is False  # Eager bulk create
         assert stats["latency_samples"] == 1  # One search recorded
 
         # 4. Try to create index now

@@ -7,10 +7,13 @@ the ``DependencyGraphGenerator`` class.
 from __future__ import annotations
 
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from itertools import dropwhile
 from pathlib import Path
+
+from local_deepwiki.core.path_utils import is_test_file
 
 
 # Language-specific import patterns
@@ -128,23 +131,15 @@ def _sanitize_mermaid_name(name: str) -> str:
 def _is_test_path(file_path: str) -> bool:
     """Check if a file path is a test file.
 
+    Delegates to the canonical ``is_test_file`` helper in ``path_utils``.
+
     Args:
         file_path: File path to check.
 
     Returns:
         True if the file is a test file.
     """
-    path_lower = file_path.lower()
-    return (
-        "/test/" in path_lower
-        or "/tests/" in path_lower
-        or file_path.startswith("test_")
-        or "/test_" in file_path
-        or "_test.py" in file_path
-        or ".test." in file_path
-        or "/spec/" in path_lower
-        or ".spec." in path_lower
-    )
+    return is_test_file(file_path)
 
 
 def _extract_module_name(file_path: str, project_root: str = "") -> str:
@@ -200,3 +195,102 @@ def _get_directory_module(file_path: str) -> str:
     elif parts:
         return parts[0]
     return "root"
+
+
+def find_circular_dependencies(
+    graph: dict[str, set[str] | Iterable[str]],
+) -> list[list[str]]:
+    """Find all circular dependency cycles using DFS.
+
+    Args:
+        graph: Adjacency list mapping module to its dependencies.
+
+    Returns:
+        List of cycles, where each cycle is a list of module names.
+    """
+    cycles: list[list[str]] = []
+    visited: set[str] = set()
+    rec_stack: set[str] = set()
+
+    def _normalize_cycle(cycle: list[str]) -> list[str]:
+        if len(cycle) <= 1:
+            return cycle
+        if cycle[0] == cycle[-1] and len(cycle) > 1:
+            cycle = cycle[:-1]
+        min_idx = cycle.index(min(cycle))
+        return cycle[min_idx:] + cycle[:min_idx]
+
+    def dfs(node: str, path: list[str]) -> None:
+        visited.add(node)
+        rec_stack.add(node)
+        path.append(node)
+
+        for neighbor in graph.get(node, set()):
+            if neighbor not in visited:
+                dfs(neighbor, path.copy())
+            elif neighbor in rec_stack:
+                cycle_start = path.index(neighbor) if neighbor in path else -1
+                if cycle_start >= 0:
+                    cycle = path[cycle_start:] + [neighbor]
+                    normalized = _normalize_cycle(cycle)
+                    if normalized not in cycles:
+                        cycles.append(normalized)
+
+        rec_stack.remove(node)
+
+    for node in graph:
+        if node not in visited:
+            dfs(node, [])
+
+    return cycles
+
+
+def find_circular_dependency_edges(
+    deps: dict[str, set[str]],
+) -> set[tuple[str, str]]:
+    """Find circular dependency *edges* in a dependency graph.
+
+    Args:
+        deps: Mapping of module to its dependencies.
+
+    Returns:
+        Set of (from, to) tuples that form circular dependencies.
+    """
+    circular: set[tuple[str, str]] = set()
+
+    def dfs(node: str, path: list[str], visited: set[str]) -> None:
+        if node in path:
+            cycle_start = path.index(node)
+            cycle = path[cycle_start:] + [node]
+            for src, tgt in zip(cycle, cycle[1:]):
+                circular.add((src, tgt))
+            return
+
+        if node in visited:
+            return
+
+        visited.add(node)
+        path.append(node)
+
+        for dep in deps.get(node, set()):
+            dfs(dep, path.copy(), visited)
+
+    for module in deps:
+        dfs(module, [], set())
+
+    return circular
+
+
+def infer_package_name(repo_path: str | Path) -> str:
+    """Infer the Python package name from a repository path.
+
+    Uses the directory name, normalised with hyphens replaced by
+    underscores (PEP 503).
+
+    Args:
+        repo_path: Path to the repository root.
+
+    Returns:
+        Lower-cased, underscore-separated package name.
+    """
+    return Path(repo_path).name.lower().replace("-", "_")
