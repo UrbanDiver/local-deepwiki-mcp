@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import CodeChunk, SearchResult
 
+from .mixins.search_types import SearchRequest
 from .schema import (
     SEARCH_PROFILES,
     VALID_CHUNK_TYPES,
@@ -606,7 +607,128 @@ class SearchEngine:
         )
 
     # -----------------------------------------------------------------
-    # search() -- main orchestrator
+    # search_from_request() -- SearchRequest-based entry point
+    # -----------------------------------------------------------------
+
+    async def search_from_request(
+        self,
+        request: SearchRequest,
+        store: Any = None,
+    ) -> list[SearchResult]:
+        """Search for similar code chunks using a ``SearchRequest`` value object.
+
+        This is the canonical entry point for the search pipeline.  The raw
+        ``search()`` method constructs a ``SearchRequest`` internally and
+        delegates here so that all search logic is driven from a single,
+        immutable parameter bundle.
+
+        Args:
+            request: Immutable bundle of all search parameters.
+            store: The VectorStore instance (needed for fuzzy helper init).
+
+        Returns:
+            List of search results with scores.
+        """
+        table = self._get_table()
+        if table is None:
+            logger.debug("No table found for search")
+            return []
+
+        # Resolve configuration
+        effective_mode = self.resolve_search_mode(
+            request.search_mode, self._default_search_mode
+        )
+        resolved_profile, profile_config = self.resolve_search_profile(request.profile)
+        effective_min_similarity = (
+            request.min_similarity
+            if request.min_similarity is not None
+            else profile_config.min_similarity
+        )
+
+        logger.debug(
+            "Searching for: '%s...' limit=%d mode=%s profile=%s min_sim=%s",
+            request.query[:50],
+            request.limit,
+            effective_mode,
+            resolved_profile.value,
+            effective_min_similarity,
+        )
+
+        filters = self.build_search_filters(request.language, request.chunk_type)
+
+        # Compute embedding (needed for vector/hybrid mode and cache)
+        needs_embedding = effective_mode != "keyword"
+        query_embedding: list[float] = []
+        if needs_embedding:
+            query_embedding = (await self._embedding_provider.embed([request.query]))[0]
+
+        # Check cache
+        cache_filters = self.build_cache_filters(
+            request.limit,
+            resolved_profile,
+            effective_min_similarity,
+            effective_mode,
+            request.language,
+            request.chunk_type,
+        )
+        use_cache = (
+            not request.use_fuzzy and not request.path_pattern and needs_embedding
+        )
+        if use_cache:
+            cached_results = self._get_search_cache().get(
+                query_embedding, cache_filters
+            )
+            if cached_results is not None:
+                return cached_results
+
+        fetch_limit = self.compute_fetch_limit(
+            request.limit,
+            profile_config,
+            request.query,
+            needs_extra=bool(request.path_pattern or request.use_fuzzy),
+        )
+
+        # Execute search pipeline based on mode
+        search_results = self.dispatch_search(
+            effective_mode,
+            table,
+            request.query,
+            query_embedding,
+            filters,
+            fetch_limit,
+            effective_min_similarity,
+        )
+
+        # Post-processing: path filter, fuzzy rerank, truncate, suggestions
+        search_results = self.apply_post_filters(search_results, request.path_pattern)
+
+        search_results, auto_fuzzy_enabled = self.apply_fuzzy_reranking(
+            search_results,
+            request.query,
+            request.fuzzy_weight,
+            use_fuzzy=request.use_fuzzy,
+        )
+        search_results = search_results[: request.limit]
+
+        if request.auto_suggest:
+            search_results = await self.attach_suggestions(
+                request.query, search_results, store
+            )
+
+        self.record_and_cache(
+            request.query,
+            query_embedding,
+            search_results,
+            cache_filters,
+            use_cache=use_cache,
+            auto_fuzzy_enabled=auto_fuzzy_enabled,
+            fetch_limit=fetch_limit,
+        )
+
+        return search_results
+
+    # -----------------------------------------------------------------
+    # search() -- main orchestrator (delegates to search_from_request)
     # -----------------------------------------------------------------
 
     async def search(
@@ -627,6 +749,11 @@ class SearchEngine:
     ) -> list[SearchResult]:
         """Search for similar code chunks.
 
+        Constructs a ``SearchRequest`` from the provided arguments and
+        delegates to ``search_from_request``.  All search logic lives in
+        ``search_from_request``; this method exists for backward compatibility
+        with callers that pass raw keyword arguments.
+
         Args:
             query: Search query text.
             limit: Maximum number of results.
@@ -644,99 +771,20 @@ class SearchEngine:
         Returns:
             List of search results with scores.
         """
-        table = self._get_table()
-        if table is None:
-            logger.debug("No table found for search")
-            return []
-
-        # Resolve configuration
-        effective_mode = self.resolve_search_mode(
-            search_mode, self._default_search_mode
-        )
-        resolved_profile, profile_config = self.resolve_search_profile(profile)
-        effective_min_similarity = (
-            min_similarity
-            if min_similarity is not None
-            else profile_config.min_similarity
-        )
-
-        logger.debug(
-            "Searching for: '%s...' limit=%d mode=%s profile=%s min_sim=%s",
-            query[:50],
-            limit,
-            effective_mode,
-            resolved_profile.value,
-            effective_min_similarity,
-        )
-
-        filters = self.build_search_filters(language, chunk_type)
-
-        # Compute embedding (needed for vector/hybrid mode and cache)
-        needs_embedding = effective_mode != "keyword"
-        query_embedding: list[float] = []
-        if needs_embedding:
-            query_embedding = (await self._embedding_provider.embed([query]))[0]
-
-        # Check cache
-        cache_filters = self.build_cache_filters(
-            limit,
-            resolved_profile,
-            effective_min_similarity,
-            effective_mode,
-            language,
-            chunk_type,
-        )
-        use_cache = not use_fuzzy and not path_pattern and needs_embedding
-        if use_cache:
-            cached_results = self._get_search_cache().get(
-                query_embedding, cache_filters
-            )
-            if cached_results is not None:
-                return cached_results
-
-        fetch_limit = self.compute_fetch_limit(
-            limit,
-            profile_config,
-            query,
-            needs_extra=bool(path_pattern or use_fuzzy),
-        )
-
-        # Execute search pipeline based on mode
-        search_results = self.dispatch_search(
-            effective_mode,
-            table,
-            query,
-            query_embedding,
-            filters,
-            fetch_limit,
-            effective_min_similarity,
-        )
-
-        # Post-processing: path filter, fuzzy rerank, truncate, suggestions
-        search_results = self.apply_post_filters(search_results, path_pattern)
-
-        search_results, auto_fuzzy_enabled = self.apply_fuzzy_reranking(
-            search_results,
-            query,
-            fuzzy_weight,
+        request = SearchRequest(
+            query=query,
+            limit=limit,
+            search_mode=search_mode,
+            language=language,
+            chunk_type=chunk_type,
+            path_pattern=path_pattern,
             use_fuzzy=use_fuzzy,
+            fuzzy_weight=fuzzy_weight,
+            profile=profile,
+            min_similarity=min_similarity,
+            auto_suggest=auto_suggest,
         )
-        search_results = search_results[:limit]
-
-        if auto_suggest:
-            search_results = await self.attach_suggestions(query, search_results, store)
-
-        self.record_and_cache(
-            query,
-            query_embedding,
-            search_results,
-            cache_filters,
-            use_cache=use_cache,
-            auto_fuzzy_enabled=auto_fuzzy_enabled,
-            fetch_limit=fetch_limit,
-        )
-
-        return search_results
+        return await self.search_from_request(request, store=store)
 
     # -----------------------------------------------------------------
     # search_paginated()

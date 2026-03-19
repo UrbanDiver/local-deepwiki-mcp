@@ -136,7 +136,9 @@ class RepositoryIndexer:
 
         logger.info("Scanning for hardcoded secrets...")
 
-        secret_findings = await asyncio.to_thread(scan_repository_for_secrets, self.repo_path)
+        secret_findings = await asyncio.to_thread(
+            scan_repository_for_secrets, self.repo_path
+        )
 
         if secret_findings:
             total_secrets = sum(len(findings) for findings in secret_findings.values())
@@ -211,15 +213,17 @@ class RepositoryIndexer:
         if full_rebuild:
             return None, {}, full_rebuild
 
-        previous_status, requires_rebuild = self._status_manager.load_with_migration_info(
-            self.wiki_path
+        previous_status, requires_rebuild = (
+            self._status_manager.load_with_migration_info(self.wiki_path)
         )
         if requires_rebuild:
             logger.info("Schema migration requires full rebuild")
             return None, {}, True
 
         if previous_status:
-            logger.debug("Loaded previous index status: %d files", previous_status.total_files)
+            logger.debug(
+                "Loaded previous index status: %d files", previous_status.total_files
+            )
             # Pre-build hash map for O(1) lookups instead of O(N) linear scan per file
             # This reduces O(N*M) to O(N+M) for file comparison
             prev_files_by_path = {f.path: f for f in previous_status.files}
@@ -247,7 +251,9 @@ class RepositoryIndexer:
         logger.info("Found %s source files to consider", len(source_files))
 
         if progress_callback:
-            progress_callback("Found source files", len(source_files), len(source_files))
+            progress_callback(
+                "Found source files", len(source_files), len(source_files)
+            )
 
         files_to_process: list[Path] = []
         files_unchanged: list[FileInfo] = []
@@ -269,7 +275,9 @@ class RepositoryIndexer:
             files_to_process.append(file_path)
 
         # Detect files that existed in the previous index but no longer exist on disk
-        deleted_file_paths = [path for path in prev_files_by_path if path not in current_file_paths]
+        deleted_file_paths = [
+            path for path in prev_files_by_path if path not in current_file_paths
+        ]
 
         if deleted_file_paths:
             logger.info(
@@ -319,7 +327,9 @@ class RepositoryIndexer:
                     len(files_to_process),
                 )
             await self.vector_store.delete_chunks_by_files(files_to_delete)
-            logger.debug("Batch deleted chunks for %d modified files", len(files_to_delete))
+            logger.debug(
+                "Batch deleted chunks for %d modified files", len(files_to_delete)
+            )
 
     async def _delete_chunks_for_deleted_files(
         self,
@@ -404,6 +414,140 @@ class RepositoryIndexer:
 
         return graph_data
 
+    async def _emit_graph_start(self, files_to_process: list[Path]) -> None:
+        """Emit the GRAPH_EXTRACT_START event."""
+        emitter = get_event_emitter()
+        await emitter.emit(
+            EventType.GRAPH_EXTRACT_START,
+            {
+                "repo_path": str(self.repo_path),
+                "file_count": len(files_to_process),
+            },
+        )
+
+    async def _delete_stale_graph_data(
+        self,
+        files_to_process: list[Path],
+        prev_files_by_path: dict[str, FileInfo],
+        deleted_file_paths: list[str],
+        full_rebuild: bool,
+    ) -> None:
+        """Delete old graph data for modified and deleted files.
+
+        Args:
+            files_to_process: Files being re-processed in this run.
+            prev_files_by_path: Previous index state for incremental detection.
+            deleted_file_paths: Files removed since last index.
+            full_rebuild: Whether this is a full rebuild (skips incremental deletion).
+        """
+        # For incremental re-indexing, delete old graph data for modified files
+        if not full_rebuild and prev_files_by_path:
+            for file_path in files_to_process:
+                rel_path = str(file_path.relative_to(self.repo_path))
+                if rel_path in prev_files_by_path:
+                    try:
+                        await self.graph_store.delete_by_file(rel_path)  # type: ignore[union-attr]
+                    except Exception:
+                        logger.warning(
+                            "Failed to delete old graph data for %s",
+                            rel_path,
+                            exc_info=True,
+                        )
+
+        # Delete graph data for files that no longer exist
+        for deleted_path in deleted_file_paths:
+            try:
+                await self.graph_store.delete_by_file(deleted_path)  # type: ignore[union-attr]
+            except Exception:
+                logger.warning(
+                    "Failed to delete graph data for deleted file %s",
+                    deleted_path,
+                    exc_info=True,
+                )
+
+    async def _extract_and_store_graph_data(
+        self,
+        files_to_process: list[Path],
+        file_chunks: dict[str, list[CodeChunk]],
+        progress_callback: ProgressCallback | None,
+    ) -> tuple[int, int]:
+        """Extract graph entities/relationships and store them for each file.
+
+        Args:
+            files_to_process: Files to extract graph data from.
+            file_chunks: Mapping of relative file path to extracted chunks.
+            progress_callback: Optional callback for progress updates.
+
+        Returns:
+            Tuple of (total_entities, total_relationships) stored.
+        """
+        total_entities = 0
+        total_relationships = 0
+
+        for idx, file_path in enumerate(files_to_process):
+            rel_path = str(file_path.relative_to(self.repo_path))
+            chunks = file_chunks.get(rel_path, [])
+
+            graph_data = await asyncio.to_thread(
+                self._extract_graph_for_file, file_path, chunks
+            )
+
+            if graph_data is None:
+                continue
+
+            try:
+                if graph_data.entities:
+                    entity_count = await self.graph_store.add_entities(
+                        list(graph_data.entities)
+                    )  # type: ignore[union-attr]
+                    total_entities += entity_count
+
+                if graph_data.relationships:
+                    rel_count = await self.graph_store.add_relationships(  # type: ignore[union-attr]
+                        list(graph_data.relationships)
+                    )
+                    total_relationships += rel_count
+            except Exception:
+                logger.warning(
+                    "Failed to store graph data for %s",
+                    rel_path,
+                    exc_info=True,
+                )
+
+            if progress_callback:
+                progress_callback(
+                    f"Graph extraction: {rel_path}",
+                    idx + 1,
+                    len(files_to_process),
+                )
+
+        return total_entities, total_relationships
+
+    async def _emit_graph_complete(
+        self, total_entities: int, total_relationships: int
+    ) -> None:
+        """Emit the GRAPH_EXTRACT_COMPLETE event and log summary.
+
+        Args:
+            total_entities: Total number of graph entities stored.
+            total_relationships: Total number of graph relationships stored.
+        """
+        emitter = get_event_emitter()
+        await emitter.emit(
+            EventType.GRAPH_EXTRACT_COMPLETE,
+            {
+                "repo_path": str(self.repo_path),
+                "total_entities": total_entities,
+                "total_relationships": total_relationships,
+            },
+        )
+
+        logger.info(
+            "Graph extraction complete: %d entities, %d relationships",
+            total_entities,
+            total_relationships,
+        )
+
     async def _run_graph_extraction(
         self,
         files_to_process: list[Path],
@@ -430,14 +574,7 @@ class RepositoryIndexer:
         if not self._graph_enabled or self.graph_store is None:
             return
 
-        emitter = get_event_emitter()
-        await emitter.emit(
-            EventType.GRAPH_EXTRACT_START,
-            {
-                "repo_path": str(self.repo_path),
-                "file_count": len(files_to_process),
-            },
-        )
+        await self._emit_graph_start(files_to_process)
 
         if progress_callback:
             progress_callback(
@@ -446,82 +583,13 @@ class RepositoryIndexer:
                 len(files_to_process),
             )
 
-        total_entities = 0
-        total_relationships = 0
-
-        # For incremental re-indexing, delete old graph data for modified files
-        if not full_rebuild and prev_files_by_path:
-            for file_path in files_to_process:
-                rel_path = str(file_path.relative_to(self.repo_path))
-                if rel_path in prev_files_by_path:
-                    try:
-                        await self.graph_store.delete_by_file(rel_path)
-                    except Exception:
-                        logger.warning(
-                            "Failed to delete old graph data for %s",
-                            rel_path,
-                            exc_info=True,
-                        )
-
-        # Delete graph data for files that no longer exist
-        for deleted_path in deleted_file_paths:
-            try:
-                await self.graph_store.delete_by_file(deleted_path)
-            except Exception:
-                logger.warning(
-                    "Failed to delete graph data for deleted file %s",
-                    deleted_path,
-                    exc_info=True,
-                )
-
-        # Extract graph data for each processed file
-        for idx, file_path in enumerate(files_to_process):
-            rel_path = str(file_path.relative_to(self.repo_path))
-            chunks = file_chunks.get(rel_path, [])
-
-            graph_data = await asyncio.to_thread(self._extract_graph_for_file, file_path, chunks)
-
-            if graph_data is None:
-                continue
-
-            try:
-                if graph_data.entities:
-                    entity_count = await self.graph_store.add_entities(list(graph_data.entities))
-                    total_entities += entity_count
-
-                if graph_data.relationships:
-                    rel_count = await self.graph_store.add_relationships(
-                        list(graph_data.relationships)
-                    )
-                    total_relationships += rel_count
-            except Exception:
-                logger.warning(
-                    "Failed to store graph data for %s",
-                    rel_path,
-                    exc_info=True,
-                )
-
-            if progress_callback:
-                progress_callback(
-                    f"Graph extraction: {rel_path}",
-                    idx + 1,
-                    len(files_to_process),
-                )
-
-        await emitter.emit(
-            EventType.GRAPH_EXTRACT_COMPLETE,
-            {
-                "repo_path": str(self.repo_path),
-                "total_entities": total_entities,
-                "total_relationships": total_relationships,
-            },
+        await self._delete_stale_graph_data(
+            files_to_process, prev_files_by_path, deleted_file_paths, full_rebuild
         )
-
-        logger.info(
-            "Graph extraction complete: %d entities, %d relationships",
-            total_entities,
-            total_relationships,
+        total_entities, total_relationships = await self._extract_and_store_graph_data(
+            files_to_process, file_chunks, progress_callback
         )
+        await self._emit_graph_complete(total_entities, total_relationships)
 
     async def _parse_files_parallel(
         self,
@@ -656,8 +724,8 @@ class RepositoryIndexer:
         )
 
         # Phase 2: Collect files to process (and detect deleted files)
-        files_to_process, files_unchanged, deleted_file_paths = self._collect_files_to_process(
-            prev_files_by_path, progress_callback
+        files_to_process, files_unchanged, deleted_file_paths = (
+            self._collect_files_to_process(prev_files_by_path, progress_callback)
         )
 
         # Phase 3: Delete old chunks for modified and deleted files (incremental only)
@@ -667,14 +735,18 @@ class RepositoryIndexer:
                     files_to_process, prev_files_by_path, progress_callback
                 )
             if deleted_file_paths:
-                await self._delete_chunks_for_deleted_files(deleted_file_paths, progress_callback)
+                await self._delete_chunks_for_deleted_files(
+                    deleted_file_paths, progress_callback
+                )
 
         # Phase 4: Parse files in parallel and store chunks
         (
             processed_files,
             total_chunks_processed,
             file_chunks,
-        ) = await self._parse_files_parallel(files_to_process, full_rebuild, progress_callback)
+        ) = await self._parse_files_parallel(
+            files_to_process, full_rebuild, progress_callback
+        )
 
         # Phase 5: Graph extraction (optional, non-blocking)
         if self._graph_enabled and files_to_process:
@@ -694,7 +766,9 @@ class RepositoryIndexer:
                 )
 
         # Phase 6: Create and save index status
-        status = self._create_index_status(processed_files, files_unchanged, total_chunks_processed)
+        status = self._create_index_status(
+            processed_files, files_unchanged, total_chunks_processed
+        )
         await asyncio.to_thread(self._save_index_status, status)
 
         if progress_callback:
@@ -820,7 +894,9 @@ class RepositoryIndexer:
                 "lines": f"{r.chunk.start_line}-{r.chunk.end_line}",
                 "score": r.score,
                 "content": (
-                    r.chunk.content[:500] + "..." if len(r.chunk.content) > 500 else r.chunk.content
+                    r.chunk.content[:500] + "..."
+                    if len(r.chunk.content) > 500
+                    else r.chunk.content
                 ),
                 "docstring": r.chunk.docstring,
             }
