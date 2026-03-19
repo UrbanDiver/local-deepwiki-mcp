@@ -25,69 +25,6 @@ _IMPORT_PATTERNS = (
     re.compile(r"^import\s+([\w.]+)"),
 )
 
-# Standard-library top-level names to exclude when include_external=False.
-# This is a static list of module name strings — no serialization is performed.
-_STDLIB_TOP_LEVEL = frozenset(
-    {
-        "abc",
-        "ast",
-        "asyncio",
-        "builtins",
-        "collections",
-        "concurrent",
-        "contextlib",
-        "copy",
-        "csv",
-        "dataclasses",
-        "datetime",
-        "enum",
-        "functools",
-        "gc",
-        "glob",
-        "hashlib",
-        "http",
-        "importlib",
-        "inspect",
-        "io",
-        "itertools",
-        "json",
-        "logging",
-        "math",
-        "multiprocessing",
-        "operator",
-        "os",
-        "pathlib",
-        "queue",
-        "random",
-        "re",
-        "shutil",
-        "signal",
-        "socket",
-        "sqlite3",
-        "ssl",
-        "stat",
-        "string",
-        "struct",
-        "subprocess",
-        "sys",
-        "tempfile",
-        "textwrap",
-        "threading",
-        "time",
-        "traceback",
-        "types",
-        "typing",
-        "unicodedata",
-        "unittest",
-        "urllib",
-        "uuid",
-        "warnings",
-        "weakref",
-        "xml",
-        "zipfile",
-    }
-)
-
 
 def _extract_full_imports(source: str) -> list[str]:
     """Return full dotted module paths from all import statements in *source*."""
@@ -195,7 +132,6 @@ def analyze_cross_module_dependencies(
             top = _top_level(dotted)
 
             is_internal = top in project_tops
-            is_stdlib = top in _STDLIB_TOP_LEVEL
 
             if not include_external and not is_internal:
                 continue
