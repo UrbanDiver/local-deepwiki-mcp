@@ -43,6 +43,59 @@ logger = get_logger(__name__)
 RowToChunk = Callable[[dict[str, Any]], CodeChunk]
 
 
+# ---------------------------------------------------------------------------
+# Module-level utility functions (stateless, no class dependency)
+# ---------------------------------------------------------------------------
+
+
+def resolve_search_mode(search_mode: str | None, default: str) -> str:
+    """Resolve the effective search mode from parameter or default."""
+    mode = search_mode or default
+    if mode not in ("vector", "keyword", "hybrid"):
+        logger.warning("Invalid search_mode '%s', falling back to 'vector'", mode)
+        return "vector"
+    return mode
+
+
+def build_search_filters(
+    language: str | None,
+    chunk_type: str | None,
+) -> list[str]:
+    """Validate filter values and return LanceDB filter expressions."""
+    filters: list[str] = []
+    if language:
+        if language not in VALID_LANGUAGES:
+            raise ValueError(f"Invalid language filter: {language}")
+        filters.append(f"language = '{language}'")
+    if chunk_type:
+        if chunk_type not in VALID_CHUNK_TYPES:
+            raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
+        filters.append(f"chunk_type = '{chunk_type}'")
+    return filters
+
+
+def build_cache_filters(
+    limit: int,
+    resolved_profile: SearchProfile,
+    effective_min_similarity: float,
+    effective_mode: str,
+    language: str | None,
+    chunk_type: str | None,
+) -> dict[str, Any]:
+    """Build the cache key filter dictionary."""
+    cache_filters: dict[str, Any] = {
+        "limit": limit,
+        "profile": resolved_profile.value,
+        "min_similarity": effective_min_similarity,
+        "search_mode": effective_mode,
+    }
+    if language:
+        cache_filters["language"] = language
+    if chunk_type:
+        cache_filters["chunk_type"] = chunk_type
+    return cache_filters
+
+
 class SearchEngine:
     """Composition-based search engine with explicit dependency injection.
 
@@ -170,143 +223,6 @@ class SearchEngine:
             resolved = profile
         return resolved, SEARCH_PROFILES[resolved]
 
-    @staticmethod
-    def build_search_filters(
-        language: str | None,
-        chunk_type: str | None,
-    ) -> list[str]:
-        """Validate filter values and return LanceDB filter expressions."""
-        filters: list[str] = []
-        if language:
-            if language not in VALID_LANGUAGES:
-                raise ValueError(f"Invalid language filter: {language}")
-            filters.append(f"language = '{language}'")
-        if chunk_type:
-            if chunk_type not in VALID_CHUNK_TYPES:
-                raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
-            filters.append(f"chunk_type = '{chunk_type}'")
-        return filters
-
-    def compute_fetch_limit(
-        self,
-        limit: int,
-        profile_config: Any,
-        query: str,
-        *,
-        needs_extra: bool = False,
-    ) -> int:
-        """Return how many raw rows to fetch from LanceDB."""
-        base_multiplier = profile_config.fetch_multiplier
-        if needs_extra:
-            base_multiplier = max(base_multiplier, 3.0)
-
-        if self._adaptive_search_enabled:
-            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(
-                query, limit
-            )
-            fetch_limit = max(int(limit * base_multiplier), adaptive_depth)
-        else:
-            fetch_limit = int(limit * base_multiplier)
-
-        return min(fetch_limit, profile_config.rerank_candidates)
-
-    def convert_results_to_search_results(
-        self,
-        rows: list[dict[str, Any]],
-        min_similarity: float,
-    ) -> list[SearchResult]:
-        """Convert raw LanceDB rows to ``SearchResult`` objects with score filtering."""
-        results: list[SearchResult] = []
-        for row in rows:
-            dist = row.get("_distance", 0)
-            score = 1.0 - dist * dist / 2.0
-            if score < min_similarity:
-                continue
-            chunk = self._row_to_chunk(row)
-            results.append(SearchResult(chunk=chunk, score=score, highlights=[]))
-        return results
-
-    # -----------------------------------------------------------------
-    # Auto-adjust search limit based on repo size
-    # -----------------------------------------------------------------
-
-    def auto_search_limit(self, requested_limit: int) -> int:
-        """Adjust search limit based on repo size for better recall."""
-        if requested_limit > 0:
-            return requested_limit
-        try:
-            table = self._get_table()
-            total = table.count_rows() if table else 0
-        except Exception:
-            return 10
-        if total > 200_000:
-            return 40
-        if total > 50_000:
-            return 20
-        return 10
-
-    # -----------------------------------------------------------------
-    # Search mode resolution
-    # -----------------------------------------------------------------
-
-    @staticmethod
-    def resolve_search_mode(search_mode: str | None, default: str) -> str:
-        """Resolve the effective search mode from parameter or default."""
-        mode = search_mode or default
-        if mode not in ("vector", "keyword", "hybrid"):
-            logger.warning("Invalid search_mode '%s', falling back to 'vector'", mode)
-            return "vector"
-        return mode
-
-    def record_and_cache(
-        self,
-        query: str,
-        query_embedding: list[float],
-        search_results: list[SearchResult],
-        cache_filters: dict[str, Any],
-        *,
-        use_cache: bool,
-        auto_fuzzy_enabled: bool,
-        fetch_limit: int,
-    ) -> None:
-        """Record adaptive search quality and cache results."""
-        if self._adaptive_search_enabled and search_results:
-            avg_score = sum(r.score for r in search_results) / len(search_results)
-            self._adaptive_searcher.record_search_quality(
-                query, avg_score, len(search_results), fetch_limit
-            )
-
-        if use_cache and not auto_fuzzy_enabled:
-            self._get_search_cache().set(
-                query, query_embedding, search_results, cache_filters
-            )
-
-    # -----------------------------------------------------------------
-    # Cache filter builder
-    # -----------------------------------------------------------------
-
-    @staticmethod
-    def build_cache_filters(
-        limit: int,
-        resolved_profile: SearchProfile,
-        effective_min_similarity: float,
-        effective_mode: str,
-        language: str | None,
-        chunk_type: str | None,
-    ) -> dict[str, Any]:
-        """Build the cache key filter dictionary."""
-        cache_filters: dict[str, Any] = {
-            "limit": limit,
-            "profile": resolved_profile.value,
-            "min_similarity": effective_min_similarity,
-            "search_mode": effective_mode,
-        }
-        if language:
-            cache_filters["language"] = language
-        if chunk_type:
-            cache_filters["chunk_type"] = chunk_type
-        return cache_filters
-
     # -----------------------------------------------------------------
     # search_from_request() -- SearchRequest-based entry point
     # -----------------------------------------------------------------
@@ -336,7 +252,7 @@ class SearchEngine:
             return []
 
         # Resolve configuration
-        effective_mode = self.resolve_search_mode(
+        effective_mode = resolve_search_mode(
             request.search_mode, self._default_search_mode
         )
         resolved_profile, profile_config = self.resolve_search_profile(request.profile)
@@ -355,7 +271,7 @@ class SearchEngine:
             effective_min_similarity,
         )
 
-        filters = self.build_search_filters(request.language, request.chunk_type)
+        filters = build_search_filters(request.language, request.chunk_type)
 
         # Compute embedding (needed for vector/hybrid mode and cache)
         needs_embedding = effective_mode != "keyword"
@@ -364,7 +280,7 @@ class SearchEngine:
             query_embedding = (await self._embedding_provider.embed([request.query]))[0]
 
         # Check cache
-        cache_filters = self.build_cache_filters(
+        cache_filters = build_cache_filters(
             request.limit,
             resolved_profile,
             effective_min_similarity,
@@ -382,12 +298,19 @@ class SearchEngine:
             if cached_results is not None:
                 return cached_results
 
-        fetch_limit = self.compute_fetch_limit(
-            request.limit,
-            profile_config,
-            request.query,
-            needs_extra=bool(request.path_pattern or request.use_fuzzy),
-        )
+        # Compute fetch limit (inlined from removed compute_fetch_limit method)
+        base_multiplier = profile_config.fetch_multiplier
+        needs_extra = bool(request.path_pattern or request.use_fuzzy)
+        if needs_extra:
+            base_multiplier = max(base_multiplier, 3.0)
+        if self._adaptive_search_enabled:
+            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(
+                request.query, request.limit
+            )
+            fetch_limit = max(int(request.limit * base_multiplier), adaptive_depth)
+        else:
+            fetch_limit = int(request.limit * base_multiplier)
+        fetch_limit = min(fetch_limit, profile_config.rerank_candidates)
 
         # Execute search pipeline based on mode
         search_results = search_pipeline.dispatch_search(
@@ -426,15 +349,16 @@ class SearchEngine:
                 self.get_fuzzy_helper,
             )
 
-        self.record_and_cache(
-            request.query,
-            query_embedding,
-            search_results,
-            cache_filters,
-            use_cache=use_cache,
-            auto_fuzzy_enabled=auto_fuzzy_enabled,
-            fetch_limit=fetch_limit,
-        )
+        # Record adaptive quality and cache results (inlined from removed record_and_cache)
+        if self._adaptive_search_enabled and search_results:
+            avg_score = sum(r.score for r in search_results) / len(search_results)
+            self._adaptive_searcher.record_search_quality(
+                request.query, avg_score, len(search_results), fetch_limit
+            )
+        if use_cache and not auto_fuzzy_enabled:
+            self._get_search_cache().set(
+                request.query, query_embedding, search_results, cache_filters
+            )
 
         return search_results
 
@@ -561,7 +485,7 @@ class SearchEngine:
 
         query_embedding = (await self._embedding_provider.embed([query]))[0]
 
-        filters = self.build_search_filters(language, chunk_type)
+        filters = build_search_filters(language, chunk_type)
         filter_expr = " AND ".join(filters) if filters else None
 
         # Fetch extra candidates for total count estimation
@@ -592,12 +516,16 @@ class SearchEngine:
             all_results = filtered_results
             total_estimate = len(all_results)
 
-        # Apply pagination and convert
+        # Apply pagination and convert (inlined from removed convert_results_to_search_results)
         paginated_rows = all_results[offset : offset + limit]
-        search_results = self.convert_results_to_search_results(
-            paginated_rows,
-            effective_min_similarity,
-        )
+        search_results: list[SearchResult] = []
+        for row in paginated_rows:
+            dist = row.get("_distance", 0)
+            score = 1.0 - dist * dist / 2.0
+            if score < effective_min_similarity:
+                continue
+            chunk = self._row_to_chunk(row)
+            search_results.append(SearchResult(chunk=chunk, score=score, highlights=[]))
 
         # Apply fuzzy re-ranking if requested
         if use_fuzzy and search_results:
