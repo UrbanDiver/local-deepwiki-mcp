@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.config import Config, GenerationMode, get_config
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.generators import lazy_cache
 from local_deepwiki.generators.crosslinks import (
     CrossLinker,
     EntityRegistry,
@@ -207,7 +208,7 @@ class LazyPageGenerator:
 
     async def get_page(self, page_path: str) -> str:
         """Get a wiki page, generating it on demand if needed."""
-        cached = self._read_cached(page_path)
+        cached = lazy_cache.read_cached_page(self._wiki_path, page_path)
         if cached is not None:
             return cached
 
@@ -220,8 +221,8 @@ class LazyPageGenerator:
             page = await self._generate_page(page_path)
             linker = await self._get_cross_linker()
             page = linker.add_links(page)
-            await self._write_page(page)
-            self._append_to_search_index(page)
+            await lazy_cache.write_page(self._wiki_path, page)
+            lazy_cache.append_to_search_index(self._wiki_path, page)
             content = page.content
             fut.set_result(content)
 
@@ -246,13 +247,6 @@ class LazyPageGenerator:
             await self.get_page(page_path)
         except Exception:  # noqa: BLE001 — background warm-up must not propagate errors
             logger.debug("Warm failed for %s", page_path, exc_info=True)
-
-    def _read_cached(self, page_path: str) -> str | None:
-        """Return cached page content from disk, or None if not yet generated."""
-        full = self._wiki_path / page_path
-        if full.exists():
-            return full.read_text()
-        return None
 
     async def _generate_page(self, page_path: str) -> WikiPage:
         """Route to the correct generator based on page path."""
@@ -382,7 +376,7 @@ class LazyPageGenerator:
 
         self._auxiliary_cache = pages
         for page in pages.values():
-            await self._write_page(page)
+            await lazy_cache.write_page(self._wiki_path, page)
         return pages
 
     async def _generate_module(self, page_path: str, vs: VectorStore) -> WikiPage:
@@ -500,32 +494,6 @@ class LazyPageGenerator:
             content=_generate_modules_index(existing),
             generated_at=time.time(),
         )
-
-    async def _write_page(self, page: WikiPage) -> None:
-        """Write a generated wiki page to disk, creating parent directories as needed."""
-        page_path = self._wiki_path / page.path
-
-        def _sync() -> None:
-            page_path.parent.mkdir(parents=True, exist_ok=True)
-            page_path.write_text(page.content)
-
-        await asyncio.to_thread(_sync)
-
-    def _append_to_search_index(self, page: WikiPage) -> None:
-        """Append a page entry to the JSON search index for client-side search."""
-        idx_path = self._wiki_path / "search_index.json"
-        try:
-            entries = json.loads(idx_path.read_text()) if idx_path.exists() else []
-        except (json.JSONDecodeError, OSError):
-            entries = []
-        entries.append(
-            {
-                "path": page.path,
-                "title": page.title,
-                "summary": page.content[:200],
-            }
-        )
-        idx_path.write_text(json.dumps(entries))
 
     def _get_module_siblings(self, page_path: str) -> list[str]:
         """Return wiki paths of sibling pages in the same section directory."""
