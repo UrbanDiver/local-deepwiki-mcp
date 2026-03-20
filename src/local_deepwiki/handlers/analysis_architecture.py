@@ -224,6 +224,32 @@ async def handle_get_hotspots(
     return make_tool_text_content("get_hotspots", result)
 
 
+def _count_smells_by_type(smells: list[dict[str, Any]]) -> dict[str, int]:
+    """Count smell occurrences grouped by type.
+
+    Returns a new dict mapping smell type to its count.
+    """
+    counts: dict[str, int] = {}
+    for smell in smells:
+        t = smell["type"]
+        counts[t] = counts.get(t, 0) + 1
+    return counts
+
+
+def _count_module_edges(edges: list[dict[str, Any]]) -> dict[str, int]:
+    """Count total edge appearances (source + target) per module name.
+
+    Returns a new dict mapping module name to its total edge count.
+    """
+    counts: dict[str, int] = {}
+    for edge in edges:
+        src = edge.get("source", "")
+        tgt = edge.get("target", "")
+        counts[src] = counts.get(src, 0) + 1
+        counts[tgt] = counts.get(tgt, 0) + 1
+    return counts
+
+
 @handle_tool_errors
 async def handle_get_cross_module_dependencies(
     args: dict[str, Any],
@@ -256,6 +282,18 @@ async def handle_get_cross_module_dependencies(
         include_external=validated.include_external,
         min_edge_weight=validated.min_edge_weight,
     )
+
+    # Apply overflow-prevention filter (immutable — new dict, no mutation).
+    if validated.top_n is not None:
+        edges = result.get("edges", [])
+        # Count edges per module (source + target appearances).
+        edge_counts: dict[str, int] = _count_module_edges(edges)
+        modules = sorted(
+            result.get("modules", []),
+            key=lambda m: edge_counts.get(m.get("name", ""), 0),
+            reverse=True,
+        )
+        result = {**result, "modules": modules[: validated.top_n]}
 
     logger.info(
         "Cross-module deps: %d modules, %d edges in %s",
@@ -294,6 +332,15 @@ async def handle_get_coupling_metrics(
         module_filter=validated.module_filter,
     )
 
+    # Apply overflow-prevention filter (immutable — new dict, no mutation).
+    if validated.top_n is not None:
+        metrics = sorted(
+            result.get("metrics", []),
+            key=lambda m: m.get("distance", 0),
+            reverse=True,
+        )
+        result = {**result, "metrics": metrics[: validated.top_n]}
+
     logger.info(
         "Coupling metrics: %d modules analyzed in %s",
         result.get("stats", {}).get("total_modules", 0),
@@ -331,6 +378,18 @@ async def handle_get_design_smells(
         severity_threshold=validated.severity_threshold,
         exclude_tests=validated.exclude_tests,
     )
+
+    # Apply overflow-prevention filters (immutable — new dicts, no mutation).
+    if validated.summary_only:
+        smells = result.get("smells", [])
+        smells_by_type = _count_smells_by_type(smells)
+        result = {
+            **{k: v for k, v in result.items() if k != "smells"},
+            "smells_by_type": smells_by_type,
+            "total_smells": len(smells),
+        }
+    elif validated.top_n is not None:
+        result = {**result, "smells": result.get("smells", [])[: validated.top_n]}
 
     logger.info(
         "Design smells: %d smells found in %s",

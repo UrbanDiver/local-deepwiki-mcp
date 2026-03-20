@@ -496,6 +496,13 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "integer",
                     "description": "Minimum import count for an edge to appear (default: 1)",
                 },
+                "top_n": {
+                    "type": "integer",
+                    "description": (
+                        "Limit output to the top N modules sorted by total "
+                        "edge count (optional, returns all if omitted)"
+                    ),
+                },
             },
             "required": ["repo_path"],
         },
@@ -522,6 +529,13 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                 "module_filter": {
                     "type": "string",
                     "description": "Restrict to modules whose label starts with this prefix",
+                },
+                "top_n": {
+                    "type": "integer",
+                    "description": (
+                        "Limit output to the top N modules sorted by distance "
+                        "from the main sequence (optional, returns all if omitted)"
+                    ),
                 },
             },
             "required": ["repo_path"],
@@ -555,6 +569,20 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                 "exclude_tests": {
                     "type": "boolean",
                     "description": "Exclude test files (default: true)",
+                },
+                "top_n": {
+                    "type": "integer",
+                    "description": (
+                        "Limit output to the top N smells sorted by severity "
+                        "(optional, returns all if omitted)"
+                    ),
+                },
+                "summary_only": {
+                    "type": "boolean",
+                    "description": (
+                        "Return only a smells_by_type count dict instead of "
+                        "individual smell records (default: false)"
+                    ),
                 },
             },
             "required": ["repo_path"],

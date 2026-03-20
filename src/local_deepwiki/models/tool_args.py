@@ -626,6 +626,11 @@ class GetCrossModuleDependenciesArgs(BaseModel):
         ge=1,
         description="Minimum import count for an edge to be included",
     )
+    top_n: int | None = Field(
+        default=None,
+        ge=1,
+        description="Limit output to the top N modules by edge count",
+    )
 
 
 class GetCouplingMetricsArgs(BaseModel):
@@ -635,6 +640,11 @@ class GetCouplingMetricsArgs(BaseModel):
     module_filter: str | None = Field(
         default=None,
         description="Filter to modules whose label starts with this prefix",
+    )
+    top_n: int | None = Field(
+        default=None,
+        ge=1,
+        description="Limit output to the top N modules by distance from main sequence",
     )
 
 
@@ -649,6 +659,15 @@ class GetDesignSmellsArgs(BaseModel):
     exclude_tests: bool = Field(
         default=True,
         description="Exclude test files from analysis",
+    )
+    top_n: int | None = Field(
+        default=None,
+        ge=1,
+        description="Limit output to the top N smells by severity",
+    )
+    summary_only: bool = Field(
+        default=False,
+        description="Return only smells_by_type counts instead of individual smells",
     )
 
 

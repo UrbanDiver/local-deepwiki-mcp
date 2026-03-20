@@ -10,6 +10,9 @@ import pytest
 
 from local_deepwiki.handlers import (
     handle_get_architecture_summary,
+    handle_get_coupling_metrics,
+    handle_get_cross_module_dependencies,
+    handle_get_design_smells,
     handle_get_layer_dependencies,
 )
 from local_deepwiki.server import TOOL_HANDLERS
@@ -294,3 +297,150 @@ class TestHandleGetArchitectureSummary:
         data = json.loads(result[0].text)
         # Only core/real.py should be counted
         assert data["file_metrics"]["total_files"] == 1
+
+
+# ---------------------------------------------------------------------------
+# handle_get_design_smells overflow tests
+# ---------------------------------------------------------------------------
+
+
+class TestHandleGetDesignSmellsOverflow:
+    """Tests for top_n and summary_only parameters on get_design_smells."""
+
+    async def test_top_n_limits_smells(
+        self, tmp_path: Path, mock_access_control
+    ) -> None:
+        """get_design_smells with top_n=5 returns at most 5 smells."""
+        fake_smells = [
+            {"type": f"smell_{i}", "severity": "high", "file": "f.py", "line": i}
+            for i in range(20)
+        ]
+        fake_result = {
+            "status": "success",
+            "smells": fake_smells,
+            "summary": {"total": 20, "by_severity": {}, "by_type": {}},
+        }
+        with patch(
+            "local_deepwiki.generators.analysis.design_smells.analyze_design_smells",
+            return_value=fake_result,
+        ):
+            result = await handle_get_design_smells(
+                {"repo_path": str(tmp_path), "top_n": 5}
+            )
+
+        data = json.loads(result[0].text)
+        assert len(data["smells"]) == 5
+
+    async def test_summary_only_returns_type_counts(
+        self, tmp_path: Path, mock_access_control
+    ) -> None:
+        """get_design_smells with summary_only=True returns smells_by_type without individual smells."""
+        fake_smells = [
+            {"type": "god_class", "severity": "high", "file": "a.py", "line": 1},
+            {"type": "god_class", "severity": "high", "file": "b.py", "line": 1},
+            {"type": "long_method", "severity": "high", "file": "c.py", "line": 1},
+        ]
+        fake_result = {
+            "status": "success",
+            "smells": fake_smells,
+            "summary": {"total": 3, "by_severity": {}, "by_type": {}},
+        }
+        with patch(
+            "local_deepwiki.generators.analysis.design_smells.analyze_design_smells",
+            return_value=fake_result,
+        ):
+            result = await handle_get_design_smells(
+                {"repo_path": str(tmp_path), "summary_only": True}
+            )
+
+        data = json.loads(result[0].text)
+        assert "smells" not in data
+        assert data["smells_by_type"] == {"god_class": 2, "long_method": 1}
+        assert data["total_smells"] == 3
+
+
+# ---------------------------------------------------------------------------
+# handle_get_coupling_metrics overflow tests
+# ---------------------------------------------------------------------------
+
+
+class TestHandleGetCouplingMetricsOverflow:
+    """Tests for top_n parameter on get_coupling_metrics."""
+
+    async def test_top_n_limits_modules(
+        self, tmp_path: Path, mock_access_control
+    ) -> None:
+        """get_coupling_metrics with top_n=10 returns at most 10 modules."""
+        fake_metrics = [
+            {
+                "module": f"mod_{i}",
+                "afferent_coupling": 1,
+                "efferent_coupling": 1,
+                "instability": 0.5,
+                "abstractness": 0.0,
+                "distance": round(0.5 - i * 0.01, 4),
+            }
+            for i in range(30)
+        ]
+        fake_result = {
+            "status": "success",
+            "metrics": fake_metrics,
+            "stats": {
+                "total_modules": 30,
+                "avg_instability": 0.5,
+                "avg_abstractness": 0.0,
+            },
+        }
+        with patch(
+            "local_deepwiki.generators.analysis.coupling.analyze_coupling_metrics",
+            return_value=fake_result,
+        ):
+            result = await handle_get_coupling_metrics(
+                {"repo_path": str(tmp_path), "top_n": 10}
+            )
+
+        data = json.loads(result[0].text)
+        assert len(data["metrics"]) == 10
+
+
+# ---------------------------------------------------------------------------
+# handle_get_cross_module_dependencies overflow tests
+# ---------------------------------------------------------------------------
+
+
+class TestHandleGetCrossModuleDependenciesOverflow:
+    """Tests for top_n parameter on get_cross_module_dependencies."""
+
+    async def test_top_n_limits_nodes(
+        self, tmp_path: Path, mock_access_control
+    ) -> None:
+        """get_cross_module_dependencies with top_n=20 limits modules to 20."""
+        fake_modules = [
+            {"name": f"mod_{i}", "file_count": 2, "total_lines": 100} for i in range(50)
+        ]
+        fake_edges = [
+            {
+                "source": f"mod_{i}",
+                "target": f"mod_{i + 1}",
+                "weight": 1,
+                "imports": [],
+            }
+            for i in range(49)
+        ]
+        fake_result = {
+            "status": "success",
+            "modules": fake_modules,
+            "edges": fake_edges,
+            "mermaid": "graph LR",
+            "stats": {"total_modules": 50, "total_edges": 49},
+        }
+        with patch(
+            "local_deepwiki.generators.analysis.module_dependencies.analyze_cross_module_dependencies",
+            return_value=fake_result,
+        ):
+            result = await handle_get_cross_module_dependencies(
+                {"repo_path": str(tmp_path), "top_n": 20}
+            )
+
+        data = json.loads(result[0].text)
+        assert len(data["modules"]) == 20
