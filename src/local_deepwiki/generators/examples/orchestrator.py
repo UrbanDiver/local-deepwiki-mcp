@@ -76,6 +76,88 @@ class UsageExample:
     description: str | None  # From test docstring
 
 
+def _skip_docstring_lines(lines: list[str]) -> int:
+    """Return the index of the first non-docstring line in *lines*.
+
+    Scans from the top and skips over any leading docstring block.
+
+    Args:
+        lines: Lines of a function body.
+
+    Returns:
+        Index of the first code line after any docstring.
+    """
+    in_docstring = False
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith(('"""', "'''")):
+            if in_docstring:
+                in_docstring = False
+                continue
+            if stripped.count('"""') >= 2 or stripped.count("'''") >= 2:
+                continue
+            in_docstring = True
+            continue
+        if in_docstring:
+            continue
+        return i
+    return 0
+
+
+def _collect_relevant_lines(
+    lines: list[str],
+    entity_name: str,
+    max_lines: int,
+) -> list[str]:
+    """Collect lines from *lines* that demonstrate usage of *entity_name*.
+
+    Starts capturing at the first occurrence of the entity name (or at a
+    ``dedent(`` block) and stops after two assertions or *max_lines* lines.
+
+    Args:
+        lines: Code lines with docstring already skipped.
+        entity_name: Name of the entity to capture usage of.
+        max_lines: Maximum number of lines to include.
+
+    Returns:
+        Relevant lines or empty list if none found.
+    """
+    relevant_lines: list[str] = []
+    capturing = False
+    dedent_block = False
+    paren_depth = 0
+    assertions_found = 0
+
+    for line in lines:
+        stripped = line.strip()
+        paren_depth += line.count("(") - line.count(")")
+
+        if "dedent(" in line or 'dedent("""' in line:
+            dedent_block = True
+            capturing = True
+
+        if entity_name in line and not capturing:
+            capturing = True
+
+        if capturing:
+            relevant_lines.append(line)
+
+            if stripped.startswith("assert") and paren_depth <= 0:
+                assertions_found += 1
+                if assertions_found >= 2:
+                    break
+
+            if len(relevant_lines) >= max_lines:
+                break
+
+        if dedent_block and '"""' in line and len(relevant_lines) > 1:
+            dedent_block = False
+
+    return relevant_lines
+
+
 def _extract_usage_snippet(
     func_node: Node,
     source: bytes,
@@ -99,67 +181,10 @@ def _extract_usage_snippet(
     body = _get_function_body(func_node, source)
     lines = body.split("\n")
 
-    # Skip the docstring if present
-    start_idx = 0
-    in_docstring = False
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        # Detect docstring boundaries
-        if stripped.startswith(('"""', "'''")):
-            if in_docstring:
-                in_docstring = False
-                continue
-            # Check for single-line docstring
-            if stripped.count('"""') >= 2 or stripped.count("'''") >= 2:
-                continue
-            in_docstring = True
-            continue
-        if in_docstring:
-            continue
-        start_idx = i
-        break
-
+    start_idx = _skip_docstring_lines(lines)
     lines = lines[start_idx:]
 
-    # Find lines relevant to the entity
-    relevant_lines: list[str] = []
-    capturing = False
-    dedent_block = False
-    paren_depth = 0
-    assertions_found = 0
-
-    for line in lines:
-        stripped = line.strip()
-
-        # Track parentheses for multi-line calls
-        paren_depth += line.count("(") - line.count(")")
-
-        # Start capturing when we see dedent (common test pattern) or the entity
-        if "dedent(" in line or 'dedent("""' in line:
-            dedent_block = True
-            capturing = True
-
-        if entity_name in line and not capturing:
-            capturing = True
-
-        if capturing:
-            relevant_lines.append(line)
-
-            # Track assertions to capture a complete test
-            if stripped.startswith("assert") and paren_depth <= 0:
-                assertions_found += 1
-                # Allow up to 2 assertions for better context
-                if assertions_found >= 2:
-                    break
-
-            if len(relevant_lines) >= max_lines:
-                break
-
-        # End dedent block
-        if dedent_block and '"""' in line and len(relevant_lines) > 1:
-            dedent_block = False
+    relevant_lines = _collect_relevant_lines(lines, entity_name, max_lines)
 
     if not relevant_lines:
         return None

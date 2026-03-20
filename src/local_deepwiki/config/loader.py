@@ -410,6 +410,110 @@ def _track_sources(
 # ---------------------------------------------------------------------------
 
 
+def _validate_embedding_config(config: Config) -> list[str]:
+    """Return warnings for embedding provider configuration.
+
+    Args:
+        config: The configuration to validate.
+
+    Returns:
+        List of warning messages (may be empty).
+    """
+    warnings: list[str] = []
+    if config.embedding.provider == EmbeddingProviderType.OPENAI:
+        if not os.environ.get("OPENAI_API_KEY"):
+            warnings.append(
+                "OpenAI embedding provider selected but OPENAI_API_KEY not set"
+            )
+    return warnings
+
+
+def _validate_llm_config(config: Config) -> list[str]:
+    """Return warnings for LLM provider configuration.
+
+    Args:
+        config: The configuration to validate.
+
+    Returns:
+        List of warning messages (may be empty).
+    """
+    warnings: list[str] = []
+    if config.llm.provider == LLMProviderType.ANTHROPIC:
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            warnings.append(
+                "Anthropic LLM provider selected but ANTHROPIC_API_KEY not set"
+            )
+    elif config.llm.provider == LLMProviderType.OPENAI:
+        if not os.environ.get("OPENAI_API_KEY"):
+            warnings.append("OpenAI LLM provider selected but OPENAI_API_KEY not set")
+    return warnings
+
+
+def _validate_performance_config(config: Config) -> list[str]:
+    """Return warnings for performance-sensitive configuration values.
+
+    Args:
+        config: The configuration to validate.
+
+    Returns:
+        List of warning messages (may be empty).
+    """
+    warnings: list[str] = []
+    if config.chunking.parallel_workers > (os.cpu_count() or 4):
+        warnings.append(
+            f"parallel_workers ({config.chunking.parallel_workers}) exceeds "
+            f"CPU count ({os.cpu_count() or 4}), may cause contention"
+        )
+    if config.embedding_batch.batch_size > 100 and config.embedding.provider != "local":
+        warnings.append(
+            f"Large embedding batch_size ({config.embedding_batch.batch_size}) "
+            "with API provider may cause rate limiting"
+        )
+    if config.deep_research.max_total_chunks > 50:
+        warnings.append(
+            f"Large max_total_chunks ({config.deep_research.max_total_chunks}) "
+            "may cause high memory usage during research"
+        )
+    if config.embedding_cache.enabled and config.embedding_cache.max_entries > 500000:
+        warnings.append(
+            f"Very large embedding cache max_entries "
+            f"({config.embedding_cache.max_entries}) may cause high memory usage"
+        )
+    return warnings
+
+
+def _validate_wiki_config(config: Config) -> list[str]:
+    """Return warnings for wiki and plugin/hook configuration.
+
+    Args:
+        config: The configuration to validate.
+
+    Returns:
+        List of warning messages (may be empty).
+    """
+    warnings: list[str] = []
+    if config.wiki.use_cloud_for_github:
+        provider = config.wiki.github_llm_provider
+        if provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
+            warnings.append(
+                "use_cloud_for_github enabled with anthropic but "
+                "ANTHROPIC_API_KEY not set"
+            )
+        elif provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
+            warnings.append(
+                "use_cloud_for_github enabled with openai but OPENAI_API_KEY not set"
+            )
+    if config.plugins.enabled and config.plugins.custom_dir:
+        custom_path = Path(config.plugins.custom_dir)
+        if not custom_path.exists():
+            warnings.append(f"Custom plugins directory does not exist: {custom_path}")
+    if config.hooks.enabled and config.hooks.scripts_dir:
+        scripts_path = Path(config.hooks.scripts_dir)
+        if not scripts_path.exists():
+            warnings.append(f"Hook scripts directory does not exist: {scripts_path}")
+    return warnings
+
+
 def validate_config(config: Config) -> list[str]:
     """Return list of validation warnings/errors.
 
@@ -429,78 +533,12 @@ def validate_config(config: Config) -> list[str]:
             for warning in warnings:
                 print(f"Warning: {warning}")
     """
-    warnings: list[str] = []
-
-    # Check embedding configuration
-    if config.embedding.provider == EmbeddingProviderType.OPENAI:
-        if not os.environ.get("OPENAI_API_KEY"):
-            warnings.append(
-                "OpenAI embedding provider selected but OPENAI_API_KEY not set"
-            )
-
-    # Check LLM configuration
-    if config.llm.provider == LLMProviderType.ANTHROPIC:
-        if not os.environ.get("ANTHROPIC_API_KEY"):
-            warnings.append(
-                "Anthropic LLM provider selected but ANTHROPIC_API_KEY not set"
-            )
-    elif config.llm.provider == LLMProviderType.OPENAI:
-        if not os.environ.get("OPENAI_API_KEY"):
-            warnings.append("OpenAI LLM provider selected but OPENAI_API_KEY not set")
-
-    # Check for potential performance issues
-    if config.chunking.parallel_workers > (os.cpu_count() or 4):
-        warnings.append(
-            f"parallel_workers ({config.chunking.parallel_workers}) exceeds "
-            f"CPU count ({os.cpu_count() or 4}), may cause contention"
-        )
-
-    if config.embedding_batch.batch_size > 100 and config.embedding.provider != "local":
-        warnings.append(
-            f"Large embedding batch_size ({config.embedding_batch.batch_size}) "
-            "with API provider may cause rate limiting"
-        )
-
-    # Check for memory concerns
-    if config.deep_research.max_total_chunks > 50:
-        warnings.append(
-            f"Large max_total_chunks ({config.deep_research.max_total_chunks}) "
-            "may cause high memory usage during research"
-        )
-
-    # Check cache configurations
-    if config.embedding_cache.enabled and config.embedding_cache.max_entries > 500000:
-        warnings.append(
-            f"Very large embedding cache max_entries "
-            f"({config.embedding_cache.max_entries}) may cause high memory usage"
-        )
-
-    # Check wiki configuration consistency
-    if config.wiki.use_cloud_for_github:
-        provider = config.wiki.github_llm_provider
-        if provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
-            warnings.append(
-                "use_cloud_for_github enabled with anthropic but "
-                "ANTHROPIC_API_KEY not set"
-            )
-        elif provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
-            warnings.append(
-                "use_cloud_for_github enabled with openai but OPENAI_API_KEY not set"
-            )
-
-    # Check plugin configuration
-    if config.plugins.enabled and config.plugins.custom_dir:
-        custom_path = Path(config.plugins.custom_dir)
-        if not custom_path.exists():
-            warnings.append(f"Custom plugins directory does not exist: {custom_path}")
-
-    # Check hooks configuration
-    if config.hooks.enabled and config.hooks.scripts_dir:
-        scripts_path = Path(config.hooks.scripts_dir)
-        if not scripts_path.exists():
-            warnings.append(f"Hook scripts directory does not exist: {scripts_path}")
-
-    return warnings
+    return [
+        *_validate_embedding_config(config),
+        *_validate_llm_config(config),
+        *_validate_performance_config(config),
+        *_validate_wiki_config(config),
+    ]
 
 
 def load_config_from_env() -> dict[str, Any]:

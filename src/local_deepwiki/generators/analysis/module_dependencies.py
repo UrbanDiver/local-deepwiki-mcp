@@ -64,28 +64,18 @@ def _top_level(dotted: str) -> str:
     return dotted.split(".")[0]
 
 
-def analyze_cross_module_dependencies(
-    repo_path: Path,
-    module_filter: str | None = None,
-    include_external: bool = False,
-    min_edge_weight: int = 1,
-) -> dict[str, Any]:
-    """Build and return the inter-module import graph for *repo_path*.
+def _discover_project_tops(repo_path: Path) -> set[str]:
+    """Discover top-level project package names from a repository root.
+
+    Checks both the root and a ``src/`` subdirectory for Python packages
+    (directories containing ``__init__.py``).
 
     Args:
-        repo_path: Root of the repository to scan.
-        module_filter: When given, only include modules whose label starts with
-            this prefix (e.g. ``"core"``).
-        include_external: When ``False`` (default), third-party and stdlib
-            imports are excluded.
-        min_edge_weight: Minimum number of import occurrences to include an
-            edge in the output.
+        repo_path: Root of the repository.
 
     Returns:
-        A dict with ``status``, ``modules``, ``edges``, ``mermaid``, and
-        ``stats`` keys.
+        Set of top-level package names.
     """
-    # Discover project package name(s) from the top-level Python dirs.
     project_tops: set[str] = set()
     for item in repo_path.iterdir():
         if item.is_dir() and (item / "__init__.py").exists():
@@ -95,7 +85,32 @@ def analyze_cross_module_dependencies(
         for item in src_dir.iterdir():
             if item.is_dir() and (item / "__init__.py").exists():
                 project_tops.add(item.name)
+    return project_tops
 
+
+def _build_module_graph(
+    repo_path: Path,
+    project_tops: set[str],
+    module_filter: str | None,
+    include_external: bool,
+) -> tuple[
+    dict[str, int],
+    dict[str, int],
+    dict[tuple[str, str], int],
+    dict[tuple[str, str], list[str]],
+]:
+    """Scan Python files and build raw import-graph data structures.
+
+    Args:
+        repo_path: Root of the repository.
+        project_tops: Known top-level package names for internal detection.
+        module_filter: Optional prefix filter for source modules.
+        include_external: Whether to include third-party/stdlib imports.
+
+    Returns:
+        Tuple of (module_file_counts, module_line_counts, edge_counts,
+        edge_imports) defaultdict instances.
+    """
     module_file_counts: dict[str, int] = defaultdict(int)
     module_line_counts: dict[str, int] = defaultdict(int)
     edge_counts: dict[tuple[str, str], int] = defaultdict(int)
@@ -118,13 +133,11 @@ def analyze_cross_module_dependencies(
 
         for dotted in _extract_full_imports(source):
             top = _top_level(dotted)
-
             is_internal = top in project_tops
 
             if not include_external and not is_internal:
                 continue
 
-            # Determine target module label.
             if is_internal:
                 parts = dotted.split(".")
                 if parts[0] in project_tops:
@@ -133,11 +146,10 @@ def analyze_cross_module_dependencies(
                     continue
                 tgt_module = ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
             else:
-                # stdlib or third-party: use top-level name only
                 tgt_module = top
 
             if tgt_module == src_module:
-                continue  # self-import
+                continue
 
             if module_filter and not tgt_module.startswith(module_filter):
                 if not include_external:
@@ -147,6 +159,67 @@ def analyze_cross_module_dependencies(
             edge_counts[edge] += 1
             if dotted not in edge_imports[edge]:
                 edge_imports[edge].append(dotted)
+
+    return module_file_counts, module_line_counts, edge_counts, edge_imports
+
+
+def _compute_dependency_stats(
+    edges: list[dict[str, Any]],
+    modules: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Compute afferent/efferent coupling statistics from edges.
+
+    Args:
+        edges: List of edge dicts with ``source`` and ``target`` keys.
+        modules: List of module dicts (used only for total count).
+
+    Returns:
+        Stats dict with total_modules, total_edges, most_depended_on,
+        and most_dependent keys.
+    """
+    ca: dict[str, int] = defaultdict(int)
+    ce: dict[str, int] = defaultdict(int)
+    for edge in edges:
+        ca[edge["target"]] += 1
+        ce[edge["source"]] += 1
+
+    most_depended_on = sorted(ca.items(), key=lambda x: x[1], reverse=True)[:3]
+    most_dependent = sorted(ce.items(), key=lambda x: x[1], reverse=True)[:3]
+
+    return {
+        "total_modules": len(modules),
+        "total_edges": len(edges),
+        "most_depended_on": [{"module": m, "afferent": c} for m, c in most_depended_on],
+        "most_dependent": [{"module": m, "efferent": c} for m, c in most_dependent],
+    }
+
+
+def analyze_cross_module_dependencies(
+    repo_path: Path,
+    module_filter: str | None = None,
+    include_external: bool = False,
+    min_edge_weight: int = 1,
+) -> dict[str, Any]:
+    """Build and return the inter-module import graph for *repo_path*.
+
+    Args:
+        repo_path: Root of the repository to scan.
+        module_filter: When given, only include modules whose label starts with
+            this prefix (e.g. ``"core"``).
+        include_external: When ``False`` (default), third-party and stdlib
+            imports are excluded.
+        min_edge_weight: Minimum number of import occurrences to include an
+            edge in the output.
+
+    Returns:
+        A dict with ``status``, ``modules``, ``edges``, ``mermaid``, and
+        ``stats`` keys.
+    """
+    project_tops = _discover_project_tops(repo_path)
+
+    module_file_counts, module_line_counts, edge_counts, edge_imports = (
+        _build_module_graph(repo_path, project_tops, module_filter, include_external)
+    )
 
     # Build output structures.
     all_module_names = set(module_file_counts.keys()) | {
@@ -172,17 +245,8 @@ def analyze_cross_module_dependencies(
         if cnt >= min_edge_weight
     ]
 
-    # Afferent (Ca) = how many modules import this module.
-    ca: dict[str, int] = defaultdict(int)
-    ce: dict[str, int] = defaultdict(int)
-    for edge in edges:
-        ca[edge["target"]] += 1
-        ce[edge["source"]] += 1
-
-    most_depended_on = sorted(ca.items(), key=lambda x: x[1], reverse=True)[:3]
-    most_dependent = sorted(ce.items(), key=lambda x: x[1], reverse=True)[:3]
-
     mermaid = _build_mermaid(edges)
+    stats = _compute_dependency_stats(edges, modules)
 
     logger.info(
         "Cross-module deps: %d modules, %d edges in %s",
@@ -196,14 +260,7 @@ def analyze_cross_module_dependencies(
         "modules": modules,
         "edges": edges,
         "mermaid": mermaid,
-        "stats": {
-            "total_modules": len(modules),
-            "total_edges": len(edges),
-            "most_depended_on": [
-                {"module": m, "afferent": c} for m, c in most_depended_on
-            ],
-            "most_dependent": [{"module": m, "efferent": c} for m, c in most_dependent],
-        },
+        "stats": stats,
     }
 
 

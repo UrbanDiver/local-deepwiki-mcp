@@ -156,39 +156,34 @@ def api_codemap_topics() -> Response | tuple[Response, int]:
     return jsonify(topics)
 
 
-@codemap_bp.route("/api/codemap", methods=["POST"])
-def api_codemap() -> Response | tuple[Response, int]:
-    """Handle codemap generation with streaming response.
+_VALID_FOCUS = frozenset({"execution_flow", "data_flow", "dependency_chain"})
 
-    Expects JSON body with:
-        - query: The codemap query (required)
-        - focus: Focus mode - execution_flow, data_flow, dependency_chain (default: execution_flow)
-        - entry_point: Optional specific entry point function name
-        - max_depth: Max traversal depth 1-10 (default: 5)
-        - max_nodes: Max nodes 5-60 (default: 30)
+
+def _validate_codemap_request(
+    data: dict,
+) -> tuple[str, str, int, int, str | None] | tuple[Response, int]:
+    """Validate and extract codemap request parameters from the JSON body.
+
+    Args:
+        data: Parsed JSON request body.
 
     Returns:
-        Server-Sent Events stream with progress, result, and done events.
+        On success: (query, focus, max_depth, max_nodes, entry_point).
+        On failure: a (Response, status_code) error tuple.
     """
-    wiki_path = _get_wiki_path()
-    if wiki_path is None:
-        return jsonify({"error": "Wiki path not configured"}), 500
-
-    data = request.get_json() or {}
     query = data.get("query", "").strip()
-
     if not query:
         return jsonify({"error": "Query is required"}), 400
-
     if len(query) > 5000:
         return jsonify({"error": "Query exceeds maximum length (5000 characters)"}), 400
 
     focus = data.get("focus", "execution_flow")
-    valid_focus = frozenset({"execution_flow", "data_flow", "dependency_chain"})
-    if focus not in valid_focus:
+    if focus not in _VALID_FOCUS:
         return jsonify(
             {
-                "error": f"Invalid focus mode. Must be one of: {', '.join(sorted(valid_focus))}"
+                "error": (
+                    f"Invalid focus mode. Must be one of: {', '.join(sorted(_VALID_FOCUS))}"
+                )
             }
         ), 400
 
@@ -208,9 +203,67 @@ def api_codemap() -> Response | tuple[Response, int]:
             return jsonify(
                 {"error": "entry_point exceeds maximum length (500 characters)"}
             ), 400
-        # Allow alphanumeric, dots, underscores, colons, slashes (typical qualified names)
         if not re.match(r"^[\w.:/ -]+$", entry_point):
             return jsonify({"error": "entry_point contains invalid characters"}), 400
+
+    return query, focus, max_depth, max_nodes, entry_point
+
+
+def _build_codemap_response(result: object) -> dict:
+    """Build the SSE result payload from a CodemapResult object.
+
+    Args:
+        result: The CodemapResult returned by generate_codemap.
+
+    Returns:
+        Dictionary ready for JSON serialisation as an SSE ``result`` event.
+    """
+    return {
+        "type": "result",
+        "query": result.query,  # type: ignore[attr-defined]
+        "focus": result.focus,  # type: ignore[attr-defined]
+        "entry_point": result.entry_point,  # type: ignore[attr-defined]
+        "mermaid_diagram": result.mermaid_diagram,  # type: ignore[attr-defined]
+        "narrative": result.narrative,  # type: ignore[attr-defined]
+        "nodes": result.nodes,  # type: ignore[attr-defined]
+        "edges": result.edges,  # type: ignore[attr-defined]
+        "files_involved": result.files_involved,  # type: ignore[attr-defined]
+        "total_nodes": result.total_nodes,  # type: ignore[attr-defined]
+        "total_edges": result.total_edges,  # type: ignore[attr-defined]
+        "cross_file_edges": result.cross_file_edges,  # type: ignore[attr-defined]
+    }
+
+
+@codemap_bp.route("/api/codemap", methods=["POST"])
+def api_codemap() -> Response | tuple[Response, int]:
+    """Handle codemap generation with streaming response.
+
+    Expects JSON body with:
+        - query: The codemap query (required)
+        - focus: Focus mode - execution_flow, data_flow, dependency_chain (default: execution_flow)
+        - entry_point: Optional specific entry point function name
+        - max_depth: Max traversal depth 1-10 (default: 5)
+        - max_nodes: Max nodes 5-60 (default: 30)
+
+    Returns:
+        Server-Sent Events stream with progress, result, and done events.
+    """
+    wiki_path = _get_wiki_path()
+    if wiki_path is None:
+        return jsonify({"error": "Wiki path not configured"}), 500
+
+    data = request.get_json() or {}
+    validated = _validate_codemap_request(data)
+
+    # If validation returned an error tuple, propagate it
+    if (
+        isinstance(validated, tuple)
+        and len(validated) == 2
+        and isinstance(validated[1], int)
+    ):
+        return validated  # type: ignore[return-value]
+
+    query, focus, max_depth, max_nodes, entry_point = validated  # type: ignore[misc]
 
     repo_path = wiki_path.parent
     if wiki_path.name == ".deepwiki":
@@ -276,20 +329,7 @@ def api_codemap() -> Response | tuple[Response, int]:
 
             yield f"data: {json.dumps({'type': 'progress', 'message': 'Codemap ready.'})}\n\n"
 
-            response = {
-                "type": "result",
-                "query": result.query,
-                "focus": result.focus,
-                "entry_point": result.entry_point,
-                "mermaid_diagram": result.mermaid_diagram,
-                "narrative": result.narrative,
-                "nodes": result.nodes,
-                "edges": result.edges,
-                "files_involved": result.files_involved,
-                "total_nodes": result.total_nodes,
-                "total_edges": result.total_edges,
-                "cross_file_edges": result.cross_file_edges,
-            }
+            response = _build_codemap_response(result)
             yield f"data: {json.dumps(response)}\n\n"
 
             # Write to cache

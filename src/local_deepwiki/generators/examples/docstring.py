@@ -131,6 +131,103 @@ def parse_doctest_examples(docstring: str) -> list[CodeExample]:
     return examples
 
 
+def _extract_examples_section(docstring: str) -> str | None:
+    """Extract the raw text of the Examples section from a Google-style docstring.
+
+    Args:
+        docstring: Full docstring text.
+
+    Returns:
+        Text of the Examples section, or None if no section found.
+    """
+    example_pattern = re.compile(
+        r"^\s*(Examples?)\s*:\s*$",
+        re.MULTILINE | re.IGNORECASE,
+    )
+    match = example_pattern.search(docstring)
+    if not match:
+        return None
+
+    start_idx = match.end()
+
+    section_pattern = re.compile(
+        r"^\s*(Args?|Returns?|Raises?|Yields?|Attributes?|Note|Notes|Warning|Warnings|See Also|References?)\s*:",
+        re.MULTILINE | re.IGNORECASE,
+    )
+    end_match = section_pattern.search(docstring, start_idx)
+    if end_match:
+        return docstring[start_idx : end_match.start()]
+    return docstring[start_idx:]
+
+
+def _parse_example_block(
+    lines: list[str],
+) -> list[CodeExample]:
+    """Parse an Examples section into a list of CodeExample objects.
+
+    Handles descriptions (lines ending with ``:``) followed by indented
+    code blocks.
+
+    Args:
+        lines: Lines of the Examples section text.
+
+    Returns:
+        List of CodeExample objects.
+    """
+    examples: list[CodeExample] = []
+    current_description: str | None = None
+    current_code_lines: list[str] = []
+    base_indent: int | None = None
+
+    def _flush() -> None:
+        nonlocal current_description, current_code_lines
+        if current_code_lines:
+            code = dedent("\n".join(current_code_lines)).strip()
+            if code:
+                examples.append(
+                    CodeExample(
+                        source="docstring",
+                        code=code,
+                        description=current_description,
+                        language="python",
+                    )
+                )
+        current_description = None
+        current_code_lines = []
+
+    for line in lines:
+        if not line.strip() and not current_code_lines:
+            continue
+
+        stripped = line.lstrip()
+        indent = len(line) - len(stripped)
+
+        if base_indent is None and stripped:
+            base_indent = indent
+
+        if not stripped:
+            if current_code_lines:
+                current_code_lines.append("")
+            continue
+
+        if base_indent is not None and indent == base_indent:
+            if stripped.endswith(":") and not stripped.startswith((">>>", "...")):
+                _flush()
+                current_description = stripped.rstrip(":")
+                continue
+
+        if base_indent is not None and indent > base_indent:
+            current_code_lines.append(line)
+        elif stripped:
+            if current_code_lines:
+                current_code_lines.append(line)
+            else:
+                current_code_lines.append(line)
+
+    _flush()
+    return examples
+
+
 def parse_google_style_examples(docstring: str) -> list[CodeExample]:
     """Extract examples from Google-style docstring Examples section.
 
@@ -160,100 +257,11 @@ def parse_google_style_examples(docstring: str) -> list[CodeExample]:
     if not docstring:
         return []
 
-    examples: list[CodeExample] = []
-
-    # Find the Examples: section
-    # Match "Examples:", "Example:", with optional leading whitespace
-    example_pattern = re.compile(
-        r"^\s*(Examples?)\s*:\s*$",
-        re.MULTILINE | re.IGNORECASE,
-    )
-
-    match = example_pattern.search(docstring)
-    if not match:
+    examples_text = _extract_examples_section(docstring)
+    if examples_text is None:
         return []
 
-    # Extract from Examples: to end or next section
-    start_idx = match.end()
-
-    # Find the next section (Args:, Returns:, Raises:, etc.)
-    section_pattern = re.compile(
-        r"^\s*(Args?|Returns?|Raises?|Yields?|Attributes?|Note|Notes|Warning|Warnings|See Also|References?)\s*:",
-        re.MULTILINE | re.IGNORECASE,
-    )
-
-    end_match = section_pattern.search(docstring, start_idx)
-    if end_match:
-        examples_text = docstring[start_idx : end_match.start()]
-    else:
-        examples_text = docstring[start_idx:]
-
-    # Parse the examples section
-    lines = examples_text.split("\n")
-    current_description: str | None = None
-    current_code_lines: list[str] = []
-    base_indent: int | None = None
-
-    def save_current_example() -> None:
-        """Save the current accumulated example."""
-        nonlocal current_description, current_code_lines
-        if current_code_lines:
-            code = dedent("\n".join(current_code_lines)).strip()
-            if code:
-                examples.append(
-                    CodeExample(
-                        source="docstring",
-                        code=code,
-                        description=current_description,
-                        language="python",
-                    )
-                )
-        current_description = None
-        current_code_lines = []
-
-    for line in lines:
-        # Skip empty lines at the start
-        if not line.strip() and not current_code_lines:
-            continue
-
-        # Calculate indentation
-        stripped = line.lstrip()
-        indent = len(line) - len(stripped)
-
-        # Detect base indent level
-        if base_indent is None and stripped:
-            base_indent = indent
-
-        if not stripped:
-            # Empty line might separate examples
-            if current_code_lines:
-                current_code_lines.append("")
-            continue
-
-        # Line at base indent level might be a description
-        if base_indent is not None and indent == base_indent:
-            # Check if it looks like a description (ends with :)
-            if stripped.endswith(":") and not stripped.startswith((">>>", "...")):
-                # Save previous example if any
-                save_current_example()
-                current_description = stripped.rstrip(":")
-                continue
-
-        # Code line (more indented than base)
-        if base_indent is not None and indent > base_indent:
-            current_code_lines.append(line)
-        elif stripped:
-            # At base level, could be code if we're already collecting
-            if current_code_lines:
-                current_code_lines.append(line)
-            else:
-                # Could be description or start of code
-                current_code_lines.append(line)
-
-    # Save the last example
-    save_current_example()
-
-    return examples
+    return _parse_example_block(examples_text.split("\n"))
 
 
 def parse_docstring_examples(docstring: str) -> list[CodeExample]:
