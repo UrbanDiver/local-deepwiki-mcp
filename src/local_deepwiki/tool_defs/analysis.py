@@ -561,4 +561,84 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         },
         annotations=_READ_ONLY,
     ),
+    Tool(
+        name="get_architecture_health",
+        description=(
+            "Comprehensive architecture health check. Runs complexity hotspot "
+            "analysis, coupling metrics, design smell detection, and layer "
+            "dependency analysis in a single call. Returns an overall health "
+            "grade (A-F), per-dimension scores, and top findings."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository to analyze",
+                },
+                "top_findings": {
+                    "type": "integer",
+                    "description": "Number of top findings per category (default: 5, max: 20)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
+        name="compare_architecture",
+        description=(
+            "Compare architecture health between two git refs. Shows which "
+            "metrics improved or degraded, grade changes, and new/resolved "
+            "smells. Uses git worktree for safe non-destructive analysis."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository (must be a git repo)",
+                },
+                "base_ref": {
+                    "type": "string",
+                    "description": "Git ref for baseline (default: HEAD~1)",
+                },
+                "head_ref": {
+                    "type": "string",
+                    "description": "Git ref for comparison target (default: HEAD)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
+        name="get_module_health",
+        description=(
+            "Deep health analysis of a single module. Shows complexity "
+            "distribution, design smells, coupling metrics, dependents (who "
+            "uses this module), dependencies (what it uses), and refactoring "
+            "risk level."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "module_name": {
+                    "type": "string",
+                    "description": (
+                        "Module to analyze (e.g., 'core.indexer', 'generators.wiki')"
+                    ),
+                },
+            },
+            "required": ["repo_path", "module_name"],
+        },
+        annotations=_READ_ONLY,
+    ),
 )

@@ -11,7 +11,11 @@ from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.config import Config, GenerationMode, get_config
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators import lazy_cache
+from local_deepwiki.generators.lazy_cache import (
+    append_to_search_index,
+    read_cached_page,
+    write_page,
+)
 from local_deepwiki.generators.crosslinks import (
     CrossLinker,
     EntityRegistry,
@@ -208,7 +212,7 @@ class LazyPageGenerator:
 
     async def get_page(self, page_path: str) -> str:
         """Get a wiki page, generating it on demand if needed."""
-        cached = lazy_cache.read_cached_page(self._wiki_path, page_path)
+        cached = read_cached_page(self._wiki_path, page_path)
         if cached is not None:
             return cached
 
@@ -221,8 +225,8 @@ class LazyPageGenerator:
             page = await self._generate_page(page_path)
             linker = await self._get_cross_linker()
             page = linker.add_links(page)
-            await lazy_cache.write_page(self._wiki_path, page)
-            lazy_cache.append_to_search_index(self._wiki_path, page)
+            await write_page(self._wiki_path, page)
+            append_to_search_index(self._wiki_path, page)
             content = page.content
             fut.set_result(content)
 
@@ -376,7 +380,7 @@ class LazyPageGenerator:
 
         self._auxiliary_cache = pages
         for page in pages.values():
-            await lazy_cache.write_page(self._wiki_path, page)
+            await write_page(self._wiki_path, page)
         return pages
 
     async def _generate_module(self, page_path: str, vs: VectorStore) -> WikiPage:

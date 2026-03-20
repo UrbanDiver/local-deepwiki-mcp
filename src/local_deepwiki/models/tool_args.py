@@ -688,3 +688,45 @@ class StopWikiServerArgs(BaseModel):
         default=None,
         description="Optional wiki path to identify which server to stop",
     )
+
+
+class GetArchitectureHealthArgs(BaseModel):
+    """Arguments for the get_architecture_health tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    top_findings: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Number of top findings per category (1-20)",
+    )
+
+
+class CompareArchitectureArgs(BaseModel):
+    """Arguments for the compare_architecture tool."""
+
+    repo_path: str = Field(
+        max_length=4096,
+        description="Path to the repository (must be a git repo)",
+    )
+    base_ref: str = Field(
+        default="HEAD~1",
+        max_length=256,
+        description="Git ref for baseline (default: HEAD~1)",
+    )
+    head_ref: str = Field(
+        default="HEAD",
+        max_length=256,
+        description="Git ref for comparison target (default: HEAD)",
+    )
+
+
+class GetModuleHealthArgs(BaseModel):
+    """Arguments for the get_module_health tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    module_name: str = Field(
+        min_length=1,
+        max_length=500,
+        description="Module to analyze (e.g., 'core.indexer', 'generators.wiki')",
+    )
