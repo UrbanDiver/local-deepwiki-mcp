@@ -131,8 +131,8 @@ def score_smells(
     god_classes = sum(1 for s in smells if s.get("type") == "god_class")
 
     score = 100.0
-    score -= min(density * 8, 60)  # density penalty, cap 60
-    score -= min(god_classes * 5, 25)  # god class penalty, cap 25
+    score -= min(density * 8, 80)  # density penalty, cap 80
+    score -= min(god_classes * 10, 35)  # god class penalty, cap 35
 
     score = max(0.0, min(100.0, score))
     return {

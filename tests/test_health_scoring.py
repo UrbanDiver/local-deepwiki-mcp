@@ -269,6 +269,58 @@ def test_score_smells_unknown_severity_defaults_to_medium_weight():
     assert result["score"] == pytest.approx(92.0, rel=0.01)
 
 
+def test_smells_score_with_one_god_class():
+    """With only 1 god class (down from 6), score should differentiate from many."""
+    smells = [
+        {"type": "god_class", "severity": "high"},
+        *[{"type": "long_method", "severity": "high"} for _ in range(20)],
+    ]
+    result = score_smells(smells, total_lines=70000)
+    assert result["score"] > 40
+
+
+def test_smells_score_with_zero_god_classes():
+    """Zero god classes should contribute 0 penalty."""
+    smells = [{"type": "long_method", "severity": "medium"} for _ in range(20)]
+    result = score_smells(smells, total_lines=70000)
+    assert result["score"] > 60
+    assert result["factors"]["god_classes"] == 0
+
+
+def test_smells_score_differentiates_god_class_counts():
+    """Score should meaningfully differ between 0, 1, and 6 god classes."""
+    base_smells = [{"type": "long_method", "severity": "medium"} for _ in range(30)]
+    score_0 = score_smells(base_smells, total_lines=70000)["score"]
+    score_1 = score_smells(
+        [*base_smells, {"type": "god_class", "severity": "high"}],
+        total_lines=70000,
+    )["score"]
+    score_6 = score_smells(
+        [*base_smells, *[{"type": "god_class", "severity": "high"} for _ in range(6)]],
+        total_lines=70000,
+    )["score"]
+    assert score_0 > score_1 > score_6
+    assert (score_0 - score_1) >= 3
+    assert (score_1 - score_6) >= 5
+
+
+def test_smells_score_density_5_differs_from_7_5():
+    """Density ~5 should score meaningfully different from density ~7.5."""
+    # Create smells to produce density ~5.0 (all high severity, weight=3)
+    # density = (count * 3 / total_lines) * 1000
+    # For density=5: count * 3 / 70000 * 1000 = 5 → count = 116.67 → 117
+    smells_5 = [{"type": "long_method", "severity": "high"} for _ in range(117)]
+    # For density=7.5: count * 3 / 70000 * 1000 = 7.5 → count = 175
+    smells_7_5 = [{"type": "long_method", "severity": "high"} for _ in range(175)]
+
+    score_5 = score_smells(smells_5, total_lines=70000)["score"]
+    score_7_5 = score_smells(smells_7_5, total_lines=70000)["score"]
+
+    # Must have meaningful differentiation (at least 5 points)
+    assert score_5 > score_7_5
+    assert (score_5 - score_7_5) >= 5
+
+
 # ---------------------------------------------------------------------------
 # score_layers
 # ---------------------------------------------------------------------------
