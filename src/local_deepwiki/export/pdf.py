@@ -172,26 +172,75 @@ class StreamingPdfExporter(StreamingExporter):
             self.output_path,
         )
 
-        # Load TOC for ordering
         await asyncio.to_thread(self.load_toc)
 
-        # Get page count for progress
         iterator = self.get_page_iterator()
         total_pages = iterator.get_page_count()
 
-        # Report total pages at start
         if progress_callback:
             progress_callback(
                 0, total_pages, f"Starting PDF export ({total_pages} pages)"
             )
 
-        # Determine output file
+        output_file = await self._resolve_output_file()
+
+        pages_processed, temp_pdfs = await self._process_pages_in_batches(
+            iterator, total_pages, errors, progress_callback
+        )
+
+        await self._finalize_pdf(
+            temp_pdfs, output_file, pages_processed, total_pages, progress_callback
+        )
+
+        duration_ms = int((time.monotonic() - start_time) * 1000)
+        logger.info(
+            "Streaming PDF export complete: %d pages in %d batches, %dms",
+            pages_processed,
+            len(temp_pdfs),
+            duration_ms,
+        )
+
+        return ExportResult(
+            pages_exported=pages_processed,
+            output_path=output_file,
+            duration_ms=duration_ms,
+            errors=errors,
+        )
+
+    async def _resolve_output_file(self) -> Path:
+        """Determine and prepare the output file path.
+
+        If the configured output path is a directory, appends ``documentation.pdf``.
+        Creates any necessary parent directories.
+
+        Returns:
+            The resolved output file path.
+        """
         output_file = self.output_path
         if output_file.is_dir():
             output_file = output_file / "documentation.pdf"
         await asyncio.to_thread(output_file.parent.mkdir, parents=True, exist_ok=True)
+        return output_file
 
-        # Process pages in batches and create intermediate PDFs
+    async def _process_pages_in_batches(
+        self,
+        iterator: Any,
+        total_pages: int,
+        errors: list[str],
+        progress_callback: ProgressCallback | None,
+    ) -> tuple[int, list[Path]]:
+        """Iterate pages, accumulate them into batches, and render each batch to a PDF.
+
+        Args:
+            iterator: Page iterator returned by ``get_page_iterator()``.
+            total_pages: Total page count used for progress reporting.
+            errors: Mutable list to which per-page error messages are appended.
+            progress_callback: Optional callback for progress updates.
+
+        Returns:
+            A tuple of ``(pages_processed, temp_pdfs)`` where ``temp_pdfs`` is
+            the ordered list of intermediate batch PDF paths.
+        """
         batch_size = self.config.batch_size
         batch_num = 0
         pages_processed = 0
@@ -213,7 +262,6 @@ class StreamingPdfExporter(StreamingExporter):
                             f"Processing page {pages_processed} of {total_pages}: {page.path}",
                         )
 
-                    # When batch is full, render to intermediate PDF
                     if len(batch_pages) >= batch_size:
                         batch_pdf = temp_path / f"batch_{batch_num:04d}.pdf"
                         await asyncio.to_thread(
@@ -224,7 +272,6 @@ class StreamingPdfExporter(StreamingExporter):
                         )
                         temp_pdfs.append(batch_pdf)
 
-                        # Release memory
                         for p in batch_pages:
                             p.release_content()
                         batch_pages = []
@@ -235,7 +282,6 @@ class StreamingPdfExporter(StreamingExporter):
                     logger.warning(error_msg)
                     errors.append(error_msg)
 
-            # Process remaining pages
             if batch_pages:
                 batch_pdf = temp_path / f"batch_{batch_num:04d}.pdf"
                 await asyncio.to_thread(
@@ -246,44 +292,49 @@ class StreamingPdfExporter(StreamingExporter):
                 for p in batch_pages:
                     p.release_content()
 
-            # Merge all batch PDFs into final output
-            if progress_callback:
-                progress_callback(
-                    pages_processed, total_pages, "Merging PDF batches..."
-                )
+            # Copy temp PDFs out of the TemporaryDirectory before it is cleaned up
+            saved: list[Path] = []
+            parent = temp_path.parent
+            for pdf in temp_pdfs:
+                dest = parent / pdf.name
+                shutil.copy(pdf, dest)
+                saved.append(dest)
 
-            if len(temp_pdfs) == 1:
-                # Only one batch, just copy it
-                await asyncio.to_thread(shutil.copy, temp_pdfs[0], output_file)
-            elif len(temp_pdfs) > 1:
-                # Multiple batches, need to merge
-                self._merge_pdfs(temp_pdfs, output_file)
-            else:
-                # No pages - create empty PDF
-                self._create_empty_pdf(output_file)
+        return pages_processed, saved
 
-        # Report completion
+    async def _finalize_pdf(
+        self,
+        temp_pdfs: list[Path],
+        output_file: Path,
+        pages_processed: int,
+        total_pages: int,
+        progress_callback: ProgressCallback | None,
+    ) -> None:
+        """Merge batch PDFs into the final output file and report completion.
+
+        Args:
+            temp_pdfs: Ordered list of intermediate batch PDF paths.
+            output_file: Destination path for the merged PDF.
+            pages_processed: Number of pages processed (for progress reporting).
+            total_pages: Total page count (for progress reporting).
+            progress_callback: Optional callback for progress updates.
+        """
+        if progress_callback:
+            progress_callback(pages_processed, total_pages, "Merging PDF batches...")
+
+        if len(temp_pdfs) == 1:
+            await asyncio.to_thread(shutil.copy, temp_pdfs[0], output_file)
+        elif len(temp_pdfs) > 1:
+            self._merge_pdfs(temp_pdfs, output_file)
+        else:
+            self._create_empty_pdf(output_file)
+
         if progress_callback:
             progress_callback(
                 pages_processed,
                 total_pages,
                 f"PDF export complete ({pages_processed} pages)",
             )
-
-        duration_ms = int((time.monotonic() - start_time) * 1000)
-        logger.info(
-            "Streaming PDF export complete: %d pages in %d batches, %dms",
-            pages_processed,
-            len(temp_pdfs),
-            duration_ms,
-        )
-
-        return ExportResult(
-            pages_exported=pages_processed,
-            output_path=output_file,
-            duration_ms=duration_ms,
-            errors=errors,
-        )
 
     async def export_separate(
         self, progress_callback: ProgressCallback | None = None
