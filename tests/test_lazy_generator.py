@@ -19,6 +19,7 @@ from local_deepwiki.generators.lazy_generator import (
     get_active_generators,
     get_lazy_generator,
 )
+from local_deepwiki.generators.lazy_resources import LazyResourceManager
 from local_deepwiki.models import WikiPage
 
 
@@ -49,14 +50,8 @@ def _make_generator(wiki_path: Path) -> LazyPageGenerator:
     gen = LazyPageGenerator.__new__(LazyPageGenerator)
     gen._wiki_path = wiki_path
     gen._config = config
-    gen._repo_path = None
-    gen._vector_store = None
-    gen._entity_registry = None
-    gen._cross_linker = None
-    gen._index_status = None
-    gen._wiki_to_file = None
+    gen._resources = LazyResourceManager(wiki_path, config)
     gen._auxiliary_cache = None
-    gen._significant_paths = None
     gen._in_flight = {}
     gen._prefetch = None
     return gen
@@ -109,7 +104,9 @@ class TestLazyPageGenerator:
             generated_at=time.time(),
         )
         gen._generate_page = AsyncMock(return_value=test_page)
-        gen._get_cross_linker = AsyncMock(return_value=MagicMock(add_links=lambda p: p))
+        gen._resources.get_cross_linker = AsyncMock(
+            return_value=MagicMock(add_links=lambda p: p)
+        )
 
         content = await gen.get_page("index.md")
 
@@ -137,7 +134,9 @@ class TestLazyPageGenerator:
             )
 
         gen._generate_page = slow_generate
-        gen._get_cross_linker = AsyncMock(return_value=MagicMock(add_links=lambda p: p))
+        gen._resources.get_cross_linker = AsyncMock(
+            return_value=MagicMock(add_links=lambda p: p)
+        )
 
         results = await asyncio.gather(
             gen.get_page("index.md"),
@@ -190,7 +189,9 @@ class TestLazyPageGenerator:
             generated_at=time.time(),
         )
         gen._generate_page = AsyncMock(return_value=test_page)
-        gen._get_cross_linker = AsyncMock(return_value=MagicMock(add_links=lambda p: p))
+        gen._resources.get_cross_linker = AsyncMock(
+            return_value=MagicMock(add_links=lambda p: p)
+        )
 
         await gen.warm_page("architecture.md")
 
@@ -244,8 +245,8 @@ class TestGenerateModule:
         )
         mock_gen.return_value = mock_page
 
-        gen._get_llm = MagicMock(return_value=MagicMock())
-        gen._get_system_prompt = MagicMock(return_value="system prompt")
+        gen._resources.get_llm = MagicMock(return_value=MagicMock())
+        gen._resources.get_system_prompt = MagicMock(return_value="system prompt")
 
         vs = MagicMock()
         page = await gen._generate_module("modules/src.md", vs)
