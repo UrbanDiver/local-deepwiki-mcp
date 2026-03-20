@@ -378,9 +378,9 @@ async def generate_auxiliary_pages(
     index_status: IndexStatus,
     progress_callback: ProgressCallback | None,
 ) -> None:
-    """Generate auxiliary pages: inheritance, glossary, coverage, dependency graph.
+    """Generate auxiliary pages: inheritance, glossary, coverage, dependency graph, health.
 
-    All four pages are generated concurrently with ``asyncio.gather``
+    All pages are generated concurrently with ``asyncio.gather``
     since they are independent of each other.  Uses structural
     fingerprinting so content-only changes skip these pages.
 
@@ -417,6 +417,7 @@ async def generate_auxiliary_pages(
         ("glossary.md", "Glossary"),
         ("coverage.md", "Documentation Coverage"),
         ("dependency-graph.md", "Dependency Graph"),
+        ("health.md", "Architecture Health"),
     ]
 
     if await _try_load_cached_auxiliary_pages(
@@ -439,11 +440,35 @@ async def generate_auxiliary_pages(
             ctx.warnings.append(f"Dependency graph generation failed: {e}")
             return None
 
+    async def _safe_health_page() -> str | None:
+        """Generate architecture health page (sync analysis run in executor)."""
+        from pathlib import Path as _Path
+
+        from local_deepwiki.generators.analysis.architecture_health import (
+            analyze_architecture_health,
+        )
+        from local_deepwiki.generators.analysis.health_page import (
+            generate_health_page,
+        )
+
+        try:
+            repo_path = _Path(index_status.repo_path)
+            project_name = repo_path.name
+            health_data = await asyncio.get_event_loop().run_in_executor(
+                None, analyze_architecture_health, repo_path, project_name
+            )
+            return generate_health_page(health_data)
+        except Exception as e:  # noqa: BLE001 — generator isolation: auxiliary page failure must not abort wiki build
+            logger.debug("Failed to generate architecture health page: %s", e)
+            ctx.warnings.append(f"Architecture health page generation failed: {e}")
+            return None
+
     contents = await asyncio.gather(
         _generate_inheritance_page(index_status, generator.vector_store),
         _generate_glossary_page(index_status, generator.vector_store),
         _generate_coverage_page(index_status, generator.vector_store),
         _safe_dependency_graph(),
+        _safe_health_page(),
     )
 
     for (page_path, title), content in zip(aux_pages, contents):
