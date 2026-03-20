@@ -24,6 +24,7 @@ from .schema import (
     VALID_LANGUAGES,
     SearchFeedback,
     SearchProfile,
+    SearchProfileConfig,
     SearchResultPage,
 )
 import local_deepwiki.core.vectorstore.search_pipeline as search_pipeline
@@ -224,6 +225,77 @@ class SearchEngine:
         return resolved, SEARCH_PROFILES[resolved]
 
     # -----------------------------------------------------------------
+    # Private helpers extracted from search_from_request
+    # -----------------------------------------------------------------
+
+    def _resolve_search_config(
+        self, request: SearchRequest
+    ) -> tuple[str, SearchProfile, SearchProfileConfig, float]:
+        """Resolve effective search mode, profile, and min similarity from request."""
+        effective_mode = resolve_search_mode(
+            request.search_mode, self._default_search_mode
+        )
+        resolved_profile, profile_config = self.resolve_search_profile(request.profile)
+        effective_min_similarity = (
+            request.min_similarity
+            if request.min_similarity is not None
+            else profile_config.min_similarity
+        )
+        return (
+            effective_mode,
+            resolved_profile,
+            profile_config,
+            effective_min_similarity,
+        )
+
+    def _compute_fetch_limit(
+        self,
+        request: SearchRequest,
+        profile_config: SearchProfileConfig,
+    ) -> int:
+        """Compute the number of candidates to fetch before post-processing."""
+        base_multiplier = profile_config.fetch_multiplier
+        needs_extra = bool(request.path_pattern or request.use_fuzzy)
+        if needs_extra:
+            base_multiplier = max(base_multiplier, 3.0)
+        if self._adaptive_search_enabled:
+            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(
+                request.query, request.limit
+            )
+            fetch_limit = max(int(request.limit * base_multiplier), adaptive_depth)
+        else:
+            fetch_limit = int(request.limit * base_multiplier)
+        return min(fetch_limit, profile_config.rerank_candidates)
+
+    def _try_cache_lookup(
+        self,
+        request: SearchRequest,
+        query_embedding: list[float],
+        resolved_profile: SearchProfile,
+        effective_min_similarity: float,
+        effective_mode: str,
+    ) -> list[SearchResult] | None:
+        """Check the search cache for a matching result. Returns None on miss."""
+        cache_filters = build_cache_filters(
+            request.limit,
+            resolved_profile,
+            effective_min_similarity,
+            effective_mode,
+            request.language,
+            request.chunk_type,
+        )
+        use_cache = (
+            not request.use_fuzzy
+            and not request.path_pattern
+            and effective_mode != "keyword"
+        )
+        if use_cache:
+            cached = self._get_search_cache().get(query_embedding, cache_filters)
+            if cached is not None:
+                return cached
+        return None
+
+    # -----------------------------------------------------------------
     # search_from_request() -- SearchRequest-based entry point
     # -----------------------------------------------------------------
 
@@ -252,14 +324,8 @@ class SearchEngine:
             return []
 
         # Resolve configuration
-        effective_mode = resolve_search_mode(
-            request.search_mode, self._default_search_mode
-        )
-        resolved_profile, profile_config = self.resolve_search_profile(request.profile)
-        effective_min_similarity = (
-            request.min_similarity
-            if request.min_similarity is not None
-            else profile_config.min_similarity
+        effective_mode, resolved_profile, profile_config, effective_min_similarity = (
+            self._resolve_search_config(request)
         )
 
         logger.debug(
@@ -274,43 +340,28 @@ class SearchEngine:
         filters = build_search_filters(request.language, request.chunk_type)
 
         # Compute embedding (needed for vector/hybrid mode and cache)
-        needs_embedding = effective_mode != "keyword"
         query_embedding: list[float] = []
-        if needs_embedding:
+        if effective_mode != "keyword":
             query_embedding = (await self._embedding_provider.embed([request.query]))[0]
 
-        # Check cache
-        cache_filters = build_cache_filters(
-            request.limit,
+        # Check cache (returns None on miss)
+        cached_results = self._try_cache_lookup(
+            request,
+            query_embedding,
             resolved_profile,
             effective_min_similarity,
             effective_mode,
-            request.language,
-            request.chunk_type,
         )
+        if cached_results is not None:
+            return cached_results
         use_cache = (
-            not request.use_fuzzy and not request.path_pattern and needs_embedding
+            not request.use_fuzzy
+            and not request.path_pattern
+            and effective_mode != "keyword"
         )
-        if use_cache:
-            cached_results = self._get_search_cache().get(
-                query_embedding, cache_filters
-            )
-            if cached_results is not None:
-                return cached_results
 
-        # Compute fetch limit (inlined from removed compute_fetch_limit method)
-        base_multiplier = profile_config.fetch_multiplier
-        needs_extra = bool(request.path_pattern or request.use_fuzzy)
-        if needs_extra:
-            base_multiplier = max(base_multiplier, 3.0)
-        if self._adaptive_search_enabled:
-            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(
-                request.query, request.limit
-            )
-            fetch_limit = max(int(request.limit * base_multiplier), adaptive_depth)
-        else:
-            fetch_limit = int(request.limit * base_multiplier)
-        fetch_limit = min(fetch_limit, profile_config.rerank_candidates)
+        # Compute fetch limit
+        fetch_limit = self._compute_fetch_limit(request, profile_config)
 
         # Execute search pipeline based on mode
         search_results = search_pipeline.dispatch_search(
@@ -356,8 +407,16 @@ class SearchEngine:
                 request.query, avg_score, len(search_results), fetch_limit
             )
         if use_cache and not auto_fuzzy_enabled:
+            store_filters = build_cache_filters(
+                request.limit,
+                resolved_profile,
+                effective_min_similarity,
+                effective_mode,
+                request.language,
+                request.chunk_type,
+            )
             self._get_search_cache().set(
-                request.query, query_embedding, search_results, cache_filters
+                request.query, query_embedding, search_results, store_filters
             )
 
         return search_results
@@ -471,11 +530,8 @@ class SearchEngine:
                 has_more=False,
             )
 
-        resolved_profile, profile_config = self.resolve_search_profile(request.profile)
-        effective_min_similarity = (
-            request.min_similarity
-            if request.min_similarity is not None
-            else profile_config.min_similarity
+        _, resolved_profile, profile_config, effective_min_similarity = (
+            self._resolve_search_config(request)
         )
 
         logger.debug(
