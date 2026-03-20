@@ -153,14 +153,14 @@ async def generate_module_pages(
     # Late import so test patches at generators.wiki.generator work
     from local_deepwiki.generators.wiki import generator as _wiki_gen
 
-    module_pages, gen_count, skip_count = await _wiki_gen.generate_module_docs(
-        index_status=index_status,
-        vector_store=generator.vector_store,
-        llm=generator.llm,
+    pipeline_ctx = generator._build_pipeline_context(
+        index_status,
         system_prompt=generator._page_prompts.get("module", generator._system_prompt),
-        status_manager=generator.status_manager,
         full_rebuild=ctx.full_rebuild,
-        max_chunk_content_chars=generator.config.wiki.max_chunk_content_chars,
+    )
+
+    module_pages, gen_count, skip_count = await _wiki_gen.generate_module_docs(
+        ctx=pipeline_ctx,
         semaphore=semaphore,
     )
     ctx.pages_generated += gen_count
@@ -244,6 +244,11 @@ async def generate_codemap_pages(
         "Repository path must be set before generating codemaps"
     )
 
+    pipeline_ctx = generator._build_pipeline_context(
+        index_status,
+        full_rebuild=ctx.full_rebuild,
+    )
+
     (
         codemap_pages,
         ctx.pages_generated,
@@ -252,13 +257,7 @@ async def generate_codemap_pages(
         pages=ctx.pages,
         pages_generated=ctx.pages_generated,
         pages_skipped=ctx.pages_skipped,
-        full_rebuild=ctx.full_rebuild,
-        repo_path=generator._repo_path,
-        wiki_path=generator.wiki_path,
-        wiki_config=generator.config.wiki,
-        vector_store=generator.vector_store,
-        llm=generator.llm,
-        status_manager=generator.status_manager,
+        ctx=pipeline_ctx,
         progress=generator._progress,
         write_callback=generator._write_page,
         progress_callback=progress_callback,
@@ -323,17 +322,21 @@ async def generate_freshness_and_finalize_phase(
     assert generator._repo_path is not None, (
         "Repository path must be set before generating wiki"
     )
+
+    pipeline_ctx = generator._build_pipeline_context(
+        index_status,
+        full_rebuild=ctx.full_rebuild,
+    )
+
     freshness_page, ctx.pages_generated = await generate_freshness_and_finalize(
         pages=ctx.pages,
         all_source_files=ctx.all_source_files,
         pages_generated=ctx.pages_generated,
         pages_skipped=ctx.pages_skipped,
-        repo_path=generator._repo_path,
         wiki_status=wiki_status,
-        index_status=index_status,
-        status_manager=generator.status_manager,
         write_callback=generator._write_page,
         progress_callback=progress_callback,
+        ctx=pipeline_ctx,
     )
     ctx.pages.append(freshness_page)
 

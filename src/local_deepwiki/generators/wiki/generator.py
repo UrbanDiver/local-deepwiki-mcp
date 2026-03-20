@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from local_deepwiki.generators.wiki.context import WikiPipelineContext
     from local_deepwiki.plugins.base import WikiGeneratorPlugin
 
 from local_deepwiki.config import Config, get_config
@@ -495,28 +496,58 @@ class WikiGenerator:
             progress_callback,
         )
 
-    async def _generate_overview(self, index_status: IndexStatus) -> WikiPage:
-        """Generate the main overview/index page with grounded facts."""
-        return await generate_overview_page(
+    def _build_pipeline_context(
+        self,
+        index_status: IndexStatus,
+        *,
+        system_prompt: str | None = None,
+        full_rebuild: bool = False,
+    ) -> "WikiPipelineContext":
+        """Build an immutable pipeline context from generator state.
+
+        Args:
+            index_status: Current repository index status.
+            system_prompt: Override system prompt (defaults to ``self._system_prompt``).
+            full_rebuild: Whether this is a full rebuild.
+
+        Returns:
+            A frozen ``WikiPipelineContext`` dataclass.
+        """
+        from local_deepwiki.generators.wiki.context import WikiPipelineContext
+
+        return WikiPipelineContext(
             index_status=index_status,
             vector_store=self.vector_store,
             llm=self.llm,
-            system_prompt=self._page_prompts.get("overview", self._system_prompt),
+            system_prompt=system_prompt or self._system_prompt,
+            repo_path=self._repo_path or Path("."),
+            wiki_path=self.wiki_path,
+            config=self.config,
+            wiki_config=self.config.wiki,
             manifest=self._manifest,
-            repo_path=self._repo_path,
+            status_manager=self.status_manager,
+            full_rebuild=full_rebuild,
             max_chunk_content_chars=self.config.wiki.max_chunk_content_chars,
+        )
+
+    async def _generate_overview(self, index_status: IndexStatus) -> WikiPage:
+        """Generate the main overview/index page with grounded facts."""
+        return await generate_overview_page(
+            ctx=self._build_pipeline_context(
+                index_status,
+                system_prompt=self._page_prompts.get("overview", self._system_prompt),
+            ),
         )
 
     async def _generate_architecture(self, index_status: IndexStatus) -> WikiPage:
         """Generate architecture documentation with diagrams and grounded facts."""
         return await generate_architecture_page(
-            index_status=index_status,
-            vector_store=self.vector_store,
-            llm=self.llm,
-            system_prompt=self._page_prompts.get("architecture", self._system_prompt),
-            manifest=self._manifest,
-            repo_path=self._repo_path,
-            max_chunk_content_chars=self.config.wiki.max_chunk_content_chars,
+            ctx=self._build_pipeline_context(
+                index_status,
+                system_prompt=self._page_prompts.get(
+                    "architecture", self._system_prompt
+                ),
+            ),
         )
 
     async def _generate_dependencies(
@@ -524,11 +555,7 @@ class WikiGenerator:
     ) -> tuple[WikiPage, list[str]]:
         """Generate dependencies documentation with grounded facts from manifest."""
         return await generate_dependencies_page(
-            index_status=index_status,
-            vector_store=self.vector_store,
-            llm=self.llm,
-            system_prompt=self._system_prompt,
-            manifest=self._manifest,
+            ctx=self._build_pipeline_context(index_status),
             import_search_limit=self.config.wiki.import_search_limit,
         )
 

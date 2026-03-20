@@ -15,6 +15,7 @@ from local_deepwiki.generators.crosslinks import add_cross_links
 from local_deepwiki.generators.search import write_full_search_index
 from local_deepwiki.generators.see_also import add_see_also_sections
 from local_deepwiki.generators.source_refs import add_source_refs_sections
+from local_deepwiki.generators.wiki.context import WikiPipelineContext
 from local_deepwiki.generators.wiki.term_validator import apply_term_corrections
 from local_deepwiki.generators.analysis.stale_detection import (
     generate_stale_report_page,
@@ -45,18 +46,22 @@ async def generate_codemap_pages_phase(
     pages: list[WikiPage],
     pages_generated: int,
     pages_skipped: int,
-    full_rebuild: bool,
-    repo_path: Path,
-    wiki_path: Path,
-    wiki_config: WikiConfig,
-    vector_store: VectorStore,
-    llm: LLMProvider,
-    status_manager: WikiStatusManager,
-    progress: GenerationProgress,
-    write_callback: Callable[[WikiPage], Awaitable[None]],
-    progress_callback: ProgressCallback | None,
+    full_rebuild: bool | None = None,
+    repo_path: "Path | None" = None,
+    wiki_path: "Path | None" = None,
+    wiki_config: "WikiConfig | None" = None,
+    vector_store: "VectorStore | None" = None,
+    llm: "LLMProvider | None" = None,
+    status_manager: "WikiStatusManager | None" = None,
+    progress: "GenerationProgress",
+    write_callback: "Callable[[WikiPage], Awaitable[None]]",
+    progress_callback: "ProgressCallback | None",
+    ctx: WikiPipelineContext | None = None,
 ) -> tuple[list[WikiPage], int, int]:
     """Generate codemap pages for auto-discovered entry points.
+
+    Accepts either a ``WikiPipelineContext`` via ``ctx`` or individual
+    parameters for backward compatibility.
 
     Args:
         pages: Current list of wiki pages (will not be mutated).
@@ -72,10 +77,21 @@ async def generate_codemap_pages_phase(
         progress: Generation progress tracker.
         write_callback: Async callback to write pages to disk.
         progress_callback: Optional progress callback.
+        ctx: Immutable pipeline context bundling shared parameters.
 
     Returns:
         Tuple of (new_codemap_pages, new_pages_generated, new_pages_skipped).
     """
+    # Resolve from context when provided
+    if ctx is not None:
+        full_rebuild = full_rebuild if full_rebuild is not None else ctx.full_rebuild
+        repo_path = repo_path or ctx.repo_path
+        wiki_path = wiki_path or ctx.wiki_path
+        wiki_config = wiki_config or ctx.wiki_config
+        vector_store = vector_store or ctx.vector_store
+        llm = llm or ctx.llm
+        status_manager = status_manager or ctx.status_manager
+
     codemap_enabled = getattr(wiki_config, "codemap_enabled", None)
     if not isinstance(codemap_enabled, bool) or not codemap_enabled:
         return [], pages_generated, pages_skipped
@@ -249,14 +265,18 @@ async def generate_freshness_and_finalize(
     all_source_files: list[str],
     pages_generated: int,
     pages_skipped: int,
-    repo_path: Path,
+    repo_path: "Path | None" = None,
     wiki_status: WikiGenerationStatus,
-    index_status: IndexStatus,
-    status_manager: WikiStatusManager,
-    write_callback: Callable[[WikiPage], Awaitable[None]],
-    progress_callback: ProgressCallback | None,
+    index_status: "IndexStatus | None" = None,
+    status_manager: "WikiStatusManager | None" = None,
+    write_callback: "Callable[[WikiPage], Awaitable[None]]",
+    progress_callback: "ProgressCallback | None",
+    ctx: WikiPipelineContext | None = None,
 ) -> tuple[WikiPage, int]:
     """Generate freshness report and finalize wiki status.
+
+    Accepts either a ``WikiPipelineContext`` via ``ctx`` or individual
+    parameters for backward compatibility.
 
     Args:
         pages: Current list of wiki pages (will not be mutated).
@@ -269,10 +289,20 @@ async def generate_freshness_and_finalize(
         status_manager: Wiki status manager.
         write_callback: Async callback to write pages to disk.
         progress_callback: Optional progress callback.
+        ctx: Immutable pipeline context bundling shared parameters.
 
     Returns:
         Tuple of (freshness_page, updated_pages_generated).
     """
+    # Resolve from context when provided
+    if ctx is not None:
+        repo_path = repo_path or ctx.repo_path
+        index_status = index_status or ctx.index_status
+        status_manager = status_manager or ctx.status_manager
+
+    assert repo_path is not None, "repo_path is required"
+    assert index_status is not None, "index_status is required"
+    assert status_manager is not None, "status_manager is required"
     total_steps = 14
 
     freshness_page = generate_stale_report_page(
