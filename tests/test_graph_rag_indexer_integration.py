@@ -55,7 +55,9 @@ def _make_config(
     graph_rag: GraphRAGConfig | None = None,
 ) -> Config:
     """Create a test Config with graph_rag settings."""
-    chunking = ChunkingConfig().model_copy(update={"batch_size": 50, "parallel_workers": 1})
+    chunking = ChunkingConfig().model_copy(
+        update={"batch_size": 50, "parallel_workers": 1}
+    )
     parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
     updates: dict = {"chunking": chunking, "parsing": parsing}
     if graph_rag is not None:
@@ -115,7 +117,9 @@ class TestGraphDisabledByDefault:
         assert indexer._graph_extractor is None
         assert indexer._graph_enabled is False
 
-    async def test_graph_store_not_created_when_extract_during_index_false(self, repo_path: Path):
+    async def test_graph_store_not_created_when_extract_during_index_false(
+        self, repo_path: Path
+    ):
         config = _make_config(
             graph_rag=_make_graph_rag_config(
                 enabled=True,
@@ -130,7 +134,9 @@ class TestGraphDisabledByDefault:
         assert indexer._graph_extractor is None
         assert indexer._graph_enabled is False
 
-    async def test_no_graph_events_when_disabled(self, repo_path: Path, simple_python_source: str):
+    async def test_no_graph_events_when_disabled(
+        self, repo_path: Path, simple_python_source: str
+    ):
         _write_python_file(repo_path, "main.py", simple_python_source)
 
         config = _make_config(graph_rag=_make_graph_rag_config(enabled=False))
@@ -201,7 +207,9 @@ class TestGraphEnabledInit:
 class TestGraphExtractionDuringIndex:
     """Verify graph extraction runs during indexing when enabled."""
 
-    async def test_graph_events_emitted(self, repo_path: Path, simple_python_source: str):
+    async def test_graph_events_emitted(
+        self, repo_path: Path, simple_python_source: str
+    ):
         _write_python_file(repo_path, "main.py", simple_python_source)
 
         config = _make_config(graph_rag=_make_graph_rag_config(enabled=True))
@@ -233,8 +241,12 @@ class TestGraphExtractionDuringIndex:
 
             # Mock graph store to capture calls
             mock_graph_store = MagicMock()
-            mock_graph_store.add_entities = AsyncMock(side_effect=lambda entities: len(entities))
-            mock_graph_store.add_relationships = AsyncMock(side_effect=lambda rels: len(rels))
+            mock_graph_store.add_entities = AsyncMock(
+                side_effect=lambda entities: len(entities)
+            )
+            mock_graph_store.add_relationships = AsyncMock(
+                side_effect=lambda rels: len(rels)
+            )
             mock_graph_store.delete_by_file = AsyncMock()
             indexer.graph_store = mock_graph_store
 
@@ -283,7 +295,9 @@ class TestGraphExtractionDuringIndex:
 
             mock_graph_store = MagicMock()
             mock_graph_store.add_entities = AsyncMock(side_effect=capture_entities)
-            mock_graph_store.add_relationships = AsyncMock(side_effect=capture_relationships)
+            mock_graph_store.add_relationships = AsyncMock(
+                side_effect=capture_relationships
+            )
             mock_graph_store.delete_by_file = AsyncMock()
             indexer.graph_store = mock_graph_store
 
@@ -327,8 +341,12 @@ class TestGraphExtractionDuringIndex:
             indexer.vector_store.delete_chunks_by_files = AsyncMock()
 
             mock_graph_store = MagicMock()
-            mock_graph_store.add_entities = AsyncMock(side_effect=lambda entities: len(entities))
-            mock_graph_store.add_relationships = AsyncMock(side_effect=lambda rels: len(rels))
+            mock_graph_store.add_entities = AsyncMock(
+                side_effect=lambda entities: len(entities)
+            )
+            mock_graph_store.add_relationships = AsyncMock(
+                side_effect=lambda rels: len(rels)
+            )
             mock_graph_store.delete_by_file = AsyncMock()
             indexer.graph_store = mock_graph_store
 
@@ -369,8 +387,12 @@ class TestGraphExtractionDuringIndex:
             indexer.vector_store.delete_chunks_by_files = AsyncMock()
 
             mock_graph_store = MagicMock()
-            mock_graph_store.add_entities = AsyncMock(side_effect=lambda entities: len(entities))
-            mock_graph_store.add_relationships = AsyncMock(side_effect=lambda rels: len(rels))
+            mock_graph_store.add_entities = AsyncMock(
+                side_effect=lambda entities: len(entities)
+            )
+            mock_graph_store.add_relationships = AsyncMock(
+                side_effect=lambda rels: len(rels)
+            )
             mock_graph_store.delete_by_file = AsyncMock()
             indexer.graph_store = mock_graph_store
 
@@ -493,8 +515,12 @@ class TestGraphIncrementalReindex:
             indexer.vector_store.delete_chunks_by_files = AsyncMock()
 
             mock_graph_store = MagicMock()
-            mock_graph_store.add_entities = AsyncMock(side_effect=lambda entities: len(entities))
-            mock_graph_store.add_relationships = AsyncMock(side_effect=lambda rels: len(rels))
+            mock_graph_store.add_entities = AsyncMock(
+                side_effect=lambda entities: len(entities)
+            )
+            mock_graph_store.add_relationships = AsyncMock(
+                side_effect=lambda rels: len(rels)
+            )
             mock_graph_store.delete_by_file = AsyncMock(side_effect=capture_delete)
             indexer.graph_store = mock_graph_store
 
@@ -582,8 +608,12 @@ class TestGraphIncrementalReindex:
             indexer.vector_store = MagicMock()
 
             mock_graph_store = MagicMock()
-            mock_graph_store.add_entities = AsyncMock(side_effect=lambda entities: len(entities))
-            mock_graph_store.add_relationships = AsyncMock(side_effect=lambda rels: len(rels))
+            mock_graph_store.add_entities = AsyncMock(
+                side_effect=lambda entities: len(entities)
+            )
+            mock_graph_store.add_relationships = AsyncMock(
+                side_effect=lambda rels: len(rels)
+            )
             mock_graph_store.delete_by_file = AsyncMock()
             indexer.graph_store = mock_graph_store
 
@@ -617,7 +647,9 @@ class TestGraphIncrementalReindex:
 class TestExtractGraphForFile:
     """Test the per-file graph extraction helper."""
 
-    async def test_returns_file_graph_data(self, repo_path: Path, simple_python_source: str):
+    async def test_returns_file_graph_data(
+        self, repo_path: Path, simple_python_source: str
+    ):
         file_path = _write_python_file(repo_path, "main.py", simple_python_source)
 
         config = _make_config(graph_rag=_make_graph_rag_config(enabled=True))
@@ -626,7 +658,7 @@ class TestExtractGraphForFile:
             mock_embed.return_value = MagicMock()
             indexer = RepositoryIndexer(repo_path, config=config)
 
-        result = indexer._extract_graph_for_file(file_path, [])
+        result = indexer._graph_helper.extract_graph_for_file(file_path, [])
 
         assert result is not None
         assert isinstance(result, FileGraphData)
@@ -647,7 +679,7 @@ class TestExtractGraphForFile:
             mock_embed.return_value = MagicMock()
             indexer = RepositoryIndexer(repo_path, config=config)
 
-        result = indexer._extract_graph_for_file(txt_file, [])
+        result = indexer._graph_helper.extract_graph_for_file(txt_file, [])
         assert result is None
 
     async def test_links_entities_to_chunks(self, repo_path: Path):
@@ -672,7 +704,7 @@ class TestExtractGraphForFile:
             end_line=2,
         )
 
-        result = indexer._extract_graph_for_file(file_path, [chunk])
+        result = indexer._graph_helper.extract_graph_for_file(file_path, [chunk])
 
         assert result is not None
         func_entities = [e for e in result.entities if e.name == "my_func"]
@@ -689,7 +721,7 @@ class TestExtractGraphForFile:
             mock_embed.return_value = MagicMock()
             indexer = RepositoryIndexer(repo_path, config=config)
 
-        result = indexer._extract_graph_for_file(file_path, [])
+        result = indexer._graph_helper.extract_graph_for_file(file_path, [])
         assert result is None
 
     async def test_handles_extraction_error_gracefully(self, repo_path: Path):
@@ -703,10 +735,11 @@ class TestExtractGraphForFile:
             indexer = RepositoryIndexer(repo_path, config=config)
 
         # Make the extractor raise an error
-        indexer._graph_extractor = MagicMock()
-        indexer._graph_extractor.extract_from_ast.side_effect = RuntimeError("Parse error")
+        mock_extractor = MagicMock()
+        mock_extractor.extract_from_ast.side_effect = RuntimeError("Parse error")
+        indexer._graph_helper._graph_extractor = mock_extractor
 
-        result = indexer._extract_graph_for_file(file_path, [])
+        result = indexer._graph_helper.extract_graph_for_file(file_path, [])
         assert result is None
 
 
@@ -819,7 +852,9 @@ class TestGraphExtractionMultipleFiles:
 
             mock_graph_store = MagicMock()
             mock_graph_store.add_entities = AsyncMock(side_effect=capture_entities)
-            mock_graph_store.add_relationships = AsyncMock(side_effect=lambda rels: len(rels))
+            mock_graph_store.add_relationships = AsyncMock(
+                side_effect=lambda rels: len(rels)
+            )
             mock_graph_store.delete_by_file = AsyncMock()
             indexer.graph_store = mock_graph_store
 
@@ -865,9 +900,13 @@ class TestDeleteByFileFailure:
 
             mock_graph_store = MagicMock()
             mock_graph_store.add_entities = AsyncMock(side_effect=capture_entities)
-            mock_graph_store.add_relationships = AsyncMock(side_effect=lambda rels: len(rels))
+            mock_graph_store.add_relationships = AsyncMock(
+                side_effect=lambda rels: len(rels)
+            )
             # delete_by_file will raise but should not block extraction
-            mock_graph_store.delete_by_file = AsyncMock(side_effect=RuntimeError("Delete failed"))
+            mock_graph_store.delete_by_file = AsyncMock(
+                side_effect=RuntimeError("Delete failed")
+            )
             indexer.graph_store = mock_graph_store
 
             from conftest import make_file_info

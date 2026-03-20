@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.chunker import CodeChunker
 from local_deepwiki.core.graph_rag.extractor import GraphRelationshipExtractor
-from local_deepwiki.core.graph_rag.models import FileGraphData
 from local_deepwiki.core.graph_rag.store import KnowledgeGraphStore
 from local_deepwiki.core.index_manager import (
     CURRENT_SCHEMA_VERSION,
@@ -223,24 +222,6 @@ class RepositoryIndexer:
         """Parse and chunk a single file. Delegates to FileParsingPipeline."""
         return self._create_parsing_pipeline().parse_single_file(file_path)
 
-    # -- Status tracking delegation (backward-compat wrappers) ----------------
-
-    def _load_previous_status(
-        self, full_rebuild: bool
-    ) -> tuple[IndexStatus | None, dict[str, FileInfo], bool]:
-        """Delegate to IndexStatusTracker.load_previous_status."""
-        return self._status_tracker.load_previous_status(full_rebuild)
-
-    def _collect_files_to_process(
-        self,
-        prev_files_by_path: dict[str, FileInfo],
-        progress_callback: ProgressCallback | None,
-    ) -> tuple[list[Path], list[FileInfo], list[str]]:
-        """Delegate to IndexStatusTracker.collect_files_to_process."""
-        return self._status_tracker.collect_files_to_process(
-            prev_files_by_path, progress_callback
-        )
-
     async def _delete_old_chunks_for_modified_files(
         self,
         files_to_process: list[Path],
@@ -300,8 +281,6 @@ class RepositoryIndexer:
             deleted_file_paths,
         )
 
-    # -- Graph extraction delegation (backward-compat wrappers) ---------------
-
     def _sync_graph_helper(self) -> None:
         """Sync mutable graph state to the composed GraphExtractor.
 
@@ -314,57 +293,6 @@ class RepositoryIndexer:
         helper._graph_enabled = self._graph_enabled
         helper._graph_extractor = self._graph_extractor
 
-    def _extract_graph_for_file(
-        self,
-        file_path: Path,
-        chunks: list[CodeChunk],
-    ) -> FileGraphData | None:
-        """Delegate to GraphExtractor.extract_graph_for_file."""
-        self._sync_graph_helper()
-        return self._graph_helper.extract_graph_for_file(file_path, chunks)
-
-    async def _emit_graph_start(self, files_to_process: list[Path]) -> None:
-        """Delegate to GraphExtractor.emit_graph_start."""
-        self._sync_graph_helper()
-        await self._graph_helper.emit_graph_start(files_to_process)
-
-    async def _delete_stale_graph_data(
-        self,
-        files_to_process: list[Path],
-        prev_files_by_path: dict[str, FileInfo],
-        deleted_file_paths: list[str],
-        full_rebuild: bool,
-    ) -> None:
-        """Delegate to GraphExtractor.delete_stale_graph_data."""
-        self._sync_graph_helper()
-        await self._graph_helper.delete_stale_graph_data(
-            files_to_process, prev_files_by_path, deleted_file_paths, full_rebuild
-        )
-
-    async def _extract_and_store_graph_data(
-        self,
-        files_to_process: list[Path],
-        file_chunks: dict[str, list[CodeChunk]],
-        progress_callback: ProgressCallback | None,
-    ) -> tuple[int, int]:
-        """Delegate to GraphExtractor.extract_and_store_graph_data."""
-        self._sync_graph_helper()
-        return await self._graph_helper.extract_and_store_graph_data(
-            files_to_process,
-            file_chunks,
-            progress_callback,
-            extract_fn=self._extract_graph_for_file,
-        )
-
-    async def _emit_graph_complete(
-        self, total_entities: int, total_relationships: int
-    ) -> None:
-        """Delegate to GraphExtractor.emit_graph_complete."""
-        self._sync_graph_helper()
-        await self._graph_helper.emit_graph_complete(
-            total_entities, total_relationships
-        )
-
     async def _run_graph_extraction(
         self,
         files_to_process: list[Path],
@@ -374,31 +302,23 @@ class RepositoryIndexer:
         full_rebuild: bool,
         progress_callback: ProgressCallback | None,
     ) -> None:
-        """Orchestrate graph extraction through patchable wrapper methods.
+        """Orchestrate graph extraction via the composed GraphExtractor.
 
-        This method calls the individual wrapper methods (``_emit_graph_start``,
-        ``_delete_stale_graph_data``, etc.) rather than delegating to the
-        helper's orchestrator, so that tests can patch individual steps.
+        Syncs mutable state once, then delegates the full pipeline to
+        ``GraphExtractor.run_graph_extraction``.
         """
         if not self._graph_enabled or self.graph_store is None:
             return
 
-        await self._emit_graph_start(files_to_process)
-
-        if progress_callback:
-            progress_callback(
-                f"Extracting graph entities from {len(files_to_process)} files...",
-                0,
-                len(files_to_process),
-            )
-
-        await self._delete_stale_graph_data(
-            files_to_process, prev_files_by_path, deleted_file_paths, full_rebuild
+        self._sync_graph_helper()
+        await self._graph_helper.run_graph_extraction(
+            files_to_process=files_to_process,
+            file_chunks=file_chunks,
+            prev_files_by_path=prev_files_by_path,
+            deleted_file_paths=deleted_file_paths,
+            full_rebuild=full_rebuild,
+            progress_callback=progress_callback,
         )
-        total_entities, total_relationships = await self._extract_and_store_graph_data(
-            files_to_process, file_chunks, progress_callback
-        )
-        await self._emit_graph_complete(total_entities, total_relationships)
 
     async def _parse_files_parallel(
         self,
@@ -439,21 +359,6 @@ class RepositoryIndexer:
         )
         return processed_files, total_chunks, file_chunks
 
-    def _create_index_status(
-        self,
-        processed_files: list[FileInfo],
-        files_unchanged: list[FileInfo],
-        total_chunks_processed: int,
-    ) -> IndexStatus:
-        """Delegate to IndexStatusTracker.create_index_status."""
-        return self._status_tracker.create_index_status(
-            processed_files, files_unchanged, total_chunks_processed
-        )
-
-    def _save_index_status(self, status: IndexStatus) -> None:
-        """Delegate to IndexStatusTracker.save_index_status."""
-        self._status_tracker.save_index_status(status)
-
     async def index(
         self,
         full_rebuild: bool = False,
@@ -492,12 +397,14 @@ class RepositoryIndexer:
 
         # Phase 1: Load previous status for incremental updates
         previous_status, prev_files_by_path, full_rebuild = await asyncio.to_thread(
-            self._load_previous_status, full_rebuild
+            self._status_tracker.load_previous_status, full_rebuild
         )
 
         # Phase 2: Collect files to process (and detect deleted files)
         files_to_process, files_unchanged, deleted_file_paths = (
-            self._collect_files_to_process(prev_files_by_path, progress_callback)
+            self._status_tracker.collect_files_to_process(
+                prev_files_by_path, progress_callback
+            )
         )
 
         # Phase 3: Delete old chunks for modified and deleted files (incremental only)
@@ -538,10 +445,10 @@ class RepositoryIndexer:
                 )
 
         # Phase 6: Create and save index status
-        status = self._create_index_status(
+        status = self._status_tracker.create_index_status(
             processed_files, files_unchanged, total_chunks_processed
         )
-        await asyncio.to_thread(self._save_index_status, status)
+        await asyncio.to_thread(self._status_tracker.save_index_status, status)
 
         if progress_callback:
             progress_callback("Indexing complete", 1, 1)
@@ -578,16 +485,12 @@ class RepositoryIndexer:
             languages=self.config.parsing.languages,
         )
 
-    def _load_status(self) -> tuple[IndexStatus | None, bool]:
-        """Delegate to IndexStatusTracker.load_status."""
-        return self._status_tracker.load_status()
-
-    def _save_status(self, status: IndexStatus) -> None:
-        """Delegate to IndexStatusTracker.save_status."""
-        self._status_tracker.save_status(status)
-
     def get_status(self) -> IndexStatus | None:
-        """Delegate to IndexStatusTracker.get_status."""
+        """Get the current indexing status.
+
+        Returns:
+            IndexStatus or None if not indexed.
+        """
         return self._status_tracker.get_status()
 
     async def search(

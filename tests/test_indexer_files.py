@@ -137,7 +137,7 @@ class TestLoadStatusErrors:
 
             indexer = RepositoryIndexer(repo_path, config)
 
-            status, requires_rebuild = indexer._load_status()
+            status, requires_rebuild = indexer._status_tracker.load_status()
 
             assert status is None
             assert requires_rebuild is False
@@ -160,7 +160,7 @@ class TestLoadStatusErrors:
             status_path.parent.mkdir(parents=True, exist_ok=True)
             status_path.write_text("not valid json {{{")
 
-            status, requires_rebuild = indexer._load_status()
+            status, requires_rebuild = indexer._status_tracker.load_status()
 
             assert status is None
             assert requires_rebuild is False
@@ -183,7 +183,7 @@ class TestLoadStatusErrors:
             status_path.parent.mkdir(parents=True, exist_ok=True)
             status_path.write_text(json.dumps({"not_a_valid_field": "value"}))
 
-            status, requires_rebuild = indexer._load_status()
+            status, requires_rebuild = indexer._status_tracker.load_status()
 
             assert status is None
             assert requires_rebuild is False
@@ -493,7 +493,7 @@ class TestLoadPreviousStatus:
 
             indexer = RepositoryIndexer(repo_path, config)
 
-            status, prev_files, rebuild = indexer._load_previous_status(
+            status, prev_files, rebuild = indexer._status_tracker.load_previous_status(
                 full_rebuild=True
             )
 
@@ -515,7 +515,7 @@ class TestLoadPreviousStatus:
 
             indexer = RepositoryIndexer(repo_path, config)
 
-            status, prev_files, rebuild = indexer._load_previous_status(
+            status, prev_files, rebuild = indexer._status_tracker.load_previous_status(
                 full_rebuild=False
             )
 
@@ -542,8 +542,8 @@ class TestLoadPreviousStatus:
                 "load_with_migration_info",
                 return_value=(None, True),
             ):
-                status, prev_files, rebuild = indexer._load_previous_status(
-                    full_rebuild=False
+                status, prev_files, rebuild = (
+                    indexer._status_tracker.load_previous_status(full_rebuild=False)
                 )
 
                 assert status is None
@@ -576,7 +576,7 @@ class TestCollectFilesToProcess:
             indexer = RepositoryIndexer(repo_path, config)
 
             files_to_process, files_unchanged, deleted_file_paths = (
-                indexer._collect_files_to_process({}, progress_callback)
+                indexer._status_tracker.collect_files_to_process({}, progress_callback)
             )
 
             assert any("Found source files" in msg for msg in progress_messages)
