@@ -8,28 +8,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from conftest import make_index_status
+from conftest import make_index_status, make_wiki_ctx
 from local_deepwiki.generators.wiki.context import WikiPipelineContext
-
-
-def _make_ctx(**overrides) -> WikiPipelineContext:
-    """Create a WikiPipelineContext with sensible mock defaults."""
-    defaults = {
-        "index_status": MagicMock(),
-        "vector_store": MagicMock(),
-        "llm": MagicMock(),
-        "system_prompt": "You are a docs expert.",
-        "repo_path": Path("/tmp/repo"),
-        "wiki_path": Path("/tmp/wiki"),
-        "config": MagicMock(),
-        "wiki_config": MagicMock(),
-        "manifest": None,
-        "status_manager": MagicMock(),
-        "full_rebuild": False,
-        "max_chunk_content_chars": 15000,
-    }
-    defaults.update(overrides)
-    return WikiPipelineContext(**defaults)
 
 
 class TestWikiPipelineContext:
@@ -37,7 +17,7 @@ class TestWikiPipelineContext:
 
     def test_construction_with_defaults(self):
         """Test context can be constructed with default values."""
-        ctx = _make_ctx()
+        ctx = make_wiki_ctx()
         assert ctx.full_rebuild is False
         assert ctx.max_chunk_content_chars == 15000
         assert ctx.manifest is None
@@ -45,7 +25,7 @@ class TestWikiPipelineContext:
     def test_construction_with_overrides(self):
         """Test context respects overridden values."""
         manifest = MagicMock()
-        ctx = _make_ctx(
+        ctx = make_wiki_ctx(
             full_rebuild=True,
             max_chunk_content_chars=5000,
             manifest=manifest,
@@ -56,19 +36,19 @@ class TestWikiPipelineContext:
 
     def test_frozen_raises_on_mutation(self):
         """Test that assigning to a frozen field raises FrozenInstanceError."""
-        ctx = _make_ctx()
+        ctx = make_wiki_ctx()
         with pytest.raises(FrozenInstanceError):
             ctx.full_rebuild = True  # type: ignore[misc]
 
     def test_frozen_raises_on_system_prompt_mutation(self):
         """Test mutating system_prompt raises FrozenInstanceError."""
-        ctx = _make_ctx()
+        ctx = make_wiki_ctx()
         with pytest.raises(FrozenInstanceError):
             ctx.system_prompt = "new prompt"  # type: ignore[misc]
 
     def test_frozen_raises_on_repo_path_mutation(self):
         """Test mutating repo_path raises FrozenInstanceError."""
-        ctx = _make_ctx()
+        ctx = make_wiki_ctx()
         with pytest.raises(FrozenInstanceError):
             ctx.repo_path = Path("/other")  # type: ignore[misc]
 
@@ -128,7 +108,7 @@ class TestContextDrivenGeneration:
         mock_vs = MagicMock()
         mock_vs.search = AsyncMock(return_value=[])
 
-        ctx = _make_ctx(
+        ctx = make_wiki_ctx(
             index_status=make_index_status(repo_path=str(repo_path)),
             vector_store=mock_vs,
             llm=mock_llm,
@@ -156,7 +136,7 @@ class TestContextDrivenGeneration:
         mock_vs = MagicMock()
         mock_vs.search = AsyncMock(return_value=[])
 
-        ctx = _make_ctx(
+        ctx = make_wiki_ctx(
             index_status=make_index_status(repo_path=str(repo_path)),
             vector_store=mock_vs,
             llm=mock_llm,
@@ -188,7 +168,7 @@ class TestContextDrivenGeneration:
         mock_sm.record_page_status = MagicMock()
         mock_sm.record_summary_page_status = MagicMock()
 
-        ctx = _make_ctx(
+        ctx = make_wiki_ctx(
             index_status=make_index_status(
                 repo_path=str(tmp_path),
                 files=[
@@ -220,7 +200,7 @@ class TestContextDrivenGeneration:
         mock_vs = MagicMock()
         mock_vs.search = AsyncMock(return_value=[])
 
-        ctx = _make_ctx(
+        ctx = make_wiki_ctx(
             index_status=make_index_status(repo_path=str(tmp_path / "project")),
             vector_store=mock_vs,
             llm=mock_llm,

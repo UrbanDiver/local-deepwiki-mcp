@@ -515,12 +515,17 @@ class WikiGenerator:
         """
         from local_deepwiki.generators.wiki.context import WikiPipelineContext
 
+        assert self._repo_path is not None, (
+            "Repository path must be set before building pipeline context"
+        )
         return WikiPipelineContext(
             index_status=index_status,
             vector_store=self.vector_store,
             llm=self.llm,
-            system_prompt=system_prompt or self._system_prompt,
-            repo_path=self._repo_path or Path("."),
+            system_prompt=system_prompt
+            if system_prompt is not None
+            else self._system_prompt,
+            repo_path=self._repo_path,
             wiki_path=self.wiki_path,
             config=self.config,
             wiki_config=self.config.wiki,

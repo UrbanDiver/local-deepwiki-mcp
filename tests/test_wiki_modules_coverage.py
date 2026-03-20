@@ -11,8 +11,8 @@ from conftest import (
     make_file_info,
     make_index_status,
     make_search_result,
+    make_wiki_ctx,
 )
-from local_deepwiki.generators.wiki.context import WikiPipelineContext
 from local_deepwiki.generators.wiki.modules import (
     _generate_modules_index,
     generate_module_docs,
@@ -26,38 +26,6 @@ from local_deepwiki.models import (
     SearchResult,
     WikiPage,
 )
-
-
-def _make_ctx(
-    *,
-    index_status=None,
-    vector_store=None,
-    llm=None,
-    system_prompt="You are a wiki generator",
-    repo_path=None,
-    wiki_path=None,
-    config=None,
-    wiki_config=None,
-    manifest=None,
-    status_manager=None,
-    full_rebuild=False,
-    max_chunk_content_chars=15000,
-):
-    """Build a mock WikiPipelineContext for testing."""
-    return WikiPipelineContext(
-        index_status=index_status or MagicMock(),
-        vector_store=vector_store or AsyncMock(),
-        llm=llm or AsyncMock(),
-        system_prompt=system_prompt,
-        repo_path=repo_path or Path("/tmp/test-repo"),
-        wiki_path=wiki_path or Path("/tmp/wiki"),
-        config=config or MagicMock(),
-        wiki_config=wiki_config or MagicMock(),
-        manifest=manifest,
-        status_manager=status_manager or MagicMock(),
-        full_rebuild=full_rebuild,
-        max_chunk_content_chars=max_chunk_content_chars,
-    )
 
 
 class TestGenerateModuleDocs:
@@ -96,7 +64,7 @@ class TestGenerateModuleDocs:
         index_status = make_index_status(repo_path=str(tmp_path), files=[])
 
         pages, generated, skipped = await generate_module_docs(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -121,7 +89,7 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, skipped = await generate_module_docs(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -160,7 +128,7 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, skipped = await generate_module_docs(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -199,7 +167,7 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, _skipped = await generate_module_docs(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -229,7 +197,7 @@ class TestGenerateModuleDocs:
         )
 
         pages, _, _ = await generate_module_docs(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -283,7 +251,7 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, skipped = await generate_module_docs(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -316,7 +284,7 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, skipped = await generate_module_docs(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -346,7 +314,7 @@ class TestGenerateModuleDocs:
         )
 
         await generate_module_docs(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -379,7 +347,7 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, skipped = await generate_module_docs(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -422,7 +390,7 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, skipped = await generate_module_docs(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -457,7 +425,7 @@ class TestGenerateModuleDocs:
         )
 
         await generate_module_docs(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -483,7 +451,7 @@ class TestGenerateModuleDocs:
         index_status = make_index_status(repo_path=str(tmp_path), files=files)
 
         await generate_module_docs(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,

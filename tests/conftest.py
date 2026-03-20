@@ -5,12 +5,17 @@ These are plain helper functions (not fixtures) so any test file can import
 and use them directly.
 
 Usage in test files:
-    from conftest import make_index_status, make_file_info, make_code_chunk
+    from conftest import make_index_status, make_file_info, make_code_chunk, make_wiki_ctx
 """
+
+from __future__ import annotations
 
 import time
 import uuid
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock
 
+from local_deepwiki.generators.wiki.context import WikiPipelineContext
 from local_deepwiki.models import (
     ChunkType,
     CodeChunk,
@@ -170,4 +175,40 @@ def make_chunk(
         content=content,
         start_line=1,
         end_line=10,
+    )
+
+
+def make_wiki_ctx(
+    *,
+    index_status: IndexStatus | None = None,
+    vector_store: object | None = None,
+    llm: object | None = None,
+    system_prompt: str = "You are a wiki generator",
+    repo_path: Path | None = None,
+    wiki_path: Path | None = None,
+    config: object | None = None,
+    wiki_config: object | None = None,
+    manifest: object | None = None,
+    status_manager: object | None = None,
+    full_rebuild: bool = False,
+    max_chunk_content_chars: int = 15000,
+) -> WikiPipelineContext:
+    """Build a mock WikiPipelineContext for testing.
+
+    All parameters default to MagicMock/AsyncMock instances so tests only
+    need to supply the fields they care about.
+    """
+    return WikiPipelineContext(
+        index_status=index_status or MagicMock(),
+        vector_store=vector_store or AsyncMock(),
+        llm=llm or AsyncMock(),
+        system_prompt=system_prompt,
+        repo_path=repo_path or Path("/tmp/test-repo"),
+        wiki_path=wiki_path or Path("/tmp/wiki"),
+        config=config or MagicMock(),
+        wiki_config=wiki_config or MagicMock(),
+        manifest=manifest,
+        status_manager=status_manager or MagicMock(),
+        full_rebuild=full_rebuild,
+        max_chunk_content_chars=max_chunk_content_chars,
     )

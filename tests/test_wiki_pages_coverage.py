@@ -11,9 +11,9 @@ from conftest import (
     make_file_info,
     make_index_status,
     make_search_result,
+    make_wiki_ctx,
 )
 from local_deepwiki.generators.manifest import ProjectManifest
-from local_deepwiki.generators.wiki.context import WikiPipelineContext
 from local_deepwiki.generators.wiki.pages import (
     generate_architecture_page,
     generate_changelog_page,
@@ -28,38 +28,6 @@ from local_deepwiki.models import (
     Language,
     SearchResult,
 )
-
-
-def _make_ctx(
-    *,
-    index_status=None,
-    vector_store=None,
-    llm=None,
-    system_prompt="You are a wiki generator",
-    repo_path=None,
-    wiki_path=None,
-    config=None,
-    wiki_config=None,
-    manifest=None,
-    status_manager=None,
-    full_rebuild=False,
-    max_chunk_content_chars=15000,
-):
-    """Build a mock WikiPipelineContext for testing."""
-    return WikiPipelineContext(
-        index_status=index_status or MagicMock(),
-        vector_store=vector_store or AsyncMock(),
-        llm=llm or AsyncMock(),
-        system_prompt=system_prompt,
-        repo_path=repo_path or Path("/tmp/test-repo"),
-        wiki_path=wiki_path or Path("/tmp/wiki"),
-        config=config or MagicMock(),
-        wiki_config=wiki_config or MagicMock(),
-        manifest=manifest,
-        status_manager=status_manager or MagicMock(),
-        full_rebuild=full_rebuild,
-        max_chunk_content_chars=max_chunk_content_chars,
-    )
 
 
 class TestGenerateOverviewPage:
@@ -90,7 +58,7 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -119,7 +87,7 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -146,7 +114,7 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -174,7 +142,7 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -200,7 +168,7 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(tmp_path))
 
         result = await generate_overview_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -227,7 +195,7 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         await generate_overview_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -257,7 +225,7 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -299,7 +267,7 @@ class TestGenerateArchitecturePage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_architecture_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -321,7 +289,7 @@ class TestGenerateArchitecturePage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         await generate_architecture_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -346,7 +314,7 @@ class TestGenerateArchitecturePage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         await generate_architecture_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -371,7 +339,7 @@ class TestGenerateArchitecturePage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         await generate_architecture_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -405,7 +373,7 @@ class TestGenerateArchitecturePage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         await generate_architecture_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -452,7 +420,7 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
-                _make_ctx(
+                make_wiki_ctx(
                     index_status=index_status,
                     vector_store=mock_vector_store,
                     llm=mock_llm,
@@ -481,7 +449,7 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = ""
 
             await generate_dependencies_page(
-                _make_ctx(
+                make_wiki_ctx(
                     index_status=index_status,
                     vector_store=mock_vector_store,
                     llm=mock_llm,
@@ -516,7 +484,7 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = ""
 
             await generate_dependencies_page(
-                _make_ctx(
+                make_wiki_ctx(
                     index_status=index_status,
                     vector_store=mock_vector_store,
                     llm=mock_llm,
@@ -555,7 +523,7 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
-                _make_ctx(
+                make_wiki_ctx(
                     index_status=index_status,
                     vector_store=mock_vector_store,
                     llm=mock_llm,
@@ -589,7 +557,7 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
-                _make_ctx(
+                make_wiki_ctx(
                     index_status=index_status,
                     vector_store=mock_vector_store,
                     llm=mock_llm,
@@ -622,7 +590,7 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = "```mermaid\ngraph TD\n  A --> B\n```"
 
             page, _ = await generate_dependencies_page(
-                _make_ctx(
+                make_wiki_ctx(
                     index_status=index_status,
                     vector_store=mock_vector_store,
                     llm=mock_llm,
@@ -646,7 +614,7 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = ""  # Empty graph
 
             page, _ = await generate_dependencies_page(
-                _make_ctx(
+                make_wiki_ctx(
                     index_status=index_status,
                     vector_store=mock_vector_store,
                     llm=mock_llm,
@@ -733,7 +701,7 @@ class TestOverviewPageEdgeCases:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -759,7 +727,7 @@ class TestOverviewPageEdgeCases:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -785,7 +753,7 @@ class TestOverviewPageEdgeCases:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -823,7 +791,7 @@ class TestArchitecturePageEdgeCases:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_architecture_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -852,7 +820,7 @@ class TestArchitecturePageEdgeCases:
         index_status = make_index_status(repo_path=str(repo_path))
 
         await generate_architecture_page(
-            _make_ctx(
+            make_wiki_ctx(
                 index_status=index_status,
                 vector_store=mock_vector_store,
                 llm=mock_llm,
@@ -896,7 +864,7 @@ class TestDependenciesPageEdgeCases:
             mock_graph.return_value = ""
 
             page, _ = await generate_dependencies_page(
-                _make_ctx(
+                make_wiki_ctx(
                     index_status=index_status,
                     vector_store=mock_vector_store,
                     llm=mock_llm,
@@ -925,7 +893,7 @@ class TestDependenciesPageEdgeCases:
             mock_graph.return_value = ""
 
             await generate_dependencies_page(
-                _make_ctx(
+                make_wiki_ctx(
                     index_status=index_status,
                     vector_store=mock_vector_store,
                     llm=mock_llm,
@@ -964,7 +932,7 @@ class TestDependenciesPageEdgeCases:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
-                _make_ctx(
+                make_wiki_ctx(
                     index_status=index_status,
                     vector_store=mock_vector_store,
                     llm=mock_llm,
