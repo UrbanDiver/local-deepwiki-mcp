@@ -45,6 +45,26 @@ _LONG_METHOD_LINE_THRESHOLD = 80
 _LONG_METHOD_CC_THRESHOLD = 15
 _LONG_PARAM_THRESHOLD = 6
 _FEATURE_ENVY_CALL_THRESHOLD = 3
+_FEATURE_ENVY_IGNORED_OBJECTS: frozenset[str] = frozenset(
+    {
+        "logger",
+        "log",  # logging
+        "lines",
+        "parts",
+        "result_lines",
+        "sections",  # list accumulators
+        "asyncio",  # stdlib
+        "re",
+        "os",
+        "sys",
+        "json",
+        "math",  # stdlib modules
+        "errors",
+        "smells",
+        "warnings",  # collection accumulators
+        "prompt_parts",  # prompt builders
+    }
+)
 _LARGE_FILE_LINE_THRESHOLD = 800
 _DEEP_NESTING_THRESHOLD = 4
 _DATA_CLUMP_SHARED_PARAMS = 3
@@ -178,7 +198,10 @@ def _collect_attribute_calls(node: Node) -> list[str]:
                 obj_node = func_node.children[0] if func_node.children else None
                 if obj_node and obj_node.type == "identifier":
                     obj_name = _node_text(obj_node)
-                    if obj_name not in ("self", "cls", "super"):
+                    if (
+                        obj_name not in ("self", "cls", "super")
+                        and obj_name not in _FEATURE_ENVY_IGNORED_OBJECTS
+                    ):
                         objects.append(obj_name)
         for child in n.children:
             _walk(child)

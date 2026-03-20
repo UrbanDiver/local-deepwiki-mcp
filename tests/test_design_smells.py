@@ -326,6 +326,34 @@ async def test_design_smells_missing_repo(mock_access_control, tmp_path):
     assert data["status"] == "error"
 
 
+async def test_feature_envy_ignores_common_utility_objects(
+    mock_access_control, tmp_path
+):
+    """Functions calling logger/lines/parts repeatedly should not be flagged."""
+    code = """\
+def generate_page(data):
+    logger.info("Starting generation")
+    logger.debug("Processing %d items", len(data))
+    logger.info("Building output")
+    logger.warning("Slow generation detected")
+    lines = []
+    lines.append("# Title")
+    lines.append("## Section")
+    lines.append("Content here")
+    lines.append("More content")
+    return "\\n".join(lines)
+"""
+    (tmp_path / "utility_calls.py").write_text(code)
+    result = await handle_get_design_smells(
+        {"repo_path": str(tmp_path), "severity_threshold": "low"}
+    )
+    data = json.loads(result[0].text)
+    feature_envy_smells = [s for s in data["smells"] if s["type"] == "feature_envy"]
+    assert len(feature_envy_smells) == 0, (
+        f"Expected no feature envy for logger/lines but got: {feature_envy_smells}"
+    )
+
+
 async def test_design_smells_data_clump_detection(mock_access_control, tmp_path):
     """Data clump is detected when 3+ functions share 3+ identical parameter names."""
     content = """\
