@@ -295,6 +295,65 @@ class SearchEngine:
                 return cached
         return None
 
+    @staticmethod
+    def _parse_cursor_offset(cursor: str | None, offset: int) -> int:
+        """Parse a pagination cursor string into an integer offset."""
+        if not cursor:
+            return offset
+        try:
+            if cursor.startswith("offset:"):
+                return int(cursor[7:])
+        except (ValueError, IndexError):
+            logger.warning("Invalid cursor format: %s, using offset=%d", cursor, offset)
+        return offset
+
+    def _estimate_total_results(
+        self,
+        table: Any,
+        query_embedding: list[float],
+        request: SearchRequest,
+        profile_config: SearchProfileConfig,
+        effective_min_similarity: float,
+        offset: int,
+    ) -> tuple[list[dict], int]:
+        """Fetch candidates and estimate total result count.
+
+        Returns:
+            Tuple of (filtered result rows, total estimate).
+        """
+        filter_expr_parts = build_search_filters(request.language, request.chunk_type)
+        filter_expr = " AND ".join(filter_expr_parts) if filter_expr_parts else None
+
+        base_count_limit = int(1000 * profile_config.fetch_multiplier)
+        count_limit = offset + request.limit + base_count_limit
+        count_search = table.search(query_embedding).limit(count_limit)
+        if filter_expr:
+            count_search = count_search.where(filter_expr)
+        all_results = count_search.to_list()
+
+        # Similarity threshold filtering
+        all_results = [
+            row
+            for row in all_results
+            if (1.0 - row.get("_distance", 0) ** 2 / 2.0) >= effective_min_similarity
+        ]
+
+        # Path pattern filtering
+        if request.path_pattern:
+            pre_filter = [
+                SearchResult(chunk=self._row_to_chunk(row), score=0, highlights=[])
+                for row in all_results
+            ]
+            filtered_sr = search_postprocess.apply_post_filters(
+                pre_filter, request.path_pattern
+            )
+            filtered_ids = {sr.chunk.id for sr in filtered_sr}
+            all_results = [
+                row for row in all_results if self._row_to_chunk(row).id in filtered_ids
+            ]
+
+        return all_results, len(all_results)
+
     # -----------------------------------------------------------------
     # search_from_request() -- SearchRequest-based entry point
     # -----------------------------------------------------------------
@@ -542,51 +601,18 @@ class SearchEngine:
             resolved_profile.value,
         )
 
-        # Parse cursor if provided (format: "offset:{number}")
-        if cursor:
-            try:
-                if cursor.startswith("offset:"):
-                    offset = int(cursor[7:])
-            except (ValueError, IndexError):
-                logger.warning(
-                    "Invalid cursor format: %s, using offset=%d", cursor, offset
-                )
+        offset = self._parse_cursor_offset(cursor, offset)
 
         query_embedding = (await self._embedding_provider.embed([request.query]))[0]
 
-        filters = build_search_filters(request.language, request.chunk_type)
-        filter_expr = " AND ".join(filters) if filters else None
-
-        # Fetch extra candidates for total count estimation
-        base_count_limit = int(1000 * profile_config.fetch_multiplier)
-        count_limit = offset + request.limit + base_count_limit
-        count_search = table.search(query_embedding).limit(count_limit)
-        if filter_expr:
-            count_search = count_search.where(filter_expr)
-        all_results = count_search.to_list()
-
-        # Apply similarity threshold filtering
-        all_results = [
-            row
-            for row in all_results
-            if (1.0 - row.get("_distance", 0) ** 2 / 2.0) >= effective_min_similarity
-        ]
-        total_estimate = len(all_results)
-
-        # Apply path pattern filter for accurate count
-        if request.path_pattern:
-            pre_filter = [
-                SearchResult(chunk=self._row_to_chunk(row), score=0, highlights=[])
-                for row in all_results
-            ]
-            filtered_results_sr = search_postprocess.apply_post_filters(
-                pre_filter, request.path_pattern
-            )
-            filtered_ids = {sr.chunk.id for sr in filtered_results_sr}
-            all_results = [
-                row for row in all_results if self._row_to_chunk(row).id in filtered_ids
-            ]
-            total_estimate = len(all_results)
+        all_results, total_estimate = self._estimate_total_results(
+            table,
+            query_embedding,
+            request,
+            profile_config,
+            effective_min_similarity,
+            offset,
+        )
 
         # Apply pagination and convert rows to SearchResult objects
         paginated_rows = all_results[offset : offset + request.limit]
