@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from conftest import make_wiki_ctx
 from local_deepwiki.generators.codemap import CodemapResult
 from local_deepwiki.generators.wiki.codemap_pages import (
     _fix_mermaid_click_paths,
@@ -214,6 +215,17 @@ def _make_wiki_config(**overrides):
     return config
 
 
+def _make_ctx(status_manager, wiki_config, repo_path=None, wiki_path=None, **overrides):
+    """Create a WikiPipelineContext with given status_manager and wiki_config."""
+    return make_wiki_ctx(
+        status_manager=status_manager,
+        wiki_config=wiki_config,
+        repo_path=repo_path or Path("/repo"),
+        wiki_path=wiki_path or Path("/wiki"),
+        **overrides,
+    )
+
+
 def _make_codemap_result(total_nodes=5, **overrides):
     defaults = {
         "query": "How does handle_request work?",
@@ -253,30 +265,16 @@ class TestGenerateCodemapPages:
 
     async def test_disabled_returns_empty(self, status_manager):
         config = _make_wiki_config(codemap_enabled=False)
-        pages, gen, skip = await generate_codemap_pages(
-            vector_store=MagicMock(),
-            llm=MagicMock(),
-            repo_path=Path("/repo"),
-            wiki_path=Path("/wiki"),
-            status_manager=status_manager,
-            config=config,
-            full_rebuild=False,
-        )
+        ctx = _make_ctx(status_manager, config)
+        pages, gen, skip = await generate_codemap_pages(ctx)
         assert pages == []
         assert gen == 0
         assert skip == 0
 
     async def test_zero_max_topics_returns_empty(self, status_manager):
         config = _make_wiki_config(codemap_max_topics=0)
-        pages, gen, skip = await generate_codemap_pages(
-            vector_store=MagicMock(),
-            llm=MagicMock(),
-            repo_path=Path("/repo"),
-            wiki_path=Path("/wiki"),
-            status_manager=status_manager,
-            config=config,
-            full_rebuild=False,
-        )
+        ctx = _make_ctx(status_manager, config)
+        pages, gen, skip = await generate_codemap_pages(ctx)
         assert pages == []
         assert gen == 0
 
@@ -289,15 +287,8 @@ class TestGenerateCodemapPages:
         mock_codemap.return_value = _make_codemap_result()
 
         config = _make_wiki_config()
-        pages, gen, skip = await generate_codemap_pages(
-            vector_store=MagicMock(),
-            llm=MagicMock(),
-            repo_path=Path("/repo"),
-            wiki_path=tmp_path,
-            status_manager=status_manager,
-            config=config,
-            full_rebuild=True,
-        )
+        ctx = _make_ctx(status_manager, config, wiki_path=tmp_path, full_rebuild=True)
+        pages, gen, skip = await generate_codemap_pages(ctx)
         # 1 codemap page + 1 index page
         assert len(pages) == 2
         assert gen == 2
@@ -315,15 +306,8 @@ class TestGenerateCodemapPages:
         mock_codemap.return_value = _make_codemap_result(total_nodes=2)
 
         config = _make_wiki_config()
-        pages, gen, skip = await generate_codemap_pages(
-            vector_store=MagicMock(),
-            llm=MagicMock(),
-            repo_path=Path("/repo"),
-            wiki_path=tmp_path,
-            status_manager=status_manager,
-            config=config,
-            full_rebuild=True,
-        )
+        ctx = _make_ctx(status_manager, config, wiki_path=tmp_path, full_rebuild=True)
+        pages, gen, skip = await generate_codemap_pages(ctx)
         # Only index page (codemap skipped due to <3 nodes)
         assert len(pages) == 1
         assert pages[0].path == "codemaps/index.md"
@@ -343,15 +327,8 @@ class TestGenerateCodemapPages:
         status_manager.load_existing_page = AsyncMock(return_value=existing_page)
 
         config = _make_wiki_config()
-        pages, gen, skip = await generate_codemap_pages(
-            vector_store=MagicMock(),
-            llm=MagicMock(),
-            repo_path=Path("/repo"),
-            wiki_path=tmp_path,
-            status_manager=status_manager,
-            config=config,
-            full_rebuild=False,
-        )
+        ctx = _make_ctx(status_manager, config, wiki_path=tmp_path, full_rebuild=False)
+        pages, gen, skip = await generate_codemap_pages(ctx)
         # Cached page + index
         assert len(pages) == 2
         assert skip == 1
@@ -373,15 +350,8 @@ class TestGenerateCodemapPages:
         ]
 
         config = _make_wiki_config()
-        pages, gen, skip = await generate_codemap_pages(
-            vector_store=MagicMock(),
-            llm=MagicMock(),
-            repo_path=Path("/repo"),
-            wiki_path=tmp_path,
-            status_manager=status_manager,
-            config=config,
-            full_rebuild=True,
-        )
+        ctx = _make_ctx(status_manager, config, wiki_path=tmp_path, full_rebuild=True)
+        pages, gen, skip = await generate_codemap_pages(ctx)
         # 1 successful codemap + index
         assert len(pages) == 2
         assert gen == 2
@@ -392,15 +362,8 @@ class TestGenerateCodemapPages:
     ):
         mock_suggest.return_value = []
         config = _make_wiki_config()
-        pages, gen, skip = await generate_codemap_pages(
-            vector_store=MagicMock(),
-            llm=MagicMock(),
-            repo_path=Path("/repo"),
-            wiki_path=tmp_path,
-            status_manager=status_manager,
-            config=config,
-            full_rebuild=True,
-        )
+        ctx = _make_ctx(status_manager, config, wiki_path=tmp_path, full_rebuild=True)
+        pages, gen, skip = await generate_codemap_pages(ctx)
         assert pages == []
         assert gen == 0
         assert skip == 0
@@ -420,15 +383,8 @@ class TestGenerateCodemapPages:
         mock_codemap.return_value = _make_codemap_result()
 
         config = _make_wiki_config()
-        await generate_codemap_pages(
-            vector_store=MagicMock(),
-            llm=MagicMock(),
-            repo_path=Path("/repo"),
-            wiki_path=tmp_path,
-            status_manager=status_manager,
-            config=config,
-            full_rebuild=True,
-        )
+        ctx = _make_ctx(status_manager, config, wiki_path=tmp_path, full_rebuild=True)
+        await generate_codemap_pages(ctx)
         assert not orphan.exists()
 
     @patch("local_deepwiki.generators.wiki.codemap_pages.suggest_topics")
@@ -437,15 +393,8 @@ class TestGenerateCodemapPages:
     ):
         mock_suggest.side_effect = RuntimeError("vector store error")
         config = _make_wiki_config()
-        pages, gen, skip = await generate_codemap_pages(
-            vector_store=MagicMock(),
-            llm=MagicMock(),
-            repo_path=Path("/repo"),
-            wiki_path=tmp_path,
-            status_manager=status_manager,
-            config=config,
-            full_rebuild=True,
-        )
+        ctx = _make_ctx(status_manager, config, wiki_path=tmp_path, full_rebuild=True)
+        pages, gen, skip = await generate_codemap_pages(ctx)
         assert pages == []
         assert gen == 0
 
@@ -459,15 +408,8 @@ class TestGenerateCodemapPages:
         mock_codemap.return_value = _make_codemap_result()
 
         config = _make_wiki_config()
-        pages, gen, skip = await generate_codemap_pages(
-            vector_store=MagicMock(),
-            llm=MagicMock(),
-            repo_path=Path("/repo"),
-            wiki_path=tmp_path,
-            status_manager=status_manager,
-            config=config,
-            full_rebuild=True,
-        )
+        ctx = _make_ctx(status_manager, config, wiki_path=tmp_path, full_rebuild=True)
+        pages, gen, skip = await generate_codemap_pages(ctx)
         # 3 codemap pages + 1 index
         assert len(pages) == 4
         assert gen == 4

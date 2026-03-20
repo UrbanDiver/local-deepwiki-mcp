@@ -63,15 +63,7 @@ async def generate_codemap_pages_phase(
     Returns:
         Tuple of (new_codemap_pages, new_pages_generated, new_pages_skipped).
     """
-    full_rebuild = ctx.full_rebuild
-    repo_path = ctx.repo_path
-    wiki_path = ctx.wiki_path
-    wiki_config = ctx.wiki_config
-    vector_store = ctx.vector_store
-    llm = ctx.llm
-    status_manager = ctx.status_manager
-
-    codemap_enabled = getattr(wiki_config, "codemap_enabled", None)
+    codemap_enabled = getattr(ctx.wiki_config, "codemap_enabled", None)
     if not isinstance(codemap_enabled, bool) or not codemap_enabled:
         return [], pages_generated, pages_skipped
 
@@ -80,15 +72,7 @@ async def generate_codemap_pages_phase(
 
     progress.start_phase("codemaps", total=0)
 
-    codemap_pages, gen_count, skip_count = await generate_codemap_pages(
-        vector_store=vector_store,
-        llm=llm,
-        repo_path=repo_path,
-        wiki_path=wiki_path,
-        status_manager=status_manager,
-        config=wiki_config,
-        full_rebuild=full_rebuild,
-    )
+    codemap_pages, gen_count, skip_count = await generate_codemap_pages(ctx)
     pages_generated += gen_count
     pages_skipped += skip_count
 
