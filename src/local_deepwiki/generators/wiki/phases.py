@@ -378,7 +378,7 @@ async def generate_auxiliary_pages(
     index_status: IndexStatus,
     progress_callback: ProgressCallback | None,
 ) -> None:
-    """Generate auxiliary pages: inheritance, glossary, coverage, dependency graph, health.
+    """Generate auxiliary pages: inheritance, glossary, coverage, dependency graph, health, hotspots.
 
     All pages are generated concurrently with ``asyncio.gather``
     since they are independent of each other.  Uses structural
@@ -418,6 +418,7 @@ async def generate_auxiliary_pages(
         ("coverage.md", "Documentation Coverage"),
         ("dependency-graph.md", "Dependency Graph"),
         ("health.md", "Architecture Health"),
+        ("hotspots.md", "Complexity Hotspots"),
     ]
 
     if await _try_load_cached_auxiliary_pages(
@@ -463,12 +464,33 @@ async def generate_auxiliary_pages(
             ctx.warnings.append(f"Architecture health page generation failed: {e}")
             return None
 
+    async def _safe_hotspots_page() -> str | None:
+        """Generate complexity hotspots page (sync analysis run in executor)."""
+        from pathlib import Path as _Path
+
+        from local_deepwiki.generators.analysis.hotspots import analyze_hotspots
+        from local_deepwiki.generators.analysis.hotspots_page import (
+            generate_hotspots_page,
+        )
+
+        try:
+            repo_path = _Path(index_status.repo_path)
+            hotspots_data = await asyncio.get_event_loop().run_in_executor(
+                None, analyze_hotspots, repo_path
+            )
+            return generate_hotspots_page(hotspots_data)
+        except Exception as e:  # noqa: BLE001 — generator isolation: auxiliary page failure must not abort wiki build
+            logger.debug("Failed to generate complexity hotspots page: %s", e)
+            ctx.warnings.append(f"Complexity hotspots page generation failed: {e}")
+            return None
+
     contents = await asyncio.gather(
         _generate_inheritance_page(index_status, generator.vector_store),
         _generate_glossary_page(index_status, generator.vector_store),
         _generate_coverage_page(index_status, generator.vector_store),
         _safe_dependency_graph(),
         _safe_health_page(),
+        _safe_hotspots_page(),
     )
 
     for (page_path, title), content in zip(aux_pages, contents):
