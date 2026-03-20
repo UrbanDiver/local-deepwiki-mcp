@@ -27,11 +27,14 @@ from local_deepwiki.providers.base import EmbeddingProvider
 
 from .cache import AdaptiveSearcher, SearchCache
 from .maintenance import LazyIndexManager
-from .mixins import LazyIndexMixin, SearchMixin, StatsMixin
+from .mixins import LazyIndexMixin, StatsMixin
+from .mixins.search_types import SearchRequest
 from .schema import (
     BatchEmbeddingResult,
     EmbeddingProgress,
+    SearchFeedback,
     SearchProfile,
+    SearchResultPage,
 )
 from .search_engine import SearchEngine
 from .utils import RateLimiter, _log_task_exception, _sanitize_string_value
@@ -39,7 +42,7 @@ from .utils import RateLimiter, _log_task_exception, _sanitize_string_value
 logger = get_logger(__name__)
 
 
-class VectorStore(SearchMixin, StatsMixin, LazyIndexMixin):
+class VectorStore(StatsMixin, LazyIndexMixin):
     """Vector store using LanceDB for code chunk storage and semantic search."""
 
     TABLE_NAME = "code_chunks"
@@ -576,3 +579,182 @@ class VectorStore(SearchMixin, StatsMixin, LazyIndexMixin):
         parts.append(f"\n{chunk.content}")
 
         return " ".join(parts)
+
+    # ------------------------------------------------------------------
+    # search_engine property
+    # ------------------------------------------------------------------
+
+    @property
+    def search_engine(self) -> "SearchEngine":
+        """Return the underlying SearchEngine instance."""
+        return self._search_engine
+
+    # ------------------------------------------------------------------
+    # Public search API (replaces SearchMixin inheritance)
+    # ------------------------------------------------------------------
+
+    async def search(
+        self,
+        query: str,
+        limit: int = 10,
+        *,
+        request: "SearchRequest | None" = None,
+        search_mode: str | None = None,
+        language: str | None = None,
+        chunk_type: str | None = None,
+        path_pattern: str | None = None,
+        use_fuzzy: bool = False,
+        fuzzy_weight: float = 0.3,
+        profile: "SearchProfile | str | None" = None,
+        min_similarity: float | None = None,
+        auto_suggest: bool = True,
+    ) -> list[Any]:
+        """Search for similar code chunks.
+
+        Accepts either individual keyword arguments (backward compatible) or
+        a ``SearchRequest`` object via the ``request`` parameter. When a
+        ``SearchRequest`` is provided its fields take precedence over the
+        positional/keyword arguments.
+
+        Args:
+            query: Search query text.
+            limit: Maximum number of results.
+            request: Optional ``SearchRequest`` bundle.
+            search_mode: ``"vector"``, ``"keyword"``, or ``"hybrid"``.
+            language: Optional language filter.
+            chunk_type: Optional chunk type filter.
+            path_pattern: Optional file path pattern filter.
+            use_fuzzy: Whether to use fuzzy matching to re-rank results.
+            fuzzy_weight: Weight for fuzzy score when use_fuzzy is True.
+            profile: Search profile for precision/recall trade-off.
+            min_similarity: Minimum similarity threshold override.
+            auto_suggest: Whether to generate "Did you mean?" suggestions.
+
+        Returns:
+            List of search results with scores.
+        """
+        if request is not None:
+            query = request.query
+            limit = request.limit
+            search_mode = request.search_mode
+            language = request.language
+            chunk_type = request.chunk_type
+            path_pattern = request.path_pattern
+            use_fuzzy = request.use_fuzzy
+            fuzzy_weight = request.fuzzy_weight
+            profile = request.profile
+            min_similarity = request.min_similarity
+            auto_suggest = request.auto_suggest
+
+        return await self._search_engine.search(
+            query,
+            limit,
+            search_mode=search_mode,
+            language=language,
+            chunk_type=chunk_type,
+            path_pattern=path_pattern,
+            use_fuzzy=use_fuzzy,
+            fuzzy_weight=fuzzy_weight,
+            profile=profile,
+            min_similarity=min_similarity,
+            auto_suggest=auto_suggest,
+            store=self,
+        )
+
+    async def search_paginated(
+        self,
+        query: str,
+        limit: int = 10,
+        offset: int = 0,
+        *,
+        language: str | None = None,
+        chunk_type: str | None = None,
+        path_pattern: str | None = None,
+        use_fuzzy: bool = False,
+        fuzzy_weight: float = 0.3,
+        cursor: str | None = None,
+        profile: "SearchProfile | str | None" = None,
+        min_similarity: float | None = None,
+    ) -> "SearchResultPage":
+        """Search for similar code chunks with pagination support.
+
+        Args:
+            query: Search query text.
+            limit: Maximum number of results per page.
+            offset: Starting offset for pagination (0-based).
+            language: Optional language filter.
+            chunk_type: Optional chunk type filter.
+            path_pattern: Optional file path pattern filter.
+            use_fuzzy: Whether to use fuzzy matching to re-rank results.
+            fuzzy_weight: Weight for fuzzy score when use_fuzzy is True.
+            cursor: Optional cursor for cursor-based pagination (overrides offset).
+            profile: Search profile for precision/recall trade-off.
+            min_similarity: Minimum similarity threshold override.
+
+        Returns:
+            SearchResultPage with results, total count, and pagination metadata.
+        """
+        return await self._search_engine.search_paginated(
+            query,
+            limit,
+            offset,
+            language=language,
+            chunk_type=chunk_type,
+            path_pattern=path_pattern,
+            use_fuzzy=use_fuzzy,
+            fuzzy_weight=fuzzy_weight,
+            cursor=cursor,
+            profile=profile,
+            min_similarity=min_similarity,
+        )
+
+    def record_feedback(self, feedback: "SearchFeedback") -> None:
+        """Record user feedback on a search result.
+
+        Args:
+            feedback: User feedback on a search result.
+        """
+        self._search_engine.record_feedback(feedback)
+
+    @property
+    def search_profile(self) -> "SearchProfile":
+        """Get the current default search profile."""
+        return self._search_engine.default_search_profile
+
+    @search_profile.setter
+    def search_profile(self, profile: "SearchProfile | str") -> None:
+        """Set the default search profile.
+
+        Args:
+            profile: The search profile to use as default.
+
+        Raises:
+            ValueError: If the profile string is invalid.
+        """
+        if isinstance(profile, str):
+            try:
+                self._search_engine.default_search_profile = SearchProfile(
+                    profile.lower()
+                )
+            except ValueError as e:
+                raise ValueError(
+                    f"Invalid search profile: {profile}. "
+                    f"Valid values: {[p.value for p in SearchProfile]}"
+                ) from e
+        else:
+            self._search_engine.default_search_profile = profile
+
+    @property
+    def adaptive_search_enabled(self) -> bool:
+        """Check if adaptive search is enabled."""
+        return self._search_engine.adaptive_search_enabled
+
+    @adaptive_search_enabled.setter
+    def adaptive_search_enabled(self, enabled: bool) -> None:
+        """Enable or disable adaptive search."""
+        self._search_engine.adaptive_search_enabled = enabled
+
+    @property
+    def adaptive_search_stats(self) -> dict[str, Any]:
+        """Get statistics about adaptive search performance."""
+        return self._search_engine.adaptive_search_stats

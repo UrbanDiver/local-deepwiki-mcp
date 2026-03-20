@@ -26,22 +26,8 @@ from .schema import (
     SearchProfile,
     SearchResultPage,
 )
-from .search_pipeline import (
-    dispatch_search as _dispatch_search,
-    execute_fts_search as _execute_fts_search,
-    execute_vector_search as _execute_vector_search,
-    convert_fts_results as _convert_fts_results,
-    reciprocal_rank_fusion as _reciprocal_rank_fusion,
-    run_keyword_pipeline as _run_keyword_pipeline,
-    run_hybrid_pipeline as _run_hybrid_pipeline,
-    run_vector_pipeline as _run_vector_pipeline,
-)
-from .search_postprocess import (
-    apply_fuzzy_reranking as _apply_fuzzy_reranking,
-    apply_post_filters as _apply_post_filters,
-    attach_suggestions as _attach_suggestions,
-    generate_suggestions as _generate_suggestions,
-)
+import local_deepwiki.core.vectorstore.search_pipeline as search_pipeline
+import local_deepwiki.core.vectorstore.search_postprocess as search_postprocess
 
 if TYPE_CHECKING:
     from local_deepwiki.config import FuzzySearchConfig
@@ -240,27 +226,6 @@ class SearchEngine:
             results.append(SearchResult(chunk=chunk, score=score, highlights=[]))
         return results
 
-    async def generate_suggestions(
-        self,
-        query: str,
-        search_results: list[SearchResult],
-        store: Any,
-    ) -> list[str] | None:
-        """Generate 'Did you mean?' suggestions for poor-quality results.
-
-        Args:
-            query: Original search query.
-            search_results: Current search results.
-            store: The VectorStore instance (needed by FuzzySearchHelper).
-        """
-        return await _generate_suggestions(
-            query,
-            search_results,
-            store,
-            self._fuzzy_search_config,
-            self.get_fuzzy_helper,
-        )
-
     # -----------------------------------------------------------------
     # Auto-adjust search limit based on repo size
     # -----------------------------------------------------------------
@@ -293,74 +258,6 @@ class SearchEngine:
             return "vector"
         return mode
 
-    # -----------------------------------------------------------------
-    # Low-level search execution
-    # -----------------------------------------------------------------
-
-    def execute_vector_search(
-        self,
-        table: Any,
-        query_embedding: list[float],
-        filters: list[str],
-        fetch_limit: int,
-    ) -> list[dict[str, Any]]:
-        """Execute LanceDB vector search with latency tracking."""
-        return _execute_vector_search(
-            table, query_embedding, filters, fetch_limit, self._lazy_index_manager
-        )
-
-    def execute_fts_search(
-        self,
-        table: Any,
-        query: str,
-        filters: list[str],
-        fetch_limit: int,
-    ) -> list[dict[str, Any]]:
-        """Execute LanceDB full-text (BM25) search."""
-        return _execute_fts_search(table, query, filters, fetch_limit)
-
-    def convert_fts_results(
-        self,
-        rows: list[dict[str, Any]],
-    ) -> list[SearchResult]:
-        """Convert FTS result rows to SearchResult objects with normalized scores."""
-        return _convert_fts_results(rows, self._row_to_chunk)
-
-    @staticmethod
-    def reciprocal_rank_fusion(
-        vector_rows: list[dict[str, Any]],
-        fts_rows: list[dict[str, Any]],
-        *,
-        k: int = 60,
-        vector_weight: float = 1.0,
-        fts_weight: float = 0.3,
-    ) -> list[tuple[dict[str, Any], float]]:
-        """Merge vector and FTS results using Reciprocal Rank Fusion."""
-        return _reciprocal_rank_fusion(
-            vector_rows,
-            fts_rows,
-            k=k,
-            vector_weight=vector_weight,
-            fts_weight=fts_weight,
-        )
-
-    def apply_fuzzy_reranking(
-        self,
-        search_results: list[SearchResult],
-        query: str,
-        fuzzy_weight: float,
-        *,
-        use_fuzzy: bool,
-    ) -> tuple[list[SearchResult], bool]:
-        """Apply fuzzy re-ranking if explicitly requested or auto-enabled."""
-        return _apply_fuzzy_reranking(
-            search_results,
-            query,
-            fuzzy_weight,
-            use_fuzzy=use_fuzzy,
-            fuzzy_config=self._fuzzy_search_config,
-        )
-
     def record_and_cache(
         self,
         query: str,
@@ -383,86 +280,6 @@ class SearchEngine:
             self._get_search_cache().set(
                 query, query_embedding, search_results, cache_filters
             )
-
-    # -----------------------------------------------------------------
-    # Pipeline stages
-    # -----------------------------------------------------------------
-
-    def run_keyword_pipeline(
-        self,
-        table: Any,
-        query: str,
-        filters: list[str],
-        fetch_limit: int,
-    ) -> list[SearchResult]:
-        """Execute the keyword-only (BM25) search pipeline."""
-        return _run_keyword_pipeline(
-            table, query, filters, fetch_limit, self._row_to_chunk
-        )
-
-    def run_hybrid_pipeline(
-        self,
-        table: Any,
-        query: str,
-        query_embedding: list[float],
-        filters: list[str],
-        fetch_limit: int,
-        min_similarity: float,
-    ) -> list[SearchResult]:
-        """Execute the hybrid (vector + BM25 with RRF) search pipeline."""
-        return _run_hybrid_pipeline(
-            table,
-            query,
-            query_embedding,
-            filters,
-            fetch_limit,
-            min_similarity,
-            self._bm25_weight,
-            self._row_to_chunk,
-            self._lazy_index_manager,
-        )
-
-    def run_vector_pipeline(
-        self,
-        table: Any,
-        query_embedding: list[float],
-        filters: list[str],
-        fetch_limit: int,
-        min_similarity: float,
-    ) -> list[SearchResult]:
-        """Execute the vector-only (semantic) search pipeline."""
-        return _run_vector_pipeline(
-            table,
-            query_embedding,
-            filters,
-            fetch_limit,
-            min_similarity,
-            self._row_to_chunk,
-            self._lazy_index_manager,
-        )
-
-    @staticmethod
-    def apply_post_filters(
-        results: list[SearchResult],
-        path_pattern: str | None,
-    ) -> list[SearchResult]:
-        """Apply post-retrieval filters (path pattern) to search results."""
-        return _apply_post_filters(results, path_pattern)
-
-    async def attach_suggestions(
-        self,
-        query: str,
-        search_results: list[SearchResult],
-        store: Any,
-    ) -> list[SearchResult]:
-        """Generate and attach 'Did you mean?' suggestions to the first result."""
-        return await _attach_suggestions(
-            query,
-            search_results,
-            store,
-            self._fuzzy_search_config,
-            self.get_fuzzy_helper,
-        )
 
     # -----------------------------------------------------------------
     # Cache filter builder
@@ -489,30 +306,6 @@ class SearchEngine:
         if chunk_type:
             cache_filters["chunk_type"] = chunk_type
         return cache_filters
-
-    def dispatch_search(
-        self,
-        mode: str,
-        table: Any,
-        query: str,
-        query_embedding: list[float],
-        filters: list[str],
-        fetch_limit: int,
-        min_similarity: float,
-    ) -> list[SearchResult]:
-        """Dispatch to the appropriate search pipeline based on mode."""
-        return _dispatch_search(
-            mode,
-            table,
-            query,
-            query_embedding,
-            filters,
-            fetch_limit,
-            min_similarity,
-            self._bm25_weight,
-            self._row_to_chunk,
-            self._lazy_index_manager,
-        )
 
     # -----------------------------------------------------------------
     # search_from_request() -- SearchRequest-based entry point
@@ -597,7 +390,7 @@ class SearchEngine:
         )
 
         # Execute search pipeline based on mode
-        search_results = self.dispatch_search(
+        search_results = search_pipeline.dispatch_search(
             effective_mode,
             table,
             request.query,
@@ -605,22 +398,32 @@ class SearchEngine:
             filters,
             fetch_limit,
             effective_min_similarity,
+            self._bm25_weight,
+            self._row_to_chunk,
+            self._lazy_index_manager,
         )
 
         # Post-processing: path filter, fuzzy rerank, truncate, suggestions
-        search_results = self.apply_post_filters(search_results, request.path_pattern)
+        search_results = search_postprocess.apply_post_filters(
+            search_results, request.path_pattern
+        )
 
-        search_results, auto_fuzzy_enabled = self.apply_fuzzy_reranking(
+        search_results, auto_fuzzy_enabled = search_postprocess.apply_fuzzy_reranking(
             search_results,
             request.query,
             request.fuzzy_weight,
             use_fuzzy=request.use_fuzzy,
+            fuzzy_config=self._fuzzy_search_config,
         )
         search_results = search_results[: request.limit]
 
         if request.auto_suggest:
-            search_results = await self.attach_suggestions(
-                request.query, search_results, store
+            search_results = await search_postprocess.attach_suggestions(
+                request.query,
+                search_results,
+                store,
+                self._fuzzy_search_config,
+                self.get_fuzzy_helper,
             )
 
         self.record_and_cache(

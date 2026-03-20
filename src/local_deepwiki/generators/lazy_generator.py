@@ -11,15 +11,15 @@ from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.config import Config, GenerationMode, get_config
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.generators.lazy_cache import (
+    append_to_search_index,
+    read_cached_page,
+    write_page,
+)
 from local_deepwiki.generators.crosslinks import (
     CrossLinker,
     EntityRegistry,
     build_entity_registry_from_store,
-)
-from local_deepwiki.generators.lazy_cache import (
-    append_to_search_index as _append_to_search_index_fn,
-    read_cached_page,
-    write_page as _write_page_fn,
 )
 from local_deepwiki.generators.wiki.utils import file_path_to_wiki_path
 from local_deepwiki.generators.wiki.files import (
@@ -212,7 +212,7 @@ class LazyPageGenerator:
 
     async def get_page(self, page_path: str) -> str:
         """Get a wiki page, generating it on demand if needed."""
-        cached = self._read_cached(page_path)
+        cached = read_cached_page(self._wiki_path, page_path)
         if cached is not None:
             return cached
 
@@ -225,8 +225,8 @@ class LazyPageGenerator:
             page = await self._generate_page(page_path)
             linker = await self._get_cross_linker()
             page = linker.add_links(page)
-            await self._write_page(page)
-            self._append_to_search_index(page)
+            await write_page(self._wiki_path, page)
+            append_to_search_index(self._wiki_path, page)
             content = page.content
             fut.set_result(content)
 
@@ -251,10 +251,6 @@ class LazyPageGenerator:
             await self.get_page(page_path)
         except Exception:  # noqa: BLE001 — background warm-up must not propagate errors
             logger.debug("Warm failed for %s", page_path, exc_info=True)
-
-    def _read_cached(self, page_path: str) -> str | None:
-        """Return cached page content from disk, or None if not yet generated."""
-        return read_cached_page(self._wiki_path, page_path)
 
     async def _generate_page(self, page_path: str) -> WikiPage:
         """Route to the correct generator based on page path."""
@@ -384,7 +380,7 @@ class LazyPageGenerator:
 
         self._auxiliary_cache = pages
         for page in pages.values():
-            await self._write_page(page)
+            await write_page(self._wiki_path, page)
         return pages
 
     async def _generate_module(self, page_path: str, vs: VectorStore) -> WikiPage:
@@ -502,14 +498,6 @@ class LazyPageGenerator:
             content=_generate_modules_index(existing),
             generated_at=time.time(),
         )
-
-    async def _write_page(self, page: WikiPage) -> None:
-        """Write a generated wiki page to disk, creating parent directories as needed."""
-        await _write_page_fn(self._wiki_path, page)
-
-    def _append_to_search_index(self, page: WikiPage) -> None:
-        """Append a page entry to the JSON search index for client-side search."""
-        _append_to_search_index_fn(self._wiki_path, page)
 
     def _get_module_siblings(self, page_path: str) -> list[str]:
         """Return wiki paths of sibling pages in the same section directory."""

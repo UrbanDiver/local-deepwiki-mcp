@@ -93,7 +93,20 @@ def _collect_file_metrics(repo_path: Path) -> dict[str, Any]:
     total_lines = 0
     files_over_threshold = 0
 
-    for py_file, rel_path in iter_python_files(repo_path, exclude_tests=False):
+    for py_file in sorted(repo_path.rglob("*.py")):
+        try:
+            rel_path = py_file.relative_to(repo_path)
+        except ValueError:
+            continue
+
+        # Skip hidden dirs and common non-source trees
+        rel_parts = rel_path.parts
+        if any(
+            part.startswith(".") or part in ("node_modules", "__pycache__")
+            for part in rel_parts
+        ):
+            continue
+
         try:
             content = py_file.read_text(encoding="utf-8", errors="replace")
         except OSError:
@@ -331,12 +344,7 @@ async def handle_get_design_smells(
 async def handle_get_architecture_health(
     args: dict[str, Any],
 ) -> list[TextContent]:
-    """Handle get_architecture_health tool call.
-
-    Runs all architecture analyses (hotspots, coupling, design smells, layer
-    dependencies) in a single call and returns a scored health summary with
-    an overall grade (A-F).
-    """
+    """Handle get_architecture_health tool call."""
     controller = get_access_controller()
     controller.require_permission(Permission.INDEX_READ)
 
@@ -346,7 +354,6 @@ async def handle_get_architecture_health(
         raise ValueError(str(e)) from e
 
     repo_path = Path(validated.repo_path).resolve()
-
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
@@ -357,13 +364,11 @@ async def handle_get_architecture_health(
 
     manifest = get_cached_manifest(repo_path)
     project_name = manifest.name or repo_path.name
-
     result = analyze_architecture_health(
         repo_path,
         project_name,
         top_findings=validated.top_findings,
     )
-
     logger.info(
         "Architecture health: %s (%s) in %s",
         result.get("overall", {}).get("grade"),
@@ -377,11 +382,7 @@ async def handle_get_architecture_health(
 async def handle_compare_architecture(
     args: dict[str, Any],
 ) -> list[TextContent]:
-    """Handle compare_architecture tool call.
-
-    Compares architecture health metrics between two git refs using
-    git worktree for safe non-destructive analysis.
-    """
+    """Handle compare_architecture tool call."""
     controller = get_access_controller()
     controller.require_permission(Permission.INDEX_READ)
 
@@ -391,7 +392,6 @@ async def handle_compare_architecture(
         raise ValueError(str(e)) from e
 
     repo_path = Path(validated.repo_path).resolve()
-
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
@@ -402,14 +402,12 @@ async def handle_compare_architecture(
 
     manifest = get_cached_manifest(repo_path)
     project_name = manifest.name or repo_path.name
-
     result = compare_architecture(
         repo_path,
         project_name,
         base_ref=validated.base_ref,
         head_ref=validated.head_ref,
     )
-
     logger.info(
         "Architecture comparison %s..%s in %s",
         validated.base_ref,
@@ -423,11 +421,7 @@ async def handle_compare_architecture(
 async def handle_get_module_health(
     args: dict[str, Any],
 ) -> list[TextContent]:
-    """Handle get_module_health tool call.
-
-    Runs a deep health analysis of a single module: complexity, smells,
-    coupling metrics, dependents, dependencies, and refactoring risk.
-    """
+    """Handle get_module_health tool call."""
     controller = get_access_controller()
     controller.require_permission(Permission.INDEX_READ)
 
@@ -437,14 +431,12 @@ async def handle_get_module_health(
         raise ValueError(str(e)) from e
 
     repo_path = Path(validated.repo_path).resolve()
-
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
     from local_deepwiki.generators.analysis.module_health import analyze_module_health
 
     result = analyze_module_health(repo_path, validated.module_name)
-
     logger.info(
         "Module health for %s: score=%s in %s",
         validated.module_name,
