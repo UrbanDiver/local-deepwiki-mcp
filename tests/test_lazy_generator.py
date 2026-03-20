@@ -71,19 +71,23 @@ class TestLazyPageGenerator:
     """Tests for LazyPageGenerator core behaviour."""
 
     def test_read_cached_returns_existing_page(self, tmp_path: Path) -> None:
+        from local_deepwiki.generators.lazy_cache import read_cached_page
+
         wiki = _make_wiki_dir(tmp_path)
-        gen = _make_generator(wiki)
+        _make_generator(wiki)
 
         (wiki / "index.md").write_text("# Overview")
 
-        result = gen._read_cached("index.md")
+        result = read_cached_page(wiki, "index.md")
         assert result == "# Overview"
 
     def test_read_cached_returns_none_for_missing(self, tmp_path: Path) -> None:
-        wiki = _make_wiki_dir(tmp_path)
-        gen = _make_generator(wiki)
+        from local_deepwiki.generators.lazy_cache import read_cached_page
 
-        result = gen._read_cached("nonexistent.md")
+        wiki = _make_wiki_dir(tmp_path)
+        _make_generator(wiki)
+
+        result = read_cached_page(wiki, "nonexistent.md")
         assert result is None
 
     async def test_get_page_returns_cached(self, tmp_path: Path) -> None:
@@ -361,13 +365,15 @@ class TestExtractCrossLinkTargets:
 
 class TestAppendToSearchIndex:
     def test_creates_new_index(self, tmp_path: Path) -> None:
+        from local_deepwiki.generators.lazy_cache import append_to_search_index
+
         wiki = _make_wiki_dir(tmp_path)
-        gen = _make_generator(wiki)
+        _make_generator(wiki)
         page = WikiPage(
             path="test.md", title="Test", content="# Test", generated_at=time.time()
         )
 
-        gen._append_to_search_index(page)
+        append_to_search_index(wiki, page)
 
         idx_path = wiki / "search_index.json"
         assert idx_path.exists()
@@ -376,8 +382,10 @@ class TestAppendToSearchIndex:
         assert entries[0]["path"] == "test.md"
 
     def test_appends_to_existing_index(self, tmp_path: Path) -> None:
+        from local_deepwiki.generators.lazy_cache import append_to_search_index
+
         wiki = _make_wiki_dir(tmp_path)
-        gen = _make_generator(wiki)
+        _make_generator(wiki)
         (wiki / "search_index.json").write_text(
             json.dumps([{"path": "old.md", "title": "Old", "summary": ""}])
         )
@@ -385,7 +393,7 @@ class TestAppendToSearchIndex:
             path="new.md", title="New", content="# New", generated_at=time.time()
         )
 
-        gen._append_to_search_index(page)
+        append_to_search_index(wiki, page)
 
         entries = json.loads((wiki / "search_index.json").read_text())
         assert len(entries) == 2
