@@ -33,6 +33,283 @@ if TYPE_CHECKING:
     from local_deepwiki.core.vectorstore import VectorStore
 
 
+# ---------------------------------------------------------------------------
+# Module-level pure helpers — no instance state required
+# ---------------------------------------------------------------------------
+
+
+def _normalize_cycle(cycle: list[str]) -> list[str]:
+    """Normalize a cycle for consistent comparison.
+
+    Rotates the cycle so that the smallest element is first.
+
+    Args:
+        cycle: List of nodes forming a cycle.
+
+    Returns:
+        Normalized cycle list.
+    """
+    if len(cycle) <= 1:
+        return cycle
+
+    # Remove the duplicate last element if present
+    if cycle[0] == cycle[-1] and len(cycle) > 1:
+        cycle = cycle[:-1]
+
+    # Find the minimum element and rotate
+    min_idx = cycle.index(min(cycle))
+    return cycle[min_idx:] + cycle[:min_idx]
+
+
+def _get_circular_edges(cycles: list[list[str]]) -> set[tuple[str, str]]:
+    """Extract edges that are part of circular dependencies.
+
+    Args:
+        cycles: List of detected cycles.
+
+    Returns:
+        Set of (source, target) tuples that form cycles.
+    """
+    edges: set[tuple[str, str]] = set()
+    for cycle in cycles:
+        rotated = cycle[1:] + cycle[:1]
+        for source, target in zip(cycle, rotated):
+            edges.add((source, target))
+    return edges
+
+
+def _parse_imports(content: str, language: str) -> list[str]:
+    """Parse import statements from code content.
+
+    Args:
+        content: Code content with import statements.
+        language: Programming language.
+
+    Returns:
+        List of imported module names.
+    """
+    imports: list[str] = []
+
+    # Get patterns for this language
+    patterns = IMPORT_PATTERNS.get(language, IMPORT_PATTERNS.get("python", []))
+
+    for line in content.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+
+        for pattern in patterns:
+            match = pattern.search(line)
+            if match:
+                imports.append(match.group(1))
+                break
+
+    return imports
+
+
+def _file_path_to_wiki_path(file_path: str) -> str:
+    """Convert a file path to its wiki page path.
+
+    Args:
+        file_path: Source file path.
+
+    Returns:
+        Wiki page path.
+    """
+    path = Path(file_path)
+    wiki_path = str(path.with_suffix(".md"))
+    return f"files/{wiki_path}"
+
+
+def _generate_empty_graph_message(message: str) -> str:
+    """Generate a placeholder for empty graphs.
+
+    Args:
+        message: Message to display.
+
+    Returns:
+        Mermaid diagram with placeholder message.
+    """
+    return f"```mermaid\nflowchart TD\n    A[{message}]\n```"
+
+
+def _render_file_graph(graph: DependencyGraph, module_path: str) -> str:
+    """Render the file dependency graph as Mermaid markdown.
+
+    Args:
+        graph: The dependency graph to render.
+        module_path: Module path being visualized.
+
+    Returns:
+        Mermaid flowchart markdown string.
+    """
+    lines = ["```mermaid", "flowchart TD"]
+    lines.append(f"    subgraph {_sanitize_mermaid_name(module_path)}[{module_path}]")
+
+    # Create node ID mapping
+    node_ids: dict[str, str] = {}
+    for i, (name, _node) in enumerate(sorted(graph.nodes.items())):
+        node_id = f"F{i}"
+        node_ids[name] = node_id
+        lines.append(f"        {node_id}[{name}]")
+
+    lines.append("    end")
+
+    # Add edges
+    link_idx = 0
+    circular_link_indices: list[int] = []
+
+    for (source, target), edge in sorted(graph.edges.items()):
+        source_id = node_ids.get(source)
+        target_id = node_ids.get(target)
+
+        if source_id and target_id:
+            if edge.is_circular:
+                lines.append(f"    {source_id} -.->|circular| {target_id}")
+                circular_link_indices.append(link_idx)
+            else:
+                lines.append(f"    {source_id} --> {target_id}")
+            link_idx += 1
+
+    # Add circular styling
+    if circular_link_indices:
+        lines.append("    linkStyle default stroke:#666")
+        for idx in circular_link_indices:
+            lines.append(f"    linkStyle {idx} stroke:#f00,stroke-width:2px")
+
+    lines.append("```")
+
+    # Add cycle warnings
+    if graph.cycles:
+        lines.append("")
+        lines.append("**Warning: Circular dependencies detected!**")
+        for cycle in graph.cycles[:3]:
+            cycle_str = " -> ".join(cycle) + " -> " + cycle[0]
+            lines.append(f"- `{cycle_str}`")
+
+    return "\n".join(lines)
+
+
+def _render_module_graph(
+    graph: DependencyGraph,
+    show_external: bool,
+    max_external: int,
+    wiki_base_path: str,
+) -> str:
+    """Render the module dependency graph as Mermaid markdown.
+
+    Args:
+        graph: The dependency graph to render.
+        show_external: Whether to show external dependencies.
+        max_external: Maximum external dependencies to show.
+        wiki_base_path: Base path for wiki links.
+
+    Returns:
+        Mermaid flowchart markdown string.
+    """
+    lines = ["```mermaid", "flowchart TD"]
+
+    # Group nodes by top-level package
+    groups: dict[str, list[DependencyNode]] = defaultdict(list)
+    external_nodes = [node for node in graph.nodes.values() if node.is_external]
+
+    for node in graph.nodes.values():
+        if not node.is_external:
+            group = node.name.split(".")[0] if "." in node.name else "root"
+            groups[group].append(node)
+
+    # Create node ID mapping
+    node_ids: dict[str, str] = {}
+    idx = 0
+
+    # Add subgraphs for internal modules
+    for group_name, nodes in sorted(groups.items()):
+        safe_group = _sanitize_mermaid_name(group_name)
+        display_name = group_name.replace("_", " ").title()
+
+        lines.append(f"    subgraph {safe_group}[{display_name}]")
+
+        for node in sorted(nodes, key=lambda n: n.name):
+            node_id = f"M{idx}"
+            node_ids[node.name] = node_id
+            idx += 1
+
+            display = node.name.split(".")[-1]
+            lines.append(f"        {node_id}[{display}]")
+
+        lines.append("    end")
+
+    # Add external dependencies subgraph if enabled
+    if show_external and external_nodes:
+        ext_nodes_to_show = sorted(external_nodes, key=lambda n: n.name)[:max_external]
+
+        lines.append("    subgraph external[External Dependencies]")
+        for node in ext_nodes_to_show:
+            node_id = f"E{idx}"
+            node_ids[node.name] = node_id
+            idx += 1
+            lines.append(f"        {node_id}([{node.name}]):::external")
+        lines.append("    end")
+
+    # Add edges
+    link_idx = 0
+    circular_link_indices: list[int] = []
+
+    for (source, target), edge in sorted(graph.edges.items()):
+        source_id = node_ids.get(source)
+        target_id = node_ids.get(target)
+
+        if source_id and target_id and source_id != target_id:
+            if edge.is_circular:
+                lines.append(f"    {source_id} -.->|circular| {target_id}")
+                circular_link_indices.append(link_idx)
+            elif edge.count > 1:
+                lines.append(f"    {source_id} -->|{edge.count}| {target_id}")
+            else:
+                # External edges get dashed lines
+                is_ext = graph.nodes.get(
+                    target, DependencyNode(name="", file_path="")
+                ).is_external
+                if is_ext:
+                    lines.append(f"    {source_id} -.-> {target_id}")
+                else:
+                    lines.append(f"    {source_id} --> {target_id}")
+            link_idx += 1
+
+    # Add click handlers for wiki links
+    if wiki_base_path:
+        for node_name, node_id in sorted(node_ids.items()):
+            node = graph.nodes.get(node_name)  # type: ignore[assignment]
+            if node and not node.is_external and node.file_path:
+                wiki_path = _file_path_to_wiki_path(node.file_path)
+                lines.append(f'    click {node_id} "{wiki_base_path}{wiki_path}"')
+
+    # Add styling
+    lines.append("    classDef external fill:#2d2d3d,stroke:#666,stroke-dasharray: 5 5")
+    lines.append("    classDef circular fill:#ff6b6b,stroke:#c92a2a")
+
+    # Add circular dependency styling
+    if circular_link_indices:
+        lines.append("    linkStyle default stroke:#666")
+        for idx in circular_link_indices:
+            lines.append(f"    linkStyle {idx} stroke:#f00,stroke-width:2px")
+
+    lines.append("```")
+
+    # Add circular dependency warning if any
+    if graph.cycles:
+        lines.append("")
+        lines.append("**Warning: Circular dependencies detected!**")
+        lines.append("")
+        for i, cycle in enumerate(graph.cycles[:5], 1):
+            cycle_str = " -> ".join(cycle) + " -> " + cycle[0]
+            lines.append(f"{i}. `{cycle_str}`")
+        if len(graph.cycles) > 5:
+            lines.append(f"   ... and {len(graph.cycles) - 5} more")
+
+    return "\n".join(lines)
+
+
 class DependencyGraphGenerator:
     """Generator for module and file dependency graphs.
 
@@ -40,6 +317,16 @@ class DependencyGraphGenerator:
     Mermaid diagrams showing module interdependencies, including detection
     of circular dependencies.
     """
+
+    # Pure helpers promoted to module level — kept as class attributes so
+    # existing call sites (including tests) can reach them via the instance.
+    _normalize_cycle = staticmethod(_normalize_cycle)
+    _get_circular_edges = staticmethod(_get_circular_edges)
+    _parse_imports = staticmethod(_parse_imports)
+    _file_path_to_wiki_path = staticmethod(_file_path_to_wiki_path)
+    _generate_empty_graph_message = staticmethod(_generate_empty_graph_message)
+    _render_file_graph = staticmethod(_render_file_graph)
+    _render_module_graph = staticmethod(_render_module_graph)
 
     def __init__(self, vector_store: "VectorStore"):
         """Initialize the dependency graph generator.
@@ -82,13 +369,13 @@ class DependencyGraphGenerator:
         )
 
         if not graph.nodes:
-            return self._generate_empty_graph_message("No module dependencies found.")
+            return _generate_empty_graph_message("No module dependencies found.")
 
         # Detect circular dependencies
         graph.cycles = self.detect_circular_dependencies(graph.get_adjacency_list())
 
         # Mark circular edges
-        circular_edges = self._get_circular_edges(graph.cycles)
+        circular_edges = _get_circular_edges(graph.cycles)
         for edge_key in circular_edges:
             if edge_key in graph.edges:
                 graph.edges[edge_key] = dataclasses.replace(
@@ -96,7 +383,7 @@ class DependencyGraphGenerator:
                 )
 
         # Generate Mermaid diagram
-        return self._render_module_graph(
+        return _render_module_graph(
             graph=graph,
             show_external=show_external,
             max_external=max_external,
@@ -132,11 +419,11 @@ class DependencyGraphGenerator:
             module_files = [f for f in module_files if not _is_test_path(f.path)]
 
         if not module_files:
-            return self._generate_empty_graph_message(
+            return _generate_empty_graph_message(
                 f"No files found in module: {module_path}"
             )
 
-        # Search for import chunks in these files
+        # Build nodes for all files in this module
         graph = DependencyGraph()
 
         for file_info in module_files:
@@ -149,20 +436,14 @@ class DependencyGraphGenerator:
                 )
             )
 
-        # Get import chunks for files in this module
-        chunks = (
-            await self._store.get_chunks_by_file(module_files[0].path)
-            if module_files
-            else []
-        )
-
-        # Also search for imports mentioning the module
+        # Search for imports mentioning the module
         search_results = await self._store.search(
             f"import {module_path}",
             limit=100,
             chunk_type="import",
         )
 
+        file_stems = [Path(f.path).stem for f in module_files]
         for result in search_results:
             chunk = result.chunk
             if chunk.chunk_type != ChunkType.IMPORT:
@@ -172,27 +453,23 @@ class DependencyGraphGenerator:
             if module_path not in chunk.file_path:
                 continue
 
-            # Parse imports from content
-            imports = self._parse_imports(chunk.content, chunk.language.value)
+            imports = _parse_imports(chunk.content, chunk.language.value)
             for imp in imports:
-                # Check if import is within the module
-                if module_path in imp or imp in [
-                    Path(f.path).stem for f in module_files
-                ]:
+                if module_path in imp or imp in file_stems:
                     target_file = imp.split(".")[-1]
-                    if target_file in [Path(f.path).stem for f in module_files]:
+                    if target_file in file_stems:
                         graph.add_edge(source_file, target_file)
 
-        # Detect cycles
+        # Detect and mark circular edges
         graph.cycles = self.detect_circular_dependencies(graph.get_adjacency_list())
-        circular_edges = self._get_circular_edges(graph.cycles)
+        circular_edges = _get_circular_edges(graph.cycles)
         for edge_key in circular_edges:
             if edge_key in graph.edges:
                 graph.edges[edge_key] = dataclasses.replace(
                     graph.edges[edge_key], is_circular=True
                 )
 
-        return self._render_file_graph(graph, module_path)
+        return _render_file_graph(graph, module_path)
 
     def detect_circular_dependencies(
         self, graph: dict[str, set[str]]
@@ -208,29 +485,6 @@ class DependencyGraphGenerator:
             List of cycles, where each cycle is a list of module names.
         """
         return find_circular_dependencies(graph)
-
-    @staticmethod
-    def _normalize_cycle(cycle: list[str]) -> list[str]:
-        """Normalize a cycle for consistent comparison.
-
-        Rotates the cycle so that the smallest element is first.
-
-        Args:
-            cycle: List of nodes forming a cycle.
-
-        Returns:
-            Normalized cycle list.
-        """
-        if len(cycle) <= 1:
-            return cycle
-
-        # Remove the duplicate last element if present
-        if cycle[0] == cycle[-1] and len(cycle) > 1:
-            cycle = cycle[:-1]
-
-        # Find the minimum element and rotate
-        min_idx = cycle.index(min(cycle))
-        return cycle[min_idx:] + cycle[:min_idx]
 
     async def _build_dependency_graph(
         self,
@@ -250,7 +504,6 @@ class DependencyGraphGenerator:
         """
         graph = DependencyGraph()
 
-        # Get all files and create nodes
         internal_modules: set[str] = set()
         file_to_module: dict[str, str] = {}
 
@@ -270,14 +523,12 @@ class DependencyGraphGenerator:
                 )
             )
 
-        # Search for import chunks
         import_results = await self._store.search(
             "import require include from use",
             limit=500,
             chunk_type="import",
         )
 
-        # Parse imports and add edges
         for result in import_results:
             chunk = result.chunk
             if chunk.chunk_type != ChunkType.IMPORT:
@@ -299,20 +550,14 @@ class DependencyGraphGenerator:
                 )
                 internal_modules.add(source_module)
 
-            # Parse imports from content
-            imports = self._parse_imports(chunk.content, chunk.language.value)
+            imports = _parse_imports(chunk.content, chunk.language.value)
 
             for imp in imports:
-                # Check if internal or external
-                is_internal = self._is_internal_import(imp, internal_modules)
-
-                if is_internal:
-                    # Map to internal module
+                if self._is_internal_import(imp, internal_modules):
                     target_module = self._resolve_internal_import(imp, internal_modules)
                     if target_module and target_module != source_module:
                         graph.add_edge(source_module, target_module)
                 elif show_external:
-                    # External dependency
                     ext_name = imp.split(".")[0]
                     if ext_name and not ext_name.startswith("_"):
                         if ext_name not in graph.nodes:
@@ -327,35 +572,6 @@ class DependencyGraphGenerator:
 
         return graph
 
-    @staticmethod
-    def _parse_imports(content: str, language: str) -> list[str]:
-        """Parse import statements from code content.
-
-        Args:
-            content: Code content with import statements.
-            language: Programming language.
-
-        Returns:
-            List of imported module names.
-        """
-        imports: list[str] = []
-
-        # Get patterns for this language
-        patterns = IMPORT_PATTERNS.get(language, IMPORT_PATTERNS.get("python", []))
-
-        for line in content.split("\n"):
-            line = line.strip()
-            if not line:
-                continue
-
-            for pattern in patterns:
-                match = pattern.search(line)
-                if match:
-                    imports.append(match.group(1))
-                    break
-
-        return imports
-
     def _is_internal_import(self, import_name: str, internal_modules: set[str]) -> bool:
         """Check if an import refers to an internal module.
 
@@ -366,19 +582,15 @@ class DependencyGraphGenerator:
         Returns:
             True if the import is internal.
         """
-        # Direct match
         if import_name in internal_modules:
             return True
 
-        # Check if import starts with project name
         if self._project_name and import_name.startswith(self._project_name + "."):
             return True
 
-        # Check if any internal module matches prefix
         import_parts = import_name.split(".")
         for module in internal_modules:
             module_parts = module.split(".")
-            # Check if import could be referring to this module
             if import_parts[-1] == module_parts[-1]:
                 return True
             if import_name.endswith("." + module):
@@ -398,18 +610,15 @@ class DependencyGraphGenerator:
         Returns:
             Resolved internal module name, or None if not found.
         """
-        # Direct match
         if import_name in internal_modules:
             return import_name
 
-        # Strip project prefix
         if self._project_name:
             if import_name.startswith(self._project_name + "."):
                 stripped = import_name[len(self._project_name) + 1 :]
                 if stripped in internal_modules:
                     return stripped
 
-        # Match by last component
         import_parts = import_name.split(".")
         for module in internal_modules:
             module_parts = module.split(".")
@@ -417,235 +626,6 @@ class DependencyGraphGenerator:
                 return module
 
         return None
-
-    @staticmethod
-    def _get_circular_edges(cycles: list[list[str]]) -> set[tuple[str, str]]:
-        """Extract edges that are part of circular dependencies.
-
-        Args:
-            cycles: List of detected cycles.
-
-        Returns:
-            Set of (source, target) tuples that form cycles.
-        """
-        edges: set[tuple[str, str]] = set()
-        for cycle in cycles:
-            rotated = cycle[1:] + cycle[:1]
-            for source, target in zip(cycle, rotated):
-                edges.add((source, target))
-        return edges
-
-    def _render_module_graph(
-        self,
-        graph: DependencyGraph,
-        show_external: bool,
-        max_external: int,
-        wiki_base_path: str,
-    ) -> str:
-        """Render the module dependency graph as Mermaid markdown.
-
-        Args:
-            graph: The dependency graph to render.
-            show_external: Whether to show external dependencies.
-            max_external: Maximum external dependencies to show.
-            wiki_base_path: Base path for wiki links.
-
-        Returns:
-            Mermaid flowchart markdown string.
-        """
-        lines = ["```mermaid", "flowchart TD"]
-
-        # Group nodes by directory
-        groups: dict[str, list[DependencyNode]] = defaultdict(list)
-        external_nodes = [node for node in graph.nodes.values() if node.is_external]
-
-        for node in graph.nodes.values():
-            if not node.is_external:
-                group = node.name.split(".")[0] if "." in node.name else "root"
-                groups[group].append(node)
-
-        # Create node ID mapping
-        node_ids: dict[str, str] = {}
-        idx = 0
-
-        # Add subgraphs for internal modules
-        for group_name, nodes in sorted(groups.items()):
-            safe_group = _sanitize_mermaid_name(group_name)
-            display_name = group_name.replace("_", " ").title()
-
-            lines.append(f"    subgraph {safe_group}[{display_name}]")
-
-            for node in sorted(nodes, key=lambda n: n.name):
-                node_id = f"M{idx}"
-                node_ids[node.name] = node_id
-                idx += 1
-
-                display = node.name.split(".")[-1]
-                lines.append(f"        {node_id}[{display}]")
-
-            lines.append("    end")
-
-        # Add external dependencies subgraph if enabled
-        if show_external and external_nodes:
-            ext_nodes_to_show = sorted(external_nodes, key=lambda n: n.name)[
-                :max_external
-            ]
-
-            lines.append("    subgraph external[External Dependencies]")
-            for node in ext_nodes_to_show:
-                node_id = f"E{idx}"
-                node_ids[node.name] = node_id
-                idx += 1
-                lines.append(f"        {node_id}([{node.name}]):::external")
-            lines.append("    end")
-
-        # Add edges
-        link_idx = 0
-        circular_link_indices: list[int] = []
-
-        for (source, target), edge in sorted(graph.edges.items()):
-            source_id = node_ids.get(source)
-            target_id = node_ids.get(target)
-
-            if source_id and target_id and source_id != target_id:
-                if edge.is_circular:
-                    lines.append(f"    {source_id} -.->|circular| {target_id}")
-                    circular_link_indices.append(link_idx)
-                elif edge.count > 1:
-                    lines.append(f"    {source_id} -->|{edge.count}| {target_id}")
-                else:
-                    # External edges get dashed lines
-                    if graph.nodes.get(
-                        target, DependencyNode(name="", file_path="")
-                    ).is_external:
-                        lines.append(f"    {source_id} -.-> {target_id}")
-                    else:
-                        lines.append(f"    {source_id} --> {target_id}")
-                link_idx += 1
-
-        # Add click handlers for wiki links
-        if wiki_base_path:
-            for node_name, node_id in sorted(node_ids.items()):
-                node = graph.nodes.get(node_name)  # type: ignore[assignment]
-                if node and not node.is_external and node.file_path:
-                    wiki_path = self._file_path_to_wiki_path(node.file_path)
-                    lines.append(f'    click {node_id} "{wiki_base_path}{wiki_path}"')
-
-        # Add styling
-        lines.append(
-            "    classDef external fill:#2d2d3d,stroke:#666,stroke-dasharray: 5 5"
-        )
-        lines.append("    classDef circular fill:#ff6b6b,stroke:#c92a2a")
-
-        # Add circular dependency styling
-        if circular_link_indices:
-            lines.append("    linkStyle default stroke:#666")
-            for idx in circular_link_indices:
-                lines.append(f"    linkStyle {idx} stroke:#f00,stroke-width:2px")
-
-        lines.append("```")
-
-        # Add circular dependency warning if any
-        if graph.cycles:
-            lines.append("")
-            lines.append("**Warning: Circular dependencies detected!**")
-            lines.append("")
-            for i, cycle in enumerate(graph.cycles[:5], 1):
-                cycle_str = " -> ".join(cycle) + " -> " + cycle[0]
-                lines.append(f"{i}. `{cycle_str}`")
-            if len(graph.cycles) > 5:
-                lines.append(f"   ... and {len(graph.cycles) - 5} more")
-
-        return "\n".join(lines)
-
-    @staticmethod
-    def _render_file_graph(graph: DependencyGraph, module_path: str) -> str:
-        """Render the file dependency graph as Mermaid markdown.
-
-        Args:
-            graph: The dependency graph to render.
-            module_path: Module path being visualized.
-
-        Returns:
-            Mermaid flowchart markdown string.
-        """
-        lines = ["```mermaid", f"flowchart TD"]
-        lines.append(
-            f"    subgraph {_sanitize_mermaid_name(module_path)}[{module_path}]"
-        )
-
-        # Create node ID mapping
-        node_ids: dict[str, str] = {}
-        for i, (name, node) in enumerate(sorted(graph.nodes.items())):
-            node_id = f"F{i}"
-            node_ids[name] = node_id
-            lines.append(f"        {node_id}[{name}]")
-
-        lines.append("    end")
-
-        # Add edges
-        link_idx = 0
-        circular_link_indices: list[int] = []
-
-        for (source, target), edge in sorted(graph.edges.items()):
-            source_id = node_ids.get(source)
-            target_id = node_ids.get(target)
-
-            if source_id and target_id:
-                if edge.is_circular:
-                    lines.append(f"    {source_id} -.->|circular| {target_id}")
-                    circular_link_indices.append(link_idx)
-                else:
-                    lines.append(f"    {source_id} --> {target_id}")
-                link_idx += 1
-
-        # Add circular styling
-        if circular_link_indices:
-            lines.append("    linkStyle default stroke:#666")
-            for idx in circular_link_indices:
-                lines.append(f"    linkStyle {idx} stroke:#f00,stroke-width:2px")
-
-        lines.append("```")
-
-        # Add cycle warnings
-        if graph.cycles:
-            lines.append("")
-            lines.append("**Warning: Circular dependencies detected!**")
-            for cycle in graph.cycles[:3]:
-                cycle_str = " -> ".join(cycle) + " -> " + cycle[0]
-                lines.append(f"- `{cycle_str}`")
-
-        return "\n".join(lines)
-
-    @staticmethod
-    def _file_path_to_wiki_path(file_path: str) -> str:
-        """Convert a file path to its wiki page path.
-
-        Args:
-            file_path: Source file path.
-
-        Returns:
-            Wiki page path.
-        """
-        # Convert file path to wiki path
-        path = Path(file_path)
-        wiki_path = str(path.with_suffix(".md"))
-        return f"files/{wiki_path}"
-
-    @staticmethod
-    def _generate_empty_graph_message(message: str) -> str:
-        """Generate a placeholder for empty graphs.
-
-        Args:
-            message: Message to display.
-
-        Returns:
-            Mermaid diagram with placeholder message.
-        """
-        return f"""```mermaid
-flowchart TD
-    A[{message}]
-```"""
 
 
 async def generate_dependency_graph_page(
@@ -670,7 +650,6 @@ async def generate_dependency_graph_page(
     """
     generator = DependencyGraphGenerator(vector_store)
 
-    # Generate module graph
     module_graph = await generator.generate_module_graph(
         index_status=index_status,
         show_external=show_external,
@@ -692,7 +671,6 @@ async def generate_dependency_graph_page(
         "",
     ]
 
-    # Add legend
     content_parts.extend(
         [
             "## Legend",
@@ -705,7 +683,6 @@ async def generate_dependency_graph_page(
         ]
     )
 
-    # Add recommendations
     content_parts.extend(
         [
             "## Best Practices",
