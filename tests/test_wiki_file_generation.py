@@ -698,14 +698,16 @@ class TestGenerateFileDocs:
         index_status = make_index_status(repo_path=str(tmp_path), files=[])
 
         pages, generated, skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         assert pages == []
@@ -728,14 +730,16 @@ class TestGenerateFileDocs:
         )
 
         pages, generated, skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         assert pages == []
@@ -756,14 +760,16 @@ class TestGenerateFileDocs:
         )
 
         pages, generated, skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         assert pages == []
@@ -788,14 +794,16 @@ class TestGenerateFileDocs:
         )
 
         pages, generated, _skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         # Should include this file (not in tests/ directory)
@@ -817,14 +825,16 @@ class TestGenerateFileDocs:
         )
 
         pages, _generated, _skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         assert pages == []
@@ -852,14 +862,16 @@ class TestGenerateFileDocs:
         index_status = make_index_status(repo_path=str(tmp_path), files=files)
 
         pages, _generated, _skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         # Should have index + max 2 file pages (but may have fewer due to no chunks)
@@ -885,14 +897,16 @@ class TestGenerateFileDocs:
         )
 
         pages, _generated, _skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         # First page should be files index
@@ -955,14 +969,16 @@ class TestGenerateFileDocs:
 
         # Should not raise, errors are caught
         pages, _generated, _skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         # Should have at least the successful file + index
@@ -993,14 +1009,16 @@ class TestGenerateFileDocs:
         )
 
         pages, _generated, _skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         # Should prioritize the file with more chunks
@@ -1036,14 +1054,16 @@ class TestGenerateFileDocs:
         )
 
         pages, generated, skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=False,  # Incremental, not full rebuild
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=False,
+            ),
         )
 
         # Should count as skipped

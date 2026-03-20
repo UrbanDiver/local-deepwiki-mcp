@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from local_deepwiki.generators.wiki.files import (
+    FileDocContext,
     _create_source_details,
     _generate_files_index,
     _inject_inline_source_code,
@@ -302,14 +303,16 @@ class TestGenerateFileDocsCallbacks:
             written_pages.append(page)
 
         pages, generated, _skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
             write_callback=write_callback,
         )
 
@@ -341,14 +344,16 @@ class TestGenerateFileDocsCallbacks:
             progress_calls.append((message, current, total))
 
         pages, _generated, _skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
             progress_callback=progress_callback,
         )
 
@@ -384,14 +389,16 @@ class TestGenerateFileDocsCallbacks:
 
         # Should not raise - errors are caught
         pages, _generated, _skipped = await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
             generation_progress=mock_progress,
         )
 
@@ -422,14 +429,16 @@ class TestGenerateFileDocsCallbacks:
         mock_progress.complete_phase = MagicMock()
 
         await generate_file_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
             generation_progress=mock_progress,
         )
 

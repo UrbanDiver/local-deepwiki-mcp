@@ -575,16 +575,9 @@ def _create_files_index_page(
 
 
 async def generate_file_docs(
-    index_status: IndexStatus,
-    vector_store: VectorStore,
-    llm: LLMProvider,
-    system_prompt: str,
+    ctx: FileDocContext,
     *,
-    status_manager: "WikiStatusManager",
-    entity_registry: EntityRegistry,
-    config: Config,
     progress_callback: ProgressCallback | None = None,
-    full_rebuild: bool = False,
     write_callback: WriteCallback | None = None,
     generation_progress: "GenerationProgress | None" = None,
     max_files: int | None = None,
@@ -597,42 +590,26 @@ async def generate_file_docs(
     immediately as they complete if write_callback is provided.
 
     Args:
-        index_status: Index status with file information.
-        vector_store: Vector store with indexed code.
-        llm: LLM provider for generation.
-        system_prompt: System prompt for LLM.
-        status_manager: Wiki status manager for incremental updates.
-        entity_registry: Entity registry for cross-linking.
-        config: Configuration.
+        ctx: Bundled context with index status, vector store, LLM, and configuration.
         progress_callback: Optional progress callback.
-        full_rebuild: If True, regenerate all pages.
         write_callback: Optional async callback to write pages immediately as they complete.
         generation_progress: Optional live progress tracker for status updates.
+        max_files: Optional limit on number of files to process.
+        semaphore: Optional semaphore to limit concurrent LLM calls.
 
     Returns:
         Tuple of (pages list, generated count, skipped count).
     """
     significant_files = filter_significant_files(
-        index_status.files, config.wiki.max_file_docs
+        ctx.index_status.files, ctx.config.wiki.max_file_docs
     )
     if not significant_files:
         return [], 0, 0
     if max_files is not None and max_files < len(significant_files):
         significant_files = significant_files[:max_files]
 
-    ctx = FileDocContext(
-        index_status=index_status,
-        vector_store=vector_store,
-        llm=llm,
-        system_prompt=system_prompt,
-        status_manager=status_manager,
-        entity_registry=entity_registry,
-        config=config,
-        full_rebuild=full_rebuild,
-    )
-
     # Use semaphore to limit concurrent LLM calls (provider-aware)
-    max_concurrent = config.effective_llm_concurrency
+    max_concurrent = ctx.config.effective_llm_concurrency
     semaphore = semaphore or asyncio.Semaphore(max_concurrent)
     logger.info(
         "Generating file docs for %d files (max %d concurrent)",
@@ -692,7 +669,9 @@ async def generate_file_docs(
 
     # Create files index
     if pages:
-        files_index = _create_files_index_page(pages, significant_files, status_manager)
+        files_index = _create_files_index_page(
+            pages, significant_files, ctx.status_manager
+        )
         pages.insert(0, files_index)
 
     if generation_progress:

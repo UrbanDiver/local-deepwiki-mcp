@@ -189,8 +189,9 @@ async def generate_file_pages(
 
     # Late import so test patches at generators.wiki.generator work
     from local_deepwiki.generators.wiki import generator as _wiki_gen
+    from local_deepwiki.generators.wiki.files import FileDocContext
 
-    file_pages, gen_count, skip_count = await _wiki_gen.generate_file_docs(
+    file_ctx = FileDocContext(
         index_status=index_status,
         vector_store=generator.vector_store,
         llm=generator.llm,
@@ -198,8 +199,11 @@ async def generate_file_pages(
         status_manager=generator.status_manager,
         entity_registry=generator.entity_registry,
         config=generator.config,
-        progress_callback=progress_callback,
         full_rebuild=ctx.full_rebuild,
+    )
+    file_pages, gen_count, skip_count = await _wiki_gen.generate_file_docs(
+        file_ctx,
+        progress_callback=progress_callback,
         write_callback=generator._write_page,
         generation_progress=generator._progress,
         max_files=max_files,
