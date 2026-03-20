@@ -18,11 +18,9 @@ from local_deepwiki.core.index_manager import (
     INDEX_STATUS_FILE,
     IndexStatusManager,
 )
-from local_deepwiki.core.indexer_files import (
-    compute_files_to_process,
-    detect_deleted_files,
-    find_source_files,
-)
+from local_deepwiki.core.indexer_files import find_source_files
+from local_deepwiki.core.indexer_graph import GraphExtractor
+from local_deepwiki.core.indexer_status import IndexStatusTracker
 from local_deepwiki.core.parser import ASTCache, CodeParser
 from local_deepwiki.core.parsing_pipeline import FileParsingPipeline, ParseResult
 from local_deepwiki.core.secret_detector import scan_repository_for_secrets
@@ -115,6 +113,30 @@ class RepositoryIndexer:
         self._exclude_compiled: list = []
         self._compile_exclude_patterns()
 
+        # Composition: delegate graph extraction and status tracking.
+        # Use lazy lookups for logger/get_event_emitter so that test patches
+        # applied to this module's globals are picked up at call time.
+        import sys
+
+        _this_module = sys.modules[__name__]
+        self._graph_helper = GraphExtractor(
+            repo_path=self.repo_path,
+            parser=self.parser,
+            graph_store=self.graph_store,
+            graph_extractor=self._graph_extractor,
+            graph_enabled=self._graph_enabled,
+            host_module=_this_module,
+        )
+        self._status_tracker = IndexStatusTracker(
+            wiki_path=self.wiki_path,
+            repo_path=self.repo_path,
+            status_manager=self._status_manager,
+            find_source_files_fn=self._find_source_files,
+            parser=self.parser,
+            host_module=_this_module,
+            ast_cache=self.ast_cache,
+        )
+
     def _compile_exclude_patterns(self) -> None:
         """Pre-compile exclude patterns from config into skip_dirs and regexes."""
         for pattern in self.config.parsing.exclude_patterns:
@@ -201,97 +223,23 @@ class RepositoryIndexer:
         """Parse and chunk a single file. Delegates to FileParsingPipeline."""
         return self._create_parsing_pipeline().parse_single_file(file_path)
 
+    # -- Status tracking delegation (backward-compat wrappers) ----------------
+
     def _load_previous_status(
         self, full_rebuild: bool
     ) -> tuple[IndexStatus | None, dict[str, FileInfo], bool]:
-        """Load and validate previous index status for incremental updates.
-
-        Args:
-            full_rebuild: If True, skip loading previous status.
-
-        Returns:
-            Tuple of (previous_status, prev_files_by_path, full_rebuild_required).
-            prev_files_by_path is a hash map for O(1) lookups.
-            full_rebuild_required may be True if schema migration requires it.
-        """
-        if full_rebuild:
-            return None, {}, full_rebuild
-
-        previous_status, requires_rebuild = (
-            self._status_manager.load_with_migration_info(self.wiki_path)
-        )
-        if requires_rebuild:
-            logger.info("Schema migration requires full rebuild")
-            return None, {}, True
-
-        if previous_status:
-            logger.debug(
-                "Loaded previous index status: %d files", previous_status.total_files
-            )
-            # Pre-build hash map for O(1) lookups instead of O(N) linear scan per file
-            # This reduces O(N*M) to O(N+M) for file comparison
-            prev_files_by_path = {f.path: f for f in previous_status.files}
-            return previous_status, prev_files_by_path, full_rebuild
-
-        return None, {}, full_rebuild
+        """Delegate to IndexStatusTracker.load_previous_status."""
+        return self._status_tracker.load_previous_status(full_rebuild)
 
     def _collect_files_to_process(
         self,
         prev_files_by_path: dict[str, FileInfo],
         progress_callback: ProgressCallback | None,
     ) -> tuple[list[Path], list[FileInfo], list[str]]:
-        """Gather source files and determine what needs processing.
-
-        Args:
-            prev_files_by_path: Hash map of previous files for O(1) lookup.
-            progress_callback: Optional callback for progress updates.
-
-        Returns:
-            Tuple of (files_to_process, files_unchanged, deleted_file_paths).
-            deleted_file_paths contains relative paths of files that existed in the
-            previous index but are no longer present on disk.
-        """
-        source_files = list(self._find_source_files())
-        logger.info("Found %s source files to consider", len(source_files))
-
-        if progress_callback:
-            progress_callback(
-                "Found source files", len(source_files), len(source_files)
-            )
-
-        files_to_process, files_unchanged = compute_files_to_process(
-            source_files=source_files,
-            parser=self.parser,
-            repo_path=self.repo_path,
-            prev_files_by_path=prev_files_by_path,
+        """Delegate to IndexStatusTracker.collect_files_to_process."""
+        return self._status_tracker.collect_files_to_process(
+            prev_files_by_path, progress_callback
         )
-
-        # Build the set of current relative paths for deleted file detection
-        current_file_paths: set[str] = set()
-        for file_path in source_files:
-            file_info = self.parser.get_file_info(file_path, self.repo_path)
-            current_file_paths.add(file_info.path)
-
-        deleted_file_paths = detect_deleted_files(
-            prev_files_by_path, current_file_paths
-        )
-
-        if deleted_file_paths:
-            logger.info(
-                "Detected %d deleted file(s): %s",
-                len(deleted_file_paths),
-                deleted_file_paths,
-            )
-
-        if progress_callback:
-            progress_callback(
-                f"Processing {len(files_to_process)} files "
-                f"({len(files_unchanged)} unchanged, {len(deleted_file_paths)} deleted)",
-                0,
-                len(files_to_process),
-            )
-
-        return files_to_process, files_unchanged, deleted_file_paths
 
     async def _delete_old_chunks_for_modified_files(
         self,
@@ -352,75 +300,33 @@ class RepositoryIndexer:
             deleted_file_paths,
         )
 
+    # -- Graph extraction delegation (backward-compat wrappers) ---------------
+
+    def _sync_graph_helper(self) -> None:
+        """Sync mutable graph state to the composed GraphExtractor.
+
+        Tests may mutate ``self.graph_store``, ``self._graph_enabled``, or
+        ``self._graph_extractor`` after construction.  This method propagates
+        those changes so the helper always operates on the current values.
+        """
+        helper = self._graph_helper
+        helper.graph_store = self.graph_store
+        helper._graph_enabled = self._graph_enabled
+        helper._graph_extractor = self._graph_extractor
+
     def _extract_graph_for_file(
         self,
         file_path: Path,
         chunks: list[CodeChunk],
     ) -> FileGraphData | None:
-        """Extract graph entities and relationships from a single file.
-
-        This is a CPU-bound operation that runs in a thread pool. It parses the
-        file's AST and extracts entities, then links them to existing code chunks.
-
-        Args:
-            file_path: Absolute path to the source file.
-            chunks: Code chunks already extracted for this file.
-
-        Returns:
-            FileGraphData with entities and relationships, or None on failure.
-        """
-        if self._graph_extractor is None:
-            return None
-
-        parse_result = self.parser.parse_file(file_path)
-        if parse_result is None:
-            return None
-
-        root_node, language, source_bytes = parse_result
-        rel_path = str(file_path.relative_to(self.repo_path))
-
-        try:
-            graph_data = self._graph_extractor.extract_from_ast(
-                root_node, source_bytes, language, rel_path
-            )
-        except Exception:
-            logger.warning(
-                "Graph extraction failed for %s, skipping",
-                rel_path,
-                exc_info=True,
-            )
-            return None
-
-        # Link entities to their corresponding code chunks
-        if graph_data.entities and chunks:
-            try:
-                linked_entities = GraphRelationshipExtractor.link_entities_to_chunks(
-                    list(graph_data.entities), chunks
-                )
-                return FileGraphData(
-                    file_path=graph_data.file_path,
-                    entities=tuple(linked_entities),
-                    relationships=graph_data.relationships,
-                )
-            except Exception:
-                logger.warning(
-                    "Entity-chunk linking failed for %s, using unlinked entities",
-                    rel_path,
-                    exc_info=True,
-                )
-
-        return graph_data
+        """Delegate to GraphExtractor.extract_graph_for_file."""
+        self._sync_graph_helper()
+        return self._graph_helper.extract_graph_for_file(file_path, chunks)
 
     async def _emit_graph_start(self, files_to_process: list[Path]) -> None:
-        """Emit the GRAPH_EXTRACT_START event."""
-        emitter = get_event_emitter()
-        await emitter.emit(
-            EventType.GRAPH_EXTRACT_START,
-            {
-                "repo_path": str(self.repo_path),
-                "file_count": len(files_to_process),
-            },
-        )
+        """Delegate to GraphExtractor.emit_graph_start."""
+        self._sync_graph_helper()
+        await self._graph_helper.emit_graph_start(files_to_process)
 
     async def _delete_stale_graph_data(
         self,
@@ -429,38 +335,11 @@ class RepositoryIndexer:
         deleted_file_paths: list[str],
         full_rebuild: bool,
     ) -> None:
-        """Delete old graph data for modified and deleted files.
-
-        Args:
-            files_to_process: Files being re-processed in this run.
-            prev_files_by_path: Previous index state for incremental detection.
-            deleted_file_paths: Files removed since last index.
-            full_rebuild: Whether this is a full rebuild (skips incremental deletion).
-        """
-        # For incremental re-indexing, delete old graph data for modified files
-        if not full_rebuild and prev_files_by_path:
-            for file_path in files_to_process:
-                rel_path = str(file_path.relative_to(self.repo_path))
-                if rel_path in prev_files_by_path:
-                    try:
-                        await self.graph_store.delete_by_file(rel_path)  # type: ignore[union-attr]
-                    except Exception:
-                        logger.warning(
-                            "Failed to delete old graph data for %s",
-                            rel_path,
-                            exc_info=True,
-                        )
-
-        # Delete graph data for files that no longer exist
-        for deleted_path in deleted_file_paths:
-            try:
-                await self.graph_store.delete_by_file(deleted_path)  # type: ignore[union-attr]
-            except Exception:
-                logger.warning(
-                    "Failed to delete graph data for deleted file %s",
-                    deleted_path,
-                    exc_info=True,
-                )
+        """Delegate to GraphExtractor.delete_stale_graph_data."""
+        self._sync_graph_helper()
+        await self._graph_helper.delete_stale_graph_data(
+            files_to_process, prev_files_by_path, deleted_file_paths, full_rebuild
+        )
 
     async def _extract_and_store_graph_data(
         self,
@@ -468,81 +347,22 @@ class RepositoryIndexer:
         file_chunks: dict[str, list[CodeChunk]],
         progress_callback: ProgressCallback | None,
     ) -> tuple[int, int]:
-        """Extract graph entities/relationships and store them for each file.
-
-        Args:
-            files_to_process: Files to extract graph data from.
-            file_chunks: Mapping of relative file path to extracted chunks.
-            progress_callback: Optional callback for progress updates.
-
-        Returns:
-            Tuple of (total_entities, total_relationships) stored.
-        """
-        total_entities = 0
-        total_relationships = 0
-
-        for idx, file_path in enumerate(files_to_process):
-            rel_path = str(file_path.relative_to(self.repo_path))
-            chunks = file_chunks.get(rel_path, [])
-
-            graph_data = await asyncio.to_thread(
-                self._extract_graph_for_file, file_path, chunks
-            )
-
-            if graph_data is None:
-                continue
-
-            try:
-                if graph_data.entities:
-                    entity_count = await self.graph_store.add_entities(
-                        list(graph_data.entities)
-                    )  # type: ignore[union-attr]
-                    total_entities += entity_count
-
-                if graph_data.relationships:
-                    rel_count = await self.graph_store.add_relationships(  # type: ignore[union-attr]
-                        list(graph_data.relationships)
-                    )
-                    total_relationships += rel_count
-            except Exception:
-                logger.warning(
-                    "Failed to store graph data for %s",
-                    rel_path,
-                    exc_info=True,
-                )
-
-            if progress_callback:
-                progress_callback(
-                    f"Graph extraction: {rel_path}",
-                    idx + 1,
-                    len(files_to_process),
-                )
-
-        return total_entities, total_relationships
+        """Delegate to GraphExtractor.extract_and_store_graph_data."""
+        self._sync_graph_helper()
+        return await self._graph_helper.extract_and_store_graph_data(
+            files_to_process,
+            file_chunks,
+            progress_callback,
+            extract_fn=self._extract_graph_for_file,
+        )
 
     async def _emit_graph_complete(
         self, total_entities: int, total_relationships: int
     ) -> None:
-        """Emit the GRAPH_EXTRACT_COMPLETE event and log summary.
-
-        Args:
-            total_entities: Total number of graph entities stored.
-            total_relationships: Total number of graph relationships stored.
-        """
-        emitter = get_event_emitter()
-        await emitter.emit(
-            EventType.GRAPH_EXTRACT_COMPLETE,
-            {
-                "repo_path": str(self.repo_path),
-                "total_entities": total_entities,
-                "total_relationships": total_relationships,
-            },
-        )
-
-        logger.info(
-            "Graph extraction complete: %d entities, %d relationships",
-            total_entities,
-            total_relationships,
+        """Delegate to GraphExtractor.emit_graph_complete."""
+        self._sync_graph_helper()
+        await self._graph_helper.emit_graph_complete(
+            total_entities, total_relationships
         )
 
     async def _run_graph_extraction(
@@ -554,19 +374,11 @@ class RepositoryIndexer:
         full_rebuild: bool,
         progress_callback: ProgressCallback | None,
     ) -> None:
-        """Run graph entity/relationship extraction for processed files.
+        """Orchestrate graph extraction through patchable wrapper methods.
 
-        This phase runs after file parsing and chunk storage. It extracts
-        entities and relationships from ASTs and stores them in the knowledge
-        graph. Failures are logged but do not fail the overall indexing.
-
-        Args:
-            files_to_process: Files that were parsed in this indexing run.
-            file_chunks: Mapping of relative file path to extracted chunks.
-            prev_files_by_path: Previous index state for incremental detection.
-            deleted_file_paths: Files removed since last index.
-            full_rebuild: Whether this is a full rebuild.
-            progress_callback: Optional callback for progress updates.
+        This method calls the individual wrapper methods (``_emit_graph_start``,
+        ``_delete_stale_graph_data``, etc.) rather than delegating to the
+        helper's orchestrator, so that tests can patch individual steps.
         """
         if not self._graph_enabled or self.graph_store is None:
             return
@@ -633,51 +445,14 @@ class RepositoryIndexer:
         files_unchanged: list[FileInfo],
         total_chunks_processed: int,
     ) -> IndexStatus:
-        """Create the final index status with statistics.
-
-        Args:
-            processed_files: List of files that were processed.
-            files_unchanged: List of files that were unchanged.
-            total_chunks_processed: Number of chunks processed in this run.
-
-        Returns:
-            IndexStatus with complete indexing results.
-        """
-        all_files, total_chunks = self._status_manager.merge_files(
+        """Delegate to IndexStatusTracker.create_index_status."""
+        return self._status_tracker.create_index_status(
             processed_files, files_unchanged, total_chunks_processed
         )
 
-        return self._status_manager.create(
-            repo_path=self.repo_path,
-            files=all_files,
-            total_chunks=total_chunks,
-        )
-
     def _save_index_status(self, status: IndexStatus) -> None:
-        """Save the final index status and log completion.
-
-        Args:
-            status: The IndexStatus to save.
-        """
-        self._status_manager.save(self.wiki_path, status)
-        logger.info(
-            "Indexing complete: %d files, %d chunks, languages: %s",
-            status.total_files,
-            status.total_chunks,
-            list(status.languages.keys()),
-        )
-
-        # Log AST cache statistics if enabled
-        if self.ast_cache is not None:
-            cache_stats = self.ast_cache.get_stats()
-            logger.info(
-                "AST cache stats: hits=%d, misses=%d, hit_rate=%.2f%%, entries=%d, memory=%.1fKB",
-                cache_stats["hits"],
-                cache_stats["misses"],
-                cache_stats["hit_rate"] * 100,
-                cache_stats["total_entries"],
-                cache_stats["estimated_memory_bytes"] / 1024,
-            )
+        """Delegate to IndexStatusTracker.save_index_status."""
+        self._status_tracker.save_index_status(status)
 
     async def index(
         self,
@@ -804,29 +579,16 @@ class RepositoryIndexer:
         )
 
     def _load_status(self) -> tuple[IndexStatus | None, bool]:
-        """Load previous indexing status and check for migration needs.
-
-        Returns:
-            Tuple of (IndexStatus or None, requires_rebuild).
-            requires_rebuild is True if the index should be fully rebuilt.
-        """
-        return self._status_manager.load_with_migration_info(self.wiki_path)
+        """Delegate to IndexStatusTracker.load_status."""
+        return self._status_tracker.load_status()
 
     def _save_status(self, status: IndexStatus) -> None:
-        """Save indexing status.
-
-        Args:
-            status: The IndexStatus to save.
-        """
-        self._status_manager.save(self.wiki_path, status)
+        """Delegate to IndexStatusTracker.save_status."""
+        self._status_tracker.save_status(status)
 
     def get_status(self) -> IndexStatus | None:
-        """Get the current indexing status.
-
-        Returns:
-            IndexStatus or None if not indexed.
-        """
-        return self._status_manager.load(self.wiki_path)
+        """Delegate to IndexStatusTracker.get_status."""
+        return self._status_tracker.get_status()
 
     async def search(
         self,
