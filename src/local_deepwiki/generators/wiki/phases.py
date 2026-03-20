@@ -378,7 +378,7 @@ async def generate_auxiliary_pages(
     index_status: IndexStatus,
     progress_callback: ProgressCallback | None,
 ) -> None:
-    """Generate auxiliary pages: inheritance, glossary, coverage, dependency graph, health, hotspots, smells.
+    """Generate auxiliary pages: inheritance, glossary, coverage, dependency graph, health, hotspots, smells, coupling.
 
     All pages are generated concurrently with ``asyncio.gather``
     since they are independent of each other.  Uses structural
@@ -420,6 +420,7 @@ async def generate_auxiliary_pages(
         ("health.md", "Architecture Health"),
         ("hotspots.md", "Complexity Hotspots"),
         ("smells.md", "Design Smells"),
+        ("coupling.md", "Coupling Metrics"),
     ]
 
     if await _try_load_cached_auxiliary_pages(
@@ -507,6 +508,28 @@ async def generate_auxiliary_pages(
             ctx.warnings.append(f"Design smells page generation failed: {e}")
             return None
 
+    async def _safe_coupling_page() -> str | None:
+        """Generate coupling metrics page (sync analysis run in executor)."""
+        from pathlib import Path as _Path
+
+        from local_deepwiki.generators.analysis.coupling import (
+            analyze_coupling_metrics,
+        )
+        from local_deepwiki.generators.analysis.coupling_page import (
+            generate_coupling_page,
+        )
+
+        try:
+            repo_path = _Path(index_status.repo_path)
+            coupling_data = await asyncio.get_event_loop().run_in_executor(
+                None, analyze_coupling_metrics, repo_path
+            )
+            return generate_coupling_page(coupling_data)
+        except Exception as e:  # noqa: BLE001 — generator isolation: auxiliary page failure must not abort wiki build
+            logger.debug("Failed to generate coupling metrics page: %s", e)
+            ctx.warnings.append(f"Coupling metrics page generation failed: {e}")
+            return None
+
     contents = await asyncio.gather(
         _generate_inheritance_page(index_status, generator.vector_store),
         _generate_glossary_page(index_status, generator.vector_store),
@@ -515,6 +538,7 @@ async def generate_auxiliary_pages(
         _safe_health_page(),
         _safe_hotspots_page(),
         _safe_smells_page(),
+        _safe_coupling_page(),
     )
 
     for (page_path, title), content in zip(aux_pages, contents):
