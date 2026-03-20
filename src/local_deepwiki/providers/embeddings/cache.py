@@ -14,7 +14,10 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    pass  # forward reference anchor
 
 from local_deepwiki.logging import get_logger
 from local_deepwiki.providers.base import EmbeddingProvider
@@ -34,6 +37,175 @@ class EmbeddingCacheConfig:
     ttl_seconds: int = 604800  # 7 days default
     max_entries: int = 100000
     batch_write_threshold: int = 100
+
+
+class _CacheStorage:
+    """Low-level SQLite storage helper for EmbeddingCache.
+
+    Delegates all connection management to the owning EmbeddingCache via
+    a live attribute lookup (``owner._get_connection()``) so that
+    ``unittest.mock.patch.object`` patches applied to ``_get_connection``
+    on the owner are always honoured.
+    """
+
+    SCHEMA_VERSION = 1
+
+    def __init__(self, owner: EmbeddingCache) -> None:
+        # Keep a reference to the owner; _get_connection is resolved at
+        # call time so that test-time patches on the owner are respected.
+        self._owner = owner
+
+    def _conn(self) -> sqlite3.Connection:
+        """Return the current thread's connection via the owner's factory."""
+        return self._owner._get_connection()
+
+    # ------------------------------------------------------------------
+    # Schema
+    # ------------------------------------------------------------------
+
+    def create_table(self) -> None:
+        """Create tables and indexes if they do not already exist."""
+        conn = self._conn()
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS cache_meta (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS embeddings (
+                cache_key TEXT PRIMARY KEY,
+                embedding BLOB NOT NULL,
+                created_at REAL NOT NULL,
+                ttl_seconds INTEGER NOT NULL,
+                model_name TEXT NOT NULL,
+                dimension INTEGER NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_embeddings_created
+                ON embeddings(created_at);
+            CREATE INDEX IF NOT EXISTS idx_embeddings_model
+                ON embeddings(model_name);
+            """
+        )
+        cursor = conn.execute(
+            "SELECT value FROM cache_meta WHERE key = 'schema_version'"
+        )
+        if cursor.fetchone() is None:
+            conn.execute(
+                "INSERT INTO cache_meta (key, value) VALUES ('schema_version', ?)",
+                (str(self.SCHEMA_VERSION),),
+            )
+        conn.commit()
+
+    # ------------------------------------------------------------------
+    # Reads
+    # ------------------------------------------------------------------
+
+    def query_one(self, cache_key: str) -> sqlite3.Row | None:
+        """Return the embeddings row for *cache_key*, or None if absent."""
+        cursor = self._conn().execute(
+            "SELECT embedding, created_at, ttl_seconds FROM embeddings WHERE cache_key = ?",
+            (cache_key,),
+        )
+        return cursor.fetchone()
+
+    def count(self) -> int:
+        """Return the total number of cached embeddings."""
+        cursor = self._conn().execute("SELECT COUNT(*) FROM embeddings")
+        row = cursor.fetchone()
+        return row[0] if row else 0
+
+    # ------------------------------------------------------------------
+    # Writes
+    # ------------------------------------------------------------------
+
+    def batch_insert(
+        self,
+        rows: list[tuple[str, bytes, float, int, str, int]],
+    ) -> None:
+        """Upsert *rows* of (cache_key, blob, created_at, ttl, model, dim)."""
+        conn = self._conn()
+        conn.executemany(
+            """
+            INSERT OR REPLACE INTO embeddings
+                (cache_key, embedding, created_at, ttl_seconds, model_name, dimension)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            rows,
+        )
+        conn.commit()
+
+    # ------------------------------------------------------------------
+    # Deletes
+    # ------------------------------------------------------------------
+
+    def delete_by_key(self, cache_key: str) -> None:
+        """Delete a single entry by primary key."""
+        conn = self._conn()
+        conn.execute("DELETE FROM embeddings WHERE cache_key = ?", (cache_key,))
+        conn.commit()
+
+    def delete_all(self) -> int:
+        """Delete every entry and return the prior count."""
+        conn = self._conn()
+        prior = self.count()
+        conn.execute("DELETE FROM embeddings")
+        conn.commit()
+        return prior
+
+    def delete_expired(self, now: float) -> int:
+        """Delete entries whose TTL has elapsed; return the number removed."""
+        conn = self._conn()
+        cursor = conn.execute(
+            "DELETE FROM embeddings WHERE (created_at + ttl_seconds) < ?",
+            (now,),
+        )
+        deleted = cursor.rowcount
+        conn.commit()
+        return deleted
+
+    def delete_by_model(self, model_name: str) -> int:
+        """Delete all entries for *model_name*; return the number removed."""
+        conn = self._conn()
+        cursor = conn.execute(
+            "DELETE FROM embeddings WHERE model_name = ?",
+            (model_name,),
+        )
+        deleted = cursor.rowcount
+        conn.commit()
+        return deleted
+
+    def delete_oldest(self, n: int) -> int:
+        """Delete the *n* oldest entries; return the number removed."""
+        conn = self._conn()
+        cursor = conn.execute(
+            """
+            DELETE FROM embeddings WHERE cache_key IN (
+                SELECT cache_key FROM embeddings
+                ORDER BY created_at ASC
+                LIMIT ?
+            )
+            """,
+            (n,),
+        )
+        deleted = cursor.rowcount
+        conn.commit()
+        return deleted
+
+    # ------------------------------------------------------------------
+    # Connection teardown
+    # ------------------------------------------------------------------
+
+    def close_connection(self, local: threading.local) -> None:
+        """Close the thread-local connection stored in *local.conn* if present."""
+        conn = getattr(local, "conn", None)
+        if conn is not None:
+            try:
+                conn.close()
+            except sqlite3.Error:
+                pass
+            local.conn = None
 
 
 class EmbeddingCache:
@@ -81,8 +253,16 @@ class EmbeddingCache:
         # Ensure cache directory exists
         self._config.cache_dir.mkdir(parents=True, exist_ok=True)
 
+        # Storage helper — holds a reference to self so that patches to
+        # _get_connection applied after construction are always honoured.
+        self._storage = _CacheStorage(self)
+
         # Initialize database schema
         self._init_db()
+
+    # ------------------------------------------------------------------
+    # Connection management (kept here so tests can patch _get_connection)
+    # ------------------------------------------------------------------
 
     def _get_connection(self) -> sqlite3.Connection:
         """Get a thread-local database connection.
@@ -102,49 +282,23 @@ class EmbeddingCache:
             self._local.conn.row_factory = sqlite3.Row
         return self._local.conn
 
+    # ------------------------------------------------------------------
+    # Initialization
+    # ------------------------------------------------------------------
+
     def _init_db(self) -> None:
         """Initialize the database schema."""
-        conn = self._get_connection()
         try:
-            conn.executescript(
-                """
-                CREATE TABLE IF NOT EXISTS cache_meta (
-                    key TEXT PRIMARY KEY,
-                    value TEXT
-                );
-
-                CREATE TABLE IF NOT EXISTS embeddings (
-                    cache_key TEXT PRIMARY KEY,
-                    embedding BLOB NOT NULL,
-                    created_at REAL NOT NULL,
-                    ttl_seconds INTEGER NOT NULL,
-                    model_name TEXT NOT NULL,
-                    dimension INTEGER NOT NULL
-                );
-
-                CREATE INDEX IF NOT EXISTS idx_embeddings_created
-                    ON embeddings(created_at);
-                CREATE INDEX IF NOT EXISTS idx_embeddings_model
-                    ON embeddings(model_name);
-                """
-            )
-
-            # Check and update schema version
-            cursor = conn.execute(
-                "SELECT value FROM cache_meta WHERE key = 'schema_version'"
-            )
-            row = cursor.fetchone()
-            if row is None:
-                conn.execute(
-                    "INSERT INTO cache_meta (key, value) VALUES ('schema_version', ?)",
-                    (str(self.SCHEMA_VERSION),),
-                )
-            conn.commit()
+            self._storage.create_table()
             logger.debug("Embedding cache initialized at %s", self._db_path)
         except (sqlite3.Error, OSError) as e:
             # sqlite3.Error: Database schema creation failures
             # OSError: File system or database file access errors
             logger.warning("Failed to initialize embedding cache: %s", e)
+
+    # ------------------------------------------------------------------
+    # Business-logic helpers
+    # ------------------------------------------------------------------
 
     def _compute_cache_key(self, text: str) -> str:
         """Compute a cache key for the given text and model.
@@ -204,6 +358,10 @@ class EmbeddingCache:
         """
         return cast(list[float], json.loads(data.decode("utf-8")))
 
+    # ------------------------------------------------------------------
+    # Cache read / write
+    # ------------------------------------------------------------------
+
     def _get_cached(self, cache_key: str) -> list[float] | None:
         """Try to get a cached embedding.
 
@@ -214,20 +372,14 @@ class EmbeddingCache:
             The cached embedding vector, or None if not found/expired.
         """
         try:
-            conn = self._get_connection()
-            cursor = conn.execute(
-                "SELECT embedding, created_at, ttl_seconds FROM embeddings WHERE cache_key = ?",
-                (cache_key,),
-            )
-            row = cursor.fetchone()
+            row = self._storage.query_one(cache_key)
 
             if row is None:
                 return None
 
             if not self._is_valid_entry(row):
-                # Entry expired - delete it
-                conn.execute("DELETE FROM embeddings WHERE cache_key = ?", (cache_key,))
-                conn.commit()
+                # Entry expired — remove it
+                self._storage.delete_by_key(cache_key)
                 return None
 
             return self._deserialize_embedding(row["embedding"])
@@ -243,7 +395,7 @@ class EmbeddingCache:
         embedding: list[float],
         ttl_seconds: int | None = None,
     ) -> None:
-        """Store an embedding in the cache.
+        """Stage an embedding for storage (flushed in batch).
 
         Args:
             cache_key: The cache key.
@@ -252,7 +404,6 @@ class EmbeddingCache:
         """
         ttl = ttl_seconds or self._config.ttl_seconds
         now = time.time()
-        dimension = len(embedding)
 
         # Add to pending writes
         self._pending_writes.append((cache_key, embedding, now, ttl))
@@ -274,34 +425,28 @@ class EmbeddingCache:
             return
 
         try:
-            conn = self._get_connection()
             model_name = self._provider.name
-
-            # Batch insert with upsert (replace on conflict)
-            conn.executemany(
-                """
-                INSERT OR REPLACE INTO embeddings
-                    (cache_key, embedding, created_at, ttl_seconds, model_name, dimension)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                [
-                    (
-                        key,
-                        self._serialize_embedding(emb),
-                        created_at,
-                        ttl,
-                        model_name,
-                        len(emb),
-                    )
-                    for key, emb, created_at, ttl in writes
-                ],
-            )
-            conn.commit()
+            rows = [
+                (
+                    key,
+                    self._serialize_embedding(emb),
+                    created_at,
+                    ttl,
+                    model_name,
+                    len(emb),
+                )
+                for key, emb, created_at, ttl in writes
+            ]
+            self._storage.batch_insert(rows)
             logger.debug("Flushed %s embeddings to cache", len(writes))
 
         except sqlite3.Error as e:
             logger.warning("Failed to write embeddings to cache: %s", e)
             self._stats["errors"] += 1
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a list of texts, using cache when available.
@@ -388,10 +533,7 @@ class EmbeddingCache:
             Number of cache entries.
         """
         try:
-            conn = self._get_connection()
-            cursor = conn.execute("SELECT COUNT(*) FROM embeddings")
-            row = cursor.fetchone()
-            return row[0] if row else 0
+            return self._storage.count()
         except sqlite3.Error:
             return 0
 
@@ -402,13 +544,7 @@ class EmbeddingCache:
             Number of entries cleared.
         """
         try:
-            conn = self._get_connection()
-            cursor = conn.execute("SELECT COUNT(*) FROM embeddings")
-            count = cursor.fetchone()[0]
-
-            conn.execute("DELETE FROM embeddings")
-            conn.commit()
-
+            count = self._storage.delete_all()
             logger.info("Cleared %s embedding cache entries", count)
             return count
         except sqlite3.Error as e:
@@ -422,17 +558,7 @@ class EmbeddingCache:
             Number of entries removed.
         """
         try:
-            conn = self._get_connection()
-            now = time.time()
-
-            # Delete entries where created_at + ttl_seconds < now
-            cursor = conn.execute(
-                "DELETE FROM embeddings WHERE (created_at + ttl_seconds) < ?",
-                (now,),
-            )
-            deleted = cursor.rowcount
-            conn.commit()
-
+            deleted = self._storage.delete_expired(time.time())
             if deleted > 0:
                 logger.info("Cleaned up %s expired embedding cache entries", deleted)
             return deleted
@@ -450,34 +576,18 @@ class EmbeddingCache:
             Number of entries removed.
         """
         try:
-            conn = self._get_connection()
-
             # First, remove expired entries
             expired_count = self.cleanup_expired()
 
             # Check current count
-            cursor = conn.execute("SELECT COUNT(*) FROM embeddings")
-            count = cursor.fetchone()[0]
+            count = self._storage.count()
 
             if count <= self._config.max_entries:
                 return expired_count
 
             # Calculate how many to remove (remove 10% buffer)
             to_remove = count - int(self._config.max_entries * 0.9)
-
-            # Delete oldest entries
-            cursor = conn.execute(
-                """
-                DELETE FROM embeddings WHERE cache_key IN (
-                    SELECT cache_key FROM embeddings
-                    ORDER BY created_at ASC
-                    LIMIT ?
-                )
-                """,
-                (to_remove,),
-            )
-            deleted = cursor.rowcount
-            conn.commit()
+            deleted = self._storage.delete_oldest(to_remove)
 
             logger.info(
                 "Cache cleanup: removed %d expired + %d oldest entries",
@@ -502,14 +612,7 @@ class EmbeddingCache:
             Number of entries invalidated.
         """
         try:
-            conn = self._get_connection()
-            cursor = conn.execute(
-                "DELETE FROM embeddings WHERE model_name = ?",
-                (model_name,),
-            )
-            deleted = cursor.rowcount
-            conn.commit()
-
+            deleted = self._storage.delete_by_model(model_name)
             if deleted > 0:
                 logger.info(
                     "Invalidated %d cache entries for model %s", deleted, model_name
@@ -538,13 +641,7 @@ class EmbeddingCache:
         self._flush_pending_writes()
 
         # Close thread-local connection if it exists in current thread
-        conn = getattr(self._local, "conn", None)
-        if conn is not None:
-            try:
-                conn.close()
-            except sqlite3.Error:
-                pass
-            self._local.conn = None
+        self._storage.close_connection(self._local)
 
     def __del__(self) -> None:
         """Destructor to ensure connections are closed.
