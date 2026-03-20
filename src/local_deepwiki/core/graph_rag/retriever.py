@@ -95,17 +95,56 @@ class GraphAugmentedRetriever:
             )
             return list(search_results)
 
-        # Step 3 — BFS traversal to discover neighbor entities
-        # We call get_neighbors once per depth level, passing all seed entity
-        # IDs together.  The store returns a GraphTraversalResult whose
-        # ``entities`` tuple contains both seed and discovered entities.
+        # Steps 3-4 — BFS traversal and neighbor collection
         seed_entity_ids = [e.id for e in entities]
+        neighbor_chunk_depths = await self._traverse_and_collect_neighbors(
+            seed_entity_ids, seen_chunk_ids, effective_rel_types
+        )
+
+        if not neighbor_chunk_depths:
+            logger.debug("Graph traversal found no new neighbors")
+            return list(search_results)
+
+        # Steps 5-6 — fetch chunks from vector store and score them
+        min_vector_score = min(r.score for r in search_results)
+        graph_results = await self._fetch_and_score_graph_results(
+            neighbor_chunk_depths, min_vector_score
+        )
+
+        logger.debug(
+            "Graph expansion: %d vector results + %d graph results",
+            len(search_results),
+            len(graph_results),
+        )
+
+        return list(search_results) + graph_results
+
+    async def _traverse_and_collect_neighbors(
+        self,
+        seed_entity_ids: list[str],
+        seen_chunk_ids: set[str],
+        relationship_types: list[str],
+    ) -> dict[str, int]:
+        """BFS traversal to discover neighbor chunk IDs and their shallowest depth.
+
+        Calls ``graph_store.get_neighbors`` once per depth level, collecting
+        every new chunk ID encountered.  Chunk IDs already present in
+        *seen_chunk_ids* are skipped.
+
+        Args:
+            seed_entity_ids: Entity IDs from which to start traversal.
+            seen_chunk_ids: Chunk IDs already in the vector results (excluded).
+            relationship_types: Edge types to follow during traversal.
+
+        Returns:
+            Mapping of ``chunk_id`` -> shallowest depth at which it was found.
+        """
         neighbor_chunk_depths: dict[str, int] = {}
 
         for depth in range(1, self._config.max_traversal_depth + 1):
             traversal = await self._graph_store.get_neighbors(
                 seed_entity_ids,
-                relationship_types=effective_rel_types,
+                relationship_types=relationship_types,
                 max_depth=depth,
             )
             for neighbor in traversal.entities:
@@ -119,19 +158,32 @@ class GraphAugmentedRetriever:
                 ):
                     neighbor_chunk_depths[cid] = depth
 
-        if not neighbor_chunk_depths:
-            logger.debug("Graph traversal found no new neighbors")
-            return list(search_results)
+        return neighbor_chunk_depths
 
-        # Step 4 — cap the number of graph neighbors
+    async def _fetch_and_score_graph_results(
+        self,
+        neighbor_chunk_depths: dict[str, int],
+        min_vector_score: float,
+    ) -> list[SearchResult]:
+        """Fetch neighbor chunks from the vector store and compute their scores.
+
+        Caps the number of graph neighbors at ``config.max_graph_neighbors``,
+        preferring shallower (closer) neighbors.  Each fetched chunk is scored
+        with :meth:`_compute_graph_score`.
+
+        Args:
+            neighbor_chunk_depths: Mapping of ``chunk_id`` -> discovery depth.
+            min_vector_score: Lowest score among the original vector results.
+
+        Returns:
+            List of :class:`~local_deepwiki.models.chunks.SearchResult` for
+            graph-discovered chunks, tagged with ``highlights=["graph-expanded"]``.
+        """
         # Prefer shallower (closer) neighbors by sorting on depth
         sorted_neighbors = sorted(
             neighbor_chunk_depths.items(), key=lambda item: item[1]
         )
         capped = sorted_neighbors[: self._config.max_graph_neighbors]
-
-        # Step 5 — fetch chunks from vector store
-        min_vector_score = min(r.score for r in search_results)
 
         graph_results: list[SearchResult] = []
         for chunk_id, depth in capped:
@@ -149,13 +201,7 @@ class GraphAugmentedRetriever:
                 SearchResult(chunk=chunk, score=score, highlights=["graph-expanded"])
             )
 
-        logger.debug(
-            "Graph expansion: %d vector results + %d graph results",
-            len(search_results),
-            len(graph_results),
-        )
-
-        return list(search_results) + graph_results
+        return graph_results
 
     @staticmethod
     def _compute_graph_score(
