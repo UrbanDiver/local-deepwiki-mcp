@@ -13,6 +13,7 @@ from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 
 from local_deepwiki.providers.errors import (
+    ApiErrorConfig,
     ProviderAuthenticationError,
     ProviderConfigurationError,
     ProviderConnectionError,
@@ -25,6 +26,7 @@ from local_deepwiki.providers.errors import (
 from local_deepwiki.providers.retry import RETRYABLE_EXCEPTIONS, with_retry
 
 __all__ = [
+    "ApiErrorConfig",
     "EmbeddingProvider",
     "EmbeddingProviderCapabilities",
     "LLMProvider",

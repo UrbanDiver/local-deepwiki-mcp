@@ -5,6 +5,7 @@ from __future__ import annotations
 from openai import APIConnectionError, APIStatusError, AsyncOpenAI, AuthenticationError
 
 from local_deepwiki.providers.base import (
+    ApiErrorConfig,
     EmbeddingProvider,
     EmbeddingProviderCapabilities,
     ProviderAuthenticationError,
@@ -63,14 +64,14 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
     def _handle_api_error(self, e: Exception) -> None:
         """Convert OpenAI API errors to standardized provider errors."""
-        handle_api_status_error(
-            e,
+        config = ApiErrorConfig(
             provider_name=self.name,
             api_label="OpenAI API",
             auth_error_type=AuthenticationError,
             status_error_type=APIStatusError,
             connection_error_type=APIConnectionError,
         )
+        handle_api_status_error(e, config)
         # Re-raise unknown errors
         raise
 

@@ -15,6 +15,7 @@ from openai.types.chat import ChatCompletionMessageParam
 
 from local_deepwiki.logging import get_logger
 from local_deepwiki.providers.base import (
+    ApiErrorConfig,
     LLMProvider,
     LLMProviderCapabilities,
     ProviderAuthenticationError,
@@ -77,8 +78,7 @@ class OpenAILLMProvider(LLMProvider):
 
     def _handle_api_error(self, e: Exception) -> None:
         """Convert OpenAI API errors to standardized provider errors."""
-        handle_api_status_error(
-            e,
+        config = ApiErrorConfig(
             provider_name=self.name,
             api_label="OpenAI API",
             model=self._model,
@@ -88,6 +88,7 @@ class OpenAILLMProvider(LLMProvider):
             status_error_type=APIStatusError,
             connection_error_type=APIConnectionError,
         )
+        handle_api_status_error(e, config)
         # Re-raise unknown errors
         raise
 
