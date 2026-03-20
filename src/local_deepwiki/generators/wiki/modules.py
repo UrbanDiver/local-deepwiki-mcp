@@ -5,76 +5,41 @@ from __future__ import annotations
 import asyncio
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.wiki.context import WikiPipelineContext
 from local_deepwiki.logging import get_logger
-from local_deepwiki.models import IndexStatus, SearchResult, WikiPage
+from local_deepwiki.models import SearchResult, WikiPage
 from local_deepwiki.providers.base import LLMProvider
-
-if TYPE_CHECKING:
-    from local_deepwiki.generators.wiki.status import WikiStatusManager
 
 logger = get_logger(__name__)
 
 
 async def generate_module_docs(
-    index_status: IndexStatus | None = None,
-    vector_store: VectorStore | None = None,
-    llm: LLMProvider | None = None,
-    system_prompt: str | None = None,
+    ctx: WikiPipelineContext,
     *,
-    status_manager: "WikiStatusManager | None" = None,
-    full_rebuild: bool = False,
-    max_chunk_content_chars: int = 15000,
     max_concurrent: int = 8,
     semaphore: asyncio.Semaphore | None = None,
-    ctx: WikiPipelineContext | None = None,
 ) -> tuple[list[WikiPage], int, int]:
     """Generate documentation for each module/directory.
 
-    Accepts either a ``WikiPipelineContext`` via ``ctx`` or individual
-    parameters for backward compatibility.
-
     Args:
-        index_status: Index status with file information.
-        vector_store: Vector store with indexed code.
-        llm: LLM provider for generation.
-        system_prompt: System prompt for LLM.
-        status_manager: Wiki status manager for incremental updates.
-        full_rebuild: If True, regenerate all pages.
-        max_chunk_content_chars: Max characters of chunk content in LLM prompt.
+        ctx: Immutable pipeline context bundling shared parameters.
         max_concurrent: Maximum concurrent LLM calls (ignored if semaphore provided).
         semaphore: Optional shared semaphore for concurrency control.
-        ctx: Immutable pipeline context bundling shared parameters.
 
     Returns:
         Tuple of (pages list, generated count, skipped count).
     """
-    # Resolve from context when provided
-    if ctx is not None:
-        index_status = index_status or ctx.index_status
-        vector_store = vector_store or ctx.vector_store
-        llm = llm or ctx.llm
-        system_prompt = (
-            system_prompt if system_prompt is not None else ctx.system_prompt
-        )
-        status_manager = status_manager or ctx.status_manager
-        full_rebuild = full_rebuild or ctx.full_rebuild
-        max_chunk_content_chars = (
-            max_chunk_content_chars
-            if max_chunk_content_chars != 15000
-            else ctx.max_chunk_content_chars
-        )
+    index_status = ctx.index_status
+    vector_store = ctx.vector_store
+    llm = ctx.llm
+    system_prompt = ctx.system_prompt
+    status_manager = ctx.status_manager
+    full_rebuild = ctx.full_rebuild
+    max_chunk_content_chars = ctx.max_chunk_content_chars
 
-    # Runtime guards for required params
-    assert index_status is not None, "index_status is required"
-    assert vector_store is not None, "vector_store is required"
-    assert llm is not None, "llm is required"
-    assert system_prompt is not None, "system_prompt is required"
-    assert status_manager is not None, "status_manager is required"
     pages: list[WikiPage] = []
     pages_generated = 0
     pages_skipped = 0

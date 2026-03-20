@@ -1,6 +1,7 @@
 """Tests for wiki_modules.py to improve coverage."""
 
 import time
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -11,6 +12,7 @@ from conftest import (
     make_index_status,
     make_search_result,
 )
+from local_deepwiki.generators.wiki.context import WikiPipelineContext
 from local_deepwiki.generators.wiki.modules import (
     _generate_modules_index,
     generate_module_docs,
@@ -24,6 +26,38 @@ from local_deepwiki.models import (
     SearchResult,
     WikiPage,
 )
+
+
+def _make_ctx(
+    *,
+    index_status=None,
+    vector_store=None,
+    llm=None,
+    system_prompt="You are a wiki generator",
+    repo_path=None,
+    wiki_path=None,
+    config=None,
+    wiki_config=None,
+    manifest=None,
+    status_manager=None,
+    full_rebuild=False,
+    max_chunk_content_chars=15000,
+):
+    """Build a mock WikiPipelineContext for testing."""
+    return WikiPipelineContext(
+        index_status=index_status or MagicMock(),
+        vector_store=vector_store or AsyncMock(),
+        llm=llm or AsyncMock(),
+        system_prompt=system_prompt,
+        repo_path=repo_path or Path("/tmp/test-repo"),
+        wiki_path=wiki_path or Path("/tmp/wiki"),
+        config=config or MagicMock(),
+        wiki_config=wiki_config or MagicMock(),
+        manifest=manifest,
+        status_manager=status_manager or MagicMock(),
+        full_rebuild=full_rebuild,
+        max_chunk_content_chars=max_chunk_content_chars,
+    )
 
 
 class TestGenerateModuleDocs:
@@ -62,12 +96,14 @@ class TestGenerateModuleDocs:
         index_status = make_index_status(repo_path=str(tmp_path), files=[])
 
         pages, generated, skipped = await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            full_rebuild=True,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                full_rebuild=True,
+            )
         )
 
         assert pages == []
@@ -85,12 +121,14 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, skipped = await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            full_rebuild=True,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                full_rebuild=True,
+            )
         )
 
         assert pages == []
@@ -122,12 +160,14 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, skipped = await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            full_rebuild=True,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                full_rebuild=True,
+            )
         )
 
         # Should generate module index + src module page
@@ -159,12 +199,14 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, _skipped = await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            full_rebuild=True,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                full_rebuild=True,
+            )
         )
 
         # Root files get grouped but no page generated since chunk filter doesn't match
@@ -187,12 +229,14 @@ class TestGenerateModuleDocs:
         )
 
         pages, _, _ = await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            full_rebuild=True,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                full_rebuild=True,
+            )
         )
 
         # First page should be modules index
@@ -239,12 +283,14 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, skipped = await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            full_rebuild=False,  # Not a full rebuild
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                full_rebuild=False,
+            )
         )
 
         assert generated == 0
@@ -270,12 +316,14 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, skipped = await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            full_rebuild=True,  # Full rebuild
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                full_rebuild=True,
+            )
         )
 
         assert generated == 2  # module page + modules index
@@ -298,12 +346,14 @@ class TestGenerateModuleDocs:
         )
 
         await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            full_rebuild=True,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                full_rebuild=True,
+            )
         )
 
         # LLM should have been called with only src directory chunks
@@ -329,12 +379,14 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, skipped = await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            full_rebuild=True,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                full_rebuild=True,
+            )
         )
 
         # No pages generated since no chunks match
@@ -370,12 +422,14 @@ class TestGenerateModuleDocs:
         )
 
         pages, generated, skipped = await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            full_rebuild=True,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                full_rebuild=True,
+            )
         )
 
         # Should have index + 2 source module pages (tests dir excluded)
@@ -403,12 +457,14 @@ class TestGenerateModuleDocs:
         )
 
         await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            full_rebuild=True,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                full_rebuild=True,
+            )
         )
 
         # record_page_status called for module page, record_summary_page_status for index
@@ -427,12 +483,14 @@ class TestGenerateModuleDocs:
         index_status = make_index_status(repo_path=str(tmp_path), files=files)
 
         await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            full_rebuild=True,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                full_rebuild=True,
+            )
         )
 
         # Prompt should have ellipsis for truncated file list

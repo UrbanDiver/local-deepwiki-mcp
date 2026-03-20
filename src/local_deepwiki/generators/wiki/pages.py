@@ -5,17 +5,12 @@ from __future__ import annotations
 import asyncio
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.manifest import ProjectManifest, get_directory_tree
 from local_deepwiki.generators.wiki.context import WikiPipelineContext
 from local_deepwiki.logging import get_logger
-from local_deepwiki.models import IndexStatus, WikiPage
-from local_deepwiki.providers.base import LLMProvider
-
-if TYPE_CHECKING:
-    pass
+from local_deepwiki.models import WikiPage
 
 logger = get_logger(__name__)
 
@@ -210,60 +205,26 @@ RULES:
 Return ONLY the Description and Key Features sections as markdown."""
 
 
-async def generate_overview_page(
-    index_status: IndexStatus | None = None,
-    vector_store: VectorStore | None = None,
-    llm: LLMProvider | None = None,
-    system_prompt: str | None = None,
-    *,
-    manifest: ProjectManifest | None = None,
-    repo_path: Path | None = None,
-    max_chunk_content_chars: int = 15000,
-    ctx: WikiPipelineContext | None = None,
-) -> WikiPage:
+async def generate_overview_page(ctx: WikiPipelineContext) -> WikiPage:
     """Generate the main overview/index page with grounded facts.
 
     This method generates structured sections programmatically (tech stack,
     directory structure, quick start) to avoid LLM hallucination, and only
     uses the LLM to generate the description and features sections.
 
-    Accepts either a ``WikiPipelineContext`` via ``ctx`` or individual
-    parameters for backward compatibility.
-
     Args:
-        index_status: Index status with repository information.
-        vector_store: Vector store for code search.
-        llm: LLM provider for content generation.
-        system_prompt: System prompt for the LLM.
-        manifest: Parsed project manifest (dependencies, entry points).
-        repo_path: Path to the repository root.
-        max_chunk_content_chars: Max characters of chunk content in LLM prompt.
         ctx: Immutable pipeline context bundling shared parameters.
 
     Returns:
         WikiPage with overview content.
     """
-    # Resolve from context when provided
-    if ctx is not None:
-        index_status = index_status or ctx.index_status
-        vector_store = vector_store or ctx.vector_store
-        llm = llm or ctx.llm
-        system_prompt = (
-            system_prompt if system_prompt is not None else ctx.system_prompt
-        )
-        manifest = manifest if manifest is not None else ctx.manifest
-        repo_path = repo_path if repo_path is not None else ctx.repo_path
-        max_chunk_content_chars = (
-            max_chunk_content_chars
-            if max_chunk_content_chars != 15000
-            else ctx.max_chunk_content_chars
-        )
-
-    # Runtime guards for required params
-    assert index_status is not None, "index_status is required"
-    assert vector_store is not None, "vector_store is required"
-    assert llm is not None, "llm is required"
-    assert system_prompt is not None, "system_prompt is required"
+    index_status = ctx.index_status
+    vector_store = ctx.vector_store
+    llm = ctx.llm
+    system_prompt = ctx.system_prompt
+    manifest = ctx.manifest
+    repo_path = ctx.repo_path
+    max_chunk_content_chars = ctx.max_chunk_content_chars
 
     repo_name = Path(index_status.repo_path).name
 
@@ -327,56 +288,22 @@ async def generate_overview_page(
     )
 
 
-async def generate_architecture_page(
-    index_status: IndexStatus | None = None,
-    vector_store: VectorStore | None = None,
-    llm: LLMProvider | None = None,
-    system_prompt: str | None = None,
-    *,
-    manifest: ProjectManifest | None = None,
-    repo_path: Path | None = None,
-    max_chunk_content_chars: int = 15000,
-    ctx: WikiPipelineContext | None = None,
-) -> WikiPage:
+async def generate_architecture_page(ctx: WikiPipelineContext) -> WikiPage:
     """Generate architecture documentation with diagrams and grounded facts.
 
-    Accepts either a ``WikiPipelineContext`` via ``ctx`` or individual
-    parameters for backward compatibility.
-
     Args:
-        index_status: Index status with repository information.
-        vector_store: Vector store for code search.
-        llm: LLM provider for content generation.
-        system_prompt: System prompt for the LLM.
-        manifest: Parsed project manifest.
-        repo_path: Path to the repository root.
-        max_chunk_content_chars: Max characters of chunk content in LLM prompt.
         ctx: Immutable pipeline context bundling shared parameters.
 
     Returns:
         WikiPage with architecture documentation.
     """
-    # Resolve from context when provided
-    if ctx is not None:
-        index_status = index_status or ctx.index_status
-        vector_store = vector_store or ctx.vector_store
-        llm = llm or ctx.llm
-        system_prompt = (
-            system_prompt if system_prompt is not None else ctx.system_prompt
-        )
-        manifest = manifest if manifest is not None else ctx.manifest
-        repo_path = repo_path if repo_path is not None else ctx.repo_path
-        max_chunk_content_chars = (
-            max_chunk_content_chars
-            if max_chunk_content_chars != 15000
-            else ctx.max_chunk_content_chars
-        )
-
-    # Runtime guards for required params
-    assert index_status is not None, "index_status is required"
-    assert vector_store is not None, "vector_store is required"
-    assert llm is not None, "llm is required"
-    assert system_prompt is not None, "system_prompt is required"
+    index_status = ctx.index_status
+    vector_store = ctx.vector_store
+    llm = ctx.llm
+    system_prompt = ctx.system_prompt
+    manifest = ctx.manifest
+    repo_path = ctx.repo_path
+    max_chunk_content_chars = ctx.max_chunk_content_chars
 
     # Read authoritative project docs (CLAUDE.md, README.md, etc.)
     authoritative_docs = _read_authoritative_docs(repo_path)
@@ -505,47 +432,25 @@ Format as markdown with clear sections."""
 
 
 async def generate_dependencies_page(
-    index_status: IndexStatus | None = None,
-    vector_store: VectorStore | None = None,
-    llm: LLMProvider | None = None,
-    system_prompt: str | None = None,
+    ctx: WikiPipelineContext,
     *,
-    manifest: ProjectManifest | None = None,
     import_search_limit: int = 100,
-    ctx: WikiPipelineContext | None = None,
 ) -> tuple[WikiPage, list[str]]:
     """Generate dependencies documentation with grounded facts from manifest.
 
-    Accepts either a ``WikiPipelineContext`` via ``ctx`` or individual
-    parameters for backward compatibility.
-
     Args:
-        index_status: Index status with repository information.
-        vector_store: Vector store for code search.
-        llm: LLM provider for content generation.
-        system_prompt: System prompt for the LLM.
-        manifest: Parsed project manifest.
-        import_search_limit: Max import chunks to search.
         ctx: Immutable pipeline context bundling shared parameters.
+        import_search_limit: Max import chunks to search.
 
     Returns:
         Tuple of (WikiPage, list of source files that contributed).
     """
-    # Resolve from context when provided
-    if ctx is not None:
-        index_status = index_status or ctx.index_status
-        vector_store = vector_store or ctx.vector_store
-        llm = llm or ctx.llm
-        system_prompt = (
-            system_prompt if system_prompt is not None else ctx.system_prompt
-        )
-        manifest = manifest if manifest is not None else ctx.manifest
+    index_status = ctx.index_status
+    vector_store = ctx.vector_store
+    llm = ctx.llm
+    system_prompt = ctx.system_prompt
+    manifest = ctx.manifest
 
-    # Runtime guards for required params
-    assert index_status is not None, "index_status is required"
-    assert vector_store is not None, "vector_store is required"
-    assert llm is not None, "llm is required"
-    assert system_prompt is not None, "system_prompt is required"
     from local_deepwiki.generators.diagrams import generate_dependency_graph
 
     # Build grounded dependency context

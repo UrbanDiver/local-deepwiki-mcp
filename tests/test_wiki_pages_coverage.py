@@ -1,6 +1,7 @@
 """Tests for wiki_pages.py to improve coverage."""
 
 import time
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -12,6 +13,7 @@ from conftest import (
     make_search_result,
 )
 from local_deepwiki.generators.manifest import ProjectManifest
+from local_deepwiki.generators.wiki.context import WikiPipelineContext
 from local_deepwiki.generators.wiki.pages import (
     generate_architecture_page,
     generate_changelog_page,
@@ -26,6 +28,38 @@ from local_deepwiki.models import (
     Language,
     SearchResult,
 )
+
+
+def _make_ctx(
+    *,
+    index_status=None,
+    vector_store=None,
+    llm=None,
+    system_prompt="You are a wiki generator",
+    repo_path=None,
+    wiki_path=None,
+    config=None,
+    wiki_config=None,
+    manifest=None,
+    status_manager=None,
+    full_rebuild=False,
+    max_chunk_content_chars=15000,
+):
+    """Build a mock WikiPipelineContext for testing."""
+    return WikiPipelineContext(
+        index_status=index_status or MagicMock(),
+        vector_store=vector_store or AsyncMock(),
+        llm=llm or AsyncMock(),
+        system_prompt=system_prompt,
+        repo_path=repo_path or Path("/tmp/test-repo"),
+        wiki_path=wiki_path or Path("/tmp/wiki"),
+        config=config or MagicMock(),
+        wiki_config=wiki_config or MagicMock(),
+        manifest=manifest,
+        status_manager=status_manager or MagicMock(),
+        full_rebuild=full_rebuild,
+        max_chunk_content_chars=max_chunk_content_chars,
+    )
 
 
 class TestGenerateOverviewPage:
@@ -56,12 +90,13 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="You are a documentation expert.",
-            manifest=None,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="You are a documentation expert.",
+                repo_path=repo_path,
+            )
         )
 
         assert result.path == "index.md"
@@ -84,12 +119,14 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="You are a documentation expert.",
-            manifest=manifest,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="You are a documentation expert.",
+                manifest=manifest,
+                repo_path=repo_path,
+            )
         )
 
         assert "A great project for testing." in result.content
@@ -109,12 +146,14 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="You are a documentation expert.",
-            manifest=manifest,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="You are a documentation expert.",
+                manifest=manifest,
+                repo_path=repo_path,
+            )
         )
 
         assert "Technology Stack" in result.content
@@ -135,12 +174,14 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="You are a documentation expert.",
-            manifest=manifest,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="You are a documentation expert.",
+                manifest=manifest,
+                repo_path=repo_path,
+            )
         )
 
         assert "Quick Start" in result.content
@@ -159,12 +200,13 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(tmp_path))
 
         result = await generate_overview_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="You are a documentation expert.",
-            manifest=None,
-            repo_path=tmp_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="You are a documentation expert.",
+                repo_path=tmp_path,
+            )
         )
 
         assert "Directory Structure" in result.content
@@ -185,12 +227,13 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         await generate_overview_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            manifest=None,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                repo_path=repo_path,
+            )
         )
 
         # LLM should have been called with code context
@@ -214,12 +257,14 @@ class TestGenerateOverviewPage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            manifest=manifest,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                manifest=manifest,
+                repo_path=repo_path,
+            )
         )
 
         # Should mention "more" since there are over 12 deps
@@ -254,12 +299,13 @@ class TestGenerateArchitecturePage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_architecture_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="Architecture expert",
-            manifest=None,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="Architecture expert",
+                repo_path=repo_path,
+            )
         )
 
         assert result.path == "architecture.md"
@@ -275,12 +321,13 @@ class TestGenerateArchitecturePage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         await generate_architecture_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="Architecture expert",
-            manifest=None,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="Architecture expert",
+                repo_path=repo_path,
+            )
         )
 
         # Should have made multiple search calls
@@ -299,12 +346,13 @@ class TestGenerateArchitecturePage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         await generate_architecture_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="Architecture expert",
-            manifest=None,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="Architecture expert",
+                repo_path=repo_path,
+            )
         )
 
         # LLM should be called with deduplicated context
@@ -323,12 +371,14 @@ class TestGenerateArchitecturePage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         await generate_architecture_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="Architecture expert",
-            manifest=manifest,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="Architecture expert",
+                manifest=manifest,
+                repo_path=repo_path,
+            )
         )
 
         call_args = mock_llm.generate.call_args
@@ -355,12 +405,13 @@ class TestGenerateArchitecturePage:
         index_status = make_index_status(repo_path=str(repo_path))
 
         await generate_architecture_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="Architecture expert",
-            manifest=None,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="Architecture expert",
+                repo_path=repo_path,
+            )
         )
 
         call_args = mock_llm.generate.call_args
@@ -401,11 +452,12 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="Dependencies expert",
-                manifest=None,
+                _make_ctx(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="Dependencies expert",
+                ),
                 import_search_limit=100,
             )
 
@@ -429,11 +481,13 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = ""
 
             await generate_dependencies_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="Dependencies expert",
-                manifest=manifest,
+                _make_ctx(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="Dependencies expert",
+                    manifest=manifest,
+                ),
                 import_search_limit=100,
             )
 
@@ -462,11 +516,13 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = ""
 
             await generate_dependencies_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="Dependencies expert",
-                manifest=manifest,
+                _make_ctx(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="Dependencies expert",
+                    manifest=manifest,
+                ),
                 import_search_limit=100,
             )
 
@@ -499,11 +555,12 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="Dependencies expert",
-                manifest=None,
+                _make_ctx(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="Dependencies expert",
+                ),
                 import_search_limit=100,
             )
 
@@ -532,11 +589,12 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="Dependencies expert",
-                manifest=None,
+                _make_ctx(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="Dependencies expert",
+                ),
                 import_search_limit=100,
             )
 
@@ -564,11 +622,12 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = "```mermaid\ngraph TD\n  A --> B\n```"
 
             page, _ = await generate_dependencies_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="Dependencies expert",
-                manifest=None,
+                _make_ctx(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="Dependencies expert",
+                ),
                 import_search_limit=100,
             )
 
@@ -587,11 +646,12 @@ class TestGenerateDependenciesPage:
             mock_graph.return_value = ""  # Empty graph
 
             page, _ = await generate_dependencies_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="Dependencies expert",
-                manifest=None,
+                _make_ctx(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="Dependencies expert",
+                ),
                 import_search_limit=100,
             )
 
@@ -666,23 +726,24 @@ class TestOverviewPageEdgeCases:
         mock.search = AsyncMock(return_value=[])
         return mock
 
-    async def test_handles_none_repo_path(self, mock_llm, mock_vector_store, tmp_path):
-        """Test handles None repo_path gracefully."""
-        index_status = make_index_status(repo_path=str(tmp_path / "project"))
+    async def test_handles_empty_repo(self, mock_llm, mock_vector_store, tmp_path):
+        """Test handles empty repo gracefully."""
+        repo_path = tmp_path / "project"
+        repo_path.mkdir()
+        index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            manifest=None,
-            repo_path=None,  # No repo path
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                repo_path=repo_path,
+            )
         )
 
         assert result is not None
         assert result.path == "index.md"
-        # Should not include directory structure without repo_path
-        assert "Directory Structure" not in result.content
 
     async def test_handles_manifest_without_language_version(
         self, mock_llm, mock_vector_store, tmp_path
@@ -698,12 +759,14 @@ class TestOverviewPageEdgeCases:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            manifest=manifest,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                manifest=manifest,
+                repo_path=repo_path,
+            )
         )
 
         assert "Python" in result.content
@@ -722,12 +785,14 @@ class TestOverviewPageEdgeCases:
         index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_overview_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            manifest=manifest,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                manifest=manifest,
+                repo_path=repo_path,
+            )
         )
 
         # Should list dependency without version string
@@ -751,17 +816,20 @@ class TestArchitecturePageEdgeCases:
         mock.search = AsyncMock(return_value=[])
         return mock
 
-    async def test_handles_none_repo_path(self, mock_llm, mock_vector_store, tmp_path):
-        """Test handles None repo_path gracefully."""
-        index_status = make_index_status(repo_path=str(tmp_path / "project"))
+    async def test_handles_empty_repo_path(self, mock_llm, mock_vector_store, tmp_path):
+        """Test handles empty repo_path gracefully."""
+        repo_path = tmp_path / "project"
+        repo_path.mkdir()
+        index_status = make_index_status(repo_path=str(repo_path))
 
         result = await generate_architecture_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            manifest=None,
-            repo_path=None,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                repo_path=repo_path,
+            )
         )
 
         assert result is not None
@@ -784,12 +852,13 @@ class TestArchitecturePageEdgeCases:
         index_status = make_index_status(repo_path=str(repo_path))
 
         await generate_architecture_page(
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            manifest=None,
-            repo_path=repo_path,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                repo_path=repo_path,
+            )
         )
 
         call_args = mock_llm.generate.call_args
@@ -827,11 +896,13 @@ class TestDependenciesPageEdgeCases:
             mock_graph.return_value = ""
 
             page, _ = await generate_dependencies_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="System prompt",
-                manifest=manifest,
+                _make_ctx(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="System prompt",
+                    manifest=manifest,
+                ),
                 import_search_limit=100,
             )
 
@@ -854,11 +925,13 @@ class TestDependenciesPageEdgeCases:
             mock_graph.return_value = ""
 
             await generate_dependencies_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="System prompt",
-                manifest=manifest,
+                _make_ctx(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="System prompt",
+                    manifest=manifest,
+                ),
                 import_search_limit=100,
             )
 
@@ -891,11 +964,12 @@ class TestDependenciesPageEdgeCases:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="System prompt",
-                manifest=None,
+                _make_ctx(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="System prompt",
+                ),
                 import_search_limit=100,
             )
 

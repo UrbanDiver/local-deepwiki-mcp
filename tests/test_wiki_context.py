@@ -136,7 +136,7 @@ class TestContextDrivenGeneration:
             repo_path=repo_path,
         )
 
-        result = await generate_overview_page(ctx=ctx)
+        result = await generate_overview_page(ctx)
 
         assert result.path == "index.md"
         assert result.title == "Overview"
@@ -164,7 +164,7 @@ class TestContextDrivenGeneration:
             repo_path=repo_path,
         )
 
-        result = await generate_architecture_page(ctx=ctx)
+        result = await generate_architecture_page(ctx)
 
         assert result.path == "architecture.md"
         assert result.title == "Architecture"
@@ -203,7 +203,7 @@ class TestContextDrivenGeneration:
             full_rebuild=True,
         )
 
-        pages, generated, skipped = await generate_module_docs(ctx=ctx)
+        pages, generated, skipped = await generate_module_docs(ctx)
 
         # No relevant chunks found -> no pages generated
         assert pages == []
@@ -233,7 +233,7 @@ class TestContextDrivenGeneration:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
-                ctx=ctx, import_search_limit=100
+                ctx, import_search_limit=100
             )
 
         assert page.path == "dependencies.md"

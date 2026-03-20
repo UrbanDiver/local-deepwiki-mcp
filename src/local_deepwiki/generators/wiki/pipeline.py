@@ -160,7 +160,7 @@ async def generate_module_pages(
     )
 
     module_pages, gen_count, skip_count = await _wiki_gen.generate_module_docs(
-        ctx=pipeline_ctx,
+        pipeline_ctx,
         semaphore=semaphore,
     )
     ctx.pages_generated += gen_count
@@ -254,10 +254,10 @@ async def generate_codemap_pages(
         ctx.pages_generated,
         ctx.pages_skipped,
     ) = await generate_codemap_pages_phase(
+        ctx=pipeline_ctx,
         pages=ctx.pages,
         pages_generated=ctx.pages_generated,
         pages_skipped=ctx.pages_skipped,
-        ctx=pipeline_ctx,
         progress=generator._progress,
         write_callback=generator._write_page,
         progress_callback=progress_callback,
@@ -329,6 +329,7 @@ async def generate_freshness_and_finalize_phase(
     )
 
     freshness_page, ctx.pages_generated = await generate_freshness_and_finalize(
+        ctx=pipeline_ctx,
         pages=ctx.pages,
         all_source_files=ctx.all_source_files,
         pages_generated=ctx.pages_generated,
@@ -336,7 +337,6 @@ async def generate_freshness_and_finalize_phase(
         wiki_status=wiki_status,
         write_callback=generator._write_page,
         progress_callback=progress_callback,
-        ctx=pipeline_ctx,
     )
     ctx.pages.append(freshness_page)
 

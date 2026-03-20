@@ -283,25 +283,33 @@ class LazyPageGenerator:
         repo_path = self._get_repo_path()
 
         from local_deepwiki.generators.manifest import get_cached_manifest
+        from local_deepwiki.generators.wiki.context import WikiPipelineContext
+        from local_deepwiki.generators.wiki.status import WikiStatusManager
 
         manifest = get_cached_manifest(repo_path, cache_dir=self._wiki_path)
 
+        ctx = WikiPipelineContext(
+            index_status=idx,
+            vector_store=vs,
+            llm=llm,
+            system_prompt=prompt,
+            repo_path=repo_path,
+            wiki_path=self._wiki_path,
+            config=self._config,
+            wiki_config=self._config.wiki,
+            manifest=manifest,
+            status_manager=WikiStatusManager(self._wiki_path),
+            full_rebuild=False,
+            max_chunk_content_chars=self._config.wiki.max_chunk_content_chars,
+        )
+
         if page_path == "index.md":
-            return await generate_overview_page(
-                idx, vs, llm, prompt, manifest=manifest, repo_path=repo_path
-            )
+            return await generate_overview_page(ctx)
         elif page_path == "architecture.md":
-            return await generate_architecture_page(
-                idx, vs, llm, prompt, manifest=manifest, repo_path=repo_path
-            )
+            return await generate_architecture_page(ctx)
         elif page_path == "dependencies.md":
             page, _ = await generate_dependencies_page(
-                idx,
-                vs,
-                llm,
-                prompt,
-                manifest=manifest,
-                import_search_limit=self._config.wiki.import_search_limit,
+                ctx, import_search_limit=self._config.wiki.import_search_limit
             )
             return page
         elif page_path == "changelog.md":

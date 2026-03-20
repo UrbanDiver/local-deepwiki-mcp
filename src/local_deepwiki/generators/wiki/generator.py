@@ -533,21 +533,21 @@ class WikiGenerator:
     async def _generate_overview(self, index_status: IndexStatus) -> WikiPage:
         """Generate the main overview/index page with grounded facts."""
         return await generate_overview_page(
-            ctx=self._build_pipeline_context(
+            self._build_pipeline_context(
                 index_status,
                 system_prompt=self._page_prompts.get("overview", self._system_prompt),
-            ),
+            )
         )
 
     async def _generate_architecture(self, index_status: IndexStatus) -> WikiPage:
         """Generate architecture documentation with diagrams and grounded facts."""
         return await generate_architecture_page(
-            ctx=self._build_pipeline_context(
+            self._build_pipeline_context(
                 index_status,
                 system_prompt=self._page_prompts.get(
                     "architecture", self._system_prompt
                 ),
-            ),
+            )
         )
 
     async def _generate_dependencies(
@@ -555,7 +555,7 @@ class WikiGenerator:
     ) -> tuple[WikiPage, list[str]]:
         """Generate dependencies documentation with grounded facts from manifest."""
         return await generate_dependencies_page(
-            ctx=self._build_pipeline_context(index_status),
+            self._build_pipeline_context(index_status),
             import_search_limit=self.config.wiki.import_search_limit,
         )
 

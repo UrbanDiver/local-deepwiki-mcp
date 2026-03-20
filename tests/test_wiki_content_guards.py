@@ -2,12 +2,48 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from conftest import make_code_chunk, make_file_info, make_index_status
+from local_deepwiki.generators.wiki.context import WikiPipelineContext
 from local_deepwiki.models import ChunkType
+
+
+def _make_ctx(
+    *,
+    index_status=None,
+    vector_store=None,
+    llm=None,
+    system_prompt="You are a wiki generator",
+    repo_path=None,
+    wiki_path=None,
+    config=None,
+    wiki_config=None,
+    manifest=None,
+    status_manager=None,
+    full_rebuild=False,
+    max_chunk_content_chars=15000,
+):
+    """Build a mock WikiPipelineContext for testing."""
+    return WikiPipelineContext(
+        index_status=index_status or MagicMock(),
+        vector_store=vector_store or AsyncMock(),
+        llm=llm or AsyncMock(),
+        system_prompt=system_prompt,
+        repo_path=repo_path or Path("/tmp/test-repo"),
+        wiki_path=wiki_path or Path("/tmp/wiki"),
+        config=config or MagicMock(),
+        wiki_config=wiki_config or MagicMock(),
+        manifest=manifest,
+        status_manager=status_manager or MagicMock(),
+        full_rebuild=full_rebuild,
+        max_chunk_content_chars=max_chunk_content_chars,
+    )
+
+
 from wiki_output_helpers import (
     BAD_PATTERNS,
     _strip_code_blocks,
@@ -145,12 +181,14 @@ class TestTestDirectoryFiltering:
         )
 
         pages, _, _ = await generate_module_docs(
-            index_status=index_status,
-            vector_store=mock_vs,
-            llm=mock_llm,
-            system_prompt="prompt",
-            status_manager=mock_sm,
-            full_rebuild=True,
+            _make_ctx(
+                index_status=index_status,
+                vector_store=mock_vs,
+                llm=mock_llm,
+                system_prompt="prompt",
+                status_manager=mock_sm,
+                full_rebuild=True,
+            )
         )
 
         page_paths = [p.path for p in pages]
