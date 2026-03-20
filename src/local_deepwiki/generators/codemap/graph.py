@@ -242,6 +242,29 @@ def _deduplicate_candidates(
     return sorted(merged, key=itemgetter(0), reverse=True)
 
 
+def _match_query_to_functions(
+    callable_results: list[Any],
+    entry_point_hint: str | None,
+) -> list[Any]:
+    """Narrow *callable_results* to name-matching entries when a hint is given.
+
+    Args:
+        callable_results: List of vector-search results with callable chunks.
+        entry_point_hint: Optional hint string for name filtering.
+
+    Returns:
+        Filtered list (or original list if no hint or no exact matches found).
+    """
+    if not entry_point_hint:
+        return callable_results
+    exact = [
+        r
+        for r in callable_results
+        if r.chunk.name and entry_point_hint.lower() in r.chunk.name.lower()
+    ]
+    return exact if exact else callable_results
+
+
 async def discover_entry_points(
     query: str,
     vector_store: "VectorStore",
@@ -285,15 +308,7 @@ async def discover_entry_points(
         and not is_test_file(r.chunk.file_path)
     ]
 
-    if entry_point_hint:
-        # Narrow to exact or close name matches
-        exact = [
-            r
-            for r in callable_results
-            if r.chunk.name and entry_point_hint.lower() in r.chunk.name.lower()
-        ]
-        if exact:
-            callable_results = exact
+    callable_results = _match_query_to_functions(callable_results, entry_point_hint)
 
     if not callable_results:
         return []
@@ -385,6 +400,45 @@ def _ensure_file_call_graph(
     return file_call_graphs.get(file_key, {})
 
 
+async def _resolve_cross_file_callee(
+    callee_name: str,
+    current_node: CodemapNode,
+    depth: int,
+    graph: CodemapGraph,
+    queue: deque[tuple[CodemapNode, int]],
+    vector_store: "VectorStore",
+    repo_path: Path,
+    focus: CodemapFocus,
+) -> None:
+    """Search the vector store for *callee_name* in another file and add to *graph*.
+
+    Args:
+        callee_name: The name of the callee to resolve cross-file.
+        current_node: The BFS node currently being expanded.
+        depth: Current BFS depth.
+        graph: The codemap graph to update.
+        queue: The BFS queue to append new nodes to.
+        vector_store: Vector store for cross-file search.
+        repo_path: Repository root path.
+        focus: Traversal focus mode.
+    """
+    cross_node = await _search_cross_file(
+        callee_name, vector_store, repo_path, current_node.file_path
+    )
+    if cross_node is not None and not is_test_file(cross_node.file_path):
+        graph.nodes[cross_node.qualified_name] = cross_node
+        graph.edges.append(
+            CodemapEdge(
+                source=current_node.qualified_name,
+                target=cross_node.qualified_name,
+                edge_type=_edge_type_for(focus, cross_node),
+                source_file=current_node.file_path,
+                target_file=cross_node.file_path,
+            )
+        )
+        queue.append((cross_node, depth + 1))
+
+
 async def _resolve_callees_for_node(
     current_node: CodemapNode,
     depth: int,
@@ -407,7 +461,6 @@ async def _resolve_callees_for_node(
         file_key, abs_path, repo_path, extractor, file_call_graphs
     )
 
-    # Determine callees for the current function
     qn = current_node.qualified_name
     sn = current_node.name
     callees = list(cg.get(qn, cg.get(sn, [])))
@@ -456,21 +509,16 @@ async def _resolve_callees_for_node(
             continue
 
         # Search vector store for cross-file definition
-        cross_node = await _search_cross_file(
-            callee_name, vector_store, repo_path, current_node.file_path
+        await _resolve_cross_file_callee(
+            callee_name,
+            current_node,
+            depth,
+            graph,
+            queue,
+            vector_store,
+            repo_path,
+            focus,
         )
-        if cross_node is not None and not is_test_file(cross_node.file_path):
-            graph.nodes[cross_node.qualified_name] = cross_node
-            graph.edges.append(
-                CodemapEdge(
-                    source=current_node.qualified_name,
-                    target=cross_node.qualified_name,
-                    edge_type=_edge_type_for(focus, cross_node),
-                    source_file=current_node.file_path,
-                    target_file=cross_node.file_path,
-                )
-            )
-            queue.append((cross_node, depth + 1))
 
 
 async def build_cross_file_graph(
@@ -572,6 +620,29 @@ async def _import_based_callees(
         return existing
 
 
+def _match_function_by_name(
+    callee_name: str,
+    call_graph: dict[str, list[str]],
+) -> str | None:
+    """Return the call-graph key that matches *callee_name*, or ``None``.
+
+    A function is "defined" in the same file if it appears as a caller key
+    in the file's call graph (meaning tree-sitter found its definition).
+
+    Args:
+        callee_name: The short name to match.
+        call_graph: The file-level call graph dict.
+
+    Returns:
+        The matching key (possibly qualified e.g. ``Class.method``) or None.
+    """
+    for key in call_graph:
+        short = key.split(".")[-1]
+        if short == callee_name or key == callee_name:
+            return key
+    return None
+
+
 async def _find_in_same_file(
     callee_name: str,
     call_graph: dict[str, list[str]],
@@ -585,15 +656,7 @@ async def _find_in_same_file(
     vector store for the matching chunk so that ``content_preview``,
     ``start_line``, ``end_line``, and ``docstring`` are populated.
     """
-    # A function is "defined" in the same file if it appears as a caller key
-    # in the file's call graph (meaning tree-sitter found its definition).
-    matched_key: str | None = None
-    for key in call_graph:
-        short = key.split(".")[-1]
-        if short == callee_name or key == callee_name:
-            matched_key = key
-            break
-
+    matched_key = _match_function_by_name(callee_name, call_graph)
     if matched_key is None:
         return None
 

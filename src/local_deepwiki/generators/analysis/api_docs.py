@@ -73,6 +73,68 @@ class ClassSignature:
     )
 
 
+_SELF_CLS = frozenset({"self", "cls"})
+
+
+def _parse_param_node(child: Node, source: bytes) -> Parameter | None:
+    """Extract a single Parameter from an AST parameter node.
+
+    Args:
+        child: A child node of the parameters list.
+        source: Source code bytes.
+
+    Returns:
+        A Parameter or None if the node should be skipped.
+    """
+    if child.type == "identifier":
+        name = get_node_text(child, source)
+        if name not in _SELF_CLS:
+            return Parameter(name=name)
+
+    elif child.type == "typed_parameter":
+        name_node = None
+        type_node = None
+        for c in child.children:
+            if c.type == "identifier":
+                name_node = c
+            elif c.type == "type":
+                type_node = c
+        if name_node:
+            name = get_node_text(name_node, source)
+            if name not in _SELF_CLS:
+                type_hint = get_node_text(type_node, source) if type_node else None
+                return Parameter(name=name, type_hint=type_hint)
+
+    elif child.type == "default_parameter":
+        name_node = child.child_by_field_name("name")
+        value_node = child.child_by_field_name("value")
+        if name_node:
+            name = get_node_text(name_node, source)
+            if name not in _SELF_CLS:
+                default = get_node_text(value_node, source) if value_node else None
+                return Parameter(name=name, default_value=default)
+
+    elif child.type == "typed_default_parameter":
+        name_node = child.child_by_field_name("name")
+        type_node = child.child_by_field_name("type")
+        value_node = child.child_by_field_name("value")
+        if name_node:
+            name = get_node_text(name_node, source)
+            if name not in _SELF_CLS:
+                type_hint = get_node_text(type_node, source) if type_node else None
+                default = get_node_text(value_node, source) if value_node else None
+                return Parameter(name=name, type_hint=type_hint, default_value=default)
+
+    elif child.type in ("list_splat_pattern", "dictionary_splat_pattern"):
+        prefix = "*" if child.type == "list_splat_pattern" else "**"
+        for c in child.children:
+            if c.type == "identifier":
+                name = get_node_text(c, source)
+                return Parameter(name=f"{prefix}{name}")
+
+    return None
+
+
 def extract_python_parameters(func_node: Node, source: bytes) -> list[Parameter]:
     """Extract parameters from a Python function definition.
 
@@ -89,62 +151,9 @@ def extract_python_parameters(func_node: Node, source: bytes) -> list[Parameter]
         return parameters
 
     for child in params_node.children:
-        if child.type == "identifier":
-            # Simple parameter without type hint
-            name = get_node_text(child, source)
-            if name not in ("self", "cls"):
-                parameters.append(Parameter(name=name))
-
-        elif child.type == "typed_parameter":
-            # Parameter with type hint: name: type
-            name_node = None
-            type_node = None
-            for c in child.children:
-                if c.type == "identifier":
-                    name_node = c
-                elif c.type == "type":
-                    type_node = c
-
-            if name_node:
-                name = get_node_text(name_node, source)
-                if name not in ("self", "cls"):
-                    type_hint = get_node_text(type_node, source) if type_node else None
-                    parameters.append(Parameter(name=name, type_hint=type_hint))
-
-        elif child.type == "default_parameter":
-            # Parameter with default: name = value
-            name_node = child.child_by_field_name("name")
-            value_node = child.child_by_field_name("value")
-
-            if name_node:
-                name = get_node_text(name_node, source)
-                if name not in ("self", "cls"):
-                    default = get_node_text(value_node, source) if value_node else None
-                    parameters.append(Parameter(name=name, default_value=default))
-
-        elif child.type == "typed_default_parameter":
-            # Parameter with type and default: name: type = value
-            name_node = child.child_by_field_name("name")
-            type_node = child.child_by_field_name("type")
-            value_node = child.child_by_field_name("value")
-
-            if name_node:
-                name = get_node_text(name_node, source)
-                if name not in ("self", "cls"):
-                    type_hint = get_node_text(type_node, source) if type_node else None
-                    default = get_node_text(value_node, source) if value_node else None
-                    parameters.append(
-                        Parameter(name=name, type_hint=type_hint, default_value=default)
-                    )
-
-        elif child.type in ("list_splat_pattern", "dictionary_splat_pattern"):
-            # *args or **kwargs
-            for c in child.children:
-                if c.type == "identifier":
-                    name = get_node_text(c, source)
-                    prefix = "*" if child.type == "list_splat_pattern" else "**"
-                    parameters.append(Parameter(name=f"{prefix}{name}"))
-                    break
+        param = _parse_param_node(child, source)
+        if param is not None:
+            parameters.append(param)
 
     return parameters
 
@@ -223,6 +232,50 @@ def extract_python_docstring(node: Node, source: bytes) -> str | None:
     return None
 
 
+def _parse_google_docstring_section(
+    stripped: str,
+    current_section: str,
+    current_param: str | None,
+    args_dict: dict[str, ArgInfo],
+    returns_str: str | None,
+    description_lines: list[str],
+) -> tuple[str | None, str | None]:
+    """Process one line for the Google docstring parser.
+
+    Args:
+        stripped: The stripped line content.
+        current_section: Current section name.
+        current_param: Name of the current parameter being parsed, or None.
+        args_dict: Mutable args dict to update in-place.
+        returns_str: Current returns string (may be None).
+        description_lines: Mutable description lines list to update.
+
+    Returns:
+        Tuple of (updated current_param, updated returns_str).
+    """
+    if current_section == "description":
+        description_lines.append(stripped)
+    elif current_section == "args":
+        param_match = re.match(r"(\w+)\s*(?:\(([^)]+)\))?\s*:\s*(.+)?", stripped)
+        if param_match:
+            param_name = param_match.group(1)
+            param_type = param_match.group(2)
+            param_desc = param_match.group(3) or ""
+            args_dict[param_name] = ArgInfo(
+                type=param_type,
+                description=param_desc.strip(),
+            )
+            current_param = param_name
+        elif current_param and stripped:
+            args_dict[current_param]["description"] += " " + stripped
+    elif current_section == "returns":
+        if returns_str is None:
+            returns_str = stripped
+        elif stripped:
+            returns_str += " " + stripped
+    return current_param, returns_str
+
+
 def parse_google_docstring(docstring: str) -> ParsedDocstring:
     """Parse a Google-style docstring.
 
@@ -270,28 +323,14 @@ def parse_google_docstring(docstring: str) -> ParsedDocstring:
             current_param = None
             continue
 
-        if current_section == "description":
-            description_lines.append(stripped)
-        elif current_section == "args":
-            # Parse parameter: name (type): description or name: description
-            param_match = re.match(r"(\w+)\s*(?:\(([^)]+)\))?\s*:\s*(.+)?", stripped)
-            if param_match:
-                param_name = param_match.group(1)
-                param_type = param_match.group(2)
-                param_desc = param_match.group(3) or ""
-                args_dict[param_name] = ArgInfo(
-                    type=param_type,
-                    description=param_desc.strip(),
-                )
-                current_param = param_name
-            elif current_param and stripped:
-                # Continuation of previous param description
-                args_dict[current_param]["description"] += " " + stripped
-        elif current_section == "returns":
-            if returns_str is None:
-                returns_str = stripped
-            elif stripped:
-                returns_str += " " + stripped
+        current_param, returns_str = _parse_google_docstring_section(
+            stripped,
+            current_section,
+            current_param,
+            args_dict,
+            returns_str,
+            description_lines,
+        )
 
     description = " ".join(description_lines).strip()
     # Take just first paragraph for description
@@ -304,6 +343,51 @@ def parse_google_docstring(docstring: str) -> ParsedDocstring:
         "returns": returns_str,
         "raises": raises_list,
     }
+
+
+def _parse_numpy_docstring_section(
+    line: str,
+    stripped: str,
+    current_section: str,
+    current_param: str | None,
+    args_dict: dict[str, ArgInfo],
+    returns_str: str | None,
+    description_lines: list[str],
+) -> tuple[str | None, str | None]:
+    """Process one line for the NumPy docstring parser.
+
+    Args:
+        line: The raw (non-stripped) line.
+        stripped: The stripped line content.
+        current_section: Current section name.
+        current_param: Name of the current parameter being parsed, or None.
+        args_dict: Mutable args dict to update in-place.
+        returns_str: Current returns string (may be None).
+        description_lines: Mutable description lines list to update.
+
+    Returns:
+        Tuple of (updated current_param, updated returns_str).
+    """
+    if current_section == "description":
+        description_lines.append(stripped)
+    elif current_section == "args":
+        param_match = re.match(r"(\w+)\s*:\s*(.+)?", stripped)
+        if param_match and not line.startswith("    "):
+            param_name = param_match.group(1)
+            param_type = param_match.group(2)
+            args_dict[param_name] = ArgInfo(
+                type=param_type.strip() if param_type else None,
+                description="",
+            )
+            current_param = param_name
+        elif current_param and stripped:
+            args_dict[current_param]["description"] += " " + stripped
+    elif current_section == "returns":
+        if returns_str is None:
+            returns_str = stripped
+        elif stripped:
+            returns_str += " " + stripped
+    return current_param, returns_str
 
 
 def parse_numpy_docstring(docstring: str) -> ParsedDocstring:
@@ -341,42 +425,24 @@ def parse_numpy_docstring(docstring: str) -> ParsedDocstring:
         if i + 1 < len(lines) and lines[i + 1].strip().startswith("---"):
             if stripped.lower() in ("parameters", "args", "arguments"):
                 current_section = "args"
-                i += 2
-                continue
             elif stripped.lower() in ("returns", "return"):
                 current_section = "returns"
-                i += 2
-                continue
             elif stripped.lower() in ("raises", "raise"):
                 current_section = "raises"
-                i += 2
-                continue
             else:
                 current_section = "other"
-                i += 2
-                continue
+            i += 2
+            continue
 
-        if current_section == "description":
-            description_lines.append(stripped)
-        elif current_section == "args":
-            # NumPy style: name : type
-            param_match = re.match(r"(\w+)\s*:\s*(.+)?", stripped)
-            if param_match and not line.startswith("    "):
-                param_name = param_match.group(1)
-                param_type = param_match.group(2)
-                args_dict[param_name] = ArgInfo(
-                    type=param_type.strip() if param_type else None,
-                    description="",
-                )
-                current_param = param_name
-            elif current_param and stripped:
-                # Description line (indented)
-                args_dict[current_param]["description"] += " " + stripped
-        elif current_section == "returns":
-            if returns_str is None:
-                returns_str = stripped
-            elif stripped:
-                returns_str += " " + stripped
+        current_param, returns_str = _parse_numpy_docstring_section(
+            line,
+            stripped,
+            current_section,
+            current_param,
+            args_dict,
+            returns_str,
+            description_lines,
+        )
 
         i += 1
 
@@ -599,6 +665,89 @@ def format_function_signature_line(sig: FunctionSignature) -> str:
     return f"{prefix}def {sig.name}({params}){return_part}"
 
 
+def _append_params_table(lines: list[str], params: list[Parameter]) -> None:
+    """Append a markdown parameter table to *lines* for the given *params*."""
+    lines.append("\n| Parameter | Type | Default | Description |")
+    lines.append("|-----------|------|---------|-------------|")
+    for param in params:
+        type_str = f"`{param.type_hint}`" if param.type_hint else "-"
+        default_str = f"`{param.default_value}`" if param.default_value else "-"
+        desc_str = param.description or "-"
+        lines.append(f"| `{param.name}` | {type_str} | {default_str} | {desc_str} |")
+    lines.append("")
+
+
+def _format_class_docs(
+    cls: ClassSignature,
+    lines: list[str],
+    include_private: bool,
+) -> None:
+    """Render one class signature block into *lines*.
+
+    Args:
+        cls: The class signature to render.
+        lines: Mutable list of markdown lines to append to.
+        include_private: Whether to include private methods.
+    """
+    lines.append(f"### class `{cls.name}`")
+
+    if cls.bases:
+        lines.append(f"\n**Inherits from:** {', '.join(f'`{b}`' for b in cls.bases)}")
+
+    if cls.description:
+        lines.append(f"\n{cls.description}")
+
+    methods = cls.methods
+    if not include_private:
+        methods = [
+            m
+            for m in methods
+            if not m.name.startswith("_")
+            or m.name in ("__init__", "__call__", "__enter__", "__exit__")
+        ]
+
+    if methods:
+        lines.append("\n**Methods:**\n")
+        for method in methods:
+            sig_line = format_function_signature_line(method)
+            lines.append(f"#### `{method.name}`\n")
+            lines.append(f"```python\n{sig_line}\n```\n")
+            if method.description:
+                lines.append(f"{method.description}\n")
+            if method.parameters:
+                _append_params_table(lines, method.parameters)
+
+    lines.append("")
+
+
+def _format_function_docs(func: FunctionSignature, lines: list[str]) -> None:
+    """Render one top-level function signature block into *lines*.
+
+    Args:
+        func: The function signature to render.
+        lines: Mutable list of markdown lines to append to.
+    """
+    sig_line = format_function_signature_line(func)
+    lines.append(f"#### `{func.name}`\n")
+
+    if func.decorators:
+        for dec in func.decorators:
+            lines.append(f"`{dec}`\n")
+
+    lines.append(f"```python\n{sig_line}\n```\n")
+
+    if func.description:
+        lines.append(f"{func.description}\n")
+
+    if func.parameters:
+        _append_params_table(lines, func.parameters)
+
+    if func.return_type:
+        lines.append(f"**Returns:** `{func.return_type}`\n")
+
+    lines.append("")
+
+
 def generate_api_reference_markdown(
     functions: list[FunctionSignature],
     classes: list[ClassSignature],
@@ -614,104 +763,22 @@ def generate_api_reference_markdown(
     Returns:
         Markdown string.
     """
-    lines = []
+    lines: list[str] = []
 
     # Filter private items unless requested
     if not include_private:
         functions = [f for f in functions if not f.name.startswith("_")]
         classes = [c for c in classes if not c.name.startswith("_")]
 
-    # Classes
     for cls in classes:
-        lines.append(f"### class `{cls.name}`")
+        _format_class_docs(cls, lines, include_private)
 
-        if cls.bases:
-            lines.append(
-                f"\n**Inherits from:** {', '.join(f'`{b}`' for b in cls.bases)}"
-            )
-
-        if cls.description:
-            lines.append(f"\n{cls.description}")
-
-        # Filter methods
-        methods = cls.methods
-        if not include_private:
-            methods = [
-                m
-                for m in methods
-                if not m.name.startswith("_")
-                or m.name in ("__init__", "__call__", "__enter__", "__exit__")
-            ]
-
-        if methods:
-            lines.append("\n**Methods:**\n")
-            for method in methods:
-                # Method signature
-                sig_line = format_function_signature_line(method)
-                lines.append(f"#### `{method.name}`\n")
-                lines.append(f"```python\n{sig_line}\n```\n")
-
-                if method.description:
-                    lines.append(f"{method.description}\n")
-
-                # Parameters table
-                params = [p for p in method.parameters]
-                if params:
-                    lines.append("\n| Parameter | Type | Default | Description |")
-                    lines.append("|-----------|------|---------|-------------|")
-                    for param in params:
-                        type_str = f"`{param.type_hint}`" if param.type_hint else "-"
-                        default_str = (
-                            f"`{param.default_value}`" if param.default_value else "-"
-                        )
-                        desc_str = param.description or "-"
-                        lines.append(
-                            f"| `{param.name}` | {type_str} | {default_str} | {desc_str} |"
-                        )
-                    lines.append("")
-
-        lines.append("")
-
-    # Top-level functions
     if functions:
         if classes:
             lines.append("---\n")
         lines.append("### Functions\n")
-
         for func in functions:
-            sig_line = format_function_signature_line(func)
-            lines.append(f"#### `{func.name}`\n")
-
-            # Decorators
-            if func.decorators:
-                for dec in func.decorators:
-                    lines.append(f"`{dec}`\n")
-
-            lines.append(f"```python\n{sig_line}\n```\n")
-
-            if func.description:
-                lines.append(f"{func.description}\n")
-
-            # Parameters table
-            if func.parameters:
-                lines.append("\n| Parameter | Type | Default | Description |")
-                lines.append("|-----------|------|---------|-------------|")
-                for param in func.parameters:
-                    type_str = f"`{param.type_hint}`" if param.type_hint else "-"
-                    default_str = (
-                        f"`{param.default_value}`" if param.default_value else "-"
-                    )
-                    desc_str = param.description or "-"
-                    lines.append(
-                        f"| `{param.name}` | {type_str} | {default_str} | {desc_str} |"
-                    )
-                lines.append("")
-
-            # Return type
-            if func.return_type:
-                lines.append(f"**Returns:** `{func.return_type}`\n")
-
-            lines.append("")
+            _format_function_docs(func, lines)
 
     return "\n".join(lines)
 

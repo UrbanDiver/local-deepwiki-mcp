@@ -42,6 +42,67 @@ from local_deepwiki.security import Permission, get_access_controller
 logger = get_logger(__name__)
 
 
+async def _build_structured_diff_result(
+    repo_path: Path,
+    changed_files: list[dict[str, Any]],
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Map changed files to wiki pages and entities via the index.
+
+    Args:
+        repo_path: Resolved repository path.
+        changed_files: List of changed-file dicts with ``file`` and ``status`` keys.
+
+    Returns:
+        Tuple of (affected_wiki_pages, affected_entities) lists.
+    """
+    affected_wiki_pages: list[dict[str, str]] = []
+    affected_entities: list[dict[str, str]] = []
+    try:
+        _index_status, wiki_path, _config = await _load_index_status(repo_path)
+        changed_file_set = {cf["file"] for cf in changed_files}
+
+        toc_path = wiki_path / "toc.json"
+        if toc_path.exists():
+            toc_content = await asyncio.to_thread(toc_path.read_text)
+            toc_data = json.loads(toc_content)
+            pages = (
+                toc_data if isinstance(toc_data, list) else toc_data.get("pages", [])
+            )
+            for page in pages:
+                source_file = page.get("source_file", "")
+                if source_file in changed_file_set:
+                    affected_wiki_pages.append(
+                        {
+                            "title": page.get("title", ""),
+                            "path": page.get("path", ""),
+                            "source_file": source_file,
+                        }
+                    )
+
+        search_path = wiki_path / "search.json"
+        if search_path.exists():
+            search_content = await asyncio.to_thread(search_path.read_text)
+            search_data = json.loads(search_content)
+            for entity in search_data.get("entities", []):
+                if entity.get("file", "") in changed_file_set:
+                    affected_entities.append(
+                        {
+                            "name": entity.get("display_name", entity.get("name", "")),
+                            "type": entity.get("entity_type", ""),
+                            "file": entity.get("file", ""),
+                        }
+                    )
+    except (
+        FileNotFoundError,
+        json.JSONDecodeError,
+        OSError,
+        KeyError,
+        ValidationError,
+    ) as e:
+        logger.debug("Could not load wiki/entity mapping for diff analysis: %s", e)
+    return affected_wiki_pages, affected_entities
+
+
 @handle_tool_errors
 async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
     """Handle analyze_diff tool call.
@@ -176,63 +237,10 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
             except (subprocess.TimeoutExpired, OSError):
                 cf["diff_content"] = "(diff content unavailable)"
 
-    # Try to load index and map to wiki pages
-    affected_wiki_pages: list[dict[str, str]] = []
-    affected_entities: list[dict[str, str]] = []
-    try:
-        _index_status, wiki_path, _config = await _load_index_status(repo_path)
+    affected_wiki_pages, affected_entities = await _build_structured_diff_result(
+        repo_path, changed_files
+    )
 
-        # Map to wiki pages via toc.json
-        toc_path = wiki_path / "toc.json"
-        if toc_path.exists():
-            toc_content = await asyncio.to_thread(toc_path.read_text)
-            toc_data = json.loads(toc_content)
-            pages = (
-                toc_data if isinstance(toc_data, list) else toc_data.get("pages", [])
-            )
-            changed_file_set = {cf["file"] for cf in changed_files}
-            for page in pages:
-                source_file = page.get("source_file", "")
-                if source_file in changed_file_set:
-                    affected_wiki_pages.append(
-                        {
-                            "title": page.get("title", ""),
-                            "path": page.get("path", ""),
-                            "source_file": source_file,
-                        }
-                    )
-
-        # Map to entities via search.json
-        search_path = wiki_path / "search.json"
-        if search_path.exists():
-            search_content = await asyncio.to_thread(search_path.read_text)
-            search_data = json.loads(search_content)
-            entities = search_data.get("entities", [])
-            changed_file_set = {cf["file"] for cf in changed_files}
-            for entity in entities:
-                if entity.get("file", "") in changed_file_set:
-                    affected_entities.append(
-                        {
-                            "name": entity.get("display_name", entity.get("name", "")),
-                            "type": entity.get("entity_type", ""),
-                            "file": entity.get("file", ""),
-                        }
-                    )
-    except (
-        FileNotFoundError,
-        json.JSONDecodeError,
-        OSError,
-        KeyError,
-        ValidationError,
-    ) as e:
-        # FileNotFoundError: no index exists
-        # json.JSONDecodeError: corrupted toc/search JSON
-        # OSError: file read issues
-        # KeyError: unexpected data format
-        # ValidationError: repository not indexed
-        logger.debug("Could not load wiki/entity mapping for diff analysis: %s", e)
-
-    # Summary
     summary = {
         "total_changed_files": len(changed_files),
         "added": sum(1 for f in changed_files if f["status"] == "added"),
@@ -258,6 +266,104 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
         len(affected_wiki_pages),
     )
     return make_tool_text_content("analyze_diff", result)
+
+
+async def _prepare_diff_context(
+    question: str,
+    max_context: int,
+    vector_db_path: Any,
+    embedding_provider: Any,
+) -> tuple[str, list[dict[str, Any]]]:
+    """Search the vector store for context relevant to *question*.
+
+    Args:
+        question: The user's question about the diff.
+        max_context: Maximum number of code chunks to retrieve.
+        vector_db_path: Path to the LanceDB vector store.
+        embedding_provider: Provider for computing query embeddings.
+
+    Returns:
+        Tuple of (additional_context_string, sources_list).
+    """
+    context_parts: list[str] = []
+    sources: list[dict[str, Any]] = []
+
+    if vector_db_path.exists():
+        vector_store = VectorStore(vector_db_path, embedding_provider)
+        search_results = await vector_store.search(question, limit=max_context)
+        for sr in search_results:
+            chunk = sr.chunk
+            context_parts.append(
+                f"File: {chunk.file_path} (lines {chunk.start_line}-{chunk.end_line})\n"
+                f"Type: {chunk.chunk_type.value}\n"
+                f"```\n{chunk.content}\n```"
+            )
+            sources.append(
+                {
+                    "file": chunk.file_path,
+                    "lines": f"{chunk.start_line}-{chunk.end_line}",
+                    "type": chunk.chunk_type.value,
+                    "score": sr.score,
+                }
+            )
+
+    additional_context = (
+        "\n\n---\n\n".join(context_parts)
+        if context_parts
+        else "(No additional code context available)"
+    )
+    return additional_context, sources
+
+
+async def _synthesize_diff_answer(
+    question: str,
+    diff_text: str,
+    base_ref: str,
+    head_ref: str,
+    additional_context: str,
+    wiki_path: Any,
+    config: Any,
+    embedding_provider: Any,
+) -> str:
+    """Call the LLM to synthesize an answer about the diff.
+
+    Args:
+        question: The user's question.
+        diff_text: The (possibly truncated) git diff text.
+        base_ref: Base git ref.
+        head_ref: Head git ref.
+        additional_context: RAG context string.
+        wiki_path: Path to wiki directory (for LLM cache).
+        config: Application config object.
+        embedding_provider: Provider for embedding (needed by cached LLM).
+
+    Returns:
+        The LLM-generated answer string.
+    """
+    from local_deepwiki.providers.llm import get_cached_llm_provider
+
+    cache_path = wiki_path / "llm_cache.lance"
+    llm = get_cached_llm_provider(
+        cache_path=cache_path,
+        embedding_provider=embedding_provider,
+        cache_config=config.llm_cache,
+        llm_config=config.llm,
+    )
+
+    prompt = (
+        f"You are analyzing recent code changes. Answer this question about the diff:\n\n"
+        f"Question: {question}\n\n"
+        f"## Git Diff (changes between {base_ref} and {head_ref}):\n"
+        f"```diff\n{diff_text}\n```\n\n"
+        f"## Additional Code Context (from the codebase):\n{additional_context}\n\n"
+        f"Provide a clear, specific answer based on the diff and context. "
+        f"Focus on what changed, why it might matter, and any potential issues."
+    )
+    system_prompt = "You are a code review assistant. Analyze code diffs and answer questions accurately."
+
+    rate_limiter = get_rate_limiter()
+    async with rate_limiter:
+        return await llm.generate(prompt, system_prompt=system_prompt)
 
 
 @handle_tool_errors
@@ -356,72 +462,25 @@ async def handle_ask_about_diff(args: dict[str, Any]) -> list[TextContent]:
             + f"\n... (diff truncated, showing first {MAX_DIFF_TEXT_LENGTH} chars)"
         )
 
-    # Get additional context from vector store
     config = get_config()
     vector_db_path = config.get_vector_db_path(repo_path)
     wiki_path = config.get_wiki_path(repo_path)
-
-    context_parts: list[str] = []
-    sources: list[dict[str, Any]] = []
-
     embedding_provider = get_embedding_provider(config.embedding)
 
-    if vector_db_path.exists():
-        vector_store = VectorStore(vector_db_path, embedding_provider)
-
-        # Search for relevant context using the question
-        search_results = await vector_store.search(
-            question, limit=validated.max_context
-        )
-
-        for sr in search_results:
-            chunk = sr.chunk
-            context_parts.append(
-                f"File: {chunk.file_path} (lines {chunk.start_line}-{chunk.end_line})\n"
-                f"Type: {chunk.chunk_type.value}\n"
-                f"```\n{chunk.content}\n```"
-            )
-            sources.append(
-                {
-                    "file": chunk.file_path,
-                    "lines": f"{chunk.start_line}-{chunk.end_line}",
-                    "type": chunk.chunk_type.value,
-                    "score": sr.score,
-                }
-            )
-
-    additional_context = (
-        "\n\n---\n\n".join(context_parts)
-        if context_parts
-        else "(No additional code context available)"
+    additional_context, sources = await _prepare_diff_context(
+        question, validated.max_context, vector_db_path, embedding_provider
     )
 
-    # Generate answer using LLM
-    from local_deepwiki.providers.llm import get_cached_llm_provider
-
-    cache_path = wiki_path / "llm_cache.lance"
-    llm = get_cached_llm_provider(
-        cache_path=cache_path,
-        embedding_provider=embedding_provider,
-        cache_config=config.llm_cache,
-        llm_config=config.llm,
+    answer = await _synthesize_diff_answer(
+        question,
+        diff_text,
+        validated.base_ref,
+        validated.head_ref,
+        additional_context,
+        wiki_path,
+        config,
+        embedding_provider,
     )
-
-    prompt = (
-        f"You are analyzing recent code changes. Answer this question about the diff:\n\n"
-        f"Question: {question}\n\n"
-        f"## Git Diff (changes between {validated.base_ref} and {validated.head_ref}):\n"
-        f"```diff\n{diff_text}\n```\n\n"
-        f"## Additional Code Context (from the codebase):\n{additional_context}\n\n"
-        f"Provide a clear, specific answer based on the diff and context. "
-        f"Focus on what changed, why it might matter, and any potential issues."
-    )
-
-    system_prompt = "You are a code review assistant. Analyze code diffs and answer questions accurately."
-
-    rate_limiter = get_rate_limiter()
-    async with rate_limiter:
-        answer = await llm.generate(prompt, system_prompt=system_prompt)
 
     result = {
         "status": "success",

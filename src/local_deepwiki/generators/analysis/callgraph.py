@@ -30,42 +30,37 @@ CALL_NODE_TYPES: dict[Language, set[str]] = {
 }
 
 
-def extract_call_name(call_node: Node, source: bytes, language: Language) -> str | None:
-    """Extract the function/method name from a call expression.
+def _extract_python_call(call_node: Node, source: bytes) -> str | None:
+    """Extract call name from a Python call expression node."""
+    func = call_node.child_by_field_name("function")
+    if func:
+        if func.type == "identifier":
+            return get_node_text(func, source)
+        elif func.type == "attribute":
+            attr = func.child_by_field_name("attribute")
+            if attr:
+                return get_node_text(attr, source)
+    return None
 
-    Args:
-        call_node: The call expression AST node.
-        source: Source bytes.
-        language: Programming language.
 
-    Returns:
-        The called function name or None if can't determine.
-    """
-    if language == Language.PYTHON:
-        # Python: func() or obj.method() or module.func()
-        func = call_node.child_by_field_name("function")
-        if func:
-            if func.type == "identifier":
-                return get_node_text(func, source)
-            elif func.type == "attribute":
-                # obj.method() - get the method name
-                attr = func.child_by_field_name("attribute")
-                if attr:
-                    return get_node_text(attr, source)
+def _extract_js_call(call_node: Node, source: bytes) -> str | None:
+    """Extract call name from a JS/TS call expression node."""
+    func = call_node.child_by_field_name("function")
+    if func:
+        if func.type == "identifier":
+            return get_node_text(func, source)
+        elif func.type == "member_expression":
+            prop = func.child_by_field_name("property")
+            if prop:
+                return get_node_text(prop, source)
+    return None
 
-    elif language in (Language.JAVASCRIPT, Language.TYPESCRIPT):
-        # JS/TS: func() or obj.method()
-        func = call_node.child_by_field_name("function")
-        if func:
-            if func.type == "identifier":
-                return get_node_text(func, source)
-            elif func.type == "member_expression":
-                prop = func.child_by_field_name("property")
-                if prop:
-                    return get_node_text(prop, source)
 
-    elif language == Language.GO:
-        # Go: func() or pkg.Func() or obj.Method()
+def _extract_generic_call(
+    call_node: Node, source: bytes, language: Language
+) -> str | None:
+    """Extract call name for Go, Rust, Java, C/C++, and Swift."""
+    if language == Language.GO:
         func = call_node.child_by_field_name("function")
         if func:
             if func.type == "identifier":
@@ -76,7 +71,6 @@ def extract_call_name(call_node: Node, source: bytes, language: Language) -> str
                     return get_node_text(field, source)
 
     elif language == Language.RUST:
-        # Rust: func() or Type::method() or self.method()
         func = call_node.child_by_field_name("function")
         if func:
             if func.type == "identifier":
@@ -91,13 +85,11 @@ def extract_call_name(call_node: Node, source: bytes, language: Language) -> str
                     return get_node_text(field, source)
 
     elif language == Language.JAVA:
-        # Java: method() or obj.method()
         name = call_node.child_by_field_name("name")
         if name:
             return get_node_text(name, source)
 
     elif language in (Language.C, Language.CPP):
-        # C/C++: func() or obj.method() or obj->method()
         func = call_node.child_by_field_name("function")
         if func:
             if func.type == "identifier":
@@ -108,7 +100,6 @@ def extract_call_name(call_node: Node, source: bytes, language: Language) -> str
                     return get_node_text(field, source)
 
     elif language == Language.SWIFT:
-        # Swift: func() or obj.method()
         func = call_node.child_by_field_name("function")
         if func:
             if func.type == "identifier":
@@ -121,6 +112,24 @@ def extract_call_name(call_node: Node, source: bytes, language: Language) -> str
                                 return get_node_text(c, source)
 
     return None
+
+
+def extract_call_name(call_node: Node, source: bytes, language: Language) -> str | None:
+    """Extract the function/method name from a call expression.
+
+    Args:
+        call_node: The call expression AST node.
+        source: Source bytes.
+        language: Programming language.
+
+    Returns:
+        The called function name or None if can't determine.
+    """
+    if language == Language.PYTHON:
+        return _extract_python_call(call_node, source)
+    elif language in (Language.JAVASCRIPT, Language.TYPESCRIPT):
+        return _extract_js_call(call_node, source)
+    return _extract_generic_call(call_node, source, language)
 
 
 def extract_calls_from_function(
@@ -155,18 +164,8 @@ def extract_calls_from_function(
     return calls
 
 
-def _is_builtin_or_noise(name: str, language: Language) -> bool:
-    """Check if a function name is a built-in or common noise.
-
-    Args:
-        name: Function name.
-        language: Programming language.
-
-    Returns:
-        True if should be filtered out.
-    """
-    # Common built-ins/noise to filter across languages
-    common_noise = {
+_BUILTIN_NAMES: frozenset[str] = frozenset(
+    {
         "print",
         "println",
         "printf",
@@ -237,29 +236,14 @@ def _is_builtin_or_noise(name: str, language: Language) -> bool:
         "require",
         "include",
     }
+)
 
-    if name.lower() in common_noise:
-        return True
-
-    # Language-specific noise
-    if language == Language.PYTHON:
-        python_noise = {
-            "super",
-            "next",
-            "iter",
-            "abs",
-            "round",
-            "ord",
-            "chr",
-            "hex",
-            "bin",
-            "oct",
-        }
-        if name in python_noise:
-            return True
-
-    elif language in (Language.JAVASCRIPT, Language.TYPESCRIPT):
-        js_noise = {
+_NOISE_PATTERNS: dict[Language, frozenset[str]] = {
+    Language.PYTHON: frozenset(
+        {"super", "next", "iter", "abs", "round", "ord", "chr", "hex", "bin", "oct"}
+    ),
+    Language.JAVASCRIPT: frozenset(
+        {
             "setTimeout",
             "setInterval",
             "clearTimeout",
@@ -267,10 +251,33 @@ def _is_builtin_or_noise(name: str, language: Language) -> bool:
             "fetch",
             "Promise",
         }
-        if name in js_noise:
-            return True
+    ),
+    Language.TYPESCRIPT: frozenset(
+        {
+            "setTimeout",
+            "setInterval",
+            "clearTimeout",
+            "clearInterval",
+            "fetch",
+            "Promise",
+        }
+    ),
+}
 
-    return False
+
+def _is_builtin_or_noise(name: str, language: Language) -> bool:
+    """Check if a function name is a built-in or common noise.
+
+    Args:
+        name: Function name.
+        language: Programming language.
+
+    Returns:
+        True if should be filtered out.
+    """
+    if name.lower() in _BUILTIN_NAMES:
+        return True
+    return name in _NOISE_PATTERNS.get(language, frozenset())
 
 
 class CallGraphExtractor:
@@ -344,6 +351,64 @@ class CallGraphExtractor:
         return False
 
 
+def _trim_nodes_to_limit(
+    all_nodes: set[str],
+    call_graph: dict[str, list[str]],
+    max_nodes: int,
+) -> set[str]:
+    """Return the top *max_nodes* most-connected nodes from *all_nodes*."""
+    connection_count: Counter[str] = Counter()
+    for caller, callees in call_graph.items():
+        connection_count[caller] += len(callees)
+        for callee in callees:
+            connection_count[callee] += 1
+    sorted_nodes = sorted(connection_count.items(), key=lambda x: x[1], reverse=True)
+    return {node for node, _ in sorted_nodes[:max_nodes]}
+
+
+def _build_call_graph_mermaid(
+    all_nodes: set[str],
+    call_graph: dict[str, list[str]],
+) -> list[str]:
+    """Build Mermaid flowchart lines for *all_nodes* and edges from *call_graph*.
+
+    Args:
+        all_nodes: Set of node names to include.
+        call_graph: Mapping of caller to list of callees.
+
+    Returns:
+        List of Mermaid diagram lines (without the closing newline join).
+    """
+    lines = ["flowchart TD"]
+
+    node_ids: dict[str, str] = {}
+    for i, node in enumerate(sorted(all_nodes)):
+        safe_id = f"N{i}"
+        node_ids[node] = safe_id
+        display_name = node if len(node) <= 30 else node[:27] + "..."
+        lines.append(f"    {safe_id}[{display_name}]")
+
+    for caller, callees in call_graph.items():
+        if caller not in node_ids:
+            continue
+        caller_id = node_ids[caller]
+        for callee in callees:
+            if callee in node_ids:
+                lines.append(f"    {caller_id} --> {node_ids[callee]}")
+
+    func_nodes = [nid for node, nid in node_ids.items() if "." not in node]
+    method_nodes = [nid for node, nid in node_ids.items() if "." in node]
+
+    if func_nodes:
+        lines.append("    classDef func fill:#e1f5fe")
+        lines.append(f"    class {','.join(func_nodes)} func")
+    if method_nodes:
+        lines.append("    classDef method fill:#fff3e0")
+        lines.append(f"    class {','.join(method_nodes)} method")
+
+    return lines
+
+
 def generate_call_graph_diagram(
     call_graph: dict[str, list[str]],
     title: str | None = None,
@@ -362,70 +427,15 @@ def generate_call_graph_diagram(
     if not call_graph:
         return None
 
-    # Collect all unique nodes
     all_nodes: set[str] = set()
     for caller, callees in call_graph.items():
         all_nodes.add(caller)
         all_nodes.update(callees)
 
-    # If too many nodes, filter to most connected
     if len(all_nodes) > max_nodes:
-        # Count connections per node
-        connection_count: Counter[str] = Counter()
-        for caller, callees in call_graph.items():
-            connection_count[caller] += len(callees)
-            for callee in callees:
-                connection_count[callee] += 1
+        all_nodes = _trim_nodes_to_limit(all_nodes, call_graph, max_nodes)
 
-        # Keep top nodes by connection count
-        sorted_nodes = sorted(
-            connection_count.items(), key=lambda x: x[1], reverse=True
-        )
-        all_nodes = {node for node, _ in sorted_nodes[:max_nodes]}
-
-    # Build diagram
-    lines = ["flowchart TD"]
-
-    if title:
-        # Mermaid doesn't have native title, use a styled node
-        pass
-
-    # Generate safe node IDs
-    node_ids: dict[str, str] = {}
-    for i, node in enumerate(sorted(all_nodes)):
-        safe_id = f"N{i}"
-        node_ids[node] = safe_id
-        # Use display name (truncate if too long)
-        display_name = node if len(node) <= 30 else node[:27] + "..."
-        lines.append(f"    {safe_id}[{display_name}]")
-
-    # Add edges
-    for caller, callees in call_graph.items():
-        if caller not in node_ids:
-            continue
-        caller_id = node_ids[caller]
-        for callee in callees:
-            if callee in node_ids:
-                callee_id = node_ids[callee]
-                lines.append(f"    {caller_id} --> {callee_id}")
-
-    # Style function nodes differently from method nodes
-    func_nodes = []
-    method_nodes = []
-    for node, node_id in node_ids.items():
-        if "." in node:
-            method_nodes.append(node_id)
-        else:
-            func_nodes.append(node_id)
-
-    if func_nodes:
-        lines.append("    classDef func fill:#e1f5fe")
-        lines.append(f"    class {','.join(func_nodes)} func")
-
-    if method_nodes:
-        lines.append("    classDef method fill:#fff3e0")
-        lines.append(f"    class {','.join(method_nodes)} method")
-
+    lines = _build_call_graph_mermaid(all_nodes, call_graph)
     return "\n".join(lines)
 
 

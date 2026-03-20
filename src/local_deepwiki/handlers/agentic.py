@@ -46,6 +46,77 @@ from local_deepwiki.handlers.agentic_workflows import (  # noqa: F401
 )
 
 
+def _compute_suggestions(
+    tools_used: list[str],
+) -> list[dict[str, str]]:
+    """Build ordered suggestions from the tool-graph based on recently used tools.
+
+    Args:
+        tools_used: Ordered list of tools already called (most-recent last).
+
+    Returns:
+        Deduplicated suggestion list from TOOL_GRAPH, or a generic fallback.
+    """
+    seen_tools: set[str] = set()
+    suggestions: list[dict[str, str]] = []
+
+    for tool_name in reversed(tools_used):
+        for suggestion in TOOL_GRAPH.get(tool_name, []):
+            if (
+                suggestion["tool"] not in seen_tools
+                and suggestion["tool"] not in tools_used
+            ):
+                seen_tools.add(suggestion["tool"])
+                suggestions.append(suggestion)
+
+    if not suggestions:
+        suggestions = [
+            {
+                "tool": "ask_question",
+                "reason": "Ask questions about the codebase",
+                "priority": "medium",
+            },
+            {
+                "tool": "search_wiki",
+                "reason": "Search across wiki content",
+                "priority": "medium",
+            },
+            {
+                "tool": "search_code",
+                "reason": "Search for code snippets",
+                "priority": "medium",
+            },
+        ]
+
+    return suggestions
+
+
+def _prioritize_by_context(
+    suggestions: list[dict[str, str]],
+    context: str | None,
+) -> list[dict[str, str]]:
+    """Boost priority of suggestions that match context keywords, then sort.
+
+    Args:
+        suggestions: Current suggestion list (may be mutated in-place for boost).
+        context: Optional free-text context string from the caller.
+
+    Returns:
+        Sorted suggestion list (high first).
+    """
+    if context:
+        context_lower = context.lower()
+        for suggestion in suggestions:
+            tool_kws = _TOOL_KEYWORDS.get(suggestion["tool"], [])
+            if any(kw in context_lower for kw in tool_kws):
+                suggestion["priority"] = "high"
+
+    priority_order = {"high": 0, "medium": 1, "low": 2}
+    return sorted(
+        suggestions, key=lambda s: priority_order.get(s.get("priority", "low"), 2)
+    )
+
+
 @handle_tool_errors
 async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]:
     """Suggest next tools to use based on what has already been used.
@@ -62,12 +133,10 @@ async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]
 
     # If no tools used, suggest starting points
     if not tools_used:
-        # Check if wiki exists (session state or filesystem)
         from local_deepwiki.handlers.session_state import is_repo_indexed
 
         has_wiki = False
         if repo_path_str:
-            # Fast check: was it indexed in this session?
             if is_repo_indexed(str(Path(repo_path_str).resolve())):
                 has_wiki = True
             else:
@@ -78,7 +147,7 @@ async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]
                 has_wiki = wiki_path.exists()
 
         if has_wiki:
-            suggestions = [
+            suggestions: list[dict[str, str]] = [
                 {
                     "tool": "read_wiki_structure",
                     "reason": "Browse existing wiki documentation",
@@ -116,57 +185,10 @@ async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]
             )
         ]
 
-    # Collect suggestions from the most recently used tools
-    seen_tools: set[str] = set()
-    suggestions: list[dict[str, str]] = []
-
-    # Process in reverse order (most recent first)
-    for tool_name in reversed(tools_used):
-        graph_suggestions = TOOL_GRAPH.get(tool_name, [])
-        for suggestion in graph_suggestions:
-            if (
-                suggestion["tool"] not in seen_tools
-                and suggestion["tool"] not in tools_used
-            ):
-                seen_tools.add(suggestion["tool"])
-                suggestions.append(suggestion)
-
-    # If no specific suggestions, offer general ones
-    if not suggestions:
-        suggestions = [
-            {
-                "tool": "ask_question",
-                "reason": "Ask questions about the codebase",
-                "priority": "medium",
-            },
-            {
-                "tool": "search_wiki",
-                "reason": "Search across wiki content",
-                "priority": "medium",
-            },
-            {
-                "tool": "search_code",
-                "reason": "Search for code snippets",
-                "priority": "medium",
-            },
-        ]
-
-    # Boost suggestions matching context keywords (Item 5)
+    suggestions = _compute_suggestions(tools_used)
     context = validated.context
-    if context:
-        context_lower = context.lower()
-        for suggestion in suggestions:
-            tool_kws = _TOOL_KEYWORDS.get(suggestion["tool"], [])
-            if any(kw in context_lower for kw in tool_kws):
-                suggestion["priority"] = "high"
+    suggestions = _prioritize_by_context(suggestions, context)
 
-    # Sort by priority
-    priority_order = {"high": 0, "medium": 1, "low": 2}
-    suggestions = sorted(
-        suggestions, key=lambda s: priority_order.get(s.get("priority", "low"), 2)
-    )
-
-    # Include session state summary for agent awareness
     from local_deepwiki.handlers.session_state import get_session_state
 
     session = get_session_state()
@@ -214,7 +236,8 @@ async def handle_batch_explain_entities(args: dict[str, Any]) -> list[TextConten
     if depth == "full":
         from local_deepwiki.handlers.analysis_entity import handle_explain_entity
 
-        async def _explain_one(name: str) -> dict[str, Any]:
+        async def _explain_single_entity(name: str) -> dict[str, Any]:
+            """Explain one entity, returning a result dict with found/error status."""
             try:
                 res = await handle_explain_entity(
                     {"repo_path": str(repo_path), "entity_name": name}
@@ -227,7 +250,9 @@ async def handle_batch_explain_entities(args: dict[str, Any]) -> list[TextConten
             except Exception as exc:  # noqa: BLE001
                 return {"entity": name, "found": False, "error": str(exc)}
 
-        results = await asyncio.gather(*[_explain_one(n) for n in entity_names])
+        results = await asyncio.gather(
+            *[_explain_single_entity(n) for n in entity_names]
+        )
 
         data: dict[str, Any] = {
             "repo_path": str(repo_path),
@@ -314,6 +339,39 @@ async def handle_batch_explain_entities(args: dict[str, Any]) -> list[TextConten
     ]
 
 
+async def _try_escalate_to_research(
+    ask_data: dict[str, Any],
+    repo_path: Path,
+    query: str,
+) -> tuple[dict[str, Any], bool]:
+    """Attempt to escalate an insufficient answer to deep_research.
+
+    Args:
+        ask_data: The original ask_question response dict.
+        repo_path: Resolved repository path.
+        query: The user's query string.
+
+    Returns:
+        Tuple of (response_data, escalated_flag). If escalation fails,
+        returns the original ask_data with escalated=False.
+    """
+    logger.info("Answer seems insufficient, escalating to deep_research")
+    try:
+        from local_deepwiki.handlers.research import handle_deep_research
+
+        research_result = await handle_deep_research(
+            {"repo_path": str(repo_path), "question": query, "preset": "quick"}
+        )
+        research_text = research_result[0].text if research_result else ""
+        try:
+            return json.loads(research_text), True
+        except (json.JSONDecodeError, TypeError):
+            return {"answer": research_text}, True
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Escalation to deep_research failed: %s", e)
+        return ask_data, False
+
+
 @handle_tool_errors
 async def handle_query_codebase(args: dict[str, Any]) -> list[TextContent]:
     """Smart query that uses ask_question and optionally escalates to deep_research.
@@ -360,28 +418,9 @@ async def handle_query_codebase(args: dict[str, Any]) -> list[TextContent]:
 
     # Escalate if answer seems insufficient and auto_escalate is enabled (Item 6)
     if auto_escalate and _answer_seems_insufficient(answer, query):
-        logger.info("Answer seems insufficient, escalating to deep_research")
-        try:
-            from local_deepwiki.handlers.research import handle_deep_research
-
-            research_result = await handle_deep_research(
-                {
-                    "repo_path": str(repo_path),
-                    "question": query,
-                    "preset": "quick",
-                }
-            )
-            research_text = research_result[0].text if research_result else ""
-            try:
-                research_data = json.loads(research_text)
-            except (json.JSONDecodeError, TypeError):
-                research_data = {"answer": research_text}
-
-            ask_data = research_data
-            escalated = True
-        except Exception as e:  # noqa: BLE001
-            logger.warning("Escalation to deep_research failed: %s", e)
-            # Fall back to original answer
+        ask_data, escalated = await _try_escalate_to_research(
+            ask_data, repo_path, query
+        )
 
     data = {
         **ask_data,
@@ -408,6 +447,45 @@ async def handle_query_codebase(args: dict[str, Any]) -> list[TextContent]:
     ]
 
 
+def _score_tool_match(
+    tool_def: Any,
+    query_lower: str,
+    query_words: set[str],
+) -> tuple[float, dict[str, Any]] | None:
+    """Score one tool definition against a lowercased query.
+
+    Args:
+        tool_def: A tool definition object with ``name`` and ``description``.
+        query_lower: The full query string in lowercase.
+        query_words: Set of individual query words in lowercase.
+
+    Returns:
+        ``(score, result_dict)`` tuple if score > 0, else ``None``.
+    """
+    desc_lower = (tool_def.description or "").lower()
+    name_lower = tool_def.name.lower()
+
+    score: float = sum(1 for w in query_words if w in desc_lower or w in name_lower)
+    if query_lower in desc_lower:
+        score += 3
+    if query_lower in name_lower:
+        score += 5
+
+    if score <= 0:
+        return None
+
+    requires_index = "Requires: index_repository" in (tool_def.description or "")
+    return (
+        score,
+        {
+            "tool": tool_def.name,
+            "description": (tool_def.description or "")[:200],
+            "requires_index": requires_index,
+            "score": score,
+        },
+    )
+
+
 @handle_tool_errors
 async def handle_find_tools(args: dict[str, Any]) -> list[TextContent]:
     """Search available tools by capability description.
@@ -427,32 +505,9 @@ async def handle_find_tools(args: dict[str, Any]) -> list[TextContent]:
 
     scored: list[tuple[float, Any]] = []
     for tool_def in TOOL_DEFINITIONS:
-        desc_lower = (tool_def.description or "").lower()
-        name_lower = tool_def.name.lower()
-
-        # Score: count matching query words in description + name
-        score = sum(1 for w in query_words if w in desc_lower or w in name_lower)
-        # Bonus for exact phrase match
-        if query_lower in desc_lower:
-            score += 3
-        if query_lower in name_lower:
-            score += 5
-
-        if score > 0:
-            requires_index = "Requires: index_repository" in (
-                tool_def.description or ""
-            )
-            scored.append(
-                (
-                    score,
-                    {
-                        "tool": tool_def.name,
-                        "description": (tool_def.description or "")[:200],
-                        "requires_index": requires_index,
-                        "score": score,
-                    },
-                )
-            )
+        entry = _score_tool_match(tool_def, query_lower, query_words)
+        if entry is not None:
+            scored.append(entry)
 
     scored = sorted(scored, key=itemgetter(0), reverse=True)
     top_results = [item for _, item in scored[:5]]

@@ -63,6 +63,78 @@ def _score_entity_match(entity: dict[str, Any], query: str) -> float:
     return 0.0
 
 
+def _build_wiki_search_results(
+    pages: list[dict[str, Any]],
+    entities: list[dict[str, Any]],
+    query: str,
+    entity_types: list[str] | None,
+    limit: int,
+    wiki_path: Path,
+) -> list[dict[str, Any]]:
+    """Score and collect matching pages and entities from a search index.
+
+    Args:
+        pages: Page records from ``search.json``.
+        entities: Entity records from ``search.json``.
+        query: Lowercased search query.
+        entity_types: Optional filter list (``None`` means all types).
+        limit: Maximum number of results to return.
+        wiki_path: Wiki directory used for building wiki resource URIs.
+
+    Returns:
+        Sorted list of match dicts, capped at *limit*.
+    """
+    matches: list[dict[str, Any]] = []
+
+    # Search pages
+    if entity_types is None or "page" in entity_types:
+        for page in pages:
+            score = _score_page_match(page, query)
+            if score > 0:
+                page_match: dict[str, Any] = {
+                    "type": "page",
+                    "title": page.get("title"),
+                    "path": page.get("path"),
+                    "snippet": page.get("snippet", ""),
+                    "score": score,
+                }
+                page_path_str = page.get("path", "")
+                if page_path_str:
+                    page_match["wiki_resource"] = build_wiki_resource_uri(
+                        wiki_path, page_path_str
+                    )
+                matches.append(page_match)
+
+    # Search entities
+    allowed_entity_types = None
+    if entity_types is not None:
+        allowed_entity_types = [t for t in entity_types if t != "page"]
+
+    if entity_types is None or allowed_entity_types:
+        for entity in entities:
+            if (
+                allowed_entity_types
+                and entity.get("entity_type") not in allowed_entity_types
+            ):
+                continue
+
+            score = _score_entity_match(entity, query)
+            if score > 0:
+                matches.append(
+                    {
+                        "type": "entity",
+                        "entity_type": entity.get("entity_type"),
+                        "name": entity.get("display_name"),
+                        "file": entity.get("file"),
+                        "signature": entity.get("signature", ""),
+                        "description": entity.get("description", ""),
+                        "score": score,
+                    }
+                )
+
+    return sorted(matches, key=itemgetter("score"), reverse=True)[:limit]
+
+
 @handle_tool_errors
 async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
     """Handle search_wiki tool call.
@@ -111,55 +183,9 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
     pages = search_data.get("pages", [])
     entities = search_data.get("entities", [])
 
-    matches: list[dict] = []
-
-    # Search pages
-    if entity_types is None or "page" in entity_types:
-        for page in pages:
-            score = _score_page_match(page, query)
-            if score > 0:
-                page_match: dict[str, Any] = {
-                    "type": "page",
-                    "title": page.get("title"),
-                    "path": page.get("path"),
-                    "snippet": page.get("snippet", ""),
-                    "score": score,
-                }
-                page_path_str = page.get("path", "")
-                if page_path_str:
-                    page_match["wiki_resource"] = build_wiki_resource_uri(
-                        wiki_path, page_path_str
-                    )
-                matches.append(page_match)
-
-    # Search entities
-    allowed_entity_types = None
-    if entity_types is not None:
-        allowed_entity_types = [t for t in entity_types if t != "page"]
-
-    if entity_types is None or allowed_entity_types:
-        for entity in entities:
-            if (
-                allowed_entity_types
-                and entity.get("entity_type") not in allowed_entity_types
-            ):
-                continue
-
-            score = _score_entity_match(entity, query)
-            if score > 0:
-                matches.append(
-                    {
-                        "type": "entity",
-                        "entity_type": entity.get("entity_type"),
-                        "name": entity.get("display_name"),
-                        "file": entity.get("file"),
-                        "signature": entity.get("signature", ""),
-                        "description": entity.get("description", ""),
-                        "score": score,
-                    }
-                )
-
-    matches = sorted(matches, key=itemgetter("score"), reverse=True)[:limit]
+    matches = _build_wiki_search_results(
+        pages, entities, query, entity_types, limit, wiki_path
+    )
 
     result = {
         "status": "success",
@@ -175,6 +201,50 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
         repo_path,
     )
     return make_tool_text_content("search_wiki", result)
+
+
+def _build_fuzzy_results(
+    helper: Any,
+    matches: list[tuple[str, float]],
+    query: str,
+    file_suggestions_limit: int,
+) -> tuple[list[dict[str, Any]], list[Any], str | None]:
+    """Format fuzzy search matches into result dicts and collect file suggestions.
+
+    Args:
+        helper: ``FuzzySearchHelper`` instance with a built name index.
+        matches: Raw ``(name, score)`` pairs from ``find_similar_names``.
+        query: Original query string (for file suggestions).
+        file_suggestions_limit: Maximum number of file suggestions to return.
+
+    Returns:
+        Tuple of ``(match_results, file_suggestions, hint)``.
+        *hint* is ``None`` when matches were found.
+    """
+    match_results: list[dict[str, Any]] = []
+    for name, score in matches:
+        entries = helper.get_entries_for_name(name)
+        locations = [
+            {"file_path": e.file_path, "type": e.chunk_type.value} for e in entries[:3]
+        ]
+        match_results.append(
+            {
+                "name": name,
+                "score": round(score, 4),
+                "locations": locations,
+            }
+        )
+
+    file_suggestions = helper.get_file_suggestions(query, limit=file_suggestions_limit)
+
+    hint: str | None = None
+    if not match_results:
+        hint = (
+            "No matches found. Try a shorter or less specific query, "
+            "or lower the threshold (e.g. threshold=0.4)."
+        )
+
+    return match_results, file_suggestions, hint
 
 
 @handle_tool_errors
@@ -224,32 +294,9 @@ async def handle_fuzzy_search(args: dict[str, Any]) -> list[TextContent]:
         chunk_type=chunk_type_filter,
     )
 
-    # Get file location info for each match
-    match_results = []
-    for name, score in matches:
-        entries = helper.get_entries_for_name(name)
-        locations = [
-            {"file_path": e.file_path, "type": e.chunk_type.value} for e in entries[:3]
-        ]
-        match_results.append(
-            {
-                "name": name,
-                "score": round(score, 4),
-                "locations": locations,
-            }
-        )
-
-    # Also get file suggestions
-    file_suggestions = helper.get_file_suggestions(
-        validated.query, limit=FILE_SUGGESTIONS_LIMIT
+    match_results, file_suggestions, hint = _build_fuzzy_results(
+        helper, matches, validated.query, FILE_SUGGESTIONS_LIMIT
     )
-
-    hint = None
-    if not match_results:
-        hint = (
-            "No matches found. Try a shorter or less specific query, "
-            "or lower the threshold (e.g. threshold=0.4)."
-        )
 
     result: dict[str, Any] = {
         "status": "success",

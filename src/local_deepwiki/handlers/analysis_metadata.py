@@ -34,6 +34,164 @@ from local_deepwiki.security import Permission, get_access_controller
 logger = get_logger(__name__)
 
 
+def _build_index_stats_dict(index_status: Any) -> dict[str, Any]:
+    """Build the ``index`` section dict from an IndexStatus object.
+
+    Args:
+        index_status: Loaded IndexStatus for the repository.
+
+    Returns:
+        Dict with indexed_at, total_files, total_chunks, languages, and
+        schema_version fields.
+    """
+    from datetime import datetime, timezone
+
+    return {
+        "indexed_at": index_status.indexed_at,
+        "indexed_at_human": datetime.fromtimestamp(
+            index_status.indexed_at, tz=timezone.utc
+        ).isoformat(),
+        "total_files": index_status.total_files,
+        "total_chunks": index_status.total_chunks,
+        "languages": index_status.languages,
+        "schema_version": index_status.schema_version,
+    }
+
+
+async def _build_toc_stats(wiki_path: Path) -> dict[str, Any]:
+    """Read toc.json and return a ``wiki_pages`` stats dict.
+
+    Args:
+        wiki_path: Path to the wiki directory.
+
+    Returns:
+        Dict with ``total_pages`` key.
+    """
+    toc_path = wiki_path / "toc.json"
+    if toc_path.exists():
+        toc_content = await asyncio.to_thread(toc_path.read_text)
+        toc_data = json.loads(toc_content)
+        pages = toc_data if isinstance(toc_data, list) else toc_data.get("pages", [])
+        return {"total_pages": len(pages)}
+    return {"total_pages": 0}
+
+
+async def _build_search_index_stats(wiki_path: Path) -> dict[str, Any]:
+    """Read search.json and return a ``search_index`` stats dict.
+
+    Args:
+        wiki_path: Path to the wiki directory.
+
+    Returns:
+        Dict with ``total_page_entries`` and ``total_entity_entries``, or
+        ``{"available": False}`` when the file is absent.
+    """
+    search_path = wiki_path / "search.json"
+    if search_path.exists():
+        search_content = await asyncio.to_thread(search_path.read_text)
+        search_data = json.loads(search_content)
+        meta = search_data.get("meta", {})
+        return {
+            "total_page_entries": meta.get(
+                "total_pages", len(search_data.get("pages", []))
+            ),
+            "total_entity_entries": meta.get(
+                "total_entities", len(search_data.get("entities", []))
+            ),
+        }
+    return {"available": False}
+
+
+async def _curate_wiki_status(wiki_path: Path) -> dict[str, Any] | None:
+    """Read wiki_status.json and return a curated summary dict.
+
+    Drops verbose page lists; keeps high-level metrics plus stale/up-to-date counts.
+
+    Args:
+        wiki_path: Path to the wiki directory.
+
+    Returns:
+        Curated dict, or ``None`` if wiki_status.json does not exist.
+    """
+    wiki_status_path = wiki_path / "wiki_status.json"
+    if not wiki_status_path.exists():
+        return None
+
+    wiki_status_content = await asyncio.to_thread(wiki_status_path.read_text)
+    wiki_status_data = json.loads(wiki_status_content)
+    curated: dict[str, Any] = {
+        "total_pages": wiki_status_data.get(
+            "total_pages", wiki_status_data.get("generated_pages", 0)
+        ),
+        "last_updated": wiki_status_data.get("generated_at"),
+    }
+    pages_dict = wiki_status_data.get("pages", {})
+    if pages_dict:
+        now = time.time()
+        stale_count = sum(
+            1
+            for p in pages_dict.values()
+            if now - p.get("generated_at", now) > STALE_DOCS_THRESHOLD_SECONDS
+        )
+        curated["stale_pages"] = stale_count
+        curated["up_to_date_pages"] = len(pages_dict) - stale_count
+    return curated
+
+
+async def _compute_coverage_stats(wiki_path: Path) -> dict[str, Any] | None:
+    """Read coverage.json and return a curated coverage dict.
+
+    Handles both the new format (``overall`` key) and legacy format.
+
+    Args:
+        wiki_path: Path to the wiki directory.
+
+    Returns:
+        Dict with ``documented_percentage``, ``total_entities``,
+        ``documented_entities``, and ``undocumented_entities``, or
+        ``None`` if coverage.json does not exist.
+    """
+    coverage_path = wiki_path / "coverage.json"
+    if not coverage_path.exists():
+        return None
+
+    coverage_content = await asyncio.to_thread(coverage_path.read_text)
+    coverage_data = json.loads(coverage_content)
+
+    if "overall" in coverage_data:
+        # New format from handle_get_coverage
+        overall = coverage_data["overall"]
+        return {
+            "documented_percentage": overall.get("coverage_percent", 0.0),
+            "total_entities": overall.get("total_entities", 0),
+            "documented_entities": overall.get("documented", 0),
+            "undocumented_entities": overall.get("undocumented", 0),
+        }
+
+    # Legacy format or direct stats
+    return {
+        "documented_percentage": coverage_data.get(
+            "coverage_percent",
+            coverage_data.get("coverage", 0.0) * 100
+            if "coverage" in coverage_data
+            else 0.0,
+        ),
+        "total_entities": coverage_data.get(
+            "total_entities", coverage_data.get("total_files", 0)
+        ),
+        "documented_entities": coverage_data.get(
+            "documented_entities", coverage_data.get("documented_files", 0)
+        ),
+        "undocumented_entities": coverage_data.get(
+            "undocumented_entities",
+            coverage_data.get("total_files", 0)
+            - coverage_data.get("documented_files", 0)
+            if "total_files" in coverage_data and "documented_files" in coverage_data
+            else 0,
+        ),
+    }
+
+
 @handle_tool_errors
 async def handle_get_project_manifest(args: dict[str, Any]) -> list[TextContent]:
     """Handle get_project_manifest tool call.
@@ -190,8 +348,6 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
 
     index_status, wiki_path, _config = await _load_index_status(repo_path)
 
-    from datetime import datetime, timezone
-
     stats: dict[str, Any] = {
         "status": "success",
         "repo_path": index_status.repo_path,
@@ -199,112 +355,23 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
     }
 
     # Index stats
-    stats["index"] = {
-        "indexed_at": index_status.indexed_at,
-        "indexed_at_human": datetime.fromtimestamp(
-            index_status.indexed_at, tz=timezone.utc
-        ).isoformat(),
-        "total_files": index_status.total_files,
-        "total_chunks": index_status.total_chunks,
-        "languages": index_status.languages,
-        "schema_version": index_status.schema_version,
-    }
+    stats["index"] = _build_index_stats_dict(index_status)
 
     # Wiki page stats from toc.json
-    toc_path = wiki_path / "toc.json"
-    if toc_path.exists():
-        toc_content = await asyncio.to_thread(toc_path.read_text)
-        toc_data = json.loads(toc_content)
-        pages = toc_data if isinstance(toc_data, list) else toc_data.get("pages", [])
-        stats["wiki_pages"] = {
-            "total_pages": len(pages),
-        }
-    else:
-        stats["wiki_pages"] = {"total_pages": 0}
+    stats["wiki_pages"] = await _build_toc_stats(wiki_path)
 
     # Search index stats from search.json
-    search_path = wiki_path / "search.json"
-    if search_path.exists():
-        search_content = await asyncio.to_thread(search_path.read_text)
-        search_data = json.loads(search_content)
-        meta = search_data.get("meta", {})
-        stats["search_index"] = {
-            "total_page_entries": meta.get(
-                "total_pages", len(search_data.get("pages", []))
-            ),
-            "total_entity_entries": meta.get(
-                "total_entities", len(search_data.get("entities", []))
-            ),
-        }
-    else:
-        stats["search_index"] = {"available": False}
+    stats["search_index"] = await _build_search_index_stats(wiki_path)
 
     # Wiki status from wiki_status.json (curated)
-    wiki_status_path = wiki_path / "wiki_status.json"
-    if wiki_status_path.exists():
-        wiki_status_content = await asyncio.to_thread(wiki_status_path.read_text)
-        wiki_status_data = json.loads(wiki_status_content)
-        # Curate wiki_status: keep high-level metrics, drop verbose page lists
-        curated_wiki_status = {
-            "total_pages": wiki_status_data.get(
-                "total_pages", wiki_status_data.get("generated_pages", 0)
-            ),
-            "last_updated": wiki_status_data.get("generated_at"),
-        }
-        # Count stale vs up-to-date pages from pages dict
-        pages_dict = wiki_status_data.get("pages", {})
-        if pages_dict:
-            now = time.time()
-            # Consider pages older than 30 days as potentially stale
-            stale_threshold = STALE_DOCS_THRESHOLD_SECONDS
-            stale_count = sum(
-                1
-                for p in pages_dict.values()
-                if now - p.get("generated_at", now) > stale_threshold
-            )
-            curated_wiki_status["stale_pages"] = stale_count
-            curated_wiki_status["up_to_date_pages"] = len(pages_dict) - stale_count
+    curated_wiki_status = await _curate_wiki_status(wiki_path)
+    if curated_wiki_status is not None:
         stats["wiki_status"] = curated_wiki_status
 
     # Coverage from coverage.json (curated)
-    coverage_path = wiki_path / "coverage.json"
-    if coverage_path.exists():
-        coverage_content = await asyncio.to_thread(coverage_path.read_text)
-        coverage_data = json.loads(coverage_content)
-        # Curate coverage: keep high-level metrics, drop per-file breakdowns
-        if "overall" in coverage_data:
-            # New format from handle_get_coverage
-            overall = coverage_data["overall"]
-            stats["coverage"] = {
-                "documented_percentage": overall.get("coverage_percent", 0.0),
-                "total_entities": overall.get("total_entities", 0),
-                "documented_entities": overall.get("documented", 0),
-                "undocumented_entities": overall.get("undocumented", 0),
-            }
-        else:
-            # Legacy format or direct stats
-            stats["coverage"] = {
-                "documented_percentage": coverage_data.get(
-                    "coverage_percent",
-                    coverage_data.get("coverage", 0.0) * 100
-                    if "coverage" in coverage_data
-                    else 0.0,
-                ),
-                "total_entities": coverage_data.get(
-                    "total_entities", coverage_data.get("total_files", 0)
-                ),
-                "documented_entities": coverage_data.get(
-                    "documented_entities", coverage_data.get("documented_files", 0)
-                ),
-                "undocumented_entities": coverage_data.get(
-                    "undocumented_entities",
-                    coverage_data.get("total_files", 0)
-                    - coverage_data.get("documented_files", 0)
-                    if "total_files" in coverage_data
-                    and "documented_files" in coverage_data
-                    else 0,
-                ),
-            }
+    coverage = await _compute_coverage_stats(wiki_path)
+    if coverage is not None:
+        stats["coverage"] = coverage
 
     # Manifest cache info
     manifest_path = wiki_path / "manifest_cache.json"
@@ -363,8 +430,6 @@ async def handle_get_status(args: dict[str, Any]) -> list[TextContent]:
 
     index_status, wiki_path, _config = await _load_index_status(repo_path)
 
-    from datetime import datetime, timezone
-
     # Build combined result
     result: dict[str, Any] = {
         "status": "success",
@@ -374,65 +439,17 @@ async def handle_get_status(args: dict[str, Any]) -> list[TextContent]:
 
     # Index section
     result["index"] = {
-        "indexed_at": index_status.indexed_at,
-        "indexed_at_human": datetime.fromtimestamp(
-            index_status.indexed_at, tz=timezone.utc
-        ).isoformat(),
-        "total_files": index_status.total_files,
-        "total_chunks": index_status.total_chunks,
-        "languages": index_status.languages,
-        "schema_version": index_status.schema_version,
+        **_build_index_stats_dict(index_status),
         "wiki_path": str(wiki_path),
     }
 
     # Wiki section
     wiki_section: dict[str, Any] = {"wiki_dir": wiki_path.name}
+    wiki_section["wiki_pages"] = await _build_toc_stats(wiki_path)
+    wiki_section["search_index"] = await _build_search_index_stats(wiki_path)
 
-    toc_path = wiki_path / "toc.json"
-    if toc_path.exists():
-        toc_content = await asyncio.to_thread(toc_path.read_text)
-        toc_data = json.loads(toc_content)
-        pages = toc_data if isinstance(toc_data, list) else toc_data.get("pages", [])
-        wiki_section["wiki_pages"] = {"total_pages": len(pages)}
-    else:
-        wiki_section["wiki_pages"] = {"total_pages": 0}
-
-    search_path = wiki_path / "search.json"
-    if search_path.exists():
-        search_content = await asyncio.to_thread(search_path.read_text)
-        search_data = json.loads(search_content)
-        meta = search_data.get("meta", {})
-        wiki_section["search_index"] = {
-            "total_page_entries": meta.get(
-                "total_pages", len(search_data.get("pages", []))
-            ),
-            "total_entity_entries": meta.get(
-                "total_entities", len(search_data.get("entities", []))
-            ),
-        }
-    else:
-        wiki_section["search_index"] = {"available": False}
-
-    wiki_status_path = wiki_path / "wiki_status.json"
-    if wiki_status_path.exists():
-        wiki_status_content = await asyncio.to_thread(wiki_status_path.read_text)
-        wiki_status_data = json.loads(wiki_status_content)
-        curated = {
-            "total_pages": wiki_status_data.get(
-                "total_pages", wiki_status_data.get("generated_pages", 0)
-            ),
-            "last_updated": wiki_status_data.get("generated_at"),
-        }
-        pages_dict = wiki_status_data.get("pages", {})
-        if pages_dict:
-            now = time.time()
-            stale_count = sum(
-                1
-                for p in pages_dict.values()
-                if now - p.get("generated_at", now) > STALE_DOCS_THRESHOLD_SECONDS
-            )
-            curated["stale_pages"] = stale_count
-            curated["up_to_date_pages"] = len(pages_dict) - stale_count
+    curated = await _curate_wiki_status(wiki_path)
+    if curated is not None:
         wiki_section["wiki_status"] = curated
 
     wiki_files = await asyncio.to_thread(lambda: list(wiki_path.glob("**/*.md")))
