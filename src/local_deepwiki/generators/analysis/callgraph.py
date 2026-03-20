@@ -56,61 +56,89 @@ def _extract_js_call(call_node: Node, source: bytes) -> str | None:
     return None
 
 
+def _extract_go_call(call_node: Node, source: bytes) -> str | None:
+    """Extract call name from a Go call expression node."""
+    func = call_node.child_by_field_name("function")
+    if func:
+        if func.type == "identifier":
+            return get_node_text(func, source)
+        elif func.type == "selector_expression":
+            field = func.child_by_field_name("field")
+            if field:
+                return get_node_text(field, source)
+    return None
+
+
+def _extract_rust_call(call_node: Node, source: bytes) -> str | None:
+    """Extract call name from a Rust call expression node."""
+    func = call_node.child_by_field_name("function")
+    if func:
+        if func.type == "identifier":
+            return get_node_text(func, source)
+        elif func.type == "scoped_identifier":
+            name = func.child_by_field_name("name")
+            if name:
+                return get_node_text(name, source)
+        elif func.type == "field_expression":
+            field = func.child_by_field_name("field")
+            if field:
+                return get_node_text(field, source)
+    return None
+
+
+def _extract_java_call(call_node: Node, source: bytes) -> str | None:
+    """Extract call name from a Java method invocation node."""
+    name = call_node.child_by_field_name("name")
+    if name:
+        return get_node_text(name, source)
+    return None
+
+
+def _extract_c_cpp_call(call_node: Node, source: bytes) -> str | None:
+    """Extract call name from a C/C++ call expression node."""
+    func = call_node.child_by_field_name("function")
+    if func:
+        if func.type == "identifier":
+            return get_node_text(func, source)
+        elif func.type == "field_expression":
+            field = func.child_by_field_name("field")
+            if field:
+                return get_node_text(field, source)
+    return None
+
+
+def _extract_swift_call(call_node: Node, source: bytes) -> str | None:
+    """Extract call name from a Swift call expression node."""
+    func = call_node.child_by_field_name("function")
+    if func:
+        if func.type == "identifier":
+            return get_node_text(func, source)
+        elif func.type in ("navigation_expression", "member_access"):
+            for child in func.children:
+                if child.type == "navigation_suffix":
+                    for c in child.children:
+                        if c.type == "simple_identifier":
+                            return get_node_text(c, source)
+    return None
+
+
+_GENERIC_CALL_EXTRACTORS: dict = {
+    Language.GO: _extract_go_call,
+    Language.RUST: _extract_rust_call,
+    Language.JAVA: _extract_java_call,
+    Language.C: _extract_c_cpp_call,
+    Language.CPP: _extract_c_cpp_call,
+    Language.SWIFT: _extract_swift_call,
+}
+
+
 def _extract_generic_call(
     call_node: Node, source: bytes, language: Language
 ) -> str | None:
     """Extract call name for Go, Rust, Java, C/C++, and Swift."""
-    if language == Language.GO:
-        func = call_node.child_by_field_name("function")
-        if func:
-            if func.type == "identifier":
-                return get_node_text(func, source)
-            elif func.type == "selector_expression":
-                field = func.child_by_field_name("field")
-                if field:
-                    return get_node_text(field, source)
-
-    elif language == Language.RUST:
-        func = call_node.child_by_field_name("function")
-        if func:
-            if func.type == "identifier":
-                return get_node_text(func, source)
-            elif func.type == "scoped_identifier":
-                name = func.child_by_field_name("name")
-                if name:
-                    return get_node_text(name, source)
-            elif func.type == "field_expression":
-                field = func.child_by_field_name("field")
-                if field:
-                    return get_node_text(field, source)
-
-    elif language == Language.JAVA:
-        name = call_node.child_by_field_name("name")
-        if name:
-            return get_node_text(name, source)
-
-    elif language in (Language.C, Language.CPP):
-        func = call_node.child_by_field_name("function")
-        if func:
-            if func.type == "identifier":
-                return get_node_text(func, source)
-            elif func.type == "field_expression":
-                field = func.child_by_field_name("field")
-                if field:
-                    return get_node_text(field, source)
-
-    elif language == Language.SWIFT:
-        func = call_node.child_by_field_name("function")
-        if func:
-            if func.type == "identifier":
-                return get_node_text(func, source)
-            elif func.type in ("navigation_expression", "member_access"):
-                for child in func.children:
-                    if child.type == "navigation_suffix":
-                        for c in child.children:
-                            if c.type == "simple_identifier":
-                                return get_node_text(c, source)
-
+    extractor = _GENERIC_CALL_EXTRACTORS.get(language)
+    if extractor:
+        return extractor(call_node, source)
     return None
 
 

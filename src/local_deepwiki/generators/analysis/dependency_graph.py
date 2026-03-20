@@ -190,6 +190,173 @@ def _render_file_graph(graph: DependencyGraph, module_path: str) -> str:
     return "\n".join(lines)
 
 
+def _render_subgraphs(
+    groups: dict[str, list[DependencyNode]],
+    node_ids: dict[str, str],
+    idx: int,
+) -> tuple[list[str], int]:
+    """Render internal module subgraphs into Mermaid lines.
+
+    Args:
+        groups: Mapping of top-level package name to its nodes.
+        node_ids: Mutable mapping that will be updated with new node IDs.
+        idx: Current node index counter.
+
+    Returns:
+        Tuple of (lines, updated_idx).
+    """
+    lines: list[str] = []
+    for group_name, nodes in sorted(groups.items()):
+        safe_group = _sanitize_mermaid_name(group_name)
+        display_name = group_name.replace("_", " ").title()
+        lines.append(f"    subgraph {safe_group}[{display_name}]")
+        for node in sorted(nodes, key=lambda n: n.name):
+            node_id = f"M{idx}"
+            node_ids[node.name] = node_id
+            idx += 1
+            display = node.name.split(".")[-1]
+            lines.append(f"        {node_id}[{display}]")
+        lines.append("    end")
+    return lines, idx
+
+
+def _render_external_subgraph(
+    external_nodes: list[DependencyNode],
+    max_external: int,
+    node_ids: dict[str, str],
+    idx: int,
+) -> tuple[list[str], int]:
+    """Render the external dependencies subgraph into Mermaid lines.
+
+    Args:
+        external_nodes: List of external dependency nodes.
+        max_external: Maximum number of external nodes to show.
+        node_ids: Mutable mapping that will be updated with new node IDs.
+        idx: Current node index counter.
+
+    Returns:
+        Tuple of (lines, updated_idx).
+    """
+    lines: list[str] = []
+    ext_nodes_to_show = sorted(external_nodes, key=lambda n: n.name)[:max_external]
+    lines.append("    subgraph external[External Dependencies]")
+    for node in ext_nodes_to_show:
+        node_id = f"E{idx}"
+        node_ids[node.name] = node_id
+        idx += 1
+        lines.append(f"        {node_id}([{node.name}]):::external")
+    lines.append("    end")
+    return lines, idx
+
+
+def _render_edges(
+    graph: DependencyGraph,
+    node_ids: dict[str, str],
+) -> tuple[list[str], list[int]]:
+    """Render edge lines for the module dependency graph.
+
+    Args:
+        graph: The dependency graph with edges.
+        node_ids: Mapping of node name to Mermaid node ID.
+
+    Returns:
+        Tuple of (edge_lines, circular_link_indices).
+    """
+    lines: list[str] = []
+    link_idx = 0
+    circular_link_indices: list[int] = []
+
+    for (source, target), edge in sorted(graph.edges.items()):
+        source_id = node_ids.get(source)
+        target_id = node_ids.get(target)
+        if not (source_id and target_id and source_id != target_id):
+            continue
+        if edge.is_circular:
+            lines.append(f"    {source_id} -.->|circular| {target_id}")
+            circular_link_indices.append(link_idx)
+        elif edge.count > 1:
+            lines.append(f"    {source_id} -->|{edge.count}| {target_id}")
+        else:
+            is_ext = graph.nodes.get(
+                target, DependencyNode(name="", file_path="")
+            ).is_external
+            if is_ext:
+                lines.append(f"    {source_id} -.-> {target_id}")
+            else:
+                lines.append(f"    {source_id} --> {target_id}")
+        link_idx += 1
+
+    return lines, circular_link_indices
+
+
+def _render_click_handlers(
+    graph: DependencyGraph,
+    node_ids: dict[str, str],
+    wiki_base_path: str,
+) -> list[str]:
+    """Render click handler lines for wiki navigation.
+
+    Args:
+        graph: The dependency graph with node metadata.
+        node_ids: Mapping of node name to Mermaid node ID.
+        wiki_base_path: Base path for wiki links.
+
+    Returns:
+        List of click handler lines.
+    """
+    lines: list[str] = []
+    for node_name, node_id in sorted(node_ids.items()):
+        node = graph.nodes.get(node_name)  # type: ignore[assignment]
+        if node and not node.is_external and node.file_path:
+            wiki_path = _file_path_to_wiki_path(node.file_path)
+            lines.append(f'    click {node_id} "{wiki_base_path}{wiki_path}"')
+    return lines
+
+
+def _render_styling(circular_link_indices: list[int]) -> list[str]:
+    """Render class definition and link styling lines.
+
+    Args:
+        circular_link_indices: Link indices that should be styled as circular.
+
+    Returns:
+        List of styling lines.
+    """
+    lines: list[str] = [
+        "    classDef external fill:#2d2d3d,stroke:#666,stroke-dasharray: 5 5",
+        "    classDef circular fill:#ff6b6b,stroke:#c92a2a",
+    ]
+    if circular_link_indices:
+        lines.append("    linkStyle default stroke:#666")
+        for idx in circular_link_indices:
+            lines.append(f"    linkStyle {idx} stroke:#f00,stroke-width:2px")
+    return lines
+
+
+def _render_cycle_warnings(graph: DependencyGraph) -> list[str]:
+    """Render circular dependency warning lines appended after the diagram.
+
+    Args:
+        graph: The dependency graph with detected cycles.
+
+    Returns:
+        List of warning lines (may be empty if no cycles).
+    """
+    if not graph.cycles:
+        return []
+    lines: list[str] = [
+        "",
+        "**Warning: Circular dependencies detected!**",
+        "",
+    ]
+    for i, cycle in enumerate(graph.cycles[:5], 1):
+        cycle_str = " -> ".join(cycle) + " -> " + cycle[0]
+        lines.append(f"{i}. `{cycle_str}`")
+    if len(graph.cycles) > 5:
+        lines.append(f"   ... and {len(graph.cycles) - 5} more")
+    return lines
+
+
 def _render_module_graph(
     graph: DependencyGraph,
     show_external: bool,
@@ -212,100 +379,33 @@ def _render_module_graph(
     # Group nodes by top-level package
     groups: dict[str, list[DependencyNode]] = defaultdict(list)
     external_nodes = [node for node in graph.nodes.values() if node.is_external]
-
     for node in graph.nodes.values():
         if not node.is_external:
             group = node.name.split(".")[0] if "." in node.name else "root"
             groups[group].append(node)
 
-    # Create node ID mapping
+    # Build node ID mapping via subgraph rendering
     node_ids: dict[str, str] = {}
     idx = 0
 
-    # Add subgraphs for internal modules
-    for group_name, nodes in sorted(groups.items()):
-        safe_group = _sanitize_mermaid_name(group_name)
-        display_name = group_name.replace("_", " ").title()
+    subgraph_lines, idx = _render_subgraphs(groups, node_ids, idx)
+    lines.extend(subgraph_lines)
 
-        lines.append(f"    subgraph {safe_group}[{display_name}]")
-
-        for node in sorted(nodes, key=lambda n: n.name):
-            node_id = f"M{idx}"
-            node_ids[node.name] = node_id
-            idx += 1
-
-            display = node.name.split(".")[-1]
-            lines.append(f"        {node_id}[{display}]")
-
-        lines.append("    end")
-
-    # Add external dependencies subgraph if enabled
     if show_external and external_nodes:
-        ext_nodes_to_show = sorted(external_nodes, key=lambda n: n.name)[:max_external]
+        ext_lines, idx = _render_external_subgraph(
+            external_nodes, max_external, node_ids, idx
+        )
+        lines.extend(ext_lines)
 
-        lines.append("    subgraph external[External Dependencies]")
-        for node in ext_nodes_to_show:
-            node_id = f"E{idx}"
-            node_ids[node.name] = node_id
-            idx += 1
-            lines.append(f"        {node_id}([{node.name}]):::external")
-        lines.append("    end")
+    edge_lines, circular_link_indices = _render_edges(graph, node_ids)
+    lines.extend(edge_lines)
 
-    # Add edges
-    link_idx = 0
-    circular_link_indices: list[int] = []
-
-    for (source, target), edge in sorted(graph.edges.items()):
-        source_id = node_ids.get(source)
-        target_id = node_ids.get(target)
-
-        if source_id and target_id and source_id != target_id:
-            if edge.is_circular:
-                lines.append(f"    {source_id} -.->|circular| {target_id}")
-                circular_link_indices.append(link_idx)
-            elif edge.count > 1:
-                lines.append(f"    {source_id} -->|{edge.count}| {target_id}")
-            else:
-                # External edges get dashed lines
-                is_ext = graph.nodes.get(
-                    target, DependencyNode(name="", file_path="")
-                ).is_external
-                if is_ext:
-                    lines.append(f"    {source_id} -.-> {target_id}")
-                else:
-                    lines.append(f"    {source_id} --> {target_id}")
-            link_idx += 1
-
-    # Add click handlers for wiki links
     if wiki_base_path:
-        for node_name, node_id in sorted(node_ids.items()):
-            node = graph.nodes.get(node_name)  # type: ignore[assignment]
-            if node and not node.is_external and node.file_path:
-                wiki_path = _file_path_to_wiki_path(node.file_path)
-                lines.append(f'    click {node_id} "{wiki_base_path}{wiki_path}"')
+        lines.extend(_render_click_handlers(graph, node_ids, wiki_base_path))
 
-    # Add styling
-    lines.append("    classDef external fill:#2d2d3d,stroke:#666,stroke-dasharray: 5 5")
-    lines.append("    classDef circular fill:#ff6b6b,stroke:#c92a2a")
-
-    # Add circular dependency styling
-    if circular_link_indices:
-        lines.append("    linkStyle default stroke:#666")
-        for idx in circular_link_indices:
-            lines.append(f"    linkStyle {idx} stroke:#f00,stroke-width:2px")
-
+    lines.extend(_render_styling(circular_link_indices))
     lines.append("```")
-
-    # Add circular dependency warning if any
-    if graph.cycles:
-        lines.append("")
-        lines.append("**Warning: Circular dependencies detected!**")
-        lines.append("")
-        for i, cycle in enumerate(graph.cycles[:5], 1):
-            cycle_str = " -> ".join(cycle) + " -> " + cycle[0]
-            lines.append(f"{i}. `{cycle_str}`")
-        if len(graph.cycles) > 5:
-            lines.append(f"   ... and {len(graph.cycles) - 5} more")
+    lines.extend(_render_cycle_warnings(graph))
 
     return "\n".join(lines)
 
