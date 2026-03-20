@@ -13,10 +13,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from local_deepwiki.generators.wiki.utils import (
-    file_path_to_wiki_path,
-    relative_wiki_path,
-)
 from local_deepwiki.models import ChunkType, CodeChunk, WikiPage
 
 
@@ -378,6 +374,8 @@ def build_entity_registry_from_store(
     Returns:
         Populated EntityRegistry.
     """
+    from local_deepwiki.generators.wiki.utils import file_path_to_wiki_path
+
     registry = EntityRegistry()
     for chunk in chunks_iter:
         if chunk.file_path not in significant_paths:
@@ -631,6 +629,8 @@ class CrossLinker:
     @staticmethod
     def _relative_path(from_path: str, to_path: str) -> str:
         """Calculate relative path between two wiki pages."""
+        from local_deepwiki.generators.wiki.utils import relative_wiki_path
+
         return relative_wiki_path(from_path, to_path)
 
 
