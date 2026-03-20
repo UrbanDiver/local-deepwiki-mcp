@@ -428,29 +428,8 @@ class SecretDetector:
         return context
 
 
-def _should_skip_file(file_path: Path) -> bool:
-    """Check if file should be skipped from secret scanning.
-
-    Args:
-        file_path: Path to the file.
-
-    Returns:
-        True if the file should be skipped.
-    """
-    # Skip the secret detector itself (self-detection false positives)
-    if file_path.name == "secret_detector.py":
-        return True
-
-    # Skip documentation files (contain example key formats, not real secrets)
-    if file_path.suffix.lower() in {".md", ".rst"}:
-        return True
-
-    # Skip test files for secret detector (contain test patterns)
-    if file_path.name == "test_secret_detector.py":
-        return True
-
-    # Binary and compiled file extensions to skip
-    skip_extensions = {
+_SKIP_EXTENSIONS: frozenset[str] = frozenset(
+    {
         # Images
         ".png",
         ".jpg",
@@ -501,20 +480,23 @@ def _should_skip_file(file_path: Path) -> bool:
         ".woff",
         ".woff2",
         ".eot",
-        # Other binary
+        # Serialised data
         ".db",
         ".sqlite",
         ".sqlite3",
         ".pkl",
-        ".pickle",
         ".npy",
         ".npz",
         # Lock files (often auto-generated)
         ".lock",
+        # Documentation (contain example key formats, not real secrets)
+        ".md",
+        ".rst",
     }
+)
 
-    # Directory names to skip
-    skip_dirs = {
+_SKIP_DIRS: frozenset[str] = frozenset(
+    {
         ".git",
         ".svn",
         ".hg",
@@ -542,9 +524,12 @@ def _should_skip_file(file_path: Path) -> bool:
         "third_party",
         "external",
     }
+)
 
-    # File names to skip
-    skip_names = {
+_SKIP_NAMES: frozenset[str] = frozenset(
+    {
+        "secret_detector.py",
+        "test_secret_detector.py",
         "package-lock.json",
         "yarn.lock",
         "pnpm-lock.yaml",
@@ -553,20 +538,27 @@ def _should_skip_file(file_path: Path) -> bool:
         "Gemfile.lock",
         "composer.lock",
     }
+)
 
-    # Check extension
-    if file_path.suffix.lower() in skip_extensions:
+
+def _should_skip_file(file_path: Path) -> bool:
+    """Check if file should be skipped from secret scanning.
+
+    Args:
+        file_path: Path to the file.
+
+    Returns:
+        True if the file should be skipped.
+    """
+    if file_path.name in _SKIP_NAMES:
         return True
 
-    # Check file name
-    if file_path.name in skip_names:
+    if file_path.suffix.lower() in _SKIP_EXTENSIONS:
         return True
 
-    # Check if any parent directory should be skipped
     for part in file_path.parts:
-        if part in skip_dirs:
+        if part in _SKIP_DIRS:
             return True
-        # Handle wildcard patterns like *.egg-info
         if part.endswith(".egg-info"):
             return True
 

@@ -57,6 +57,61 @@ def get_optimal_batch_config(
     return batch_size, concurrency
 
 
+def _is_retryable_error(e: Exception) -> bool:
+    """Determine if an embedding error is retryable."""
+    error_str = str(e).lower()
+    return (
+        isinstance(e, (ConnectionError, TimeoutError, OSError))
+        or ("rate" in error_str and "limit" in error_str)
+        or "overloaded" in error_str
+        or "503" in error_str
+        or "502" in error_str
+        or "timeout" in error_str
+    )
+
+
+def _handle_batch_error(
+    e: Exception,
+    batch_index: int,
+    retry_count: int,
+    config: EmbeddingBatchConfig,
+    progress: EmbeddingProgress,
+) -> tuple[bool, float]:
+    """Handle a batch embedding error — decide whether to retry and compute delay.
+
+    Args:
+        e: The exception that occurred.
+        batch_index: Batch index for logging.
+        retry_count: Current retry count (already incremented).
+        config: Embedding batch configuration.
+        progress: Progress tracker.
+
+    Returns:
+        Tuple of (should_retry, delay_seconds). If should_retry is False, the
+        caller should return a failed BatchEmbeddingResult.
+    """
+    if not _is_retryable_error(e) or retry_count >= config.retry_max_attempts:
+        logger.warning(
+            "Batch %d failed after %d attempts: %s",
+            batch_index,
+            retry_count,
+            e,
+        )
+        progress.update(success=False)
+        return False, 0.0
+
+    delay = config.retry_base_delay * (2 ** (retry_count - 1))
+    delay = delay * (0.5 + random.random())
+    logger.warning(
+        "Batch %d failed (attempt %d): %s. Retrying in %.2fs...",
+        batch_index,
+        retry_count,
+        e,
+        delay,
+    )
+    return True, delay
+
+
 async def embed_single_batch_with_retry(
     batch_index: int,
     texts: list[str],
@@ -106,41 +161,16 @@ async def embed_single_batch_with_retry(
                 ValueError,
             ) as e:
                 retry_count += 1
-                error_str = str(e).lower()
-
-                is_retryable = (
-                    isinstance(e, (ConnectionError, TimeoutError, OSError))
-                    or ("rate" in error_str and "limit" in error_str)
-                    or "overloaded" in error_str
-                    or "503" in error_str
-                    or "502" in error_str
-                    or "timeout" in error_str
+                should_retry, delay = _handle_batch_error(
+                    e, batch_index, retry_count, config, progress
                 )
-
-                if not is_retryable or retry_count >= config.retry_max_attempts:
-                    logger.warning(
-                        "Batch %d failed after %d attempts: %s",
-                        batch_index,
-                        retry_count,
-                        e,
-                    )
-                    progress.update(success=False)
+                if not should_retry:
                     return BatchEmbeddingResult(
                         batch_index=batch_index,
                         embeddings=None,
                         error=e,
                         retry_count=retry_count,
                     )
-
-                delay = config.retry_base_delay * (2 ** (retry_count - 1))
-                delay = delay * (0.5 + random.random())
-                logger.warning(
-                    "Batch %d failed (attempt %d): %s. Retrying in %.2fs...",
-                    batch_index,
-                    retry_count,
-                    e,
-                    delay,
-                )
                 await asyncio.sleep(delay)
 
     progress.update(success=False)
@@ -150,6 +180,60 @@ async def embed_single_batch_with_retry(
         error=RuntimeError("Unexpected: exhausted retries without returning"),
         retry_count=retry_count,
     )
+
+
+def _deduplicate_texts(texts: list[str]) -> tuple[list[str], dict[str, int]]:
+    """Return unique texts and a mapping from text to its unique index."""
+    unique_texts: list[str] = []
+    text_to_index: dict[str, int] = {}
+    for text in texts:
+        if text not in text_to_index:
+            text_to_index[text] = len(unique_texts)
+            unique_texts.append(text)
+    return unique_texts, text_to_index
+
+
+def _split_into_batches(texts: list[str], batch_size: int) -> list[list[str]]:
+    """Split a list of texts into fixed-size batches."""
+    return [texts[i : i + batch_size] for i in range(0, len(texts), batch_size)]
+
+
+def _merge_batch_results(
+    results: list[BatchEmbeddingResult],
+    total_batches: int,
+) -> list[list[float]]:
+    """Collect embeddings from sorted batch results, raising on any failure.
+
+    Args:
+        results: List of BatchEmbeddingResult objects (already sorted by batch_index).
+        total_batches: Total number of batches (for error messages).
+
+    Returns:
+        Flat list of embeddings in batch order.
+
+    Raises:
+        RuntimeError: If any batch failed.
+    """
+    errors: list[tuple[int, Exception]] = []
+    all_embeddings: list[list[float]] = []
+
+    for result in results:
+        if result.error is not None:
+            errors.append((result.batch_index, result.error))
+        elif result.embeddings is not None:
+            all_embeddings.extend(result.embeddings)
+
+    if errors:
+        error_msgs = [f"Batch {idx}: {err}" for idx, err in errors]
+        logger.error(
+            "Embedding failed for %s batches:\n%s", len(errors), "\n".join(error_msgs)
+        )
+        raise RuntimeError(
+            f"Failed to embed {len(errors)} out of {total_batches} batches. "
+            f"First error: {errors[0][1]}"
+        )
+
+    return all_embeddings
 
 
 async def batch_embed(
@@ -184,13 +268,7 @@ async def batch_embed(
     if not texts:
         return []
 
-    # Deduplicate texts to avoid redundant embedding API calls
-    unique_texts: list[str] = []
-    text_to_index: dict[str, int] = {}
-    for text in texts:
-        if text not in text_to_index:
-            text_to_index[text] = len(unique_texts)
-            unique_texts.append(text)
+    unique_texts, text_to_index = _deduplicate_texts(texts)
 
     duplicates_saved = len(texts) - len(unique_texts)
     if duplicates_saved > 0:
@@ -201,17 +279,12 @@ async def batch_embed(
             duplicates_saved,
         )
 
-    # Get optimal config based on provider type
     optimal_batch_size, optimal_concurrency = get_optimal_batch_config(
         config, embedding_provider
     )
     batch_size = batch_size or optimal_batch_size
 
-    # Split unique texts into batches
-    batches: list[list[str]] = []
-    for i in range(0, len(unique_texts), batch_size):
-        batches.append(unique_texts[i : i + batch_size])
-
+    batches = _split_into_batches(unique_texts, batch_size)
     total_batches = len(batches)
 
     # For single batch, still use retry logic but without parallel overhead
@@ -234,7 +307,6 @@ async def batch_embed(
         unique_embeddings = result.embeddings or []
         return [unique_embeddings[text_to_index[t]] for t in texts]
 
-    # Create progress tracker
     progress = EmbeddingProgress(
         total_texts=len(unique_texts),
         total_batches=total_batches,
@@ -250,10 +322,8 @@ async def batch_embed(
             optimal_concurrency,
         )
 
-    # Create semaphore for concurrency control
     semaphore = asyncio.Semaphore(optimal_concurrency)
 
-    # Create tasks for all batches
     tasks = [
         embed_single_batch_with_retry(
             i,
@@ -267,36 +337,14 @@ async def batch_embed(
         for i, batch_texts in enumerate(batches)
     ]
 
-    # Execute all tasks concurrently
     results: list[BatchEmbeddingResult] = await asyncio.gather(*tasks)
 
-    # Log final progress
     if log_progress:
         progress.log_progress()
 
-    # Sort results by batch index to maintain order
     results = sorted(results, key=attrgetter("batch_index"))
 
-    # Check for failures and collect errors
-    errors: list[tuple[int, Exception]] = []
-    all_embeddings: list[list[float]] = []
-
-    for result in results:
-        if result.error is not None:
-            errors.append((result.batch_index, result.error))
-        elif result.embeddings is not None:
-            all_embeddings.extend(result.embeddings)
-
-    # If there were failures, report them
-    if errors:
-        error_msgs = [f"Batch {idx}: {err}" for idx, err in errors]
-        error_summary = "\n".join(error_msgs)
-        logger.error("Embedding failed for %s batches:\n%s", len(errors), error_summary)
-
-        raise RuntimeError(
-            f"Failed to embed {len(errors)} out of {total_batches} batches. "
-            f"First error: {errors[0][1]}"
-        )
+    all_embeddings = _merge_batch_results(results, total_batches)
 
     if log_progress:
         elapsed = progress.elapsed_seconds
@@ -308,7 +356,6 @@ async def batch_embed(
             rate,
         )
 
-    # Remap unique embeddings back to original text order
     return [all_embeddings[text_to_index[t]] for t in texts]
 
 

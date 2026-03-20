@@ -342,6 +342,59 @@ class FuzzySearchHelper:
         """Check if the name index has been built."""
         return self._is_built
 
+    def _extract_names_from_table(
+        self,
+        all_rows: Any,
+        name_types: set[ChunkType],
+    ) -> None:
+        """Scan pandas rows and populate the internal name indexes.
+
+        Args:
+            all_rows: Pandas DataFrame returned by ``table.to_pandas()``.
+            name_types: Set of ChunkTypes whose names should be indexed.
+        """
+        for _, row in all_rows.iterrows():
+            name = row.get("name")
+            if not name or not isinstance(name, str) or not name.strip():
+                continue
+
+            chunk_type_str = row.get("chunk_type", "")
+            try:
+                chunk_type = ChunkType(chunk_type_str)
+            except ValueError:
+                continue
+
+            if chunk_type not in name_types:
+                continue
+
+            file_path = row.get("file_path", "")
+            parent_name = row.get("parent_name")
+
+            full_qualified_name = None
+            if chunk_type == ChunkType.METHOD and parent_name:
+                full_qualified_name = f"{parent_name}.{name}"
+
+            entry = NameEntry(
+                name=name,
+                chunk_type=chunk_type,
+                file_path=file_path,
+                full_qualified_name=full_qualified_name,
+            )
+
+            type_key = chunk_type.value
+            if type_key not in self._name_cache:
+                self._name_cache[type_key] = []
+            self._name_cache[type_key].append(entry)
+
+            if name not in self._name_to_entries:
+                self._name_to_entries[name] = []
+                self._all_names.append(name)
+            self._name_to_entries[name].append(entry)
+
+            if full_qualified_name and full_qualified_name not in self._name_to_entries:
+                self._name_to_entries[full_qualified_name] = [entry]
+                self._all_names.append(full_qualified_name)
+
     async def build_name_index(self) -> None:
         """Build an index of all function/class/method names for fuzzy matching.
 
@@ -358,7 +411,6 @@ class FuzzySearchHelper:
             self._is_built = True
             return
 
-        # Types of chunks that have meaningful names
         name_types = {
             ChunkType.FUNCTION,
             ChunkType.CLASS,
@@ -366,60 +418,9 @@ class FuzzySearchHelper:
             ChunkType.MODULE,
         }
 
-        # Iterate over all chunks to extract names
-        # Use batched iteration to avoid memory issues with large tables
         try:
-            # LanceDB returns a pyarrow table or list
             all_rows = table.to_pandas()
-            for _, row in all_rows.iterrows():
-                name = row.get("name")
-                if not name or not isinstance(name, str) or not name.strip():
-                    continue
-
-                chunk_type_str = row.get("chunk_type", "")
-                try:
-                    chunk_type = ChunkType(chunk_type_str)
-                except ValueError:
-                    continue
-
-                if chunk_type not in name_types:
-                    continue
-
-                file_path = row.get("file_path", "")
-                parent_name = row.get("parent_name")
-
-                # Create fully qualified name for methods
-                full_qualified_name = None
-                if chunk_type == ChunkType.METHOD and parent_name:
-                    full_qualified_name = f"{parent_name}.{name}"
-
-                entry = NameEntry(
-                    name=name,
-                    chunk_type=chunk_type,
-                    file_path=file_path,
-                    full_qualified_name=full_qualified_name,
-                )
-
-                # Add to type-specific cache
-                type_key = chunk_type.value
-                if type_key not in self._name_cache:
-                    self._name_cache[type_key] = []
-                self._name_cache[type_key].append(entry)
-
-                # Add to flat name list (for fuzzy matching)
-                if name not in self._name_to_entries:
-                    self._name_to_entries[name] = []
-                    self._all_names.append(name)
-                self._name_to_entries[name].append(entry)
-
-                # Also index fully qualified name if present
-                if (
-                    full_qualified_name
-                    and full_qualified_name not in self._name_to_entries
-                ):
-                    self._name_to_entries[full_qualified_name] = [entry]
-                    self._all_names.append(full_qualified_name)
-
+            self._extract_names_from_table(all_rows, name_types)
         except (ImportError, ValueError, RuntimeError, OSError) as e:
             logger.warning("Failed to build fuzzy search index: %s", e)
             self._is_built = False

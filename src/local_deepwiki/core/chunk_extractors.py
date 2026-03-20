@@ -90,6 +90,119 @@ IMPORT_NODE_TYPES: dict[Language, set[str]] = {
 }
 
 
+def _get_python_parents(class_node: Node, source: bytes) -> list[str]:
+    """Extract parent class names from a Python class definition."""
+    parents = []
+    for child in class_node.children:
+        if child.type == "argument_list":
+            for arg in child.children:
+                if arg.type == "identifier":
+                    parents.append(get_node_text(arg, source))
+    return parents
+
+
+def _get_ts_js_parents(class_node: Node, source: bytes) -> list[str]:
+    """Extract parent class names from a TypeScript/JavaScript class definition."""
+    parents = []
+    for child in class_node.children:
+        if child.type == "class_heritage":
+            for clause in child.children:
+                if clause.type in ("extends_clause", "implements_clause"):
+                    for item in clause.children:
+                        if item.type in ("identifier", "type_identifier"):
+                            parents.append(get_node_text(item, source))
+    return parents
+
+
+def _get_java_parents(class_node: Node, source: bytes) -> list[str]:
+    """Extract parent class names from a Java class definition."""
+    parents = []
+    for child in class_node.children:
+        if child.type == "superclass":
+            for item in child.children:
+                if item.type == "type_identifier":
+                    parents.append(get_node_text(item, source))
+        elif child.type == "super_interfaces":
+            for item in find_nodes_by_type(child, {"type_identifier"}):
+                parents.append(get_node_text(item, source))
+    return parents
+
+
+def _get_swift_parents(class_node: Node, source: bytes) -> list[str]:
+    """Extract parent class names from a Swift class definition."""
+    parents = []
+    for child in class_node.children:
+        if child.type == "type_inheritance_clause":
+            for item in child.children:
+                if item.type in ("user_type", "type_identifier"):
+                    text = get_node_text(item, source)
+                    if text and text not in (":", ","):
+                        parents.append(text)
+    return parents
+
+
+def _get_cpp_parents(class_node: Node, source: bytes) -> list[str]:
+    """Extract parent class names from a C++ class definition."""
+    parents = []
+    for child in class_node.children:
+        if child.type == "base_class_clause":
+            for item in find_nodes_by_type(child, {"type_identifier"}):
+                parents.append(get_node_text(item, source))
+    return parents
+
+
+def _get_ruby_parents(class_node: Node, source: bytes) -> list[str]:
+    """Extract parent class names from a Ruby class definition."""
+    parents = []
+    for child in class_node.children:
+        if child.type == "superclass":
+            for sc in child.children:
+                if sc.type in ("constant", "scope_resolution"):
+                    parents.append(get_node_text(sc, source))
+    return parents
+
+
+def _get_php_parents(class_node: Node, source: bytes) -> list[str]:
+    """Extract parent class names from a PHP class definition."""
+    parents = []
+    for child in class_node.children:
+        if child.type in ("base_clause", "class_interface_clause"):
+            for item in find_nodes_by_type(child, {"name", "qualified_name"}):
+                parents.append(get_node_text(item, source))
+    return parents
+
+
+def _get_kotlin_parents(class_node: Node, source: bytes) -> list[str]:
+    """Extract parent class names from a Kotlin class definition."""
+    parents = []
+    for child in class_node.children:
+        if child.type == "delegation_specifiers":
+            for spec in child.children:
+                if spec.type == "delegation_specifier":
+                    for item in find_nodes_by_type(
+                        spec, {"user_type", "simple_identifier"}
+                    ):
+                        text = get_node_text(item, source)
+                        if text and text not in (":", ","):
+                            parents.append(text)
+                            break
+    return parents
+
+
+def _get_csharp_parents(class_node: Node, source: bytes) -> list[str]:
+    """Extract parent class names from a C# class definition."""
+    parents = []
+    for child in class_node.children:
+        if child.type == "base_list":
+            for item in find_nodes_by_type(
+                child, {"identifier", "generic_name", "qualified_name"}
+            ):
+                text = get_node_text(item, source)
+                if text:
+                    parents.append(text)
+    return parents
+
+
 def get_parent_classes(
     class_node: Node, source: bytes, language: Language
 ) -> list[str]:
@@ -103,102 +216,94 @@ def get_parent_classes(
     Returns:
         List of parent class names.
     """
-    parents = []
-
     match language:
         case Language.PYTHON:
-            # Python: class Child(Parent, Mixin): -> argument_list > identifier
-            for child in class_node.children:
-                if child.type == "argument_list":
-                    for arg in child.children:
-                        if arg.type == "identifier":
-                            parents.append(get_node_text(arg, source))
-
+            return _get_python_parents(class_node, source)
         case Language.TYPESCRIPT | Language.JAVASCRIPT:
-            # TS/JS: class Child extends Parent implements Interface
-            for child in class_node.children:
-                if child.type == "class_heritage":
-                    for clause in child.children:
-                        if clause.type in ("extends_clause", "implements_clause"):
-                            for item in clause.children:
-                                if item.type in ("identifier", "type_identifier"):
-                                    parents.append(get_node_text(item, source))
-
+            return _get_ts_js_parents(class_node, source)
         case Language.JAVA:
-            # Java: class Child extends Parent implements Interface
-            for child in class_node.children:
-                if child.type == "superclass":
-                    for item in child.children:
-                        if item.type == "type_identifier":
-                            parents.append(get_node_text(item, source))
-                elif child.type == "super_interfaces":
-                    for item in find_nodes_by_type(child, {"type_identifier"}):
-                        parents.append(get_node_text(item, source))
-
+            return _get_java_parents(class_node, source)
         case Language.SWIFT:
-            # Swift: class Child: Parent, Protocol
-            for child in class_node.children:
-                if child.type == "type_inheritance_clause":
-                    for item in child.children:
-                        if item.type in ("user_type", "type_identifier"):
-                            # Get the identifier from user_type
-                            text = get_node_text(item, source)
-                            if text and text not in (":", ","):
-                                parents.append(text)
-
+            return _get_swift_parents(class_node, source)
         case Language.CPP:
-            # C++: class Child : public Parent
-            for child in class_node.children:
-                if child.type == "base_class_clause":
-                    for item in find_nodes_by_type(child, {"type_identifier"}):
-                        parents.append(get_node_text(item, source))
-
+            return _get_cpp_parents(class_node, source)
         case Language.RUBY:
-            # Ruby: class Child < Parent
-            for child in class_node.children:
-                if child.type == "superclass":
-                    for sc in child.children:
-                        if sc.type == "constant" or sc.type == "scope_resolution":
-                            parents.append(get_node_text(sc, source))
-
+            return _get_ruby_parents(class_node, source)
         case Language.PHP:
-            # PHP: class Child extends Parent implements Interface1, Interface2
-            for child in class_node.children:
-                if child.type == "base_clause":
-                    # extends clause
-                    for item in find_nodes_by_type(child, {"name", "qualified_name"}):
-                        parents.append(get_node_text(item, source))
-                elif child.type == "class_interface_clause":
-                    # implements clause
-                    for item in find_nodes_by_type(child, {"name", "qualified_name"}):
-                        parents.append(get_node_text(item, source))
-
+            return _get_php_parents(class_node, source)
         case Language.KOTLIN:
-            # Kotlin: class Child : Parent(), Interface1, Interface2
-            for child in class_node.children:
-                if child.type == "delegation_specifiers":
-                    for spec in child.children:
-                        if spec.type == "delegation_specifier":
-                            for item in find_nodes_by_type(
-                                spec, {"user_type", "simple_identifier"}
-                            ):
-                                text = get_node_text(item, source)
-                                if text and text not in (":", ","):
-                                    parents.append(text)
-                                    break  # Only get the type name, not nested parts
-
+            return _get_kotlin_parents(class_node, source)
         case Language.CSHARP:
-            # C#: class Child : Parent, IInterface1, IInterface2
-            for child in class_node.children:
-                if child.type == "base_list":
-                    for item in find_nodes_by_type(
-                        child, {"identifier", "generic_name", "qualified_name"}
-                    ):
-                        text = get_node_text(item, source)
-                        if text:
-                            parents.append(text)
+            return _get_csharp_parents(class_node, source)
+    return []
 
-    return parents
+
+def _get_splat_prefix(node_type: str) -> str:
+    """Return the prefix string for a splat parameter node type."""
+    return "*" if node_type == "list_splat_pattern" else "**"
+
+
+def _extract_typed_parameter(
+    child: Node, source: bytes
+) -> tuple[str, str | None] | None:
+    """Extract name and type hint from a typed_parameter node.
+
+    Returns:
+        A (name, type_hint) tuple, or None if the parameter should be skipped.
+    """
+    name_node = None
+    type_node = None
+    splat_pattern = None
+
+    for c in child.children:
+        if c.type == "identifier":
+            name_node = c
+        elif c.type == "type":
+            type_node = c
+        elif c.type in ("list_splat_pattern", "dictionary_splat_pattern"):
+            splat_pattern = c
+            for sc in c.children:
+                if sc.type == "identifier":
+                    name_node = sc
+                    break
+
+    if not name_node:
+        return None
+    name = get_node_text(name_node, source)
+    if name in ("self", "cls"):
+        return None
+    type_hint = get_node_text(type_node, source) if type_node else None
+    if splat_pattern:
+        name = f"{_get_splat_prefix(splat_pattern.type)}{name}"
+    return name, type_hint
+
+
+def _extract_splat_parameter(
+    child: Node, source: bytes
+) -> tuple[str, str | None] | None:
+    """Extract name and type hint from a list_splat_pattern or dictionary_splat_pattern node.
+
+    Returns:
+        A (name, type_hint) tuple, or None if nothing could be extracted.
+    """
+    prefix = _get_splat_prefix(child.type)
+    for c in child.children:
+        if c.type == "identifier":
+            return f"{prefix}{get_node_text(c, source)}", None
+        if c.type == "typed_parameter":
+            inner_name = None
+            inner_type = None
+            for tc in c.children:
+                if tc.type == "identifier":
+                    inner_name = tc
+                elif tc.type == "type":
+                    inner_type = tc
+            if inner_name:
+                name = get_node_text(inner_name, source)
+                type_hint = get_node_text(inner_type, source) if inner_type else None
+                return f"{prefix}{name}", type_hint
+            break
+    return None
 
 
 def extract_python_parameter_types(
@@ -220,50 +325,16 @@ def extract_python_parameter_types(
 
     for child in params_node.children:
         if child.type == "identifier":
-            # Simple parameter without type hint
             name = get_node_text(child, source)
             if name not in ("self", "cls"):
                 param_types[name] = None
 
         elif child.type == "typed_parameter":
-            # Parameter with type hint: name: type
-            # Or typed *args: *args: type, typed **kwargs: **kwargs: type
-            name_node = None
-            type_node = None
-            splat_pattern = None
-
-            for c in child.children:
-                if c.type == "identifier":
-                    name_node = c
-                elif c.type == "type":
-                    type_node = c
-                elif c.type == "list_splat_pattern":
-                    splat_pattern = c
-                    for sc in c.children:
-                        if sc.type == "identifier":
-                            name_node = sc
-                            break
-                elif c.type == "dictionary_splat_pattern":
-                    splat_pattern = c
-                    for sc in c.children:
-                        if sc.type == "identifier":
-                            name_node = sc
-                            break
-
-            if name_node:
-                name = get_node_text(name_node, source)
-                if name not in ("self", "cls"):
-                    type_hint = get_node_text(type_node, source) if type_node else None
-                    # Add prefix for splat patterns
-                    if splat_pattern:
-                        prefix = (
-                            "*" if splat_pattern.type == "list_splat_pattern" else "**"
-                        )
-                        name = f"{prefix}{name}"
-                    param_types[name] = type_hint
+            result = _extract_typed_parameter(child, source)
+            if result is not None:
+                param_types[result[0]] = result[1]
 
         elif child.type == "default_parameter":
-            # Parameter with default: name = value
             name_node = child.child_by_field_name("name")
             if name_node:
                 name = get_node_text(name_node, source)
@@ -271,41 +342,19 @@ def extract_python_parameter_types(
                     param_types[name] = None
 
         elif child.type == "typed_default_parameter":
-            # Parameter with type and default: name: type = value
             name_node = child.child_by_field_name("name")
             type_node = child.child_by_field_name("type")
-
             if name_node:
                 name = get_node_text(name_node, source)
                 if name not in ("self", "cls"):
-                    type_hint = get_node_text(type_node, source) if type_node else None
-                    param_types[name] = type_hint
+                    param_types[name] = (
+                        get_node_text(type_node, source) if type_node else None
+                    )
 
         elif child.type in ("list_splat_pattern", "dictionary_splat_pattern"):
-            # *args or **kwargs
-            for c in child.children:
-                if c.type == "identifier":
-                    name = get_node_text(c, source)
-                    prefix = "*" if child.type == "list_splat_pattern" else "**"
-                    param_types[f"{prefix}{name}"] = None
-                    break
-                elif c.type == "typed_parameter":
-                    # *args: type or **kwargs: type
-                    inner_name = None
-                    inner_type = None
-                    for tc in c.children:
-                        if tc.type == "identifier":
-                            inner_name = tc
-                        elif tc.type == "type":
-                            inner_type = tc
-                    if inner_name:
-                        name = get_node_text(inner_name, source)
-                        prefix = "*" if child.type == "list_splat_pattern" else "**"
-                        type_hint = (
-                            get_node_text(inner_type, source) if inner_type else None
-                        )
-                        param_types[f"{prefix}{name}"] = type_hint
-                    break
+            result = _extract_splat_parameter(child, source)
+            if result is not None:
+                param_types[result[0]] = result[1]
 
     return param_types
 
@@ -398,6 +447,44 @@ def is_async_function(func_node: Node) -> bool:
     )
 
 
+def _extract_raise_target(raise_node: Node, source: bytes) -> str | None:
+    """Extract the exception name from a raise_statement node.
+
+    Handles both direct raises (``raise ValueError``) and call raises
+    (``raise ValueError("msg")``), as well as attribute forms
+    (``raise errors.CustomError``).
+
+    Args:
+        raise_node: A raise_statement AST node.
+        source: Source code bytes.
+
+    Returns:
+        Exception name string, or None if it could not be extracted.
+    """
+    for child in raise_node.children:
+        if child.type == "identifier":
+            exc_name = get_node_text(child, source)
+            return exc_name if exc_name and exc_name != "raise" else None
+        if child.type == "call":
+            for call_child in child.children:
+                if call_child.type in ("identifier", "attribute"):
+                    exc_name = get_node_text(call_child, source)
+                    return exc_name if exc_name else None
+            break
+    return None
+
+
+def _find_raises_in_block(node: Node, source: bytes, exceptions: set[str]) -> None:
+    """Recursively collect raised exception names, skipping nested function defs."""
+    if node.type == "raise_statement":
+        name = _extract_raise_target(node, source)
+        if name:
+            exceptions.add(name)
+    for child in node.children:
+        if child.type not in ("function_definition", "async_function_definition"):
+            _find_raises_in_block(child, source, exceptions)
+
+
 def extract_python_raised_exceptions(func_node: Node, source: bytes) -> list[str]:
     """Extract exception types raised by a Python function.
 
@@ -412,44 +499,9 @@ def extract_python_raised_exceptions(func_node: Node, source: bytes) -> list[str
         List of unique exception type names raised by the function.
     """
     exceptions: set[str] = set()
-
-    def find_raise_statements(node: Node) -> None:
-        """Recursively find raise statements in the AST."""
-        if node.type == "raise_statement":
-            # Extract the exception type
-            for child in node.children:
-                if child.type == "identifier":
-                    # Direct raise like: raise ValueError
-                    exc_name = get_node_text(child, source)
-                    if exc_name and exc_name != "raise":
-                        exceptions.add(exc_name)
-                    break
-                elif child.type == "call":
-                    # Raise with call like: raise ValueError("msg")
-                    for call_child in child.children:
-                        if call_child.type == "identifier":
-                            exc_name = get_node_text(call_child, source)
-                            if exc_name:
-                                exceptions.add(exc_name)
-                            break
-                        elif call_child.type == "attribute":
-                            # Handle module.Exception like: raise errors.CustomError
-                            exc_name = get_node_text(call_child, source)
-                            if exc_name:
-                                exceptions.add(exc_name)
-                            break
-                    break
-
-        # Recurse into child nodes (but not into nested functions)
-        for child in node.children:
-            if child.type not in ("function_definition", "async_function_definition"):
-                find_raise_statements(child)
-
-    # Start searching from the function body
     for child in func_node.children:
         if child.type == "block":
-            find_raise_statements(child)
-
+            _find_raises_in_block(child, source, exceptions)
     return sorted(exceptions)
 
 

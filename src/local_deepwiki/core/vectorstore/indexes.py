@@ -15,6 +15,70 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
+def _get_index_type(idx: object) -> str:
+    """Safely extract the index_type string from a LanceDB index object."""
+    idx_type = getattr(idx, "index_type", None) or (
+        idx.get("index_type", "") if isinstance(idx, dict) else ""  # type: ignore[union-attr]
+    )
+    return str(idx_type).lower() if idx_type else ""
+
+
+def _inspect_existing_indexes(
+    table: Table,
+) -> tuple[list[object], set[str], bool]:
+    """List table indexes and classify them.
+
+    Returns:
+        Tuple of (indices, existing_index_names, has_vector_index).
+    """
+    try:
+        indices = table.list_indices()
+        existing_indexes: set[str] = set()
+        has_vector_index = False
+        for idx in indices:
+            name = getattr(idx, "name", None) or (
+                idx.get("name") if isinstance(idx, dict) else None  # type: ignore[union-attr]
+            )
+            if name:
+                existing_indexes.add(name)
+            if "ivf" in _get_index_type(idx):
+                has_vector_index = True
+        return indices, existing_indexes, has_vector_index
+    except (KeyError, TypeError, RuntimeError, AttributeError) as e:
+        logger.debug("Could not list existing indexes: %s", e)
+        return [], set(), False
+
+
+def _has_fts_index(indices: list[object]) -> bool:
+    """Return True if any of the listed indexes is a full-text search index."""
+    return bool(indices) and any("fts" in _get_index_type(idx) for idx in indices)
+
+
+def _create_fts_index(table: Table, indices: list[object]) -> None:
+    """Create the FTS index on 'content' if it does not already exist."""
+    if not _has_fts_index(indices):
+        create_fts_index_safe(table, "content")
+
+
+def _create_vector_index_if_needed(
+    table: Table,
+    lazy_index_manager: LazyIndexManager,
+) -> None:
+    """Create or defer creation of the vector index."""
+    try:
+        num_rows = table.count_rows()
+        if lazy_index_manager.config.enabled:
+            if num_rows >= lazy_index_manager.config.min_rows:
+                lazy_index_manager.mark_index_pending()
+                logger.debug(
+                    "Vector index creation deferred (lazy mode): %d rows", num_rows
+                )
+        else:
+            create_vector_index(table, num_rows, lazy_index_manager)
+    except (RuntimeError, OSError) as e:
+        logger.debug("Could not check row count for vector indexing: %s", e)
+
+
 def ensure_indexes(table: Table, lazy_index_manager: LazyIndexManager) -> None:
     """Ensure all indexes exist on a table, creating them if needed.
 
@@ -26,67 +90,17 @@ def ensure_indexes(table: Table, lazy_index_manager: LazyIndexManager) -> None:
         table: The LanceDB table to check/create indexes on.
         lazy_index_manager: Manager for lazy vector index creation.
     """
-    # Check existing indexes
-    indices: list[object] = []
-    try:
-        indices = table.list_indices()
-        existing_indexes: set[str] = set()
-        has_vector_index = False
-        for idx in indices:
-            name = getattr(idx, "name", None) or (
-                idx.get("name") if isinstance(idx, dict) else None
-            )
-            if name:
-                existing_indexes.add(name)
-            idx_type = getattr(idx, "index_type", None) or (
-                idx.get("index_type") if isinstance(idx, dict) else None
-            )
-            if idx_type and "ivf" in str(idx_type).lower():
-                has_vector_index = True
-    except (KeyError, TypeError, RuntimeError, AttributeError) as e:
-        logger.debug("Could not list existing indexes: %s", e)
-        existing_indexes = set()
-        has_vector_index = False
+    indices, existing_indexes, has_vector_index = _inspect_existing_indexes(table)
 
-    # Create missing scalar indexes
     if "id_idx" not in existing_indexes:
         create_index_safe(table, "id")
     if "file_path_idx" not in existing_indexes:
         create_index_safe(table, "file_path")
 
-    # Ensure FTS index exists for keyword/hybrid search
-    has_fts_index = (
-        any(
-            "fts"
-            in str(
-                getattr(
-                    idx,
-                    "index_type",
-                    idx.get("index_type", "") if isinstance(idx, dict) else "",
-                )
-            ).lower()
-            for idx in indices
-        )
-        if indices
-        else False
-    )
-    if not has_fts_index:
-        create_fts_index_safe(table, "content")
+    _create_fts_index(table, indices)
 
-    # Handle vector index
     if not has_vector_index:
-        try:
-            num_rows = table.count_rows()
-            if lazy_index_manager.config.enabled:
-                if num_rows >= lazy_index_manager.config.min_rows:
-                    lazy_index_manager.mark_index_pending()
-                    logger.debug(
-                        "Vector index creation deferred (lazy mode): %d rows", num_rows
-                    )
-            else:
-                create_vector_index(table, num_rows, lazy_index_manager)
-        except (RuntimeError, OSError) as e:
-            logger.debug("Could not check row count for vector indexing: %s", e)
+        _create_vector_index_if_needed(table, lazy_index_manager)
     else:
         lazy_index_manager.mark_index_created()
 

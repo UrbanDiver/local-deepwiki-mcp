@@ -157,6 +157,71 @@ Rewrite the question to better find the missing information. Output only the rew
     return question  # Fall back to original
 
 
+def _grade_and_filter_results(
+    graded: list[GradedChunk],
+    relevant_count: int,
+) -> tuple[str, str]:
+    """Summarise what was found and describe the gaps for query rewriting.
+
+    Args:
+        graded: Graded chunks from the first retrieval round.
+        relevant_count: Number of chunks graded as "relevant".
+
+    Returns:
+        Tuple of (context_summary, gaps) strings for use in query rewriting.
+    """
+    relevant_files = [g.chunk.chunk.file_path for g in graded if g.grade == "relevant"]
+    irrelevant_files = [
+        g.chunk.chunk.file_path for g in graded if g.grade == "irrelevant"
+    ]
+    context_summary = (
+        f"Found {relevant_count} relevant chunks in: {', '.join(relevant_files[:5])}"
+        if relevant_files
+        else "No clearly relevant code found"
+    )
+    gaps = (
+        f"Most results were irrelevant (from: {', '.join(irrelevant_files[:5])}). "
+        "Need more targeted results."
+    )
+    return context_summary, gaps
+
+
+def _merge_graded_results(
+    first_graded: list[GradedChunk],
+    new_graded: list[GradedChunk],
+    max_context: int,
+) -> list[GradedChunk]:
+    """Merge two rounds of graded results, deduplicating by file+line.
+
+    Relevant chunks from both rounds come first; irrelevant chunks from
+    the first round are appended as a fallback.
+
+    Args:
+        first_graded: Graded results from the initial retrieval.
+        new_graded: Graded results from the rewritten-query retrieval.
+        max_context: Maximum number of chunks to return.
+
+    Returns:
+        Merged, deduplicated list capped at *max_context*.
+    """
+    seen: set[str] = set()
+    merged: list[GradedChunk] = []
+
+    for g in first_graded + new_graded:
+        key = f"{g.chunk.chunk.file_path}:{g.chunk.chunk.start_line}"
+        if key not in seen and g.grade != "irrelevant":
+            seen.add(key)
+            merged.append(g)
+
+    for g in first_graded:
+        key = f"{g.chunk.chunk.file_path}:{g.chunk.chunk.start_line}"
+        if key not in seen:
+            seen.add(key)
+            merged.append(g)
+
+    return merged[:max_context]
+
+
 async def agentic_retrieve(
     question: str,
     vector_store: VectorStore,
@@ -177,7 +242,6 @@ async def agentic_retrieve(
     Returns:
         AgenticRetrievalResult with graded results and metadata.
     """
-    # Step 1: Initial retrieval
     initial_results = await vector_store.search(question, limit=max_context)
 
     if not initial_results:
@@ -188,7 +252,6 @@ async def agentic_retrieve(
             metadata={"rounds": 1, "initial_count": 0, "rewritten": False},
         )
 
-    # Step 2: Grade relevance
     graded = await grade_relevance(initial_results, question, llm)
 
     relevant_count = sum(1 for g in graded if g.grade == "relevant")
@@ -196,52 +259,15 @@ async def agentic_retrieve(
 
     rewritten_query = None
 
-    # Step 3: If too few relevant, rewrite and re-retrieve
     if relevant_fraction < relevance_threshold and len(graded) > 0:
-        # Summarize what was found
-        relevant_files = [
-            g.chunk.chunk.file_path for g in graded if g.grade == "relevant"
-        ]
-        irrelevant_files = [
-            g.chunk.chunk.file_path for g in graded if g.grade == "irrelevant"
-        ]
-        context_summary = (
-            f"Found {relevant_count} relevant chunks in: {', '.join(relevant_files[:5])}"
-            if relevant_files
-            else "No clearly relevant code found"
-        )
-        gaps = (
-            f"Most results were irrelevant (from: {', '.join(irrelevant_files[:5])}). "
-            "Need more targeted results."
-        )
-
+        context_summary, gaps = _grade_and_filter_results(graded, relevant_count)
         rewritten_query = await rewrite_query(question, context_summary, gaps, llm)
 
         if rewritten_query != question:
-            # Re-retrieve with rewritten query
             new_results = await vector_store.search(rewritten_query, limit=max_context)
             new_graded = await grade_relevance(new_results, question, llm)
+            graded = _merge_graded_results(graded, new_graded, max_context)
 
-            # Merge: keep relevant from both rounds, deduplicate by file+line
-            seen: set[str] = set()
-            merged_graded: list[GradedChunk] = []
-
-            for g in graded + new_graded:
-                key = f"{g.chunk.chunk.file_path}:{g.chunk.chunk.start_line}"
-                if key not in seen and g.grade != "irrelevant":
-                    seen.add(key)
-                    merged_graded.append(g)
-
-            # Also include irrelevant from first round as fallback
-            for g in graded:
-                key = f"{g.chunk.chunk.file_path}:{g.chunk.chunk.start_line}"
-                if key not in seen:
-                    seen.add(key)
-                    merged_graded.append(g)
-
-            graded = merged_graded[:max_context]
-
-    # Build final results list (preserve original SearchResult objects)
     final_results = [g.chunk for g in graded]
 
     return AgenticRetrievalResult(

@@ -121,6 +121,54 @@ class LLMCache:
         age = time.time() - created_at
         return age < ttl
 
+    async def _exact_hash_lookup(
+        self, table: Table, exact_hash: str
+    ) -> dict[str, Any] | None:
+        """Try an exact hash lookup. Returns the entry dict on hit, or None."""
+        try:
+            results = (
+                table.search().where(f"exact_hash = '{exact_hash}'").limit(1).to_list()
+            )
+            if results and self._is_valid_entry(results[0]):
+                return results[0]
+        except (KeyError, ValueError, RuntimeError, OSError) as e:
+            logger.debug("Exact hash lookup failed: %s", e)
+        return None
+
+    async def _similarity_lookup(
+        self, table: Table, prompt: str, model_name: str
+    ) -> dict[str, Any] | None:
+        """Try a vector similarity lookup. Returns the first valid matching entry, or None."""
+        try:
+            query_embedding = (await self.embedding_provider.embed([prompt]))[0]
+            similar_results = table.search(query_embedding).limit(5).to_list()
+            for result in similar_results:
+                similarity = 1.0 - result.get("_distance", 1.0)
+                if similarity >= self.config.similarity_threshold:
+                    if result.get(
+                        "model_name", ""
+                    ) == model_name and self._is_valid_entry(result):
+                        logger.debug(
+                            "Cache similarity hit: similarity=%.3f, entry=%s...",
+                            similarity,
+                            result["id"][:8],
+                        )
+                        return result
+        except (KeyError, ValueError, RuntimeError, OSError) as e:
+            logger.debug("Similarity search failed: %s", e)
+        return None
+
+    async def _deserialize_cached_response(
+        self,
+        entry: dict[str, Any],
+        label: str,
+    ) -> str:
+        """Record a hit for *entry* and return its response string."""
+        self._stats["hits"] += 1
+        logger.debug("Cache %s hit: id=%s...", label, str(entry.get("id", ""))[:8])
+        await self._record_hit(entry["id"], entry)
+        return cast(str, entry["response"])
+
     async def get(
         self,
         prompt: str,
@@ -145,7 +193,6 @@ class LLMCache:
         Returns:
             Cached response if found and valid, None otherwise.
         """
-        # Skip if temperature too high (non-deterministic responses)
         if temperature > self.config.max_cacheable_temperature:
             self._stats["skipped"] += 1
             logger.debug(
@@ -162,58 +209,13 @@ class LLMCache:
 
         exact_hash = self._compute_hash(system_prompt, prompt)
 
-        # Fast path: exact hash match
-        try:
-            # LanceDB filter query for exact hash
-            exact_results = (
-                table.search().where(f"exact_hash = '{exact_hash}'").limit(1).to_list()
-            )
+        entry = await self._exact_hash_lookup(table, exact_hash)
+        if entry is not None:
+            return await self._deserialize_cached_response(entry, "exact")
 
-            if exact_results:
-                entry = exact_results[0]
-                if self._is_valid_entry(entry):
-                    self._stats["hits"] += 1
-                    logger.debug("Cache exact hit: hash=%s...", exact_hash[:12])
-                    # Update hit tracking (pass entry to avoid re-fetch)
-                    await self._record_hit(entry["id"], entry)
-                    return cast(str, entry["response"])
-        except (KeyError, ValueError, RuntimeError, OSError) as e:
-            # KeyError: Missing field in result
-            # ValueError: Invalid query or filter expression
-            # RuntimeError: LanceDB query execution error
-            # OSError: Database file access issues
-            logger.debug("Exact hash lookup failed: %s", e)
-
-        # Slow path: embedding similarity search
-        try:
-            query_embedding = (await self.embedding_provider.embed([prompt]))[0]
-
-            # Search for similar prompts with same model
-            similar_results = table.search(query_embedding).limit(5).to_list()
-
-            for result in similar_results:
-                # Calculate similarity from distance
-                similarity = 1.0 - result.get("_distance", 1.0)
-
-                if similarity >= self.config.similarity_threshold:
-                    # Check model match and validity
-                    if result.get(
-                        "model_name", ""
-                    ) == model_name and self._is_valid_entry(result):
-                        self._stats["hits"] += 1
-                        logger.debug(
-                            "Cache similarity hit: similarity=%.3f, entry=%s...",
-                            similarity,
-                            result["id"][:8],
-                        )
-                        await self._record_hit(result["id"], result)
-                        return cast(str, result["response"])
-        except (KeyError, ValueError, RuntimeError, OSError) as e:
-            # KeyError: Missing field in search result
-            # ValueError: Invalid embedding or search parameters
-            # RuntimeError: Vector search execution error
-            # OSError: Database access issues
-            logger.debug("Similarity search failed: %s", e)
+        entry = await self._similarity_lookup(table, prompt, model_name)
+        if entry is not None:
+            return await self._deserialize_cached_response(entry, "similarity")
 
         self._stats["misses"] += 1
         return None
@@ -337,6 +339,48 @@ class LLMCache:
             # OSError: Storage issues
             logger.debug("Failed to record hit: %s", e)
 
+    def _delete_entries(self, table: Table, entry_ids: list[str]) -> tuple[int, int]:
+        """Delete entries from the table by ID.
+
+        Returns:
+            Tuple of (deleted_count, failed_count).
+        """
+        deleted = 0
+        failed = 0
+        for entry_id in entry_ids:
+            try:
+                table.delete(f"id = '{entry_id}'")
+                deleted += 1
+            except (ValueError, RuntimeError, OSError):
+                failed += 1
+        return deleted, failed
+
+    def _select_eviction_candidates(
+        self,
+        all_entries: list[dict[str, Any]],
+    ) -> tuple[list[str], list[dict[str, Any]]]:
+        """Partition entries into expired IDs and valid entries for LRU eviction.
+
+        Args:
+            all_entries: All fetched entries with eviction-relevant columns.
+
+        Returns:
+            Tuple of (expired_ids, valid_entries_sorted_lru).
+        """
+        expired_ids: list[str] = []
+        valid_entries: list[dict[str, Any]] = []
+        for entry in all_entries:
+            if not self._is_valid_entry(entry):
+                expired_ids.append(entry["id"])
+            else:
+                valid_entries.append(entry)
+        # Pre-sort valid entries by LRU order so callers need not sort again
+        valid_entries = sorted(
+            valid_entries,
+            key=lambda e: e.get("last_hit_at", e.get("created_at", 0)),
+        )
+        return expired_ids, valid_entries
+
     async def _maybe_evict(self) -> None:
         """Evict old entries if cache exceeds max_entries.
 
@@ -351,7 +395,6 @@ class LLMCache:
             if table is None:
                 return
 
-            # Count entries
             count = table.count_rows()
             if count <= self.config.max_entries:
                 return
@@ -362,32 +405,18 @@ class LLMCache:
                 self.config.max_entries,
             )
 
-            # Fetch only eviction-relevant columns (skip large vector/response fields)
             eviction_columns = ["id", "created_at", "ttl_seconds", "last_hit_at"]
             fetch_limit = min(count, self.config.max_entries * 2)
             all_entries = (
                 table.search().select(eviction_columns).limit(fetch_limit).to_list()
             )
 
-            # Phase 1: Identify and delete expired entries
-            expired_ids = []
-            valid_entries = []
-            for entry in all_entries:
-                if not self._is_valid_entry(entry):
-                    expired_ids.append(entry["id"])
-                else:
-                    valid_entries.append(entry)
+            expired_ids, valid_entries = self._select_eviction_candidates(all_entries)
 
+            # Phase 1: delete expired entries
             deleted_count = 0
-            failed_count = 0
             if expired_ids:
-                for entry_id in expired_ids:
-                    try:
-                        table.delete(f"id = '{entry_id}'")
-                        deleted_count += 1
-                    except (ValueError, RuntimeError, OSError):
-                        failed_count += 1
-
+                deleted_count, failed_count = self._delete_entries(table, expired_ids)
                 logger.info("Evicted %s expired cache entries", deleted_count)
                 if failed_count:
                     logger.warning(
@@ -398,39 +427,22 @@ class LLMCache:
 
             # Phase 2: LRU eviction if still over limit
             remaining_count = count - deleted_count
-            if remaining_count > self.config.max_entries:
-                # Calculate how many to evict (remove 20% buffer to avoid frequent eviction)
+            if remaining_count > self.config.max_entries and valid_entries:
                 target_count = int(self.config.max_entries * 0.8)
                 to_evict = remaining_count - target_count
-
-                if to_evict > 0 and valid_entries:
-                    # Sort by last_hit_at (oldest first = LRU)
-                    valid_entries = sorted(
-                        valid_entries,
-                        key=lambda e: e.get("last_hit_at", e.get("created_at", 0)),
+                if to_evict > 0:
+                    lru_deleted, lru_failed = self._delete_entries(
+                        table, [e["id"] for e in valid_entries[:to_evict]]
                     )
-
-                    # Delete oldest entries
-                    lru_deleted = 0
-                    lru_failed = 0
-                    for entry in valid_entries[:to_evict]:
-                        try:
-                            table.delete(f"id = '{entry['id']}'")
-                            lru_deleted += 1
-                        except (ValueError, RuntimeError, OSError):
-                            lru_failed += 1
-
                     logger.info("Evicted %s LRU cache entries", lru_deleted)
                     if lru_failed:
                         logger.warning(
-                            "Failed to evict %d of %d LRU entries", lru_failed, to_evict
+                            "Failed to evict %d of %d LRU entries",
+                            lru_failed,
+                            to_evict,
                         )
 
         except (KeyError, ValueError, RuntimeError, OSError) as e:
-            # KeyError: Missing fields in entries
-            # ValueError: Invalid query during eviction
-            # RuntimeError: Database operation failure
-            # OSError: Storage issues
             logger.warning("Eviction failed: %s", e)
 
     async def clear(self) -> int:

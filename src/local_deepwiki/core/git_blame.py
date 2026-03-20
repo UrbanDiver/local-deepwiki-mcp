@@ -177,6 +177,55 @@ def _parse_porcelain_blame(output: str) -> BlameInfo | None:
     return entries[0] if entries else None
 
 
+def _is_commit_hash_line(line: str) -> bool:
+    """Return True if the line starts with a 40-char hex commit hash."""
+    return len(line) >= 40 and all(c in "0123456789abcdef" for c in line[:40])
+
+
+def _parse_blame_header(
+    lines: list[str], start: int
+) -> tuple[str | None, str | None, int | None, str | None, int]:
+    """Parse blame header lines starting at *start* (after the commit-hash line).
+
+    Reads lines until it hits a tab (source line) and returns the parsed
+    author fields plus the new line index.
+
+    Args:
+        lines: All split lines of the porcelain output.
+        start: Index of the first header line (the line after the hash line).
+
+    Returns:
+        Tuple of (author, author_email, author_time, summary, new_index)
+        where new_index points past the source line.
+    """
+    author: str | None = None
+    author_email: str | None = None
+    author_time: int | None = None
+    summary: str | None = None
+
+    i = start
+    while i < len(lines) and not lines[i].startswith("\t"):
+        header_line = lines[i]
+        if header_line.startswith("author "):
+            author = header_line[7:]
+        elif header_line.startswith("author-mail "):
+            author_email = header_line[12:].strip("<>")
+        elif header_line.startswith("author-time "):
+            try:
+                author_time = int(header_line[12:])
+            except ValueError:
+                pass
+        elif header_line.startswith("summary "):
+            summary = header_line[8:]
+        i += 1
+
+    # Skip the source line (starts with tab)
+    if i < len(lines) and lines[i].startswith("\t"):
+        i += 1
+
+    return author, author_email, author_time, summary, i
+
+
 def _parse_all_porcelain_blame(output: str) -> list[BlameInfo]:
     """Parse git blame porcelain format output for multiple entries.
 
@@ -196,36 +245,11 @@ def _parse_all_porcelain_blame(output: str) -> list[BlameInfo]:
     while i < len(lines):
         line = lines[i]
 
-        # First line of each entry starts with the commit hash (40 hex chars)
-        if len(line) >= 40 and all(c in "0123456789abcdef" for c in line[:40]):
+        if _is_commit_hash_line(line):
             commit_hash = line[:40]
-            author = None
-            author_email = None
-            author_time = None
-            summary = None
-
-            # Parse header lines until we hit a tab (the source line)
-            i += 1
-            while i < len(lines) and not lines[i].startswith("\t"):
-                header_line = lines[i]
-                if header_line.startswith("author "):
-                    author = header_line[7:]
-                elif header_line.startswith("author-mail "):
-                    # Remove angle brackets: <email@example.com> -> email@example.com
-                    author_email = header_line[12:].strip("<>")
-                elif header_line.startswith("author-time "):
-                    try:
-                        author_time = int(header_line[12:])
-                    except ValueError:
-                        pass
-                elif header_line.startswith("summary "):
-                    summary = header_line[8:]
-                i += 1
-
-            # Skip the source line (starts with tab)
-            if i < len(lines) and lines[i].startswith("\t"):
-                i += 1
-
+            author, author_email, author_time, summary, i = _parse_blame_header(
+                lines, i + 1
+            )
             if author and author_time:
                 entries.append(
                     BlameInfo(
@@ -324,6 +348,47 @@ def get_file_entity_blame(
         return []
 
 
+def _parse_blame_entry(
+    lines: list[str],
+    hash_line: str,
+    start: int,
+    commit_cache: dict[str, BlameInfo],
+) -> tuple[int, BlameInfo | None, int]:
+    """Parse a single blame entry from the porcelain output.
+
+    Args:
+        lines: All split lines of the porcelain output.
+        hash_line: The commit-hash line (first line of this entry).
+        start: Index of the first header line after the hash line.
+        commit_cache: Cache mapping commit hash -> BlameInfo for abbreviated entries.
+
+    Returns:
+        Tuple of (final_line, blame_info_or_None, new_index).
+    """
+    parts = hash_line.split()
+    commit_hash = parts[0]
+    final_line = int(parts[2]) if len(parts) >= 3 else 0
+
+    author, author_email, author_time, summary, new_index = _parse_blame_header(
+        lines, start
+    )
+
+    blame_info: BlameInfo | None = None
+    if author and author_time and final_line > 0:
+        blame_info = BlameInfo(
+            author=author,
+            author_email=author_email,
+            date=datetime.fromtimestamp(author_time, tz=timezone.utc),
+            commit_hash=commit_hash,
+            summary=summary,
+        )
+        commit_cache[commit_hash] = blame_info
+    elif final_line > 0 and commit_hash in commit_cache:
+        blame_info = commit_cache[commit_hash]
+
+    return final_line, blame_info, new_index
+
+
 def _parse_line_blame_map(output: str) -> dict[int, BlameInfo]:
     """Parse git blame porcelain output into a line number -> BlameInfo map.
 
@@ -338,61 +403,18 @@ def _parse_line_blame_map(output: str) -> dict[int, BlameInfo]:
         Dictionary mapping line numbers to BlameInfo.
     """
     line_blame: dict[int, BlameInfo] = {}
-    # Cache of commit hash -> BlameInfo for reusing info on subsequent lines
     commit_cache: dict[str, BlameInfo] = {}
     lines = output.strip().split("\n")
 
     i = 0
     while i < len(lines):
         line = lines[i]
-
-        # First line of each entry: <hash> <orig_line> <final_line> [<num_lines>]
-        if len(line) >= 40 and all(c in "0123456789abcdef" for c in line[:40]):
-            parts = line.split()
-            commit_hash = parts[0]
-            # final_line is the line number in the current file
-            final_line = int(parts[2]) if len(parts) >= 3 else 0
-
-            author = None
-            author_email = None
-            author_time = None
-            summary = None
-
-            # Parse header lines
-            i += 1
-            while i < len(lines) and not lines[i].startswith("\t"):
-                header_line = lines[i]
-                if header_line.startswith("author "):
-                    author = header_line[7:]
-                elif header_line.startswith("author-mail "):
-                    author_email = header_line[12:].strip("<>")
-                elif header_line.startswith("author-time "):
-                    try:
-                        author_time = int(header_line[12:])
-                    except ValueError:
-                        pass
-                elif header_line.startswith("summary "):
-                    summary = header_line[8:]
-                i += 1
-
-            # Skip source line
-            if i < len(lines) and lines[i].startswith("\t"):
-                i += 1
-
-            if author and author_time and final_line > 0:
-                # Full info available - create new BlameInfo and cache it
-                blame_info = BlameInfo(
-                    author=author,
-                    author_email=author_email,
-                    date=datetime.fromtimestamp(author_time, tz=timezone.utc),
-                    commit_hash=commit_hash,
-                    summary=summary,
-                )
-                commit_cache[commit_hash] = blame_info
+        if _is_commit_hash_line(line):
+            final_line, blame_info, i = _parse_blame_entry(
+                lines, line, i + 1, commit_cache
+            )
+            if blame_info is not None and final_line > 0:
                 line_blame[final_line] = blame_info
-            elif final_line > 0 and commit_hash in commit_cache:
-                # Abbreviated entry - reuse cached info for this commit
-                line_blame[final_line] = commit_cache[commit_hash]
         else:
             i += 1
 

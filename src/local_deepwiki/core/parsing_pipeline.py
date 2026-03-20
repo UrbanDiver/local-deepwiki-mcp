@@ -154,49 +154,19 @@ class FileParsingPipeline:
                         )
 
                     result = future.result()
-
-                    if result.error:
+                    skipped = await self._handle_parse_result(
+                        result,
+                        progress_callback,
+                        files_completed,
+                        file_count,
+                        chunk_batch,
+                        processed_files,
+                    )
+                    if skipped:
                         error_count += 1
-                        self._logger.warning(
-                            "Error processing %s: %s", result.file_path, result.error
-                        )
-                        if progress_callback:
-                            progress_callback(
-                                f"Error processing {result.file_path}: {result.error}",
-                                files_completed,
-                                file_count,
-                            )
-                        # Emit INDEX_ERROR event for file processing errors
-                        emitter = get_event_emitter()
-                        await emitter.emit(
-                            EventType.INDEX_ERROR,
-                            {
-                                "file_path": str(result.file_path),
-                                "error": result.error,
-                            },
-                        )
                         files_completed += 1
                         continue
 
-                    chunk_batch.extend(result.chunks)
-                    processed_files.append(result.file_info)
-
-                    # Emit INDEX_FILE event for successfully parsed file
-                    emitter = get_event_emitter()
-                    await emitter.emit(
-                        EventType.INDEX_FILE,
-                        {
-                            "file_path": str(result.file_path),
-                            "language": (
-                                result.file_info.language.value
-                                if result.file_info.language
-                                else None
-                            ),
-                            "chunk_count": len(result.chunks),
-                        },
-                    )
-
-                    # Process batch if it reaches the batch size
                     if len(chunk_batch) >= self.batch_size:
                         chunks_stored = await self._process_chunk_batch(
                             chunk_batch,
@@ -208,7 +178,7 @@ class FileParsingPipeline:
                         )
                         total_chunks_processed += chunks_stored
                         is_first_batch = False
-                        chunk_batch = []
+                        chunk_batch.clear()
 
                     files_completed += 1
 
@@ -246,6 +216,63 @@ class FileParsingPipeline:
         )
 
         return processed_files, total_chunks_processed
+
+    async def _handle_parse_result(
+        self,
+        result: ParseResult,
+        progress_callback: ProgressCallback | None,
+        files_completed: int,
+        file_count: int,
+        chunk_batch: list[CodeChunk],
+        processed_files: list[FileInfo],
+    ) -> bool:
+        """Handle a single parsed file result, emitting events and updating state.
+
+        Args:
+            result: The ParseResult from parsing a single file.
+            progress_callback: Optional progress callback.
+            files_completed: Number of files already completed (for callback).
+            file_count: Total number of files (for callback).
+            chunk_batch: Mutable list to append chunks to (mutated in place).
+            processed_files: Mutable list to append successful FileInfo to.
+
+        Returns:
+            True if the file had an error and should be counted as skipped.
+        """
+        if result.error:
+            self._logger.warning(
+                "Error processing %s: %s", result.file_path, result.error
+            )
+            if progress_callback:
+                progress_callback(
+                    f"Error processing {result.file_path}: {result.error}",
+                    files_completed,
+                    file_count,
+                )
+            emitter = get_event_emitter()
+            await emitter.emit(
+                EventType.INDEX_ERROR,
+                {"file_path": str(result.file_path), "error": result.error},
+            )
+            return True
+
+        chunk_batch.extend(result.chunks)
+        processed_files.append(result.file_info)
+
+        emitter = get_event_emitter()
+        await emitter.emit(
+            EventType.INDEX_FILE,
+            {
+                "file_path": str(result.file_path),
+                "language": (
+                    result.file_info.language.value
+                    if result.file_info.language
+                    else None
+                ),
+                "chunk_count": len(result.chunks),
+            },
+        )
+        return False
 
     async def _process_chunk_batch(
         self,
