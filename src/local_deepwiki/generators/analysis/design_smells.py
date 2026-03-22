@@ -44,7 +44,7 @@ _GOD_CLASS_LINE_THRESHOLD = 500
 _LONG_METHOD_LINE_THRESHOLD = 80
 _LONG_METHOD_CC_THRESHOLD = 15
 _LONG_PARAM_THRESHOLD = 6
-_FEATURE_ENVY_CALL_THRESHOLD = 3
+_FEATURE_ENVY_CALL_THRESHOLD = 5
 _FEATURE_ENVY_IGNORED_OBJECTS: frozenset[str] = frozenset(
     {
         "logger",
@@ -58,11 +58,31 @@ _FEATURE_ENVY_IGNORED_OBJECTS: frozenset[str] = frozenset(
         "os",
         "sys",
         "json",
-        "math",  # stdlib modules
+        "math",
+        "time",
+        "Path",  # stdlib modules and types
         "errors",
         "smells",
         "warnings",  # collection accumulators
         "prompt_parts",  # prompt builders
+        "console",
+        "table",  # Rich output objects
+        "parser",  # argparse
+        "m",
+        "s",  # regex match / single-letter iteration vars
+        "data",
+        "metadata",
+        "config",
+        "cached",  # dict-like / config access
+        "request",
+        "response",  # web framework objects
+        "node",
+        "cursor",  # AST / DB cursors
+        "entry",
+        "entity",
+        "candidate",  # iteration variables
+        "mock",
+        "patch",  # test doubles
     }
 )
 _LARGE_FILE_LINE_THRESHOLD = 800
