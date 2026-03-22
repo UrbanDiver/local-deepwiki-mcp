@@ -241,6 +241,30 @@ class TestCrossLinker:
         # But prose should still work if there was one
         assert "[VectorStore]" not in result.content
 
+    def test_preserves_blank_lines_around_code_blocks(self):
+        """Test that blank lines around code fences are preserved."""
+        registry = EntityRegistry()
+        registry.register_entity(
+            name="VectorStore",
+            entity_type=ChunkType.CLASS,
+            wiki_path="files/vectorstore.md",
+            file_path="vectorstore.py",
+        )
+
+        linker = CrossLinker(registry)
+        content = "## Heading\n\n```mermaid\nflowchart TD\n```\n\n## Next"
+        page = WikiPage(
+            path="files/indexer.md",
+            title="Indexer",
+            content=content,
+            generated_at=0,
+        )
+
+        result = linker.add_links(page)
+        # Blank lines before and after the code fence must be preserved
+        assert "## Heading\n\n```mermaid" in result.content
+        assert "```\n\n## Next" in result.content
+
     def test_does_not_self_link(self):
         """Test that entities are not linked on their own page."""
         registry = EntityRegistry()

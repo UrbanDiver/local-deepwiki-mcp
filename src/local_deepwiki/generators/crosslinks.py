@@ -485,7 +485,7 @@ class CrossLinker:
                     )
                 )
 
-        return "".join(processed_parts)
+        return "\n".join(processed_parts)
 
     @staticmethod
     def _split_by_code_blocks(content: str) -> list[tuple[str, bool]]:

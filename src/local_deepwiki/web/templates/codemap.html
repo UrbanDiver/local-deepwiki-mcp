@@ -2129,7 +2129,10 @@
         function readUrlState() {
             var params = new URLSearchParams(window.location.search);
             if (params.has('query')) {
-                queryInput.value = params.get('query');
+                var q = params.get('query');
+                // Strip wiki prefixes so the vector search gets a clean query
+                q = q.replace(/^Codemap:\s*/i, '');
+                queryInput.value = q;
             }
             if (params.has('focus')) {
                 var focus = params.get('focus');

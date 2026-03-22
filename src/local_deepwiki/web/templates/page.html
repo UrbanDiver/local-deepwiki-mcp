@@ -706,15 +706,21 @@
             document.querySelectorAll('.mermaid').forEach(function(el) {
                 if (el.parentElement && el.parentElement.classList.contains('mermaid-wrapper')) return;
 
-                // Find a subject from the nearest preceding heading
+                // Find a subject: prefer the page H1 (most descriptive),
+                // fall back to the nearest preceding heading
                 var subject = '';
-                var prev = el.previousElementSibling;
-                while (prev) {
-                    if (/^H[1-6]$/.test(prev.tagName)) {
-                        subject = prev.textContent.trim();
-                        break;
+                var h1 = document.querySelector('.content h1');
+                if (h1) {
+                    subject = h1.textContent.trim();
+                } else {
+                    var prev = el.previousElementSibling;
+                    while (prev) {
+                        if (/^H[1-6]$/.test(prev.tagName)) {
+                            subject = prev.textContent.trim();
+                            break;
+                        }
+                        prev = prev.previousElementSibling;
                     }
-                    prev = prev.previousElementSibling;
                 }
                 if (!subject) subject = document.title || '';
 
