@@ -81,7 +81,10 @@ def score_coupling(metrics: list[dict[str, Any]]) -> dict[str, Any]:
 
     Factors:
     - Average distance from main sequence (lower is better)
-    - Number of highly unstable modules (I>0.8, Ce>3)
+    - Percentage of highly unstable modules (I>0.8 and Ce>5)
+
+    Uses percentage-based thresholds so the score scales with project size
+    rather than penalizing large projects with many small modules.
     """
     if not metrics:
         return {"score": 100, "grade": "A", "factors": {}}
@@ -91,12 +94,13 @@ def score_coupling(metrics: list[dict[str, Any]]) -> dict[str, Any]:
     highly_unstable = sum(
         1
         for m in metrics
-        if m.get("instability", 0) > 0.8 and m.get("efferent_coupling", 0) > 3
+        if m.get("instability", 0) > 0.8 and m.get("efferent_coupling", 0) > 5
     )
+    unstable_pct = (highly_unstable / len(metrics)) * 100 if metrics else 0
 
     score = 100.0
-    score -= min(avg_distance * 60, 50)  # avg distance penalty, cap 50
-    score -= min(highly_unstable * 2, 30)  # unstable module penalty, cap 30
+    score -= min(avg_distance * 50, 40)  # avg distance penalty, cap 40
+    score -= min(unstable_pct * 2, 25)  # unstable % penalty, cap 25
 
     score = max(0.0, min(100.0, score))
     return {
@@ -105,6 +109,7 @@ def score_coupling(metrics: list[dict[str, Any]]) -> dict[str, Any]:
         "factors": {
             "avg_distance": round(avg_distance, 3),
             "highly_unstable_modules": highly_unstable,
+            "unstable_pct": round(unstable_pct, 1),
             "total_modules": len(metrics),
         },
     }
