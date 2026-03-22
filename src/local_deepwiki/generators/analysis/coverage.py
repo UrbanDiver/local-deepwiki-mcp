@@ -200,6 +200,128 @@ def _get_coverage_emoji(percent: float) -> str:
 _get_wiki_link = file_path_to_wiki_path
 
 
+def _render_summary_section(overall: CoverageStats) -> list[str]:
+    """Render the overall summary and type-breakdown markdown sections.
+
+    Args:
+        overall: Aggregate coverage statistics.
+
+    Returns:
+        List of markdown lines.
+    """
+    emoji = _get_coverage_emoji(overall.coverage_percent)
+    lines = [
+        "## Summary",
+        "",
+        f"{emoji} **Overall Coverage: {overall.coverage_percent:.1f}%**",
+        "",
+        f"- **{overall.documented_entities}** / **{overall.total_entities}** entities documented",
+        "",
+        "### By Type",
+        "",
+        "| Type | Documented | Total | Coverage |",
+        "|------|------------|-------|----------|",
+    ]
+
+    for label, documented, total in [
+        ("Classes", overall.documented_classes, overall.total_classes),
+        ("Functions", overall.documented_functions, overall.total_functions),
+        ("Methods", overall.documented_methods, overall.total_methods),
+    ]:
+        if total > 0:
+            pct = (documented / total) * 100
+            lines.append(f"| {label} | {documented} | {total} | {pct:.1f}% |")
+
+    lines.append("")
+    return lines
+
+
+def _render_file_table(file_coverages: list[FileCoverage]) -> list[str]:
+    """Render the per-file coverage table.
+
+    Args:
+        file_coverages: Sorted list of per-file coverage stats.
+
+    Returns:
+        List of markdown lines.
+    """
+    lines = [
+        "## Coverage by File",
+        "",
+        "| File | Documented | Total | Coverage |",
+        "|------|------------|-------|----------|",
+    ]
+
+    for fc in file_coverages:
+        if fc.stats.total_entities == 0:
+            continue
+
+        emoji = _get_coverage_emoji(fc.stats.coverage_percent)
+        file_name = Path(fc.file_path).name
+        if has_wiki_page(fc.file_path):
+            file_col = f"[{file_name}]({_get_wiki_link(fc.file_path)})"
+        else:
+            file_col = file_name
+
+        lines.append(
+            f"| {emoji} {file_col} | "
+            f"{fc.stats.documented_entities} | {fc.stats.total_entities} | "
+            f"{fc.stats.coverage_percent:.1f}% |"
+        )
+
+    lines.append("")
+    return lines
+
+
+def _render_low_coverage_section(file_coverages: list[FileCoverage]) -> list[str]:
+    """Render the 'Files Needing Attention' section for low-coverage files.
+
+    Args:
+        file_coverages: Sorted list of per-file coverage stats.
+
+    Returns:
+        List of markdown lines (empty if no low-coverage files).
+    """
+    low_coverage_files = [
+        fc
+        for fc in file_coverages
+        if fc.stats.coverage_percent < COVERAGE_FAIR_THRESHOLD
+        and fc.stats.total_entities > 0
+    ]
+
+    if not low_coverage_files:
+        return []
+
+    lines = [
+        "## Files Needing Attention",
+        "",
+        "Files with less than 50% documentation coverage:",
+        "",
+    ]
+
+    for fc in low_coverage_files[:MAX_LOW_COVERAGE_FILES]:
+        file_name = Path(fc.file_path).name
+        if has_wiki_page(fc.file_path):
+            lines.append(f"### [{file_name}]({_get_wiki_link(fc.file_path)})")
+        else:
+            lines.append(f"### {file_name}")
+        lines.append("")
+        lines.append(f"Coverage: {fc.stats.coverage_percent:.1f}%")
+        lines.append("")
+
+        if fc.undocumented:
+            lines.append("Undocumented:")
+            for item in fc.undocumented[:MAX_UNDOCUMENTED_ITEMS]:
+                lines.append(f"- `{item}`")
+            if len(fc.undocumented) > MAX_UNDOCUMENTED_ITEMS:
+                lines.append(
+                    f"- ... and {len(fc.undocumented) - MAX_UNDOCUMENTED_ITEMS} more"
+                )
+        lines.append("")
+
+    return lines
+
+
 async def generate_coverage_page(
     index_status: IndexStatus,
     vector_store: VectorStore,
@@ -225,101 +347,9 @@ async def generate_coverage_page(
         "",
     ]
 
-    # Overall summary
-    emoji = _get_coverage_emoji(overall.coverage_percent)
-    lines.append("## Summary")
-    lines.append("")
-    lines.append(f"{emoji} **Overall Coverage: {overall.coverage_percent:.1f}%**")
-    lines.append("")
-    lines.append(
-        f"- **{overall.documented_entities}** / **{overall.total_entities}** entities documented"
-    )
-    lines.append("")
-
-    # Breakdown by type
-    lines.append("### By Type")
-    lines.append("")
-    lines.append("| Type | Documented | Total | Coverage |")
-    lines.append("|------|------------|-------|----------|")
-
-    if overall.total_classes > 0:
-        class_pct = (overall.documented_classes / overall.total_classes) * 100
-        lines.append(
-            f"| Classes | {overall.documented_classes} | {overall.total_classes} | {class_pct:.1f}% |"
-        )
-
-    if overall.total_functions > 0:
-        func_pct = (overall.documented_functions / overall.total_functions) * 100
-        lines.append(
-            f"| Functions | {overall.documented_functions} | {overall.total_functions} | {func_pct:.1f}% |"
-        )
-
-    if overall.total_methods > 0:
-        method_pct = (overall.documented_methods / overall.total_methods) * 100
-        lines.append(
-            f"| Methods | {overall.documented_methods} | {overall.total_methods} | {method_pct:.1f}% |"
-        )
-
-    lines.append("")
-
-    # Coverage by file
-    lines.append("## Coverage by File")
-    lines.append("")
-    lines.append("| File | Documented | Total | Coverage |")
-    lines.append("|------|------------|-------|----------|")
-
-    for fc in file_coverages:
-        if fc.stats.total_entities == 0:
-            continue
-
-        emoji = _get_coverage_emoji(fc.stats.coverage_percent)
-        file_name = Path(fc.file_path).name
-        if has_wiki_page(fc.file_path):
-            file_col = f"[{file_name}]({_get_wiki_link(fc.file_path)})"
-        else:
-            file_col = file_name
-
-        lines.append(
-            f"| {emoji} {file_col} | "
-            f"{fc.stats.documented_entities} | {fc.stats.total_entities} | "
-            f"{fc.stats.coverage_percent:.1f}% |"
-        )
-
-    lines.append("")
-
-    # Files needing attention (lowest coverage)
-    low_coverage_files = [
-        fc
-        for fc in file_coverages
-        if fc.stats.coverage_percent < COVERAGE_FAIR_THRESHOLD
-        and fc.stats.total_entities > 0
-    ]
-
-    if low_coverage_files:
-        lines.append("## Files Needing Attention")
-        lines.append("")
-        lines.append("Files with less than 50% documentation coverage:")
-        lines.append("")
-
-        for fc in low_coverage_files[:MAX_LOW_COVERAGE_FILES]:  # Top worst
-            file_name = Path(fc.file_path).name
-            if has_wiki_page(fc.file_path):
-                lines.append(f"### [{file_name}]({_get_wiki_link(fc.file_path)})")
-            else:
-                lines.append(f"### {file_name}")
-            lines.append("")
-            lines.append(f"Coverage: {fc.stats.coverage_percent:.1f}%")
-            lines.append("")
-
-            if fc.undocumented:
-                lines.append("Undocumented:")
-                for item in fc.undocumented[:MAX_UNDOCUMENTED_ITEMS]:
-                    lines.append(f"- `{item}`")
-                if len(fc.undocumented) > MAX_UNDOCUMENTED_ITEMS:
-                    lines.append(
-                        f"- ... and {len(fc.undocumented) - MAX_UNDOCUMENTED_ITEMS} more"
-                    )
-            lines.append("")
+    lines.extend(_render_summary_section(overall))
+    lines.extend(_render_file_table(file_coverages))
+    lines.extend(_render_low_coverage_section(file_coverages))
 
     # Legend
     lines.append("---")

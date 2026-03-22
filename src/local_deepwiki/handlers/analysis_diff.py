@@ -41,6 +41,181 @@ from local_deepwiki.security import Permission, get_access_controller
 
 logger = get_logger(__name__)
 
+# Compiled once; used by both handle_analyze_diff and handle_ask_about_diff.
+_GIT_REF_PATTERN = re.compile(r"^[a-zA-Z0-9_.\/\-~^]+$")
+
+
+def _validate_git_refs(
+    refs: list[tuple[str, str]],
+) -> None:
+    """Validate git ref strings to prevent injection.
+
+    Args:
+        refs: List of (field_name, ref_value) tuples.
+
+    Raises:
+        ValidationError: If any ref is invalid.
+    """
+    for ref_name, ref_value in refs:
+        if not _GIT_REF_PATTERN.match(ref_value):
+            raise ValidationError(
+                message=f"Invalid git ref: {ref_value}",
+                hint="Git refs must contain only alphanumeric chars, /, -, _, ~, ^, and .",
+                field=ref_name,
+                value=ref_value,
+            )
+
+
+async def _run_git_diff(
+    repo_path: Path,
+    base_ref: str,
+    head_ref: str,
+    *,
+    extra_args: list[str] | None = None,
+    timeout: int = GIT_DIFF_TIMEOUT,
+) -> subprocess.CompletedProcess[str] | list[TextContent]:
+    """Run a git diff command and return the result or an error response.
+
+    Args:
+        repo_path: Repository path.
+        base_ref: Base git ref.
+        head_ref: Head git ref.
+        extra_args: Additional args inserted after ``head_ref``.
+        timeout: Subprocess timeout in seconds.
+
+    Returns:
+        ``CompletedProcess`` on success, or ``list[TextContent]`` error response.
+    """
+    cmd = ["git", "diff"]
+    if extra_args:
+        cmd.extend(extra_args)
+    cmd.extend([base_ref, head_ref])
+
+    try:
+        diff_result = await asyncio.to_thread(
+            subprocess.run,
+            cmd,
+            cwd=str(repo_path),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        if diff_result.returncode != 0:
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps(
+                        {
+                            "status": "error",
+                            "error": f"git diff failed: {sanitize_error_message(diff_result.stderr.strip())}",
+                        },
+                        indent=2,
+                    ),
+                )
+            ]
+        return diff_result
+    except subprocess.TimeoutExpired:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "error",
+                        "error": f"git diff timed out after {timeout} seconds",
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+
+def _parse_diff_name_status(stdout: str) -> list[dict[str, Any]]:
+    """Parse ``git diff --name-status`` output into changed-file dicts.
+
+    Args:
+        stdout: Raw stdout from the git diff command.
+
+    Returns:
+        List of dicts with ``file`` and ``status`` keys.
+    """
+    status_map = {
+        "A": "added",
+        "M": "modified",
+        "D": "deleted",
+        "R": "renamed",
+    }
+    changed_files: list[dict[str, Any]] = []
+    for line in stdout.strip().splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t", 1)
+        if len(parts) == 2:
+            status_code, file_name = parts
+            status = status_map.get(status_code[0], "modified")
+            changed_files.append({"file": file_name, "status": status})
+    return changed_files
+
+
+async def _fetch_per_file_diff_content(
+    repo_path: Path,
+    base_ref: str,
+    head_ref: str,
+    changed_files: list[dict[str, Any]],
+) -> None:
+    """Mutate *changed_files* in-place to add ``diff_content`` per file.
+
+    Args:
+        repo_path: Repository path.
+        base_ref: Base git ref.
+        head_ref: Head git ref.
+        changed_files: Changed-file dicts to augment.
+    """
+    for cf in changed_files:
+        try:
+            file_diff = await asyncio.to_thread(
+                subprocess.run,
+                [
+                    "git",
+                    "diff",
+                    base_ref,
+                    head_ref,
+                    "--",
+                    cf["file"],
+                ],
+                cwd=str(repo_path),
+                capture_output=True,
+                text=True,
+                timeout=GIT_FILE_DIFF_TIMEOUT,
+            )
+            cf["diff_content"] = file_diff.stdout[:MAX_DIFF_CONTENT_LENGTH]
+        except (subprocess.TimeoutExpired, OSError):
+            cf["diff_content"] = "(diff content unavailable)"
+
+
+def _build_diff_summary(
+    changed_files: list[dict[str, Any]],
+    affected_wiki_pages: list[dict[str, str]],
+    affected_entities: list[dict[str, str]],
+) -> dict[str, int]:
+    """Build a summary dict from diff analysis results.
+
+    Args:
+        changed_files: Changed-file dicts.
+        affected_wiki_pages: Wiki pages affected by the diff.
+        affected_entities: Code entities affected by the diff.
+
+    Returns:
+        Summary dict with counts.
+    """
+    return {
+        "total_changed_files": len(changed_files),
+        "added": sum(1 for f in changed_files if f["status"] == "added"),
+        "modified": sum(1 for f in changed_files if f["status"] == "modified"),
+        "deleted": sum(1 for f in changed_files if f["status"] == "deleted"),
+        "affected_wiki_pages": len(affected_wiki_pages),
+        "affected_entities": len(affected_entities),
+    }
+
 
 async def _build_structured_diff_result(
     repo_path: Path,
@@ -121,134 +296,52 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    # Validate git refs to prevent injection
-    ref_pattern = re.compile(r"^[a-zA-Z0-9_.\/\-~^]+$")
-    for ref_name, ref_value in [
-        ("base_ref", validated.base_ref),
-        ("head_ref", validated.head_ref),
-    ]:
-        if not ref_pattern.match(ref_value):
-            raise ValidationError(
-                message=f"Invalid git ref: {ref_value}",
-                hint="Git refs must contain only alphanumeric chars, /, -, _, ~, ^, and .",
-                field=ref_name,
-                value=ref_value,
-            )
+    _validate_git_refs(
+        [
+            ("base_ref", validated.base_ref),
+            ("head_ref", validated.head_ref),
+        ]
+    )
 
     # Run git diff --name-status
-    try:
-        diff_result = await asyncio.to_thread(
-            subprocess.run,
-            [
-                "git",
-                "diff",
-                "--name-status",
-                validated.base_ref,
-                validated.head_ref,
-            ],
-            cwd=str(repo_path),
-            capture_output=True,
-            text=True,
-            timeout=GIT_DIFF_TIMEOUT,
-        )
-        if diff_result.returncode != 0:
-            return [
-                TextContent(
-                    type="text",
-                    text=json.dumps(
-                        {
-                            "status": "error",
-                            "error": f"git diff failed: {sanitize_error_message(diff_result.stderr.strip())}",
-                        },
-                        indent=2,
-                    ),
-                )
-            ]
-    except subprocess.TimeoutExpired:
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "error",
-                        "error": f"git diff timed out after {GIT_DIFF_TIMEOUT} seconds",
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+    diff_result = await _run_git_diff(
+        repo_path,
+        validated.base_ref,
+        validated.head_ref,
+        extra_args=["--name-status"],
+    )
+    if isinstance(diff_result, list):
+        return diff_result
 
-    # Parse git diff output
-    status_map = {
-        "A": "added",
-        "M": "modified",
-        "D": "deleted",
-        "R": "renamed",
-    }
-    changed_files: list[dict[str, Any]] = []
-    for line in diff_result.stdout.strip().splitlines():
-        if not line.strip():
-            continue
-        parts = line.split("\t", 1)
-        if len(parts) == 2:
-            status_code, file_name = parts
-            status = status_map.get(status_code[0], "modified")
-            changed_files.append({"file": file_name, "status": status})
+    changed_files = _parse_diff_name_status(diff_result.stdout)
 
     if not changed_files:
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "success",
-                        "base_ref": validated.base_ref,
-                        "head_ref": validated.head_ref,
-                        "message": "No file changes found between the specified refs.",
-                        "changed_files": [],
-                        "affected_wiki_pages": [],
-                        "affected_entities": [],
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+        return make_tool_text_content(
+            "analyze_diff",
+            {
+                "status": "success",
+                "base_ref": validated.base_ref,
+                "head_ref": validated.head_ref,
+                "message": "No file changes found between the specified refs.",
+                "changed_files": [],
+                "affected_wiki_pages": [],
+                "affected_entities": [],
+            },
+        )
 
-    # Optionally get diff content per file
     if validated.include_content:
-        for cf in changed_files:
-            try:
-                file_diff = await asyncio.to_thread(
-                    subprocess.run,
-                    [
-                        "git",
-                        "diff",
-                        validated.base_ref,
-                        validated.head_ref,
-                        "--",
-                        cf["file"],
-                    ],
-                    cwd=str(repo_path),
-                    capture_output=True,
-                    text=True,
-                    timeout=GIT_FILE_DIFF_TIMEOUT,
-                )
-                cf["diff_content"] = file_diff.stdout[:MAX_DIFF_CONTENT_LENGTH]
-            except (subprocess.TimeoutExpired, OSError):
-                cf["diff_content"] = "(diff content unavailable)"
+        await _fetch_per_file_diff_content(
+            repo_path,
+            validated.base_ref,
+            validated.head_ref,
+            changed_files,
+        )
 
     affected_wiki_pages, affected_entities = await _build_structured_diff_result(
         repo_path, changed_files
     )
 
-    summary = {
-        "total_changed_files": len(changed_files),
-        "added": sum(1 for f in changed_files if f["status"] == "added"),
-        "modified": sum(1 for f in changed_files if f["status"] == "modified"),
-        "deleted": sum(1 for f in changed_files if f["status"] == "deleted"),
-        "affected_wiki_pages": len(affected_wiki_pages),
-        "affected_entities": len(affected_entities),
-    }
+    summary = _build_diff_summary(changed_files, affected_wiki_pages, affected_entities)
 
     result = {
         "status": "success",
@@ -366,6 +459,45 @@ async def _synthesize_diff_answer(
         return await llm.generate(prompt, system_prompt=system_prompt)
 
 
+async def _rag_answer_about_diff(
+    question: str,
+    diff_text: str,
+    repo_path: Path,
+    validated: AskAboutDiffArgs,
+) -> tuple[str, list[dict[str, Any]]]:
+    """Run RAG retrieval and LLM synthesis for a diff question.
+
+    Args:
+        question: The user's question.
+        diff_text: (Possibly truncated) diff text.
+        repo_path: Resolved repository path.
+        validated: Validated request arguments.
+
+    Returns:
+        Tuple of (answer_string, sources_list).
+    """
+    config = get_config()
+    vector_db_path = config.get_vector_db_path(repo_path)
+    wiki_path = config.get_wiki_path(repo_path)
+    embedding_provider = get_embedding_provider(config.embedding)
+
+    additional_context, sources = await _prepare_diff_context(
+        question, validated.max_context, vector_db_path, embedding_provider
+    )
+
+    answer = await _synthesize_diff_answer(
+        question,
+        diff_text,
+        validated.base_ref,
+        validated.head_ref,
+        additional_context,
+        wiki_path,
+        config,
+        embedding_provider,
+    )
+    return answer, sources
+
+
 @handle_tool_errors
 async def handle_ask_about_diff(args: dict[str, Any]) -> list[TextContent]:
     """Handle ask_about_diff tool call.
@@ -387,73 +519,33 @@ async def handle_ask_about_diff(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    # Validate git refs to prevent injection
-    ref_pattern = re.compile(r"^[a-zA-Z0-9_.\/\-~^]+$")
-    for ref_name, ref_value in [
-        ("base_ref", validated.base_ref),
-        ("head_ref", validated.head_ref),
-    ]:
-        if not ref_pattern.match(ref_value):
-            raise ValidationError(
-                message=f"Invalid git ref: {ref_value}",
-                hint="Git refs must contain only alphanumeric chars, /, -, _, ~, ^, and .",
-                field=ref_name,
-                value=ref_value,
-            )
+    _validate_git_refs(
+        [
+            ("base_ref", validated.base_ref),
+            ("head_ref", validated.head_ref),
+        ]
+    )
 
     # Get the diff
-    try:
-        diff_result = await asyncio.to_thread(
-            subprocess.run,
-            ["git", "diff", validated.base_ref, validated.head_ref],
-            cwd=str(repo_path),
-            capture_output=True,
-            text=True,
-            timeout=GIT_DIFF_TIMEOUT,
-        )
-        if diff_result.returncode != 0:
-            return [
-                TextContent(
-                    type="text",
-                    text=json.dumps(
-                        {
-                            "status": "error",
-                            "error": f"git diff failed: {sanitize_error_message(diff_result.stderr.strip())}",
-                        },
-                        indent=2,
-                    ),
-                )
-            ]
-    except subprocess.TimeoutExpired:
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "error",
-                        "error": f"git diff timed out after {GIT_DIFF_TIMEOUT} seconds",
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+    diff_result = await _run_git_diff(
+        repo_path,
+        validated.base_ref,
+        validated.head_ref,
+    )
+    if isinstance(diff_result, list):
+        return diff_result
 
     diff_text = diff_result.stdout
     if not diff_text.strip():
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "success",
-                        "question": question,
-                        "answer": "No changes found between the specified refs. There is nothing to analyze.",
-                        "sources": [],
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+        return make_tool_text_content(
+            "ask_about_diff",
+            {
+                "status": "success",
+                "question": question,
+                "answer": "No changes found between the specified refs. There is nothing to analyze.",
+                "sources": [],
+            },
+        )
 
     # Truncate diff if very large
     if len(diff_text) > MAX_DIFF_TEXT_LENGTH:
@@ -462,24 +554,11 @@ async def handle_ask_about_diff(args: dict[str, Any]) -> list[TextContent]:
             + f"\n... (diff truncated, showing first {MAX_DIFF_TEXT_LENGTH} chars)"
         )
 
-    config = get_config()
-    vector_db_path = config.get_vector_db_path(repo_path)
-    wiki_path = config.get_wiki_path(repo_path)
-    embedding_provider = get_embedding_provider(config.embedding)
-
-    additional_context, sources = await _prepare_diff_context(
-        question, validated.max_context, vector_db_path, embedding_provider
-    )
-
-    answer = await _synthesize_diff_answer(
+    answer, sources = await _rag_answer_about_diff(
         question,
         diff_text,
-        validated.base_ref,
-        validated.head_ref,
-        additional_context,
-        wiki_path,
-        config,
-        embedding_provider,
+        repo_path,
+        validated,
     )
 
     result = {
