@@ -288,40 +288,36 @@ async def generate_overview_page(ctx: WikiPipelineContext) -> WikiPage:
     )
 
 
-async def generate_architecture_page(ctx: WikiPipelineContext) -> WikiPage:
-    """Generate architecture documentation with diagrams and grounded facts.
+async def _gather_architecture_context(
+    vector_store: VectorStore,
+    max_chunk_content_chars: int,
+    repo_path: Path | None,
+    manifest: ProjectManifest | None,
+) -> tuple[str, str, str, str, str | None]:
+    """Gather all context needed for the architecture page LLM prompt.
+
+    Runs four parallel vector searches, deduplicates results, and builds
+    the formatted strings consumed by the prompt template.
 
     Args:
-        ctx: Immutable pipeline context bundling shared parameters.
+        vector_store: Vector store for code search.
+        max_chunk_content_chars: Max characters per chunk in the prompt.
+        repo_path: Repository root path (may be None).
+        manifest: Parsed project manifest (may be None).
 
     Returns:
-        WikiPage with architecture documentation.
+        Tuple of (code_context, class_list, dir_structure, dep_context,
+        authoritative_docs) strings.
     """
-    index_status = ctx.index_status
-    vector_store = ctx.vector_store
-    llm = ctx.llm
-    system_prompt = ctx.system_prompt
-    manifest = ctx.manifest
-    repo_path = ctx.repo_path
-    max_chunk_content_chars = ctx.max_chunk_content_chars
-
-    # Read authoritative project docs (CLAUDE.md, README.md, etc.)
-    authoritative_docs = _read_authoritative_docs(repo_path)
-
-    # Gather multiple types of context for comprehensive architecture view (parallel)
     core_results, pattern_results, flow_results, class_results = await asyncio.gather(
-        # 1. Search for core/main components
         vector_store.search("main core primary class module", limit=15),
-        # 2. Search for architectural patterns
         vector_store.search("factory provider service handler controller", limit=10),
-        # 3. Search for data flow / pipeline
         vector_store.search("process pipeline flow parse index generate", limit=10),
-        # 4. Get all classes for class list
         vector_store.search("class def __init__", limit=30),
     )
 
     # Combine and deduplicate results
-    seen_chunks = set()
+    seen_chunks: set[tuple[str, str | None]] = set()
     all_chunks = []
     for r in core_results + pattern_results + flow_results:
         chunk_key = (r.chunk.file_path, r.chunk.name)
@@ -329,46 +325,55 @@ async def generate_architecture_page(ctx: WikiPipelineContext) -> WikiPage:
             seen_chunks.add(chunk_key)
             all_chunks.append(r)
 
-    # Build detailed context with more content per chunk
-    context_parts = []
-    for r in all_chunks[:40]:
-        context_parts.append(
-            f"File: {r.chunk.file_path}\n"
-            f"Type: {r.chunk.chunk_type.value}\n"
-            f"Name: {r.chunk.name}\n"
-            f"```\n{r.chunk.content[:max_chunk_content_chars]}\n```"
-        )
-
+    context_parts = [
+        f"File: {r.chunk.file_path}\n"
+        f"Type: {r.chunk.chunk_type.value}\n"
+        f"Name: {r.chunk.name}\n"
+        f"```\n{r.chunk.content[:max_chunk_content_chars]}\n```"
+        for r in all_chunks[:40]
+    ]
     code_context = "\n\n".join(context_parts)
 
-    # Extract class names for reference
-    class_names = set()
-    for r in class_results:
-        if r.chunk.chunk_type.value == "class" and r.chunk.name:
-            class_names.add(r.chunk.name)
-
+    class_names = {
+        r.chunk.name
+        for r in class_results
+        if r.chunk.chunk_type.value == "class" and r.chunk.name
+    }
     class_list = (
         ", ".join(sorted(class_names)[:30]) if class_names else "No classes found"
     )
 
-    # Include directory structure for module organization
-    dir_structure = ""
-    if repo_path:
-        dir_structure = get_directory_tree(repo_path, max_depth=2, max_items=25)
+    dir_structure = (
+        get_directory_tree(repo_path, max_depth=2, max_items=25) if repo_path else ""
+    )
 
-    # Include dependencies for technology context
     dep_context = ""
     if manifest and manifest.dependencies:
         dep_context = "Key dependencies: " + ", ".join(
             sorted(manifest.dependencies.keys())[:15]
         )
 
-    auth_section = ""
-    if authoritative_docs:
-        auth_section = f"""AUTHORITATIVE PROJECT DOCUMENTATION (HIGH PRIORITY — the project maintainer wrote this):
-{authoritative_docs}
+    authoritative_docs = _read_authoritative_docs(repo_path)
 
-"""
+    return code_context, class_list, dir_structure, dep_context, authoritative_docs
+
+
+async def generate_architecture_page(ctx: WikiPipelineContext) -> WikiPage:
+    """Generate architecture documentation with diagrams and grounded facts."""
+    arch_ctx = await _gather_architecture_context(
+        ctx.vector_store,
+        ctx.max_chunk_content_chars,
+        ctx.repo_path,
+        ctx.manifest,
+    )
+    code_context, class_list, dir_structure, dep_context, authoritative_docs = arch_ctx
+
+    auth_section = (
+        f"AUTHORITATIVE PROJECT DOCUMENTATION (HIGH PRIORITY "
+        f"— the project maintainer wrote this):\n{authoritative_docs}\n\n"
+        if authoritative_docs
+        else ""
+    )
 
     prompt = f"""Generate architecture documentation based ONLY on the code provided below.
 
@@ -414,15 +419,12 @@ CRITICAL CONSTRAINTS:
 
 Format as markdown with clear sections."""
 
-    content = await llm.generate(prompt, system_prompt=system_prompt)
-
-    # Add link to detailed dependency graph
-    content += "\n\n## Module Dependencies\n\n"
+    content = await ctx.llm.generate(prompt, system_prompt=ctx.system_prompt)
     content += (
+        "\n\n## Module Dependencies\n\n"
         "For a detailed view of module interdependencies including circular dependency "
+        "detection, see the [Dependency Graph](dependency-graph.md) page.\n"
     )
-    content += "detection, see the [Dependency Graph](dependency-graph.md) page.\n"
-
     return WikiPage(
         path="architecture.md",
         title="Architecture",

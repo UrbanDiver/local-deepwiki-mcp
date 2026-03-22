@@ -24,6 +24,7 @@ from .schema import (
     VALID_LANGUAGES,
     SearchFeedback,
     SearchProfile,
+    SearchProfileConfig,
     SearchResultPage,
 )
 import local_deepwiki.core.vectorstore.search_pipeline as search_pipeline
@@ -94,6 +95,196 @@ def build_cache_filters(
     if chunk_type:
         cache_filters["chunk_type"] = chunk_type
     return cache_filters
+
+
+class PaginationEngine:
+    """Handles paginated search over a ``SearchEngine``.
+
+    Extracted from ``SearchEngine`` to keep its method count below the god-class
+    threshold.  Uses composition: receives a ``SearchEngine`` reference and
+    delegates to it for shared helpers (config resolution, table access,
+    embedding, row conversion, fuzzy config).
+    """
+
+    def __init__(self, engine: "SearchEngine") -> None:
+        self._engine = engine
+
+    # -----------------------------------------------------------------
+    # Helpers
+    # -----------------------------------------------------------------
+
+    @staticmethod
+    def _parse_cursor_offset(cursor: str | None, offset: int) -> int:
+        """Parse a pagination cursor string into an integer offset."""
+        if not cursor:
+            return offset
+        try:
+            if cursor.startswith("offset:"):
+                return int(cursor[7:])
+        except (ValueError, IndexError):
+            logger.warning("Invalid cursor format: %s, using offset=%d", cursor, offset)
+        return offset
+
+    def _estimate_total_results(
+        self,
+        table: Any,
+        query_embedding: list[float],
+        request: SearchRequest,
+        profile_config: SearchProfileConfig,
+        effective_min_similarity: float,
+        offset: int,
+    ) -> tuple[list[dict], int]:
+        """Fetch candidates and estimate total result count.
+
+        Returns:
+            Tuple of (filtered result rows, total estimate).
+        """
+        filter_expr_parts = build_search_filters(request.language, request.chunk_type)
+        filter_expr = " AND ".join(filter_expr_parts) if filter_expr_parts else None
+
+        base_count_limit = int(1000 * profile_config.fetch_multiplier)
+        count_limit = offset + request.limit + base_count_limit
+        count_search = table.search(query_embedding).limit(count_limit)
+        if filter_expr:
+            count_search = count_search.where(filter_expr)
+        all_results = count_search.to_list()
+
+        # Similarity threshold filtering
+        all_results = [
+            row
+            for row in all_results
+            if (1.0 - row.get("_distance", 0) ** 2 / 2.0) >= effective_min_similarity
+        ]
+
+        # Path pattern filtering
+        if request.path_pattern:
+            pre_filter = [
+                SearchResult(
+                    chunk=self._engine._row_to_chunk(row), score=0, highlights=[]
+                )
+                for row in all_results
+            ]
+            filtered_sr = search_postprocess.apply_post_filters(
+                pre_filter, request.path_pattern
+            )
+            filtered_ids = {sr.chunk.id for sr in filtered_sr}
+            all_results = [
+                row
+                for row in all_results
+                if self._engine._row_to_chunk(row).id in filtered_ids
+            ]
+
+        return all_results, len(all_results)
+
+    # -----------------------------------------------------------------
+    # search_paginated()
+    # -----------------------------------------------------------------
+
+    async def search_paginated(
+        self,
+        query: str,
+        limit: int = 10,
+        offset: int = 0,
+        *,
+        language: str | None = None,
+        chunk_type: str | None = None,
+        path_pattern: str | None = None,
+        use_fuzzy: bool = False,
+        fuzzy_weight: float = 0.3,
+        cursor: str | None = None,
+        profile: SearchProfile | str | None = None,
+        min_similarity: float | None = None,
+    ) -> SearchResultPage:
+        """Search for similar code chunks with pagination support."""
+        # Build a SearchRequest value object to centralise parameter resolution,
+        # eliminating the duplicated profile / filter / fuzzy logic that was
+        # previously inlined here.  Pagination-specific execution (cursor
+        # parsing, total count estimation, offset slicing, SearchResultPage
+        # construction) is intentionally NOT delegated to search_from_request().
+        request = SearchRequest(
+            query=query,
+            limit=limit,
+            search_mode=None,  # paginated search always uses vector mode
+            language=language,
+            chunk_type=chunk_type,
+            path_pattern=path_pattern,
+            use_fuzzy=use_fuzzy,
+            fuzzy_weight=fuzzy_weight,
+            profile=profile,
+            min_similarity=min_similarity,
+            auto_suggest=False,  # suggestions not supported in paginated mode
+        )
+
+        table = self._engine._get_table()
+        if table is None:
+            logger.debug("No table found for search")
+            return SearchResultPage(
+                results=[],
+                total=0,
+                offset=offset,
+                limit=limit,
+                has_more=False,
+            )
+
+        _, resolved_profile, profile_config, effective_min_similarity = (
+            self._engine._resolve_search_config(request)
+        )
+
+        logger.debug(
+            "Paginated search for: '%s...' limit=%d offset=%d profile=%s",
+            request.query[:50],
+            request.limit,
+            offset,
+            resolved_profile.value,
+        )
+
+        offset = self._parse_cursor_offset(cursor, offset)
+
+        query_embedding = (
+            await self._engine._embedding_provider.embed([request.query])
+        )[0]
+
+        all_results, total_estimate = self._estimate_total_results(
+            table,
+            query_embedding,
+            request,
+            profile_config,
+            effective_min_similarity,
+            offset,
+        )
+
+        # Apply pagination and convert rows to SearchResult objects
+        paginated_rows = all_results[offset : offset + request.limit]
+        search_results: list[SearchResult] = []
+        for row in paginated_rows:
+            dist = row.get("_distance", 0)
+            score = 1.0 - dist * dist / 2.0
+            if score < effective_min_similarity:
+                continue
+            chunk = self._engine._row_to_chunk(row)
+            search_results.append(SearchResult(chunk=chunk, score=score, highlights=[]))
+
+        # Apply fuzzy re-ranking via the shared postprocess module
+        if request.use_fuzzy and search_results:
+            search_results, _ = search_postprocess.apply_fuzzy_reranking(
+                search_results,
+                request.query,
+                request.fuzzy_weight,
+                use_fuzzy=True,
+                fuzzy_config=self._engine._fuzzy_search_config,
+            )
+
+        has_more = offset + request.limit < total_estimate
+        next_cursor = f"offset:{offset + request.limit}" if has_more else None
+
+        return SearchResultPage(
+            results=search_results,
+            total=total_estimate,
+            offset=offset,
+            limit=request.limit,
+            has_more=has_more,
+            cursor=next_cursor,
+        )
 
 
 class SearchEngine:
@@ -224,6 +415,90 @@ class SearchEngine:
         return resolved, SEARCH_PROFILES[resolved]
 
     # -----------------------------------------------------------------
+    # Private helpers extracted from search_from_request
+    # -----------------------------------------------------------------
+
+    def _resolve_search_config(
+        self, request: SearchRequest
+    ) -> tuple[str, SearchProfile, SearchProfileConfig, float]:
+        """Resolve effective search mode, profile, and min similarity from request."""
+        effective_mode = resolve_search_mode(
+            request.search_mode, self._default_search_mode
+        )
+        resolved_profile, profile_config = self.resolve_search_profile(request.profile)
+        effective_min_similarity = (
+            request.min_similarity
+            if request.min_similarity is not None
+            else profile_config.min_similarity
+        )
+        return (
+            effective_mode,
+            resolved_profile,
+            profile_config,
+            effective_min_similarity,
+        )
+
+    def _compute_fetch_limit(
+        self,
+        request: SearchRequest,
+        profile_config: SearchProfileConfig,
+    ) -> int:
+        """Compute the number of candidates to fetch before post-processing."""
+        base_multiplier = profile_config.fetch_multiplier
+        needs_extra = bool(request.path_pattern or request.use_fuzzy)
+        if needs_extra:
+            base_multiplier = max(base_multiplier, 3.0)
+        if self._adaptive_search_enabled:
+            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(
+                request.query, request.limit
+            )
+            fetch_limit = max(int(request.limit * base_multiplier), adaptive_depth)
+        else:
+            fetch_limit = int(request.limit * base_multiplier)
+        return min(fetch_limit, profile_config.rerank_candidates)
+
+    def _try_cache_lookup(
+        self,
+        request: SearchRequest,
+        query_embedding: list[float],
+        resolved_profile: SearchProfile,
+        effective_min_similarity: float,
+        effective_mode: str,
+    ) -> list[SearchResult] | None:
+        """Check the search cache for a matching result. Returns None on miss."""
+        cache_filters = build_cache_filters(
+            request.limit,
+            resolved_profile,
+            effective_min_similarity,
+            effective_mode,
+            request.language,
+            request.chunk_type,
+        )
+        use_cache = (
+            not request.use_fuzzy
+            and not request.path_pattern
+            and effective_mode != "keyword"
+        )
+        if use_cache:
+            cached = self._get_search_cache().get(query_embedding, cache_filters)
+            if cached is not None:
+                return cached
+        return None
+
+    # -----------------------------------------------------------------
+    # Pagination (delegated to PaginationEngine)
+    # -----------------------------------------------------------------
+
+    @property
+    def _pagination(self) -> PaginationEngine:
+        """Lazily create and return the ``PaginationEngine``."""
+        engine: PaginationEngine | None = getattr(self, "_pagination_engine", None)
+        if engine is None:
+            engine = PaginationEngine(self)
+            self._pagination_engine = engine
+        return engine
+
+    # -----------------------------------------------------------------
     # search_from_request() -- SearchRequest-based entry point
     # -----------------------------------------------------------------
 
@@ -252,14 +527,8 @@ class SearchEngine:
             return []
 
         # Resolve configuration
-        effective_mode = resolve_search_mode(
-            request.search_mode, self._default_search_mode
-        )
-        resolved_profile, profile_config = self.resolve_search_profile(request.profile)
-        effective_min_similarity = (
-            request.min_similarity
-            if request.min_similarity is not None
-            else profile_config.min_similarity
+        effective_mode, resolved_profile, profile_config, effective_min_similarity = (
+            self._resolve_search_config(request)
         )
 
         logger.debug(
@@ -274,43 +543,28 @@ class SearchEngine:
         filters = build_search_filters(request.language, request.chunk_type)
 
         # Compute embedding (needed for vector/hybrid mode and cache)
-        needs_embedding = effective_mode != "keyword"
         query_embedding: list[float] = []
-        if needs_embedding:
+        if effective_mode != "keyword":
             query_embedding = (await self._embedding_provider.embed([request.query]))[0]
 
-        # Check cache
-        cache_filters = build_cache_filters(
-            request.limit,
+        # Check cache (returns None on miss)
+        cached_results = self._try_cache_lookup(
+            request,
+            query_embedding,
             resolved_profile,
             effective_min_similarity,
             effective_mode,
-            request.language,
-            request.chunk_type,
         )
+        if cached_results is not None:
+            return cached_results
         use_cache = (
-            not request.use_fuzzy and not request.path_pattern and needs_embedding
+            not request.use_fuzzy
+            and not request.path_pattern
+            and effective_mode != "keyword"
         )
-        if use_cache:
-            cached_results = self._get_search_cache().get(
-                query_embedding, cache_filters
-            )
-            if cached_results is not None:
-                return cached_results
 
-        # Compute fetch limit (inlined from removed compute_fetch_limit method)
-        base_multiplier = profile_config.fetch_multiplier
-        needs_extra = bool(request.path_pattern or request.use_fuzzy)
-        if needs_extra:
-            base_multiplier = max(base_multiplier, 3.0)
-        if self._adaptive_search_enabled:
-            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(
-                request.query, request.limit
-            )
-            fetch_limit = max(int(request.limit * base_multiplier), adaptive_depth)
-        else:
-            fetch_limit = int(request.limit * base_multiplier)
-        fetch_limit = min(fetch_limit, profile_config.rerank_candidates)
+        # Compute fetch limit
+        fetch_limit = self._compute_fetch_limit(request, profile_config)
 
         # Execute search pipeline based on mode
         search_results = search_pipeline.dispatch_search(
@@ -356,8 +610,16 @@ class SearchEngine:
                 request.query, avg_score, len(search_results), fetch_limit
             )
         if use_cache and not auto_fuzzy_enabled:
+            store_filters = build_cache_filters(
+                request.limit,
+                resolved_profile,
+                effective_min_similarity,
+                effective_mode,
+                request.language,
+                request.chunk_type,
+            )
             self._get_search_cache().set(
-                request.query, query_embedding, search_results, cache_filters
+                request.query, query_embedding, search_results, store_filters
             )
 
         return search_results
@@ -422,7 +684,7 @@ class SearchEngine:
         return await self.search_from_request(request, store=store)
 
     # -----------------------------------------------------------------
-    # search_paginated()
+    # search_paginated() -- thin delegation to PaginationEngine
     # -----------------------------------------------------------------
 
     async def search_paginated(
@@ -440,129 +702,22 @@ class SearchEngine:
         profile: SearchProfile | str | None = None,
         min_similarity: float | None = None,
     ) -> SearchResultPage:
-        """Search for similar code chunks with pagination support."""
-        # Build a SearchRequest value object to centralise parameter resolution,
-        # eliminating the duplicated profile / filter / fuzzy logic that was
-        # previously inlined here.  Pagination-specific execution (cursor
-        # parsing, total count estimation, offset slicing, SearchResultPage
-        # construction) is intentionally NOT delegated to search_from_request().
-        request = SearchRequest(
-            query=query,
-            limit=limit,
-            search_mode=None,  # paginated search always uses vector mode
+        """Search for similar code chunks with pagination support.
+
+        Delegates to ``PaginationEngine.search_paginated``.
+        """
+        return await self._pagination.search_paginated(
+            query,
+            limit,
+            offset,
             language=language,
             chunk_type=chunk_type,
             path_pattern=path_pattern,
             use_fuzzy=use_fuzzy,
             fuzzy_weight=fuzzy_weight,
+            cursor=cursor,
             profile=profile,
             min_similarity=min_similarity,
-            auto_suggest=False,  # suggestions not supported in paginated mode
-        )
-
-        table = self._get_table()
-        if table is None:
-            logger.debug("No table found for search")
-            return SearchResultPage(
-                results=[],
-                total=0,
-                offset=offset,
-                limit=limit,
-                has_more=False,
-            )
-
-        resolved_profile, profile_config = self.resolve_search_profile(request.profile)
-        effective_min_similarity = (
-            request.min_similarity
-            if request.min_similarity is not None
-            else profile_config.min_similarity
-        )
-
-        logger.debug(
-            "Paginated search for: '%s...' limit=%d offset=%d profile=%s",
-            request.query[:50],
-            request.limit,
-            offset,
-            resolved_profile.value,
-        )
-
-        # Parse cursor if provided (format: "offset:{number}")
-        if cursor:
-            try:
-                if cursor.startswith("offset:"):
-                    offset = int(cursor[7:])
-            except (ValueError, IndexError):
-                logger.warning(
-                    "Invalid cursor format: %s, using offset=%d", cursor, offset
-                )
-
-        query_embedding = (await self._embedding_provider.embed([request.query]))[0]
-
-        filters = build_search_filters(request.language, request.chunk_type)
-        filter_expr = " AND ".join(filters) if filters else None
-
-        # Fetch extra candidates for total count estimation
-        base_count_limit = int(1000 * profile_config.fetch_multiplier)
-        count_limit = offset + request.limit + base_count_limit
-        count_search = table.search(query_embedding).limit(count_limit)
-        if filter_expr:
-            count_search = count_search.where(filter_expr)
-        all_results = count_search.to_list()
-
-        # Apply similarity threshold filtering
-        all_results = [
-            row
-            for row in all_results
-            if (1.0 - row.get("_distance", 0) ** 2 / 2.0) >= effective_min_similarity
-        ]
-        total_estimate = len(all_results)
-
-        # Apply path pattern filter for accurate count
-        if request.path_pattern:
-            pre_filter = [
-                SearchResult(chunk=self._row_to_chunk(row), score=0, highlights=[])
-                for row in all_results
-            ]
-            filtered_results_sr = search_postprocess.apply_post_filters(
-                pre_filter, request.path_pattern
-            )
-            filtered_ids = {sr.chunk.id for sr in filtered_results_sr}
-            all_results = [
-                row for row in all_results if self._row_to_chunk(row).id in filtered_ids
-            ]
-            total_estimate = len(all_results)
-
-        # Apply pagination and convert rows to SearchResult objects
-        paginated_rows = all_results[offset : offset + request.limit]
-        search_results: list[SearchResult] = []
-        for row in paginated_rows:
-            dist = row.get("_distance", 0)
-            score = 1.0 - dist * dist / 2.0
-            if score < effective_min_similarity:
-                continue
-            chunk = self._row_to_chunk(row)
-            search_results.append(SearchResult(chunk=chunk, score=score, highlights=[]))
-
-        # Apply fuzzy re-ranking via the shared postprocess module
-        if request.use_fuzzy and search_results:
-            search_results, _ = search_postprocess.apply_fuzzy_reranking(
-                search_results,
-                request.query,
-                request.fuzzy_weight,
-                use_fuzzy=True,
-                fuzzy_config=self._fuzzy_search_config,
-            )
-
-        has_more = offset + request.limit < total_estimate
-        next_cursor = f"offset:{offset + request.limit}" if has_more else None
-
-        return SearchResultPage(
-            results=search_results,
-            total=total_estimate,
-            offset=offset,
-            limit=request.limit,
-            has_more=has_more,
-            cursor=next_cursor,
         )
 
     # -----------------------------------------------------------------

@@ -144,43 +144,23 @@ class FileParsingPipeline:
                 window_files = files_to_process[window_start:window_end]
                 futures = {executor.submit(_parse, fp): fp for fp in window_files}
 
-                for future in as_completed(futures):
-                    file_path = futures[future]
-                    if progress_callback:
-                        progress_callback(
-                            f"Parsing {file_path.name}",
-                            files_completed,
-                            file_count,
-                        )
-
-                    result = future.result()
-                    skipped = await self._handle_parse_result(
-                        result,
-                        progress_callback,
-                        files_completed,
-                        file_count,
-                        chunk_batch,
-                        processed_files,
-                    )
-                    if skipped:
-                        error_count += 1
-                        files_completed += 1
-                        continue
-
-                    if len(chunk_batch) >= self.batch_size:
-                        chunks_stored = await self._process_chunk_batch(
-                            chunk_batch,
-                            full_rebuild,
-                            is_first_batch,
-                            progress_callback,
-                            files_completed,
-                            file_count,
-                        )
-                        total_chunks_processed += chunks_stored
-                        is_first_batch = False
-                        chunk_batch.clear()
-
-                    files_completed += 1
+                (
+                    files_completed,
+                    error_count,
+                    total_chunks_processed,
+                    is_first_batch,
+                ) = await self._process_window(
+                    futures,
+                    files_completed,
+                    error_count,
+                    file_count,
+                    chunk_batch,
+                    processed_files,
+                    total_chunks_processed,
+                    is_first_batch,
+                    full_rebuild,
+                    progress_callback,
+                )
 
         # Process any remaining chunks in the final batch
         if chunk_batch:
@@ -195,9 +175,98 @@ class FileParsingPipeline:
             )
             total_chunks_processed += chunks_stored
 
-        # Log performance metrics
+        self._log_parse_metrics(
+            parse_start_time, len(processed_files), total_chunks_processed, error_count
+        )
+
+        return processed_files, total_chunks_processed
+
+    async def _process_window(
+        self,
+        futures: dict,
+        files_completed: int,
+        error_count: int,
+        file_count: int,
+        chunk_batch: list[CodeChunk],
+        processed_files: list[FileInfo],
+        total_chunks_processed: int,
+        is_first_batch: bool,
+        full_rebuild: bool,
+        progress_callback: ProgressCallback | None,
+    ) -> tuple[int, int, int, bool]:
+        """Iterate completed futures for one sliding window, collecting results.
+
+        Args:
+            futures: Mapping of Future -> file_path for the current window.
+            files_completed: Running count of completed files before this window.
+            error_count: Running count of parse errors before this window.
+            file_count: Total number of files in the entire parse run.
+            chunk_batch: Mutable list that accumulates chunks across windows.
+            processed_files: Mutable list of successfully parsed FileInfo objects.
+            total_chunks_processed: Running chunk count before this window.
+            is_first_batch: True if no batch has been stored to the vector store yet.
+            full_rebuild: Passed through to ``_process_chunk_batch``.
+            progress_callback: Optional progress callback.
+
+        Returns:
+            Updated (files_completed, error_count, total_chunks_processed, is_first_batch).
+        """
+        for future in as_completed(futures):
+            file_path = futures[future]
+            if progress_callback:
+                progress_callback(
+                    f"Parsing {file_path.name}",
+                    files_completed,
+                    file_count,
+                )
+
+            result = future.result()
+            skipped = await self._handle_parse_result(
+                result,
+                progress_callback,
+                files_completed,
+                file_count,
+                chunk_batch,
+                processed_files,
+            )
+            if skipped:
+                error_count += 1
+                files_completed += 1
+                continue
+
+            if len(chunk_batch) >= self.batch_size:
+                chunks_stored = await self._process_chunk_batch(
+                    chunk_batch,
+                    full_rebuild,
+                    is_first_batch,
+                    progress_callback,
+                    files_completed,
+                    file_count,
+                )
+                total_chunks_processed += chunks_stored
+                is_first_batch = False
+                chunk_batch.clear()
+
+            files_completed += 1
+
+        return files_completed, error_count, total_chunks_processed, is_first_batch
+
+    def _log_parse_metrics(
+        self,
+        parse_start_time: float,
+        files_parsed: int,
+        total_chunks_processed: int,
+        error_count: int,
+    ) -> None:
+        """Log a summary of parallel parsing performance.
+
+        Args:
+            parse_start_time: ``time.time()`` recorded before parsing started.
+            files_parsed: Number of files successfully parsed.
+            total_chunks_processed: Total chunks stored to the vector store.
+            error_count: Number of files that failed to parse.
+        """
         parse_duration = time.time() - parse_start_time
-        files_parsed = len(processed_files)
         files_per_second = files_parsed / parse_duration if parse_duration > 0 else 0
         chunks_per_second = (
             total_chunks_processed / parse_duration if parse_duration > 0 else 0
@@ -214,8 +283,6 @@ class FileParsingPipeline:
             self.parallel_workers,
             error_count,
         )
-
-        return processed_files, total_chunks_processed
 
     async def _handle_parse_result(
         self,

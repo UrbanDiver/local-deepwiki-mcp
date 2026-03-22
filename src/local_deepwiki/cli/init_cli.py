@@ -240,6 +240,96 @@ def write_config(config_dict: dict, dest: Path) -> None:
 # ── Wizard section helpers ────────────────────────────────────────────
 
 
+def _check_existing_config(
+    dest: Path,
+    non_interactive: bool,
+    force: bool,
+    console: Console,
+) -> bool:
+    """Check for an existing config and resolve any conflict.
+
+    Returns True if the wizard should proceed, False if it should abort.
+    *dest* is unused here but kept for a uniform signature.
+    """
+    existing = find_existing_config()
+    if existing is None:
+        return True
+
+    console.print(f"[yellow]Existing config found:[/yellow] {existing}")
+    if non_interactive and not force:
+        console.print(
+            "[red]Aborting (--non-interactive, will not overwrite). Use --force to overwrite.[/red]"
+        )
+        return False
+    if non_interactive and force:
+        console.print("[yellow]--force: overwriting existing config.[/yellow]")
+        return True
+
+    overwrite = Prompt.ask("Overwrite?", choices=["yes", "no"], default="no")
+    if overwrite != "yes":
+        console.print("[dim]Aborted.[/dim]")
+        return False
+    return True
+
+
+def _select_providers(
+    console: Console,
+    *,
+    non_interactive: bool,
+    provider_flag: str | None,
+    embedding_flag: str | None,
+) -> tuple[str, str]:
+    """Detect providers and prompt (or auto-select) LLM + embedding.
+
+    Returns *(llm_provider, embedding_provider)*.
+    """
+    providers = detect_providers()
+    llm_provider = _prompt_llm_config(
+        console,
+        providers,
+        non_interactive=non_interactive,
+        provider_flag=provider_flag,
+    )
+    embedding_provider = _prompt_embedding_config(
+        console,
+        non_interactive=non_interactive,
+        embedding_flag=embedding_flag,
+    )
+    return llm_provider, embedding_provider
+
+
+def _display_summary(
+    console: Console,
+    dest: Path,
+    llm_provider: str,
+    embedding_provider: str,
+    languages: list[str],
+) -> None:
+    """Print the setup-complete panel and next-steps hints."""
+    summary_lines = [
+        f"[bold]Config path:[/bold]  {dest}",
+        f"[bold]LLM provider:[/bold] {llm_provider}",
+        f"[bold]Embedding:[/bold]    {embedding_provider}",
+        f"[bold]Languages:[/bold]    {', '.join(languages[:8])}{'...' if len(languages) > 8 else ''}",
+    ]
+    console.print(
+        Panel(
+            "\n".join(summary_lines),
+            title="Setup Complete",
+            border_style="green",
+        )
+    )
+    console.print("[bold]Next steps:[/bold]")
+    console.print(
+        "  deepwiki mcp                  Start MCP server (for IDE integration)"
+    )
+    console.print(
+        "  deepwiki serve .deepwiki       Browse wiki at http://localhost:8080"
+    )
+    console.print("  deepwiki config health-check   Verify providers are working")
+    console.print()
+
+
 def _prompt_llm_config(
     console: Console,
     providers: dict[str, bool],
@@ -327,40 +417,20 @@ def run_wizard(
     console.print("\n[bold]deepwiki init[/bold] - project configuration wizard\n")
 
     # ── Step 1: Check for existing config ─────────────────────────
-    existing = find_existing_config()
-    if existing is not None:
-        console.print(f"[yellow]Existing config found:[/yellow] {existing}")
-        if non_interactive and not force:
-            console.print(
-                "[red]Aborting (--non-interactive, will not overwrite). Use --force to overwrite.[/red]"
-            )
-            return 1
-        if non_interactive and force:
-            console.print("[yellow]--force: overwriting existing config.[/yellow]")
-        else:
-            overwrite = Prompt.ask("Overwrite?", choices=["yes", "no"], default="no")
-            if overwrite != "yes":
-                console.print("[dim]Aborted.[/dim]")
-                return 1
+    dest = config_dest or _DEFAULT_CONFIG_PATH
+    if not _check_existing_config(dest, non_interactive, force, console):
+        return 1
 
     # ── Step 2: Detect languages ──────────────────────────────────
     console.print(f"[bold]Scanning[/bold] {repo_path.resolve()} for source files...")
     lang_counts = detect_languages(repo_path)
     detected_languages = _prompt_wiki_config(console, lang_counts)
 
-    # ── Step 3: Choose LLM provider ──────────────────────────────
-    providers = detect_providers()
-    llm_provider = _prompt_llm_config(
+    # ── Steps 3–4: Choose providers ───────────────────────────────
+    llm_provider, embedding_provider = _select_providers(
         console,
-        providers,
         non_interactive=non_interactive,
         provider_flag=provider_flag,
-    )
-
-    # ── Step 4: Choose embedding provider ─────────────────────────
-    embedding_provider = _prompt_embedding_config(
-        console,
-        non_interactive=non_interactive,
         embedding_flag=embedding_flag,
     )
 
@@ -368,7 +438,6 @@ def run_wizard(
     config = build_config(llm_provider, embedding_provider, detected_languages)  # type: ignore[arg-type]
 
     # ── Step 6: Write config ──────────────────────────────────────
-    dest = config_dest or _DEFAULT_CONFIG_PATH
     minimal = config_to_minimal_dict(config)
 
     if not minimal:
@@ -379,28 +448,9 @@ def run_wizard(
     console.print(f"\n[green]Config written to:[/green] {dest}")
 
     # ── Step 7: Summary & next steps ──────────────────────────────
-    summary_lines = [
-        f"[bold]Config path:[/bold]  {dest}",
-        f"[bold]LLM provider:[/bold] {llm_provider}",
-        f"[bold]Embedding:[/bold]    {embedding_provider}",
-        f"[bold]Languages:[/bold]    {', '.join(detected_languages[:8])}{'...' if len(detected_languages) > 8 else ''}",
-    ]
-    console.print(
-        Panel(
-            "\n".join(summary_lines),
-            title="Setup Complete",
-            border_style="green",
-        )
+    _display_summary(
+        console, dest, llm_provider, embedding_provider, detected_languages
     )
-    console.print("[bold]Next steps:[/bold]")
-    console.print(
-        "  deepwiki mcp                  Start MCP server (for IDE integration)"
-    )
-    console.print(
-        "  deepwiki serve .deepwiki       Browse wiki at http://localhost:8080"
-    )
-    console.print("  deepwiki config health-check   Verify providers are working")
-    console.print()
 
     return 0
 

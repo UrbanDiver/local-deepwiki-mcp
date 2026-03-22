@@ -78,7 +78,9 @@ class TestDeletedFileCleanup:
                 indexer.parser, "get_file_info", side_effect=patched_get_file_info
             ):
                 _, files_unchanged, deleted_file_paths = (
-                    indexer._collect_files_to_process(prev_files_by_path, None)
+                    indexer._status_tracker.collect_files_to_process(
+                        prev_files_by_path, None
+                    )
                 )
 
             assert "module_b.py" in deleted_file_paths
@@ -101,7 +103,9 @@ class TestDeletedFileCleanup:
 
             indexer = RepositoryIndexer(repo_path, config)
 
-            _, _, deleted_file_paths = indexer._collect_files_to_process({}, None)
+            _, _, deleted_file_paths = indexer._status_tracker.collect_files_to_process(
+                {}, None
+            )
 
             assert deleted_file_paths == []
 
@@ -243,8 +247,10 @@ class TestDeletedFileCleanup:
                 mock_logger.warning = MagicMock()
                 mock_logger.debug = MagicMock()
 
-                _, _, deleted_file_paths = indexer._collect_files_to_process(
-                    prev_files_by_path, None
+                _, _, deleted_file_paths = (
+                    indexer._status_tracker.collect_files_to_process(
+                        prev_files_by_path, None
+                    )
                 )
 
             assert "deleted_module.py" in deleted_file_paths
@@ -261,21 +267,17 @@ class TestDeletedFileCleanup:
 
 
 class TestEmitGraphStart:
-    """Tests for _emit_graph_start helper."""
+    """Tests for GraphExtractor.emit_graph_start helper."""
 
     async def test_emit_graph_start_fires_event(self, tmp_path):
-        """Test that _emit_graph_start emits the GRAPH_EXTRACT_START event."""
+        """Test that emit_graph_start emits the GRAPH_EXTRACT_START event."""
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
 
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         config = Config().model_copy(update={"parsing": parsing})
 
-        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
-            mock_store = MagicMock()
-            MockVectorStore.return_value = mock_store
-
-            indexer = RepositoryIndexer(repo_path, config)
+        indexer = _make_indexer(repo_path, config)
 
         files = [repo_path / "a.py", repo_path / "b.py"]
         emitted_events = []
@@ -287,7 +289,7 @@ class TestEmitGraphStart:
             )
             mock_get_emitter.return_value = mock_emitter
 
-            await indexer._emit_graph_start(files)
+            await indexer._graph_helper.emit_graph_start(files)
 
         assert len(emitted_events) == 1
         event_type, event_data = emitted_events[0]
@@ -296,7 +298,7 @@ class TestEmitGraphStart:
 
 
 class TestDeleteStaleGraphData:
-    """Tests for _delete_stale_graph_data helper."""
+    """Tests for GraphExtractor.delete_stale_graph_data helper."""
 
     async def test_skips_deletion_on_full_rebuild(self, tmp_path):
         """Test that incremental deletion is skipped during a full rebuild."""
@@ -306,14 +308,11 @@ class TestDeleteStaleGraphData:
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         config = Config().model_copy(update={"parsing": parsing})
 
-        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
-            mock_store = MagicMock()
-            MockVectorStore.return_value = mock_store
-            indexer = RepositoryIndexer(repo_path, config)
+        indexer = _make_indexer(repo_path, config)
 
         mock_graph_store = AsyncMock()
-        indexer.graph_store = mock_graph_store
-        indexer._graph_enabled = True
+        indexer._graph_helper.graph_store = mock_graph_store
+        indexer._graph_helper._graph_enabled = True
 
         file_a = repo_path / "a.py"
         file_a.write_text("def a(): pass")
@@ -327,7 +326,7 @@ class TestDeleteStaleGraphData:
             )
         }
 
-        await indexer._delete_stale_graph_data(
+        await indexer._graph_helper.delete_stale_graph_data(
             [file_a], prev_files_by_path, [], full_rebuild=True
         )
 
@@ -341,14 +340,11 @@ class TestDeleteStaleGraphData:
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         config = Config().model_copy(update={"parsing": parsing})
 
-        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
-            mock_store = MagicMock()
-            MockVectorStore.return_value = mock_store
-            indexer = RepositoryIndexer(repo_path, config)
+        indexer = _make_indexer(repo_path, config)
 
         mock_graph_store = AsyncMock()
-        indexer.graph_store = mock_graph_store
-        indexer._graph_enabled = True
+        indexer._graph_helper.graph_store = mock_graph_store
+        indexer._graph_helper._graph_enabled = True
 
         file_a = repo_path / "a.py"
         file_a.write_text("def a(): pass")
@@ -362,7 +358,7 @@ class TestDeleteStaleGraphData:
             )
         }
 
-        await indexer._delete_stale_graph_data(
+        await indexer._graph_helper.delete_stale_graph_data(
             [file_a], prev_files_by_path, [], full_rebuild=False
         )
 
@@ -376,16 +372,13 @@ class TestDeleteStaleGraphData:
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         config = Config().model_copy(update={"parsing": parsing})
 
-        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
-            mock_store = MagicMock()
-            MockVectorStore.return_value = mock_store
-            indexer = RepositoryIndexer(repo_path, config)
+        indexer = _make_indexer(repo_path, config)
 
         mock_graph_store = AsyncMock()
-        indexer.graph_store = mock_graph_store
-        indexer._graph_enabled = True
+        indexer._graph_helper.graph_store = mock_graph_store
+        indexer._graph_helper._graph_enabled = True
 
-        await indexer._delete_stale_graph_data(
+        await indexer._graph_helper.delete_stale_graph_data(
             [], {}, ["gone.py", "also_gone.py"], full_rebuild=False
         )
 
@@ -399,28 +392,25 @@ class TestDeleteStaleGraphData:
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         config = Config().model_copy(update={"parsing": parsing})
 
-        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
-            mock_store = MagicMock()
-            MockVectorStore.return_value = mock_store
-            indexer = RepositoryIndexer(repo_path, config)
+        indexer = _make_indexer(repo_path, config)
 
         mock_graph_store = AsyncMock()
         mock_graph_store.delete_by_file = AsyncMock(
             side_effect=RuntimeError("DB error")
         )
-        indexer.graph_store = mock_graph_store
-        indexer._graph_enabled = True
+        indexer._graph_helper.graph_store = mock_graph_store
+        indexer._graph_helper._graph_enabled = True
 
         # Should not raise
         with patch("local_deepwiki.core.indexer.logger") as mock_logger:
-            await indexer._delete_stale_graph_data(
+            await indexer._graph_helper.delete_stale_graph_data(
                 [], {}, ["gone.py"], full_rebuild=False
             )
             mock_logger.warning.assert_called()
 
 
 class TestExtractAndStoreGraphData:
-    """Tests for _extract_and_store_graph_data helper."""
+    """Tests for GraphExtractor.extract_and_store_graph_data helper."""
 
     async def test_returns_zero_counts_when_no_graph_data(self, tmp_path):
         """Test that (0, 0) is returned when no graph data is extracted."""
@@ -430,18 +420,17 @@ class TestExtractAndStoreGraphData:
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         config = Config().model_copy(update={"parsing": parsing})
 
-        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
-            mock_store = MagicMock()
-            MockVectorStore.return_value = mock_store
-            indexer = RepositoryIndexer(repo_path, config)
+        indexer = _make_indexer(repo_path, config)
 
         mock_graph_store = AsyncMock()
-        indexer.graph_store = mock_graph_store
+        indexer._graph_helper.graph_store = mock_graph_store
 
-        with patch.object(indexer, "_extract_graph_for_file", return_value=None):
+        with patch.object(
+            indexer._graph_helper, "extract_graph_for_file", return_value=None
+        ):
             file_a = repo_path / "a.py"
             file_a.write_text("def a(): pass")
-            total_e, total_r = await indexer._extract_and_store_graph_data(
+            total_e, total_r = await indexer._graph_helper.extract_and_store_graph_data(
                 [file_a], {}, None
             )
 
@@ -456,15 +445,12 @@ class TestExtractAndStoreGraphData:
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         config = Config().model_copy(update={"parsing": parsing})
 
-        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
-            mock_store = MagicMock()
-            MockVectorStore.return_value = mock_store
-            indexer = RepositoryIndexer(repo_path, config)
+        indexer = _make_indexer(repo_path, config)
 
         mock_graph_store = AsyncMock()
         mock_graph_store.add_entities = AsyncMock(return_value=3)
         mock_graph_store.add_relationships = AsyncMock(return_value=2)
-        indexer.graph_store = mock_graph_store
+        indexer._graph_helper.graph_store = mock_graph_store
 
         fake_graph_data = MagicMock()
         fake_graph_data.entities = [MagicMock(), MagicMock(), MagicMock()]
@@ -476,14 +462,16 @@ class TestExtractAndStoreGraphData:
         file_b.write_text("def b(): pass")
 
         with patch.object(
-            indexer, "_extract_graph_for_file", return_value=fake_graph_data
+            indexer._graph_helper,
+            "extract_graph_for_file",
+            return_value=fake_graph_data,
         ):
-            total_e, total_r = await indexer._extract_and_store_graph_data(
+            total_e, total_r = await indexer._graph_helper.extract_and_store_graph_data(
                 [file_a, file_b], {}, None
             )
 
-        assert total_e == 6  # 3 per file × 2 files
-        assert total_r == 4  # 2 per file × 2 files
+        assert total_e == 6  # 3 per file x 2 files
+        assert total_r == 4  # 2 per file x 2 files
 
     async def test_calls_progress_callback_per_file(self, tmp_path):
         """Test that progress callback is called once per file."""
@@ -493,15 +481,12 @@ class TestExtractAndStoreGraphData:
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         config = Config().model_copy(update={"parsing": parsing})
 
-        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
-            mock_store = MagicMock()
-            MockVectorStore.return_value = mock_store
-            indexer = RepositoryIndexer(repo_path, config)
+        indexer = _make_indexer(repo_path, config)
 
         mock_graph_store = AsyncMock()
         mock_graph_store.add_entities = AsyncMock(return_value=0)
         mock_graph_store.add_relationships = AsyncMock(return_value=0)
-        indexer.graph_store = mock_graph_store
+        indexer._graph_helper.graph_store = mock_graph_store
 
         fake_graph_data = MagicMock()
         fake_graph_data.entities = []
@@ -519,29 +504,30 @@ class TestExtractAndStoreGraphData:
             files.append(f)
 
         with patch.object(
-            indexer, "_extract_graph_for_file", return_value=fake_graph_data
+            indexer._graph_helper,
+            "extract_graph_for_file",
+            return_value=fake_graph_data,
         ):
-            await indexer._extract_and_store_graph_data(files, {}, progress_callback)
+            await indexer._graph_helper.extract_and_store_graph_data(
+                files, {}, progress_callback
+            )
 
         assert len(progress_calls) == 3
         assert progress_calls[-1][1] == 3  # current = total on last call
 
 
 class TestEmitGraphComplete:
-    """Tests for _emit_graph_complete helper."""
+    """Tests for GraphExtractor.emit_graph_complete helper."""
 
     async def test_emits_complete_event_and_logs(self, tmp_path):
-        """Test that _emit_graph_complete emits event and logs the summary."""
+        """Test that emit_graph_complete emits event and logs the summary."""
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
 
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         config = Config().model_copy(update={"parsing": parsing})
 
-        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
-            mock_store = MagicMock()
-            MockVectorStore.return_value = mock_store
-            indexer = RepositoryIndexer(repo_path, config)
+        indexer = _make_indexer(repo_path, config)
 
         emitted_events = []
         log_messages = []
@@ -560,7 +546,7 @@ class TestEmitGraphComplete:
                     )
                 )
 
-                await indexer._emit_graph_complete(
+                await indexer._graph_helper.emit_graph_complete(
                     total_entities=5, total_relationships=10
                 )
 
@@ -586,10 +572,7 @@ class TestRunGraphExtraction:
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         config = Config().model_copy(update={"parsing": parsing})
 
-        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
-            mock_store = MagicMock()
-            MockVectorStore.return_value = mock_store
-            indexer = RepositoryIndexer(repo_path, config)
+        indexer = _make_indexer(repo_path, config)
 
         indexer._graph_enabled = False
         indexer.graph_store = None
@@ -605,10 +588,7 @@ class TestRunGraphExtraction:
         parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
         config = Config().model_copy(update={"parsing": parsing})
 
-        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
-            mock_store = MagicMock()
-            MockVectorStore.return_value = mock_store
-            indexer = RepositoryIndexer(repo_path, config)
+        indexer = _make_indexer(repo_path, config)
 
         indexer._graph_enabled = True
         indexer.graph_store = AsyncMock()
@@ -621,24 +601,25 @@ class TestRunGraphExtraction:
         async def mock_delete_stale(files, prev, deleted, rebuild):
             call_order.append("delete_stale")
 
-        async def mock_extract_store(files, chunks, cb):
+        async def mock_extract_store(files, chunks, cb, extract_fn=None):
             call_order.append("extract_store")
             return (7, 3)
 
         async def mock_emit_complete(entities, relationships):
             call_order.append("emit_complete")
 
+        helper = indexer._graph_helper
         with (
-            patch.object(indexer, "_emit_graph_start", side_effect=mock_emit_start),
+            patch.object(helper, "emit_graph_start", side_effect=mock_emit_start),
             patch.object(
-                indexer, "_delete_stale_graph_data", side_effect=mock_delete_stale
+                helper, "delete_stale_graph_data", side_effect=mock_delete_stale
             ),
             patch.object(
-                indexer, "_extract_and_store_graph_data", side_effect=mock_extract_store
+                helper,
+                "extract_and_store_graph_data",
+                side_effect=mock_extract_store,
             ),
-            patch.object(
-                indexer, "_emit_graph_complete", side_effect=mock_emit_complete
-            ),
+            patch.object(helper, "emit_graph_complete", side_effect=mock_emit_complete),
         ):
             await indexer._run_graph_extraction([], {}, {}, [], False, None)
 

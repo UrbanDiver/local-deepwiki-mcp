@@ -175,7 +175,7 @@ class TestSchemaMigration:
             status_path.parent.mkdir(parents=True, exist_ok=True)
             status_path.write_text(json.dumps(legacy_status))
 
-            status, requires_rebuild = indexer._load_status()
+            status, requires_rebuild = indexer._status_tracker.load_status()
 
             assert status is not None
             assert status.schema_version == CURRENT_SCHEMA_VERSION
@@ -246,7 +246,7 @@ class TestSchemaMigration:
             status_path.parent.mkdir(parents=True, exist_ok=True)
             status_path.write_text(json.dumps(old_status))
 
-            status, requires_rebuild = indexer._load_status()
+            status, requires_rebuild = indexer._status_tracker.load_status()
 
             if CURRENT_SCHEMA_VERSION > 1:
                 with open(status_path) as f:

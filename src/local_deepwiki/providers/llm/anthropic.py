@@ -15,6 +15,7 @@ from anthropic import (
 
 from local_deepwiki.logging import get_logger
 from local_deepwiki.providers.base import (
+    ApiErrorConfig,
     LLMProvider,
     LLMProviderCapabilities,
     ProviderAuthenticationError,
@@ -107,8 +108,7 @@ class AnthropicProvider(LLMProvider):
 
     def _handle_api_error(self, e: Exception) -> None:
         """Convert Anthropic API errors to standardized provider errors."""
-        handle_api_status_error(
-            e,
+        config = ApiErrorConfig(
             provider_name=self.name,
             api_label="Anthropic API",
             model=self._model,
@@ -117,6 +117,7 @@ class AnthropicProvider(LLMProvider):
             status_error_type=APIStatusError,
             connection_error_type=APIConnectionError,
         )
+        handle_api_status_error(e, config)
         # Re-raise unknown errors
         raise
 

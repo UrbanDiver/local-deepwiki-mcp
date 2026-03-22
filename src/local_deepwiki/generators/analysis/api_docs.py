@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TypedDict
+from typing import Callable, TypedDict
 
 from tree_sitter import Node
 
@@ -76,6 +76,76 @@ class ClassSignature:
 _SELF_CLS = frozenset({"self", "cls"})
 
 
+def _parse_identifier_param(child: Node, source: bytes) -> Parameter | None:
+    """Handle a plain ``identifier`` parameter node."""
+    name = get_node_text(child, source)
+    if name not in _SELF_CLS:
+        return Parameter(name=name)
+    return None
+
+
+def _parse_typed_param(child: Node, source: bytes) -> Parameter | None:
+    """Handle a ``typed_parameter`` node (name: type)."""
+    name_node = None
+    type_node = None
+    for c in child.children:
+        if c.type == "identifier":
+            name_node = c
+        elif c.type == "type":
+            type_node = c
+    if name_node:
+        name = get_node_text(name_node, source)
+        if name not in _SELF_CLS:
+            type_hint = get_node_text(type_node, source) if type_node else None
+            return Parameter(name=name, type_hint=type_hint)
+    return None
+
+
+def _parse_default_param(child: Node, source: bytes) -> Parameter | None:
+    """Handle a ``default_parameter`` node (name=default)."""
+    name_node = child.child_by_field_name("name")
+    value_node = child.child_by_field_name("value")
+    if name_node:
+        name = get_node_text(name_node, source)
+        if name not in _SELF_CLS:
+            default = get_node_text(value_node, source) if value_node else None
+            return Parameter(name=name, default_value=default)
+    return None
+
+
+def _parse_typed_default_param(child: Node, source: bytes) -> Parameter | None:
+    """Handle a ``typed_default_parameter`` node (name: type = default)."""
+    name_node = child.child_by_field_name("name")
+    type_node = child.child_by_field_name("type")
+    value_node = child.child_by_field_name("value")
+    if name_node:
+        name = get_node_text(name_node, source)
+        if name not in _SELF_CLS:
+            type_hint = get_node_text(type_node, source) if type_node else None
+            default = get_node_text(value_node, source) if value_node else None
+            return Parameter(name=name, type_hint=type_hint, default_value=default)
+    return None
+
+
+def _parse_splat_param(child: Node, source: bytes) -> Parameter | None:
+    """Handle ``list_splat_pattern`` (*args) and ``dictionary_splat_pattern`` (**kwargs)."""
+    prefix = "*" if child.type == "list_splat_pattern" else "**"
+    for c in child.children:
+        if c.type == "identifier":
+            return Parameter(name=f"{prefix}{get_node_text(c, source)}")
+    return None
+
+
+_PARAM_NODE_HANDLERS: dict[str, Callable[[Node, bytes], Parameter | None]] = {
+    "identifier": _parse_identifier_param,
+    "typed_parameter": _parse_typed_param,
+    "default_parameter": _parse_default_param,
+    "typed_default_parameter": _parse_typed_default_param,
+    "list_splat_pattern": _parse_splat_param,
+    "dictionary_splat_pattern": _parse_splat_param,
+}
+
+
 def _parse_param_node(child: Node, source: bytes) -> Parameter | None:
     """Extract a single Parameter from an AST parameter node.
 
@@ -86,52 +156,9 @@ def _parse_param_node(child: Node, source: bytes) -> Parameter | None:
     Returns:
         A Parameter or None if the node should be skipped.
     """
-    if child.type == "identifier":
-        name = get_node_text(child, source)
-        if name not in _SELF_CLS:
-            return Parameter(name=name)
-
-    elif child.type == "typed_parameter":
-        name_node = None
-        type_node = None
-        for c in child.children:
-            if c.type == "identifier":
-                name_node = c
-            elif c.type == "type":
-                type_node = c
-        if name_node:
-            name = get_node_text(name_node, source)
-            if name not in _SELF_CLS:
-                type_hint = get_node_text(type_node, source) if type_node else None
-                return Parameter(name=name, type_hint=type_hint)
-
-    elif child.type == "default_parameter":
-        name_node = child.child_by_field_name("name")
-        value_node = child.child_by_field_name("value")
-        if name_node:
-            name = get_node_text(name_node, source)
-            if name not in _SELF_CLS:
-                default = get_node_text(value_node, source) if value_node else None
-                return Parameter(name=name, default_value=default)
-
-    elif child.type == "typed_default_parameter":
-        name_node = child.child_by_field_name("name")
-        type_node = child.child_by_field_name("type")
-        value_node = child.child_by_field_name("value")
-        if name_node:
-            name = get_node_text(name_node, source)
-            if name not in _SELF_CLS:
-                type_hint = get_node_text(type_node, source) if type_node else None
-                default = get_node_text(value_node, source) if value_node else None
-                return Parameter(name=name, type_hint=type_hint, default_value=default)
-
-    elif child.type in ("list_splat_pattern", "dictionary_splat_pattern"):
-        prefix = "*" if child.type == "list_splat_pattern" else "**"
-        for c in child.children:
-            if c.type == "identifier":
-                name = get_node_text(c, source)
-                return Parameter(name=f"{prefix}{name}")
-
+    handler = _PARAM_NODE_HANDLERS.get(child.type)
+    if handler is not None:
+        return handler(child, source)
     return None
 
 

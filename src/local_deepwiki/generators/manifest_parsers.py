@@ -250,6 +250,45 @@ def _parse_go_mod(filepath: Path, manifest: ProjectManifest) -> None:
                     manifest.dependencies[name] = version
 
 
+def _pom_find(root: Any, path: str, ns: dict[str, str]) -> Any:
+    """Find an XML element trying namespaced path first, then bare path."""
+    result = root.find(path, ns)
+    if result is None:
+        result = root.find(path.replace("m:", ""))
+    return result
+
+
+def _pom_set_text_field(
+    root: Any,
+    xpath: str,
+    ns: dict[str, str],
+    manifest: "ProjectManifest",
+    attr: str,
+) -> None:
+    """Set a manifest attribute from an XML element's text, if found."""
+    elem = _pom_find(root, xpath, ns)
+    if elem is not None and elem.text:
+        setattr(manifest, attr, elem.text)
+
+
+def _pom_parse_dependencies(
+    root: Any, ns: dict[str, str], manifest: "ProjectManifest"
+) -> None:
+    """Parse Maven dependency elements into manifest dependencies."""
+    deps = root.findall(".//m:dependency", ns) or root.findall(".//dependency")
+    for dep in deps:
+        artifact = dep.find("m:artifactId", ns) or dep.find("artifactId")
+        version = dep.find("m:version", ns) or dep.find("version")
+        scope = dep.find("m:scope", ns) or dep.find("scope")
+        if artifact is not None and artifact.text:
+            version_text = version.text if version is not None else "*"
+            scope_text = scope.text if scope is not None else ""
+            if scope_text == "test":
+                manifest.dev_dependencies[artifact.text] = version_text or "*"
+            else:
+                manifest.dependencies[artifact.text] = version_text or "*"
+
+
 def _parse_pom_xml(filepath: Path, manifest: ProjectManifest) -> None:
     """Parse pom.xml (Java/Maven)."""
     import xml.etree.ElementTree as ET
@@ -257,50 +296,18 @@ def _parse_pom_xml(filepath: Path, manifest: ProjectManifest) -> None:
     tree = ET.parse(filepath)
     root = tree.getroot()
 
-    # Handle namespace
-    ns = {"m": "http://maven.apache.org/POM/4.0.0"}
-
-    # Try with and without namespace
-    def find(path: str) -> Any:
-        result = root.find(path, ns)
-        if result is None:
-            result = root.find(path.replace("m:", ""))
-        return result
+    ns: dict[str, str] = {"m": "http://maven.apache.org/POM/4.0.0"}
 
     manifest.language = "Java"
 
-    artifact_id = find("m:artifactId")
-    if artifact_id is not None:
-        manifest.name = artifact_id.text
+    _pom_set_text_field(root, "m:artifactId", ns, manifest, "name")
+    _pom_set_text_field(root, "m:version", ns, manifest, "version")
+    _pom_set_text_field(root, "m:description", ns, manifest, "description")
+    _pom_set_text_field(
+        root, "m:properties/m:java.version", ns, manifest, "language_version"
+    )
 
-    version = find("m:version")
-    if version is not None:
-        manifest.version = version.text
-
-    description = find("m:description")
-    if description is not None:
-        manifest.description = description.text
-
-    # Java version from properties
-    java_version = find("m:properties/m:java.version")
-    if java_version is not None:
-        manifest.language_version = java_version.text
-
-    # Dependencies
-    deps = root.findall(".//m:dependency", ns) or root.findall(".//dependency")
-    for dep in deps:
-        artifact = dep.find("m:artifactId", ns) or dep.find("artifactId")
-        version = dep.find("m:version", ns) or dep.find("version")
-        scope = dep.find("m:scope", ns) or dep.find("scope")
-
-        if artifact is not None and artifact.text:
-            version_text = version.text if version is not None else "*"
-            scope_text = scope.text if scope is not None else ""
-
-            if scope_text == "test":
-                manifest.dev_dependencies[artifact.text] = version_text or "*"
-            else:
-                manifest.dependencies[artifact.text] = version_text or "*"
+    _pom_parse_dependencies(root, ns, manifest)
 
 
 def _parse_build_gradle(filepath: Path, manifest: ProjectManifest) -> None:

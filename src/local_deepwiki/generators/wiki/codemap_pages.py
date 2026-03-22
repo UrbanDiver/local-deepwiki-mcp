@@ -22,10 +22,7 @@ from local_deepwiki.logging import get_logger
 from local_deepwiki.models import WikiPage
 
 if TYPE_CHECKING:
-    from local_deepwiki.config import WikiConfig
-    from local_deepwiki.core.vectorstore import VectorStore
-    from local_deepwiki.generators.wiki.status import WikiStatusManager
-    from local_deepwiki.providers.base import LLMProvider
+    from local_deepwiki.generators.wiki.context import WikiPipelineContext
 
 logger = get_logger(__name__)
 
@@ -160,29 +157,24 @@ def _format_codemap_index(topics: list[dict]) -> str:
 
 
 async def generate_codemap_pages(
-    vector_store: "VectorStore",
-    llm: "LLMProvider",
-    repo_path: Path,
-    wiki_path: Path,
-    *,
-    status_manager: "WikiStatusManager",
-    config: "WikiConfig",
-    full_rebuild: bool = False,
+    ctx: "WikiPipelineContext",
 ) -> tuple[list[WikiPage], int, int]:
     """Generate codemap wiki pages for auto-discovered entry points.
 
     Args:
-        vector_store: Vector store with indexed code.
-        llm: LLM provider for narrative generation.
-        repo_path: Path to the repository.
-        wiki_path: Path to wiki output directory.
-        status_manager: Wiki status manager for incremental updates.
-        config: Wiki configuration with codemap settings.
-        full_rebuild: If True, regenerate all codemap pages.
+        ctx: Immutable pipeline context bundling shared parameters.
 
     Returns:
         Tuple of (pages list, generated count, skipped count).
     """
+    vector_store = ctx.vector_store
+    llm = ctx.llm
+    repo_path = ctx.repo_path
+    wiki_path = ctx.wiki_path
+    status_manager = ctx.status_manager
+    config = ctx.wiki_config
+    full_rebuild = ctx.full_rebuild
+
     if not config.codemap_enabled or config.codemap_max_topics <= 0:
         return [], 0, 0
 

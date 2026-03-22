@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.logging import get_logger
@@ -372,20 +372,169 @@ async def _try_load_cached_auxiliary_pages(
     return True
 
 
+async def _safe_dependency_graph(
+    index_status: IndexStatus,
+    vector_store: object,
+    generate_fn: Callable[..., Awaitable[str | None]],
+    warnings: list[str],
+) -> str | None:
+    """Wrapper that catches dependency graph errors."""
+    try:
+        return await generate_fn(
+            index_status=index_status,
+            vector_store=vector_store,
+            show_external=True,
+            max_external=10,
+            wiki_base_path="files/",
+        )
+    except Exception as e:  # noqa: BLE001 — generator isolation: auxiliary page failure must not abort wiki build
+        logger.debug("Failed to generate dependency graph: %s", e)
+        warnings.append(f"Dependency graph generation failed: {e}")
+        return None
+
+
+async def _safe_executor_page(
+    repo_path_str: str,
+    analyze_fn_path: str,
+    render_fn_path: str,
+    label: str,
+    warnings: list[str],
+    *,
+    pass_project_name: bool = False,
+) -> str | None:
+    """Run a sync analysis in an executor and render the result page.
+
+    Parameters
+    ----------
+    repo_path_str:
+        Repository path string from ``index_status.repo_path``.
+    analyze_fn_path:
+        Dotted import path for the analysis function (e.g.
+        ``"local_deepwiki.generators.analysis.hotspots.analyze_hotspots"``).
+    render_fn_path:
+        Dotted import path for the page-rendering function.
+    label:
+        Human-readable label used in warning messages.
+    warnings:
+        List to append warning messages to on failure.
+    pass_project_name:
+        If True, pass ``project_name`` as the second argument to the analysis
+        function (used by ``analyze_architecture_health``).
+    """
+    import importlib
+    from pathlib import Path as _Path
+
+    try:
+        # Dynamically import analysis and render functions
+        analyze_mod_path, analyze_fn_name = analyze_fn_path.rsplit(".", 1)
+        render_mod_path, render_fn_name = render_fn_path.rsplit(".", 1)
+        analyze_fn = getattr(importlib.import_module(analyze_mod_path), analyze_fn_name)
+        render_fn = getattr(importlib.import_module(render_mod_path), render_fn_name)
+
+        repo_path = _Path(repo_path_str)
+        if pass_project_name:
+            data = await asyncio.get_event_loop().run_in_executor(
+                None, analyze_fn, repo_path, repo_path.name
+            )
+        else:
+            data = await asyncio.get_event_loop().run_in_executor(
+                None, analyze_fn, repo_path
+            )
+        return render_fn(data)
+    except Exception as e:  # noqa: BLE001 — generator isolation: auxiliary page failure must not abort wiki build
+        logger.debug("Failed to generate %s page: %s", label, e)
+        warnings.append(f"{label} page generation failed: {e}")
+        return None
+
+
+# Specs for executor-based auxiliary pages: (analyze_path, render_path, label, pass_project_name)
+_EXECUTOR_PAGE_SPECS: list[tuple[str, str, str, bool]] = [
+    (
+        "local_deepwiki.generators.analysis.architecture_health.analyze_architecture_health",
+        "local_deepwiki.generators.analysis.health_page.generate_health_page",
+        "Architecture health",
+        True,
+    ),
+    (
+        "local_deepwiki.generators.analysis.hotspots.analyze_hotspots",
+        "local_deepwiki.generators.analysis.hotspots_page.generate_hotspots_page",
+        "Complexity hotspots",
+        False,
+    ),
+    (
+        "local_deepwiki.generators.analysis.design_smells.analyze_design_smells",
+        "local_deepwiki.generators.analysis.smells_page.generate_smells_page",
+        "Design smells",
+        False,
+    ),
+    (
+        "local_deepwiki.generators.analysis.coupling.analyze_coupling_metrics",
+        "local_deepwiki.generators.analysis.coupling_page.generate_coupling_page",
+        "Coupling metrics",
+        False,
+    ),
+]
+
+# Metadata for all auxiliary pages (path, title) — order must match the gather call
+# in ``_gather_auxiliary_contents``.
+_AUX_PAGE_METADATA: list[tuple[str, str]] = [
+    ("inheritance.md", "Class Inheritance"),
+    ("glossary.md", "Glossary"),
+    ("coverage.md", "Documentation Coverage"),
+    ("dependency-graph.md", "Dependency Graph"),
+    ("health.md", "Architecture Health"),
+    ("hotspots.md", "Complexity Hotspots"),
+    ("smells.md", "Design Smells"),
+    ("coupling.md", "Coupling Metrics"),
+]
+
+
+async def _gather_auxiliary_contents(
+    index_status: IndexStatus,
+    vector_store: Any,
+    warnings: list[str],
+) -> list[str | None]:
+    """Run all auxiliary page generators concurrently.
+
+    Late-imports the wiki generator module so that test patches remain effective.
+
+    Returns a tuple of content strings (or None) aligned with ``_AUX_PAGE_METADATA``.
+    """
+    from local_deepwiki.generators.wiki import generator as _wiki_gen
+
+    repo_path_str = index_status.repo_path
+
+    return await asyncio.gather(
+        _wiki_gen.generate_inheritance_page(index_status, vector_store),
+        _wiki_gen.generate_glossary_page(index_status, vector_store),
+        _wiki_gen.generate_coverage_page(index_status, vector_store),
+        _safe_dependency_graph(
+            index_status,
+            vector_store,
+            _wiki_gen.generate_dependency_graph_page,
+            warnings,
+        ),
+        *(
+            _safe_executor_page(
+                repo_path_str,
+                analyze_path,
+                render_path,
+                label,
+                warnings,
+                pass_project_name=needs_name,
+            )
+            for analyze_path, render_path, label, needs_name in _EXECUTOR_PAGE_SPECS
+        ),
+    )
+
+
 async def generate_auxiliary_pages(
     ctx: _GenerationContext,
     generator: WikiGenerator,
     index_status: IndexStatus,
     progress_callback: ProgressCallback | None,
 ) -> None:
-    """Generate auxiliary pages: inheritance, glossary, coverage, dependency graph, health, hotspots, smells, coupling.
-
-    All pages are generated concurrently with ``asyncio.gather``
-    since they are independent of each other.  Uses structural
-    fingerprinting so content-only changes skip these pages.
-
-    Generator functions are imported late from ``local_deepwiki.generators.wiki``
-    so that test patches applied at that location remain effective.
+    """Generate auxiliary pages concurrently with structural fingerprinting.
 
     Parameters
     ----------
@@ -398,150 +547,23 @@ async def generate_auxiliary_pages(
     progress_callback:
         Optional progress callback.
     """
-    # Late imports so test patches at ``generators.wiki.generator.*`` are
-    # picked up at call time rather than module-load time.
-    from local_deepwiki.generators.wiki import generator as _wiki_gen
-
-    _generate_inheritance_page = _wiki_gen.generate_inheritance_page
-    _generate_glossary_page = _wiki_gen.generate_glossary_page
-    _generate_coverage_page = _wiki_gen.generate_coverage_page
-    _generate_dependency_graph_page = _wiki_gen.generate_dependency_graph_page
-
     if progress_callback:
         progress_callback("Generating auxiliary pages", 6, 14)
 
     status_manager = generator.status_manager
 
-    aux_pages = [
-        ("inheritance.md", "Class Inheritance"),
-        ("glossary.md", "Glossary"),
-        ("coverage.md", "Documentation Coverage"),
-        ("dependency-graph.md", "Dependency Graph"),
-        ("health.md", "Architecture Health"),
-        ("hotspots.md", "Complexity Hotspots"),
-        ("smells.md", "Design Smells"),
-        ("coupling.md", "Coupling Metrics"),
-    ]
-
     if await _try_load_cached_auxiliary_pages(
-        ctx, aux_pages, index_status, status_manager
+        ctx, _AUX_PAGE_METADATA, index_status, status_manager
     ):
         return
 
-    async def _safe_dependency_graph() -> str | None:
-        """Wrapper that catches dependency graph errors."""
-        try:
-            return await _generate_dependency_graph_page(
-                index_status=index_status,
-                vector_store=generator.vector_store,
-                show_external=True,
-                max_external=10,
-                wiki_base_path="files/",
-            )
-        except Exception as e:  # noqa: BLE001 — generator isolation: auxiliary page failure must not abort wiki build
-            logger.debug("Failed to generate dependency graph: %s", e)
-            ctx.warnings.append(f"Dependency graph generation failed: {e}")
-            return None
-
-    async def _safe_health_page() -> str | None:
-        """Generate architecture health page (sync analysis run in executor)."""
-        from pathlib import Path as _Path
-
-        from local_deepwiki.generators.analysis.architecture_health import (
-            analyze_architecture_health,
-        )
-        from local_deepwiki.generators.analysis.health_page import (
-            generate_health_page,
-        )
-
-        try:
-            repo_path = _Path(index_status.repo_path)
-            project_name = repo_path.name
-            health_data = await asyncio.get_event_loop().run_in_executor(
-                None, analyze_architecture_health, repo_path, project_name
-            )
-            return generate_health_page(health_data)
-        except Exception as e:  # noqa: BLE001 — generator isolation: auxiliary page failure must not abort wiki build
-            logger.debug("Failed to generate architecture health page: %s", e)
-            ctx.warnings.append(f"Architecture health page generation failed: {e}")
-            return None
-
-    async def _safe_hotspots_page() -> str | None:
-        """Generate complexity hotspots page (sync analysis run in executor)."""
-        from pathlib import Path as _Path
-
-        from local_deepwiki.generators.analysis.hotspots import analyze_hotspots
-        from local_deepwiki.generators.analysis.hotspots_page import (
-            generate_hotspots_page,
-        )
-
-        try:
-            repo_path = _Path(index_status.repo_path)
-            hotspots_data = await asyncio.get_event_loop().run_in_executor(
-                None, analyze_hotspots, repo_path
-            )
-            return generate_hotspots_page(hotspots_data)
-        except Exception as e:  # noqa: BLE001 — generator isolation: auxiliary page failure must not abort wiki build
-            logger.debug("Failed to generate complexity hotspots page: %s", e)
-            ctx.warnings.append(f"Complexity hotspots page generation failed: {e}")
-            return None
-
-    async def _safe_smells_page() -> str | None:
-        """Generate design smells page (sync analysis run in executor)."""
-        from pathlib import Path as _Path
-
-        from local_deepwiki.generators.analysis.design_smells import (
-            analyze_design_smells,
-        )
-        from local_deepwiki.generators.analysis.smells_page import (
-            generate_smells_page,
-        )
-
-        try:
-            repo_path = _Path(index_status.repo_path)
-            smells_data = await asyncio.get_event_loop().run_in_executor(
-                None, analyze_design_smells, repo_path
-            )
-            return generate_smells_page(smells_data)
-        except Exception as e:  # noqa: BLE001 — generator isolation: auxiliary page failure must not abort wiki build
-            logger.debug("Failed to generate design smells page: %s", e)
-            ctx.warnings.append(f"Design smells page generation failed: {e}")
-            return None
-
-    async def _safe_coupling_page() -> str | None:
-        """Generate coupling metrics page (sync analysis run in executor)."""
-        from pathlib import Path as _Path
-
-        from local_deepwiki.generators.analysis.coupling import (
-            analyze_coupling_metrics,
-        )
-        from local_deepwiki.generators.analysis.coupling_page import (
-            generate_coupling_page,
-        )
-
-        try:
-            repo_path = _Path(index_status.repo_path)
-            coupling_data = await asyncio.get_event_loop().run_in_executor(
-                None, analyze_coupling_metrics, repo_path
-            )
-            return generate_coupling_page(coupling_data)
-        except Exception as e:  # noqa: BLE001 — generator isolation: auxiliary page failure must not abort wiki build
-            logger.debug("Failed to generate coupling metrics page: %s", e)
-            ctx.warnings.append(f"Coupling metrics page generation failed: {e}")
-            return None
-
-    contents = await asyncio.gather(
-        _generate_inheritance_page(index_status, generator.vector_store),
-        _generate_glossary_page(index_status, generator.vector_store),
-        _generate_coverage_page(index_status, generator.vector_store),
-        _safe_dependency_graph(),
-        _safe_health_page(),
-        _safe_hotspots_page(),
-        _safe_smells_page(),
-        _safe_coupling_page(),
+    contents = await _gather_auxiliary_contents(
+        index_status,
+        generator.vector_store,
+        ctx.warnings,
     )
 
-    for (page_path, title), content in zip(aux_pages, contents):
+    for (page_path, title), content in zip(_AUX_PAGE_METADATA, contents):
         await _add_auxiliary_page(
             ctx,
             content,

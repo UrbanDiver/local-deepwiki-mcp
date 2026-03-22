@@ -195,12 +195,32 @@ def extract_title(md_file: Path) -> str:
     return md_file.stem.replace("_", " ").replace("-", " ").title()
 
 
+def _fix_markdown_fences(content: str) -> str:
+    """Fix malformed markdown where headings and code fences are on the same line.
+
+    LLM-generated wiki pages sometimes produce patterns like:
+    - ``## Class Diagram```mermaid`` (heading glued to opening fence)
+    - ``````## Call Graph```mermaid`` (closing fence + heading + opening fence)
+    - ``````## Used By`` (closing fence glued to heading)
+    """
+    # Split closing fence glued to a heading: ```## Heading → ```\n\n## Heading
+    content = _re.sub(
+        r"^(```)(\s*)(#{1,6} )", r"\1\n\n\3", content, flags=_re.MULTILINE
+    )
+    # Split heading glued to opening fence: ## Heading```lang → ## Heading\n\n```lang
+    content = _re.sub(
+        r"^(#{1,6} [^\n`]*?)(```\w*)$", r"\1\n\n\2", content, flags=_re.MULTILINE
+    )
+    return content
+
+
 def render_markdown(content: str) -> str:
     """Render markdown to HTML with sanitization.
 
     Uses nh3 (if available) to strip dangerous tags like <script> while
     preserving safe HTML produced by the markdown renderer.
     """
+    content = _fix_markdown_fences(content)
     md = markdown.Markdown(
         extensions=[
             "fenced_code",

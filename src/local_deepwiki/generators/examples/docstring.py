@@ -160,6 +160,33 @@ def _extract_examples_section(docstring: str) -> str | None:
     return docstring[start_idx:]
 
 
+def _flush_example(
+    code_lines: list[str],
+    description: str | None,
+) -> CodeExample | None:
+    """Build a CodeExample from accumulated lines, or None if nothing to flush."""
+    if not code_lines:
+        return None
+    code = dedent("\n".join(code_lines)).strip()
+    if not code:
+        return None
+    return CodeExample(
+        source="docstring",
+        code=code,
+        description=description,
+        language="python",
+    )
+
+
+def _is_description_marker(stripped: str, indent: int, base_indent: int) -> bool:
+    """Return True when a line is a description header like 'Basic usage:'."""
+    return (
+        indent == base_indent
+        and stripped.endswith(":")
+        and not stripped.startswith((">>>", "..."))
+    )
+
+
 def _parse_example_block(
     lines: list[str],
 ) -> list[CodeExample]:
@@ -179,52 +206,40 @@ def _parse_example_block(
     current_code_lines: list[str] = []
     base_indent: int | None = None
 
-    def _flush() -> None:
-        nonlocal current_description, current_code_lines
-        if current_code_lines:
-            code = dedent("\n".join(current_code_lines)).strip()
-            if code:
-                examples.append(
-                    CodeExample(
-                        source="docstring",
-                        code=code,
-                        description=current_description,
-                        language="python",
-                    )
-                )
-        current_description = None
-        current_code_lines = []
-
     for line in lines:
-        if not line.strip() and not current_code_lines:
-            continue
-
         stripped = line.lstrip()
         indent = len(line) - len(stripped)
 
+        # Skip leading empty lines before any code has started
+        if not stripped and not current_code_lines:
+            continue
+
+        # Record the indentation level of the first non-empty line
         if base_indent is None and stripped:
             base_indent = indent
 
+        # Empty line inside an active code block — preserve as blank line
         if not stripped:
-            if current_code_lines:
-                current_code_lines.append("")
+            current_code_lines.append("")
             continue
 
-        if base_indent is not None and indent == base_indent:
-            if stripped.endswith(":") and not stripped.startswith((">>>", "...")):
-                _flush()
-                current_description = stripped.rstrip(":")
-                continue
+        # Description marker at base indent: flush current block, start new description
+        if base_indent is not None and _is_description_marker(
+            stripped, indent, base_indent
+        ):
+            example = _flush_example(current_code_lines, current_description)
+            if example is not None:
+                examples.append(example)
+            current_description = stripped.rstrip(":")
+            current_code_lines = []
+            continue
 
-        if base_indent is not None and indent > base_indent:
-            current_code_lines.append(line)
-        elif stripped:
-            if current_code_lines:
-                current_code_lines.append(line)
-            else:
-                current_code_lines.append(line)
+        # All other non-empty lines go into the code block
+        current_code_lines.append(line)
 
-    _flush()
+    example = _flush_example(current_code_lines, current_description)
+    if example is not None:
+        examples.append(example)
     return examples
 
 
