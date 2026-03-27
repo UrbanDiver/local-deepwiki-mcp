@@ -12,6 +12,7 @@ from mcp.types import TextContent
 from local_deepwiki.handlers import (
     ToolHandler,
     handle_analyze_diff,
+    handle_analyze_architecture,
     handle_ask_about_diff,
     handle_ask_question,
     handle_batch_explain_entities,
@@ -130,6 +131,7 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "get_coupling_metrics": handle_get_coupling_metrics,
     "get_design_smells": handle_get_design_smells,
     "get_architecture_health": handle_get_architecture_health,
+    "analyze_architecture": handle_analyze_architecture,
     "compare_architecture": handle_compare_architecture,
     "get_module_health": handle_get_module_health,
     "analyze_diff": handle_analyze_diff,

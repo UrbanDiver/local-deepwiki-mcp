@@ -14,6 +14,7 @@ from local_deepwiki.handlers._error_handling import handle_tool_errors
 from local_deepwiki.handlers._response import make_tool_text_content
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
+    AnalyzeArchitectureArgs,
     CompareArchitectureArgs,
     GetArchitectureHealthArgs,
     GetCouplingMetricsArgs,
@@ -495,6 +496,45 @@ async def handle_compare_architecture(
         repo_path,
     )
     return make_tool_text_content("compare_architecture", result)
+
+
+@handle_tool_errors
+async def handle_analyze_architecture(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle analyze_architecture composite tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = AnalyzeArchitectureArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.architecture_composite import (
+        analyze_architecture_composite,
+    )
+    from local_deepwiki.generators.manifest import get_cached_manifest
+
+    manifest = get_cached_manifest(repo_path)
+    project_name = manifest.name or repo_path.name
+    result = analyze_architecture_composite(
+        repo_path,
+        project_name,
+        detail_level=validated.detail_level,
+        focus=validated.focus,
+    )
+    logger.info(
+        "Architecture analysis: %s (%s) in %s",
+        result.get("overall", {}).get("grade"),
+        result.get("overall", {}).get("score"),
+        repo_path,
+    )
+    return make_tool_text_content("analyze_architecture", result)
 
 
 @handle_tool_errors

@@ -667,6 +667,36 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         annotations=_READ_ONLY,
     ),
     Tool(
+        name="analyze_architecture",
+        description=(
+            "Comprehensive architecture analysis in a single call. Runs health "
+            "check, dependency analysis, design smell detection, and hotspot "
+            "ranking, then returns a pre-synthesized markdown narrative report. "
+            "No prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository to analyze",
+                },
+                "detail_level": {
+                    "type": "string",
+                    "enum": ["summary", "standard", "full"],
+                    "description": "Output detail level: summary (~2K chars), standard (~6K, default), full (~12K)",
+                },
+                "focus": {
+                    "type": "string",
+                    "enum": ["all", "complexity", "coupling", "smells"],
+                    "description": "Focus area: all (default), complexity, coupling, or smells",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
         name="get_module_health",
         description=(
             "Deep health analysis of a single module. Shows complexity "

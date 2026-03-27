@@ -709,6 +709,20 @@ class GetArchitectureHealthArgs(BaseModel):
     )
 
 
+class AnalyzeArchitectureArgs(BaseModel):
+    """Arguments for the analyze_architecture composite tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    detail_level: str = Field(
+        default="standard",
+        description="Output detail: summary (~2K), standard (~6K), full (~12K)",
+    )
+    focus: str = Field(
+        default="all",
+        description="Focus area: all, complexity, coupling, or smells",
+    )
+
+
 class CompareArchitectureArgs(BaseModel):
     """Arguments for the compare_architecture tool."""
 

@@ -14,7 +14,7 @@ _CONCERN_THRESHOLD = 70
 
 def format_architecture_report(
     health: dict[str, Any],
-    deps: dict[str, Any],
+    deps: dict[str, Any] | None,
     *,
     detail_level: str = "standard",
 ) -> str:
@@ -27,7 +27,8 @@ def format_architecture_report(
 
     sections.append(_format_strengths(health))
     sections.append(_format_concerns(health))
-    sections.append(_format_dependency_structure(deps))
+    if deps is not None:
+        sections.append(_format_dependency_structure(deps))
 
     return "\n\n".join(s for s in sections if s)
 
