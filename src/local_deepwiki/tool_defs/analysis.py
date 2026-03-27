@@ -397,6 +397,10 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "string",
                     "description": "Path to the repository to analyze",
                 },
+                "summary_only": {
+                    "type": "boolean",
+                    "description": "Return only violation count without full layer details (default: false)",
+                },
             },
             "required": ["repo_path"],
         },
@@ -405,10 +409,9 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
     Tool(
         name="get_architecture_summary",
         description=(
-            "Get a composite architecture overview combining layer dependency "
-            "analysis with file metrics. Returns layer violation counts, file "
-            "counts per layer, total files and lines, largest files, and files "
-            "exceeding 800 lines."
+            "Deprecated: use get_architecture_health with detail_level='full' instead. "
+            "Returns a composite architecture overview combining health grade, "
+            "layer dependency analysis, and file metrics."
             "\n\nNo prior indexing required."
         ),
         inputSchema={
@@ -460,6 +463,10 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "boolean",
                     "description": "Exclude test files (default: true)",
                 },
+                "summary_only": {
+                    "type": "boolean",
+                    "description": "Return only stats without individual hotspot details (default: false)",
+                },
             },
             "required": ["repo_path"],
         },
@@ -500,8 +507,12 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "integer",
                     "description": (
                         "Limit output to the top N modules sorted by total "
-                        "edge count (optional, returns all if omitted)"
+                        "edge count (default: 20, max: 500)"
                     ),
+                },
+                "summary_only": {
+                    "type": "boolean",
+                    "description": "Return only stats (module/edge counts) without full lists (default: false)",
                 },
             },
             "required": ["repo_path"],
@@ -534,8 +545,16 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "integer",
                     "description": (
                         "Limit output to the top N modules sorted by distance "
-                        "from the main sequence (optional, returns all if omitted)"
+                        "from the main sequence (default: 20, max: 500)"
                     ),
+                },
+                "include_leaves": {
+                    "type": "boolean",
+                    "description": "Include modules with zero efferent coupling (default: false, excludes pure leaf modules)",
+                },
+                "summary_only": {
+                    "type": "boolean",
+                    "description": "Return only stats without individual module metrics (default: false)",
                 },
             },
             "required": ["repo_path"],
@@ -609,6 +628,11 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "integer",
                     "description": "Number of top findings per category (default: 5, max: 20)",
                 },
+                "detail_level": {
+                    "type": "string",
+                    "enum": ["summary", "standard", "full"],
+                    "description": "Output detail level: summary (~1K chars), standard (~4K, default), full (~12K with file metrics)",
+                },
             },
             "required": ["repo_path"],
         },
@@ -636,6 +660,36 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                 "head_ref": {
                     "type": "string",
                     "description": "Git ref for comparison target (default: HEAD)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
+        name="analyze_architecture",
+        description=(
+            "Comprehensive architecture analysis in a single call. Runs health "
+            "check, dependency analysis, design smell detection, and hotspot "
+            "ranking, then returns a pre-synthesized markdown narrative report. "
+            "No prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository to analyze",
+                },
+                "detail_level": {
+                    "type": "string",
+                    "enum": ["summary", "standard", "full"],
+                    "description": "Output detail level: summary (~2K chars), standard (~6K, default), full (~12K)",
+                },
+                "focus": {
+                    "type": "string",
+                    "enum": ["all", "complexity", "coupling", "smells"],
+                    "description": "Focus area: all (default), complexity, coupling, or smells",
                 },
             },
             "required": ["repo_path"],

@@ -14,9 +14,9 @@ from local_deepwiki.handlers._error_handling import handle_tool_errors
 from local_deepwiki.handlers._response import make_tool_text_content
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
+    AnalyzeArchitectureArgs,
     CompareArchitectureArgs,
     GetArchitectureHealthArgs,
-    GetArchitectureSummaryArgs,
     GetCouplingMetricsArgs,
     GetCrossModuleDependenciesArgs,
     GetDesignSmellsArgs,
@@ -68,11 +68,19 @@ async def handle_get_layer_dependencies(
 
     layer_result = analyze_layer_dependencies(repo_path, project_name)
 
-    result: dict[str, Any] = {
-        "status": "success",
-        "project_name": project_name,
-        **layer_result,
-    }
+    if validated.summary_only:
+        result: dict[str, Any] = {
+            "status": "success",
+            "project_name": project_name,
+            "total_violations": layer_result["total_violations"],
+            "tool": "get_layer_dependencies",
+        }
+    else:
+        result = {
+            "status": "success",
+            "project_name": project_name,
+            **layer_result,
+        }
 
     logger.info(
         "Layer dependencies: %d violations in %s",
@@ -140,47 +148,10 @@ async def handle_get_architecture_summary(
 ) -> list[TextContent]:
     """Handle get_architecture_summary tool call.
 
-    Composite tool that combines layer dependency analysis with file metrics
-    to give a high-level architecture overview.
+    Deprecated: delegates to get_architecture_health with detail_level=full.
     """
-    controller = get_access_controller()
-    controller.require_permission(Permission.INDEX_READ)
-
-    try:
-        validated = GetArchitectureSummaryArgs.model_validate(args)
-    except PydanticValidationError as e:
-        raise ValueError(str(e)) from e
-
-    repo_path = Path(validated.repo_path).resolve()
-
-    if not repo_path.exists():
-        raise path_not_found_error(str(repo_path), "repository")
-
-    from local_deepwiki.generators.analysis.layer_analysis import (
-        analyze_layer_dependencies,
-    )
-    from local_deepwiki.generators.manifest import get_cached_manifest
-
-    manifest = get_cached_manifest(repo_path)
-    project_name = manifest.name or repo_path.name
-
-    layer_analysis = analyze_layer_dependencies(repo_path, project_name)
-    file_metrics = _collect_file_metrics(repo_path)
-
-    result: dict[str, Any] = {
-        "status": "success",
-        "project_name": project_name,
-        "layer_analysis": layer_analysis,
-        "file_metrics": file_metrics,
-    }
-
-    logger.info(
-        "Architecture summary: %d violations, %d files in %s",
-        layer_analysis["total_violations"],
-        file_metrics["total_files"],
-        repo_path,
-    )
-    return make_tool_text_content("get_architecture_summary", result)
+    health_args = {**args, "detail_level": "full"}
+    return await handle_get_architecture_health(health_args)
 
 
 @handle_tool_errors
@@ -214,6 +185,13 @@ async def handle_get_hotspots(
         min_threshold=validated.min_threshold,
         exclude_tests=validated.exclude_tests,
     )
+
+    if validated.summary_only:
+        result = {
+            "status": result.get("status", "success"),
+            "stats": result.get("stats", {}),
+            "tool": result.get("tool", "get_hotspots"),
+        }
 
     logger.info(
         "Hotspots: %d results for metric=%s in %s",
@@ -283,10 +261,15 @@ async def handle_get_cross_module_dependencies(
         min_edge_weight=validated.min_edge_weight,
     )
 
-    # Apply overflow-prevention filter (immutable — new dict, no mutation).
-    if validated.top_n is not None:
+    # Apply overflow-prevention filters (immutable — new dicts, no mutation).
+    if validated.summary_only:
+        result = {
+            "status": result.get("status", "success"),
+            "stats": result.get("stats", {}),
+            "tool": result.get("tool", "get_cross_module_dependencies"),
+        }
+    else:
         edges = result.get("edges", [])
-        # Count edges per module (source + target appearances).
         edge_counts: dict[str, int] = _count_module_edges(edges)
         modules = sorted(
             result.get("modules", []),
@@ -332,8 +315,27 @@ async def handle_get_coupling_metrics(
         module_filter=validated.module_filter,
     )
 
-    # Apply overflow-prevention filter (immutable — new dict, no mutation).
-    if validated.top_n is not None:
+    # Filter out pure leaf modules (Ce == 0) unless explicitly requested.
+    if not validated.include_leaves:
+        metrics = result.get("metrics", [])
+        filtered = [m for m in metrics if m.get("efferent_coupling", 0) > 0]
+        result = {
+            **result,
+            "metrics": filtered,
+            "stats": {
+                **result.get("stats", {}),
+                "filtered_modules": len(metrics) - len(filtered),
+            },
+        }
+
+    # Apply overflow-prevention filters (immutable — new dicts, no mutation).
+    if validated.summary_only:
+        result = {
+            "status": result.get("status", "success"),
+            "stats": result.get("stats", {}),
+            "tool": result.get("tool", "get_coupling_metrics"),
+        }
+    else:
         metrics = sorted(
             result.get("metrics", []),
             key=lambda m: m.get("distance", 0),
@@ -428,6 +430,26 @@ async def handle_get_architecture_health(
         project_name,
         top_findings=validated.top_findings,
     )
+
+    detail = validated.detail_level
+    if detail == "summary":
+        overall = result.get("overall", {})
+        findings = result.get("top_findings", {})
+        trimmed_findings = {
+            k: v[:3] if isinstance(v, list) else v for k, v in findings.items()
+        }
+        result = {
+            "status": "success",
+            "project_name": result.get("project_name", ""),
+            "overall": overall,
+            "top_findings": trimmed_findings,
+            "tool": "get_architecture_health",
+        }
+    elif detail == "full":
+        file_metrics = _collect_file_metrics(repo_path)
+        result = {**result, "file_metrics": file_metrics}
+    # "standard" — return as-is (current behavior)
+
     logger.info(
         "Architecture health: %s (%s) in %s",
         result.get("overall", {}).get("grade"),
@@ -474,6 +496,45 @@ async def handle_compare_architecture(
         repo_path,
     )
     return make_tool_text_content("compare_architecture", result)
+
+
+@handle_tool_errors
+async def handle_analyze_architecture(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle analyze_architecture composite tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = AnalyzeArchitectureArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.architecture_composite import (
+        analyze_architecture_composite,
+    )
+    from local_deepwiki.generators.manifest import get_cached_manifest
+
+    manifest = get_cached_manifest(repo_path)
+    project_name = manifest.name or repo_path.name
+    result = analyze_architecture_composite(
+        repo_path,
+        project_name,
+        detail_level=validated.detail_level,
+        focus=validated.focus,
+    )
+    logger.info(
+        "Architecture analysis: %s (%s) in %s",
+        result.get("overall", {}).get("grade"),
+        result.get("overall", {}).get("score"),
+        repo_path,
+    )
+    return make_tool_text_content("analyze_architecture", result)
 
 
 @handle_tool_errors

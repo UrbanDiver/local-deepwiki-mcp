@@ -225,3 +225,18 @@ async def test_cross_module_deps_no_external_by_default(mock_access_control, tmp
     target_names = [e["target"] for e in data["edges"]]
     assert "flask" not in target_names
     assert "requests" not in target_names
+
+
+async def test_cross_module_deps_summary_only(mock_access_control, simple_pkg):
+    """summary_only=true returns counts without full module/edge lists."""
+    result = await handle_get_cross_module_dependencies(
+        {"repo_path": str(simple_pkg), "summary_only": True}
+    )
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert "modules" not in data
+    assert "edges" not in data
+    assert "mermaid" not in data
+    assert "stats" in data
+    assert isinstance(data["stats"]["total_modules"], int)
+    assert isinstance(data["stats"]["total_edges"], int)

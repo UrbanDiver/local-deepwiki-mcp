@@ -162,6 +162,24 @@ class TestHandleGetLayerDependencies:
         # Falls back to directory name
         assert data["project_name"] == mini_project.name
 
+    async def test_summary_only(
+        self, mini_project: Path, mock_access_control, mock_manifest
+    ) -> None:
+        with patch(
+            "local_deepwiki.generators.manifest.get_cached_manifest",
+            return_value=mock_manifest,
+        ):
+            result = await handle_get_layer_dependencies(
+                {"repo_path": str(mini_project), "summary_only": True}
+            )
+
+        data = json.loads(result[0].text)
+        assert data["status"] == "success"
+        assert "total_violations" in data
+        assert "layer_file_counts" not in data
+        assert "layer_edges" not in data
+        assert "violations" not in data
+
 
 # ---------------------------------------------------------------------------
 # handle_get_architecture_summary tests
@@ -169,11 +187,12 @@ class TestHandleGetLayerDependencies:
 
 
 class TestHandleGetArchitectureSummary:
-    """Tests for the get_architecture_summary handler."""
+    """Tests for the get_architecture_summary handler (deprecated, delegates to health)."""
 
-    async def test_returns_structured_summary(
+    async def test_returns_health_check_data(
         self, mini_project: Path, mock_access_control, mock_manifest
     ) -> None:
+        """Deprecated handler delegates to get_architecture_health with full detail."""
         with patch(
             "local_deepwiki.generators.manifest.get_cached_manifest",
             return_value=mock_manifest,
@@ -185,69 +204,10 @@ class TestHandleGetArchitectureSummary:
         assert len(result) == 1
         data = json.loads(result[0].text)
         assert data["status"] == "success"
-        assert "layer_analysis" in data
+        # Should include health grade data (from delegation to health check)
+        assert "overall" in data
+        # Full detail includes file_metrics
         assert "file_metrics" in data
-
-    async def test_includes_layer_file_counts(
-        self, mini_project: Path, mock_access_control, mock_manifest
-    ) -> None:
-        with patch(
-            "local_deepwiki.generators.manifest.get_cached_manifest",
-            return_value=mock_manifest,
-        ):
-            result = await handle_get_architecture_summary(
-                {"repo_path": str(mini_project)}
-            )
-
-        data = json.loads(result[0].text)
-        layer_counts = data["layer_analysis"]["layer_file_counts"]
-        assert "core" in layer_counts
-        assert "handlers" in layer_counts
-
-    async def test_file_metrics_shape(
-        self, mini_project: Path, mock_access_control, mock_manifest
-    ) -> None:
-        with patch(
-            "local_deepwiki.generators.manifest.get_cached_manifest",
-            return_value=mock_manifest,
-        ):
-            result = await handle_get_architecture_summary(
-                {"repo_path": str(mini_project)}
-            )
-
-        data = json.loads(result[0].text)
-        metrics = data["file_metrics"]
-        assert "total_files" in metrics
-        assert "total_lines" in metrics
-        assert "largest_files" in metrics
-        assert "files_over_threshold" in metrics
-        assert "threshold_lines" in metrics
-        assert metrics["total_files"] >= 4  # 2 core + 1 handlers + 1 models
-
-    async def test_large_file_detection(
-        self, tmp_path: Path, mock_access_control, mock_manifest
-    ) -> None:
-        """A file with >800 lines should appear in files_over_threshold."""
-        src_dir = tmp_path / "core"
-        src_dir.mkdir()
-        # Create a file with 850 lines
-        large_content = "\n".join(f"line_{i} = {i}" for i in range(850))
-        (src_dir / "big.py").write_text(large_content)
-        # Create a small file
-        (src_dir / "small.py").write_text("x = 1\n")
-
-        with patch(
-            "local_deepwiki.generators.manifest.get_cached_manifest",
-            return_value=mock_manifest,
-        ):
-            result = await handle_get_architecture_summary({"repo_path": str(tmp_path)})
-
-        data = json.loads(result[0].text)
-        metrics = data["file_metrics"]
-        assert metrics["files_over_threshold"] >= 1
-        # The big file should be first in largest_files
-        assert metrics["largest_files"][0]["file"] == "core/big.py"
-        assert metrics["largest_files"][0]["lines"] >= 850
 
     async def test_nonexistent_repo_path(
         self, tmp_path: Path, mock_access_control
@@ -256,47 +216,6 @@ class TestHandleGetArchitectureSummary:
         result = await handle_get_architecture_summary({"repo_path": str(bogus)})
         data = json.loads(result[0].text)
         assert "error" in data or data.get("status") == "error"
-
-    async def test_empty_project(
-        self, tmp_path: Path, mock_access_control, mock_manifest
-    ) -> None:
-        """An empty directory should return zero counts gracefully."""
-        with patch(
-            "local_deepwiki.generators.manifest.get_cached_manifest",
-            return_value=mock_manifest,
-        ):
-            result = await handle_get_architecture_summary({"repo_path": str(tmp_path)})
-
-        data = json.loads(result[0].text)
-        assert data["layer_analysis"]["total_violations"] == 0
-        assert data["file_metrics"]["total_files"] == 0
-        assert data["file_metrics"]["total_lines"] == 0
-
-    async def test_skips_pycache_and_hidden_dirs(
-        self, tmp_path: Path, mock_access_control, mock_manifest
-    ) -> None:
-        """Files in __pycache__ and .hidden dirs should be excluded."""
-        cache_dir = tmp_path / "__pycache__"
-        cache_dir.mkdir()
-        (cache_dir / "cached.py").write_text("x = 1\n")
-
-        hidden_dir = tmp_path / ".hidden"
-        hidden_dir.mkdir()
-        (hidden_dir / "secret.py").write_text("y = 2\n")
-
-        core_dir = tmp_path / "core"
-        core_dir.mkdir()
-        (core_dir / "real.py").write_text("z = 3\n")
-
-        with patch(
-            "local_deepwiki.generators.manifest.get_cached_manifest",
-            return_value=mock_manifest,
-        ):
-            result = await handle_get_architecture_summary({"repo_path": str(tmp_path)})
-
-        data = json.loads(result[0].text)
-        # Only core/real.py should be counted
-        assert data["file_metrics"]["total_files"] == 1
 
 
 # ---------------------------------------------------------------------------

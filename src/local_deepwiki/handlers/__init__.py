@@ -17,6 +17,7 @@ from local_deepwiki.handlers._progress import ProgressNotifier, create_progress_
 
 # --- Analysis and search tool handlers ---
 from local_deepwiki.handlers.analysis import (
+    handle_analyze_architecture,
     handle_analyze_diff,
     handle_ask_about_diff,
     handle_compare_architecture,
@@ -133,6 +134,7 @@ __all__ = [
     "handle_get_test_examples",
     "handle_list_indexed_repos",
     # Analysis handlers
+    "handle_analyze_architecture",
     "handle_analyze_diff",
     "handle_ask_about_diff",
     "handle_compare_architecture",

@@ -577,6 +577,10 @@ class GetLayerDependenciesArgs(BaseModel):
     """Arguments for the get_layer_dependencies tool."""
 
     repo_path: str = Field(max_length=4096, description="Path to the repository")
+    summary_only: bool = Field(
+        default=False,
+        description="Return only violation count without full layer details",
+    )
 
 
 class GetArchitectureSummaryArgs(BaseModel):
@@ -607,6 +611,10 @@ class GetHotspotsArgs(BaseModel):
         default=True,
         description="Exclude test files from analysis",
     )
+    summary_only: bool = Field(
+        default=False,
+        description="Return only stats without individual hotspot details",
+    )
 
 
 class GetCrossModuleDependenciesArgs(BaseModel):
@@ -626,10 +634,15 @@ class GetCrossModuleDependenciesArgs(BaseModel):
         ge=1,
         description="Minimum import count for an edge to be included",
     )
-    top_n: int | None = Field(
-        default=None,
+    top_n: int = Field(
+        default=20,
         ge=1,
-        description="Limit output to the top N modules by edge count",
+        le=500,
+        description="Limit output to the top N modules by edge count (default: 20)",
+    )
+    summary_only: bool = Field(
+        default=False,
+        description="Return only stats (module/edge counts) without full lists",
     )
 
 
@@ -641,10 +654,19 @@ class GetCouplingMetricsArgs(BaseModel):
         default=None,
         description="Filter to modules whose label starts with this prefix",
     )
-    top_n: int | None = Field(
-        default=None,
+    top_n: int = Field(
+        default=20,
         ge=1,
-        description="Limit output to the top N modules by distance from main sequence",
+        le=500,
+        description="Limit output to the top N modules by distance (default: 20)",
+    )
+    include_leaves: bool = Field(
+        default=False,
+        description="Include modules with zero efferent coupling (pure leaves)",
+    )
+    summary_only: bool = Field(
+        default=False,
+        description="Return only stats without individual module metrics",
     )
 
 
@@ -680,6 +702,24 @@ class GetArchitectureHealthArgs(BaseModel):
         ge=1,
         le=20,
         description="Number of top findings per category (1-20)",
+    )
+    detail_level: str = Field(
+        default="standard",
+        description="Output detail: summary (~1K), standard (~4K), full (~12K with file metrics)",
+    )
+
+
+class AnalyzeArchitectureArgs(BaseModel):
+    """Arguments for the analyze_architecture composite tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    detail_level: str = Field(
+        default="standard",
+        description="Output detail: summary (~2K), standard (~6K), full (~12K)",
+    )
+    focus: str = Field(
+        default="all",
+        description="Focus area: all, complexity, coupling, or smells",
     )
 
 

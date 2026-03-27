@@ -98,10 +98,11 @@ uv run deepwiki cache cleanup
 │    detect_stale_docs, detect_secrets, get_index_status,             │
 │    list_indexed_repos                                               │
 │                                                                     │
-│  Analysis & Search Tools (10):                                      │
+│  Analysis & Search Tools (11):                                      │
 │    search_wiki, fuzzy_search, get_file_context, explain_entity,     │
 │    impact_analysis, get_complexity_metrics, analyze_diff,           │
-│    ask_about_diff, get_project_manifest, get_wiki_stats             │
+│    ask_about_diff, get_project_manifest, get_wiki_stats,            │
+│    analyze_architecture                                              │
 │                                                                     │
 │  Codemap Tools (2):                                                 │
 │    generate_codemap, suggest_codemap_topics                         │
@@ -197,6 +198,8 @@ Organized into 4 subpackages plus root utilities:
 | Glossary | `analysis/glossary.py` | Searchable code entity glossary |
 | Inheritance | `analysis/inheritance.py` | Class hierarchy tree generation |
 | Stale Detection | `analysis/stale_detection.py` | Detects outdated wiki pages |
+| Architecture Report | `analysis/architecture_report.py` | Narrative formatter for composite architecture reports |
+| Architecture Composite | `analysis/architecture_composite.py` | Composite orchestrator: runs health + deps + smells + hotspots |
 
 #### `generators/examples/` — Example Extraction
 
@@ -278,12 +281,14 @@ Key workflow chains:
 | `ask_about_diff` | RAG-based Q&A about code changes (git diff + vector search + LLM) | No (degrades gracefully) |
 | `get_project_manifest` | Parsed metadata from pyproject.toml, package.json, etc. | No |
 | `get_wiki_stats` | Wiki health dashboard: index, pages, coverage, status | Yes |
+| `analyze_architecture` | Composite: health + deps + smells + hotspots → markdown narrative | No |
 
 Key workflow chains:
 - `fuzzy_search` -> `explain_entity` (find entity, then get full explanation)
 - `analyze_diff` -> `impact_analysis` (see what changed, then assess blast radius)
 - `analyze_diff` -> `ask_about_diff` (structural view, then natural-language Q&A)
 - `search_wiki` -> `get_file_context` (find a file, then explore its role)
+- `analyze_architecture` -> `get_module_health` (overall view, then drill into specific module)
 
 ### Provider Abstraction
 
@@ -348,7 +353,7 @@ The `events.py` module implements a pub-sub event system:
 
 ## Testing Notes
 
-- 5,128 tests across 141 test files with 95% coverage
+- 5,976 tests across 203 test files with 95% coverage
 - Tests use `pytest-asyncio` with `asyncio_mode = "auto"` (no need for `@pytest.mark.asyncio`)
 - Most tests mock LLM/embedding providers to avoid external calls
 - Test files follow pattern `test_<module>.py`
