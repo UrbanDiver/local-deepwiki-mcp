@@ -281,7 +281,7 @@ Key workflow chains:
 |------|---------|-------------------|
 | `search_wiki` | Full-text search across wiki pages and code entities | Yes |
 | `fuzzy_search` | Levenshtein-based name matching ("Did you mean?") | Yes |
-| `get_file_context` | Imports, callers, related files for a source file | Yes |
+| `get_file_context` | Imports, callers, related files; full mode adds entities, tests, commits | Yes |
 | `explain_entity` | Composite: glossary + call graph + inheritance + tests + API docs | Yes |
 | `impact_analysis` | Blast radius analysis with reverse call graph and risk level | Yes |
 | `get_complexity_metrics` | Cyclomatic complexity, nesting depth via tree-sitter AST | No |

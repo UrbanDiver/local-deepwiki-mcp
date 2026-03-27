@@ -89,6 +89,11 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "string",
                     "description": "File path relative to repo root (e.g., 'src/local_deepwiki/server.py')",
                 },
+                "detail_level": {
+                    "type": "string",
+                    "enum": ["standard", "full"],
+                    "description": "Output detail: standard (default) or full (adds entities, related tests, recent commits)",
+                },
             },
             "required": ["repo_path", "file_path"],
         },
@@ -660,6 +665,11 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                 "head_ref": {
                     "type": "string",
                     "description": "Git ref for comparison target (default: HEAD)",
+                },
+                "detail_level": {
+                    "type": "string",
+                    "enum": ["standard", "full"],
+                    "description": "Output detail: standard (default, scores + verdict) or full (adds coupling and smell diffs)",
                 },
             },
             "required": ["repo_path"],

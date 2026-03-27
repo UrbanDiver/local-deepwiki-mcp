@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import subprocess
 import time
 from pathlib import Path
 from typing import Any
@@ -254,11 +255,135 @@ async def handle_get_project_manifest(args: dict[str, Any]) -> list[TextContent]
     return make_tool_text_content("get_project_manifest", result)
 
 
+def _extract_entities(file_path: Path) -> list[dict[str, Any]]:
+    """Extract top-level functions and classes from a source file using tree-sitter.
+
+    Args:
+        file_path: Absolute path to the source file.
+
+    Returns:
+        List of dicts with ``name``, ``type``, and ``line`` keys.
+    """
+    try:
+        from local_deepwiki.core.parser import CodeParser
+
+        parser = CodeParser()
+        result = parser.parse_file(file_path)
+        if result is None:
+            return []
+        root_node = result[0]
+    except Exception:
+        return []
+
+    entities: list[dict[str, Any]] = []
+    for node in root_node.children:
+        if node.type == "function_definition":
+            name_node = node.child_by_field_name("name")
+            if name_node:
+                entities.append(
+                    {
+                        "name": name_node.text.decode("utf-8"),
+                        "type": "function",
+                        "line": node.start_point[0] + 1,
+                    }
+                )
+        elif node.type == "class_definition":
+            name_node = node.child_by_field_name("name")
+            if name_node:
+                entities.append(
+                    {
+                        "name": name_node.text.decode("utf-8"),
+                        "type": "class",
+                        "line": node.start_point[0] + 1,
+                    }
+                )
+    return entities
+
+
+def _find_related_tests(repo_path: Path, file_path: str) -> list[str]:
+    """Scan test directories for test files that import the given module.
+
+    Args:
+        repo_path: Root of the repository.
+        file_path: Relative file path within the repo.
+
+    Returns:
+        Sorted list of test file paths relative to ``repo_path``.
+    """
+    module_stem = Path(file_path).stem
+    module_parts = Path(file_path).with_suffix("").parts
+    results: list[str] = []
+    for test_dir_name in ("tests", "test"):
+        test_dir = repo_path / test_dir_name
+        if not test_dir.is_dir():
+            continue
+        for test_file in test_dir.rglob("test_*.py"):
+            try:
+                content = test_file.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            if module_stem in content and (
+                f"import {module_stem}" in content
+                or f"from {module_stem}" in content
+                or any(
+                    ".".join(module_parts[i:]) in content
+                    for i in range(len(module_parts))
+                )
+            ):
+                try:
+                    results.append(str(test_file.relative_to(repo_path)))
+                except ValueError:
+                    results.append(str(test_file))
+    return sorted(results)
+
+
+def _get_recent_commits(
+    repo_path: Path, file_path: str, limit: int = 5
+) -> list[dict[str, str]]:
+    """Return recent git commits that touched the given file.
+
+    Args:
+        repo_path: Root of the repository (must be a git repo).
+        file_path: Relative file path within the repo.
+        limit: Maximum number of commits to return.
+
+    Returns:
+        List of dicts with ``sha`` and ``message`` keys.
+    """
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "log",
+                f"--max-count={limit}",
+                "--format=%h %s",
+                "--",
+                file_path,
+            ],
+            cwd=str(repo_path),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode != 0:
+            return []
+    except (subprocess.SubprocessError, OSError):
+        return []
+
+    commits: list[dict[str, str]] = []
+    for line in result.stdout.strip().splitlines():
+        if " " in line:
+            sha, message = line.split(" ", 1)
+            commits.append({"sha": sha, "message": message})
+    return commits
+
+
 @handle_tool_errors
 async def handle_get_file_context(args: dict[str, Any]) -> list[TextContent]:
     """Handle get_file_context tool call.
 
     Returns imports, callers, related files, and type definitions for a source file.
+    When ``detail_level='full'``, also includes entities, related tests, and recent commits.
     """
     controller = get_access_controller()
     controller.require_permission(Permission.INDEX_READ)
@@ -311,6 +436,12 @@ async def handle_get_file_context(args: dict[str, Any]) -> list[TextContent]:
     }
     if context.warnings:
         result_context["warnings"] = context.warnings
+
+    if validated.detail_level == "full":
+        full_file_path = repo_path / file_path
+        result_context["entities"] = _extract_entities(full_file_path)
+        result_context["related_tests"] = _find_related_tests(repo_path, file_path)
+        result_context["recent_commits"] = _get_recent_commits(repo_path, file_path)
 
     result = {
         "status": "success",
