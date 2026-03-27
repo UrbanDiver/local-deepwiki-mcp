@@ -37,9 +37,26 @@ Append-only JSONL storage at `.deepwiki/health-history.jsonl`.
 }
 ```
 
+**Extraction logic** (key paths from `analyze_architecture_health` return value):
+```python
+overall = health_data["overall"]
+snapshot = {
+    "timestamp": now_utc_iso(),
+    "git_ref": get_short_git_ref(),  # git rev-parse --short HEAD, fallback "unknown"
+    "score": overall["score"],
+    "grade": overall["grade"],
+    "dimensions": {
+        name: {"score": dim["score"], "grade": dim["grade"]}
+        for name, dim in overall["dimensions"].items()
+    },
+}
+```
+
+Note: dimension dicts from health data also contain `factors` and `weights` — these are stripped to keep snapshots compact. File growth is unbounded in v1; rotation can be added later.
+
 **Functions:**
 
-- `save_snapshot(wiki_path: Path, health_data: dict) -> None` — extracts overall score/grade and dimension scores from health data, appends one JSONL line. Gets git ref via `git rev-parse --short HEAD` (falls back to `"unknown"` if not a git repo). No-op if health_data is missing required fields.
+- `save_snapshot(wiki_path: Path, health_data: dict) -> None` — extracts fields per the logic above, appends one JSONL line. No-op if health_data is missing `overall` key.
 
 - `load_snapshots(wiki_path: Path, *, since: str | None = None) -> list[dict]` — reads JSONL file, optionally filters by ISO timestamp. Returns list sorted by timestamp ascending. Returns empty list if file doesn't exist.
 
@@ -73,12 +90,18 @@ All thresholds are optional. Omitted thresholds are not checked. If no `[tool.de
 **Flow:**
 1. Parse CLI args (repo_path, --json flag)
 2. Resolve repo path (default: cwd)
-3. Read thresholds from `pyproject.toml` `[tool.deepwiki.check]` section
-4. Run `analyze_architecture_health(repo_path, project_name)`
-5. Save snapshot via `save_snapshot(wiki_path, health_data)`
-6. Compare overall grade and score + per-dimension scores against thresholds
-7. Print rich table (or JSON) with pass/fail per dimension
-8. Exit: 0 = all pass, 1 = threshold violated, 2 = error
+3. Read thresholds from `repo_path / pyproject.toml` via `tomllib` (stdlib). Missing file or missing `[tool.deepwiki.check]` section = no thresholds.
+4. Resolve project_name: `get_cached_manifest(repo_path).name or repo_path.name`
+5. Run `analyze_architecture_health(repo_path, project_name)`
+6. Save snapshot via `save_snapshot(wiki_path, health_data)` where `wiki_path = repo_path / ".deepwiki"`
+7. Compare overall grade and score + per-dimension scores against thresholds
+8. Print rich table (or JSON) with pass/fail per dimension
+9. Exit: 0 = all pass, 1 = any threshold violated, 2 = error
+
+**Threshold semantics:**
+- A grade **at or above** `min_grade` passes; strictly below fails. E.g., `min_grade = "C"` means C, B, A pass; D, F fail. Grade order: A > B > C > D > F.
+- A score **at or equal to** a `min_*` threshold passes; strictly below fails.
+- Any single threshold violation causes exit 1. Multiple violations are all reported.
 
 **Terminal output:**
 ```
@@ -156,7 +179,11 @@ Default `since`: 30 days before now if not specified.
 }
 ```
 
+`score_change` = last snapshot score minus first snapshot score in the filtered range.
+
 If no snapshots: `{"status": "success", "snapshots": [], "summary": null}`.
+
+Note: `since` date-string comparison works via ISO prefix sorting — `"2026-03-01" <= "2026-03-27T14:30:00Z"` is correct because ISO format sorts lexicographically.
 
 ### 3.4 Tool Definition
 
@@ -191,14 +218,19 @@ Tool(
 
 ## 4. Auto-snapshot in `deepwiki update`
 
-After wiki generation completes successfully in `cli/update_cli.py`, save a health snapshot:
+After wiki generation completes successfully in `cli/update_cli.py`, save a health snapshot. Insert in the synchronous `run_update()` function after `asyncio.run()` returns, using the resolved `wiki_path` and `repo_path` already in scope:
 
 ```python
+# Save health snapshot for trend tracking (non-critical)
 try:
     from local_deepwiki.core.health_history import save_snapshot
     from local_deepwiki.generators.analysis.architecture_health import (
         analyze_architecture_health,
     )
+    from local_deepwiki.generators.manifest import get_cached_manifest
+
+    manifest = get_cached_manifest(repo_path)
+    project_name = manifest.name or repo_path.name
     health = analyze_architecture_health(repo_path, project_name)
     save_snapshot(wiki_path, health)
 except Exception:
@@ -250,6 +282,7 @@ Silent failure — snapshot is a side effect, not a reason to fail the update.
 - `load_snapshots` returns empty list when file doesn't exist
 - `load_snapshots` returns all snapshots in chronological order
 - `load_snapshots` with `since` filters correctly
+- `load_snapshots` skips malformed JSONL lines without crashing
 - `get_latest` returns most recent snapshot
 - `get_latest` returns None when no history
 
@@ -261,9 +294,10 @@ Silent failure — snapshot is a side effect, not a reason to fail the update.
 - Exit 1 when dimension score below threshold
 - Exit 0 when no `[tool.deepwiki.check]` config exists (no thresholds = pass)
 - Exit 2 when repo path doesn't exist
-- `--json` flag produces valid JSON output
+- `--json` flag produces valid JSON output with violations array
 - Snapshot is saved as side effect of check
 - Grade comparison is ordinal (D < C, F < D)
+- Exit 2 when `analyze_architecture_health` raises an exception
 
 ### Trends MCP Tool Tests (`test_architecture_trends.py`)
 
