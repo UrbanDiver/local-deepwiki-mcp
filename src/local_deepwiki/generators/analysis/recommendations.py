@@ -71,9 +71,7 @@ _TEMPLATES: list[dict[str, str]] = [
 ]
 
 # Build a lookup for quick access by finding type.
-_TEMPLATE_BY_TYPE: dict[str, dict[str, str]] = {
-    t["finding_type"]: t for t in _TEMPLATES
-}
+_TEMPLATE_BY_TYPE: dict[str, dict[str, str]] = {t["finding_type"]: t for t in _TEMPLATES}
 
 
 # ---------------------------------------------------------------------------
@@ -193,9 +191,7 @@ def _recommendations_from_coupling(
             {
                 "title": f"Reduce coupling in module {module_name}",
                 "category": "coupling",
-                "description": (
-                    f"Distance from main sequence is {distance:.2f} (threshold: 0.7)."
-                ),
+                "description": (f"Distance from main sequence is {distance:.2f} (threshold: 0.7)."),
                 "file": "",
                 "line": 0,
                 "effort": "high",
@@ -266,9 +262,7 @@ def generate_recommendations(
     all_recs.extend(_recommendations_from_smells(combined_smells))
 
     all_recs.extend(_recommendations_from_hotspots(findings.get("hotspots", [])))
-    all_recs.extend(
-        _recommendations_from_layer_violations(findings.get("layer_violations", []))
-    )
+    all_recs.extend(_recommendations_from_layer_violations(findings.get("layer_violations", [])))
 
     # Coupling metrics are optional -- passed via a private key.
     coupling_metrics = health_data.get("_coupling_metrics", [])

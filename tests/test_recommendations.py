@@ -42,9 +42,7 @@ def _make_health_data(
 
 def test_recommendations_from_god_class() -> None:
     """God class findings produce 'Split class' recommendations."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        generate_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import generate_recommendations
 
     health = _make_health_data(
         god_classes=[
@@ -79,9 +77,7 @@ def test_recommendations_from_god_class() -> None:
 
 def test_recommendations_from_long_method() -> None:
     """Long method findings produce 'Extract helpers' recommendations."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        generate_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import generate_recommendations
 
     health = _make_health_data(
         smells=[
@@ -113,9 +109,7 @@ def test_recommendations_from_long_method() -> None:
 
 def test_recommendations_sorted_by_priority() -> None:
     """Recommendations are sorted by priority descending."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        generate_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import generate_recommendations
 
     health = _make_health_data(
         smells=[
@@ -162,9 +156,7 @@ def test_recommendations_sorted_by_priority() -> None:
 
 def test_recommendations_max_items() -> None:
     """max_items limits the number of returned recommendations."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        generate_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import generate_recommendations
 
     # Create many smells to exceed limit.
     smells = [
@@ -194,9 +186,7 @@ def test_recommendations_max_items() -> None:
 
 def test_recommendations_category_filter() -> None:
     """category_filter restricts results to a single category."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        generate_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import generate_recommendations
 
     health = _make_health_data(
         smells=[
@@ -235,9 +225,7 @@ def test_recommendations_category_filter() -> None:
 
 def test_recommendations_empty_health() -> None:
     """Empty findings produce an empty recommendations list."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        generate_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import generate_recommendations
 
     health = _make_health_data()
 
@@ -254,9 +242,7 @@ def test_recommendations_empty_health() -> None:
 
 def test_recommendations_reuses_health_data() -> None:
     """Passing health_data avoids calling analyze_architecture_health."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        generate_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import generate_recommendations
 
     health = _make_health_data(
         smells=[
@@ -285,9 +271,7 @@ def test_recommendations_reuses_health_data() -> None:
 
 async def test_enrich_adds_enriched_description() -> None:
     """enrich_recommendations adds an enriched_description via the LLM."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        enrich_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import enrich_recommendations
 
     recs = [
         {
@@ -308,9 +292,7 @@ async def test_enrich_adds_enriched_description() -> None:
     enriched = await enrich_recommendations(recs, mock_llm)
 
     assert len(enriched) == 1
-    assert (
-        enriched[0]["enriched_description"] == "This class handles too many concerns."
-    )
+    assert enriched[0]["enriched_description"] == "This class handles too many concerns."
     # Original dict must not have been mutated.
     assert "enriched_description" not in recs[0]
     # All original fields are preserved.
@@ -320,9 +302,7 @@ async def test_enrich_adds_enriched_description() -> None:
 
 async def test_enrich_handles_llm_failure_gracefully() -> None:
     """When the LLM fails for an item, the original rec is kept without enrichment."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        enrich_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import enrich_recommendations
 
     recs = [
         {
@@ -351,9 +331,7 @@ async def test_enrich_handles_llm_failure_gracefully() -> None:
 
 def test_recommendations_from_coupling_high_distance() -> None:
     """Coupling metrics with distance > 0.7 produce recommendations."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        generate_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import generate_recommendations
 
     health = _make_health_data(
         coupling_metrics=[
@@ -385,9 +363,7 @@ def test_recommendations_from_coupling_high_distance() -> None:
 
 def test_recommendations_from_layer_violations() -> None:
     """Layer violations produce 'Fix upward dependency' recommendations."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        generate_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import generate_recommendations
 
     health = _make_health_data(
         layer_violations=[
@@ -417,9 +393,7 @@ def test_recommendations_from_layer_violations() -> None:
 
 def test_recommendations_from_hotspots_high_cc() -> None:
     """Hotspots with CC > 15 produce 'Reduce complexity' recommendations."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        generate_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import generate_recommendations
 
     health = _make_health_data(
         hotspots=[
@@ -451,9 +425,7 @@ def test_recommendations_from_hotspots_high_cc() -> None:
 
 def test_recommendations_deduplicates() -> None:
     """Duplicate findings by (file, line, category) are removed."""
-    from local_deepwiki.generators.analysis.recommendations import (
-        generate_recommendations,
-    )
+    from local_deepwiki.generators.analysis.recommendations import generate_recommendations
 
     # Same file/line/category from both god_classes and high_severity_smells.
     smell = {
