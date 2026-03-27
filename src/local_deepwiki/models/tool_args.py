@@ -577,6 +577,10 @@ class GetLayerDependenciesArgs(BaseModel):
     """Arguments for the get_layer_dependencies tool."""
 
     repo_path: str = Field(max_length=4096, description="Path to the repository")
+    summary_only: bool = Field(
+        default=False,
+        description="Return only violation count without full layer details",
+    )
 
 
 class GetArchitectureSummaryArgs(BaseModel):
@@ -607,6 +611,10 @@ class GetHotspotsArgs(BaseModel):
         default=True,
         description="Exclude test files from analysis",
     )
+    summary_only: bool = Field(
+        default=False,
+        description="Return only stats without individual hotspot details",
+    )
 
 
 class GetCrossModuleDependenciesArgs(BaseModel):
@@ -632,6 +640,10 @@ class GetCrossModuleDependenciesArgs(BaseModel):
         le=500,
         description="Limit output to the top N modules by edge count (default: 20)",
     )
+    summary_only: bool = Field(
+        default=False,
+        description="Return only stats (module/edge counts) without full lists",
+    )
 
 
 class GetCouplingMetricsArgs(BaseModel):
@@ -647,6 +659,10 @@ class GetCouplingMetricsArgs(BaseModel):
         ge=1,
         le=500,
         description="Limit output to the top N modules by distance (default: 20)",
+    )
+    summary_only: bool = Field(
+        default=False,
+        description="Return only stats without individual module metrics",
     )
 
 

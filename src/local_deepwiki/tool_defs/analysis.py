@@ -397,6 +397,10 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "string",
                     "description": "Path to the repository to analyze",
                 },
+                "summary_only": {
+                    "type": "boolean",
+                    "description": "Return only violation count without full layer details (default: false)",
+                },
             },
             "required": ["repo_path"],
         },
@@ -460,6 +464,10 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "boolean",
                     "description": "Exclude test files (default: true)",
                 },
+                "summary_only": {
+                    "type": "boolean",
+                    "description": "Return only stats without individual hotspot details (default: false)",
+                },
             },
             "required": ["repo_path"],
         },
@@ -503,6 +511,10 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                         "edge count (default: 20, max: 500)"
                     ),
                 },
+                "summary_only": {
+                    "type": "boolean",
+                    "description": "Return only stats (module/edge counts) without full lists (default: false)",
+                },
             },
             "required": ["repo_path"],
         },
@@ -536,6 +548,10 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                         "Limit output to the top N modules sorted by distance "
                         "from the main sequence (default: 20, max: 500)"
                     ),
+                },
+                "summary_only": {
+                    "type": "boolean",
+                    "description": "Return only stats without individual module metrics (default: false)",
                 },
             },
             "required": ["repo_path"],

@@ -68,11 +68,19 @@ async def handle_get_layer_dependencies(
 
     layer_result = analyze_layer_dependencies(repo_path, project_name)
 
-    result: dict[str, Any] = {
-        "status": "success",
-        "project_name": project_name,
-        **layer_result,
-    }
+    if validated.summary_only:
+        result: dict[str, Any] = {
+            "status": "success",
+            "project_name": project_name,
+            "total_violations": layer_result["total_violations"],
+            "tool": "get_layer_dependencies",
+        }
+    else:
+        result = {
+            "status": "success",
+            "project_name": project_name,
+            **layer_result,
+        }
 
     logger.info(
         "Layer dependencies: %d violations in %s",
@@ -215,6 +223,13 @@ async def handle_get_hotspots(
         exclude_tests=validated.exclude_tests,
     )
 
+    if validated.summary_only:
+        result = {
+            "status": result.get("status", "success"),
+            "stats": result.get("stats", {}),
+            "tool": result.get("tool", "get_hotspots"),
+        }
+
     logger.info(
         "Hotspots: %d results for metric=%s in %s",
         len(result.get("hotspots", [])),
@@ -283,15 +298,22 @@ async def handle_get_cross_module_dependencies(
         min_edge_weight=validated.min_edge_weight,
     )
 
-    # Apply overflow-prevention filter (immutable — new dict, no mutation).
-    edges = result.get("edges", [])
-    edge_counts: dict[str, int] = _count_module_edges(edges)
-    modules = sorted(
-        result.get("modules", []),
-        key=lambda m: edge_counts.get(m.get("name", ""), 0),
-        reverse=True,
-    )
-    result = {**result, "modules": modules[: validated.top_n]}
+    # Apply overflow-prevention filters (immutable — new dicts, no mutation).
+    if validated.summary_only:
+        result = {
+            "status": result.get("status", "success"),
+            "stats": result.get("stats", {}),
+            "tool": result.get("tool", "get_cross_module_dependencies"),
+        }
+    else:
+        edges = result.get("edges", [])
+        edge_counts: dict[str, int] = _count_module_edges(edges)
+        modules = sorted(
+            result.get("modules", []),
+            key=lambda m: edge_counts.get(m.get("name", ""), 0),
+            reverse=True,
+        )
+        result = {**result, "modules": modules[: validated.top_n]}
 
     logger.info(
         "Cross-module deps: %d modules, %d edges in %s",
@@ -330,13 +352,20 @@ async def handle_get_coupling_metrics(
         module_filter=validated.module_filter,
     )
 
-    # Apply overflow-prevention filter (immutable — new dict, no mutation).
-    metrics = sorted(
-        result.get("metrics", []),
-        key=lambda m: m.get("distance", 0),
-        reverse=True,
-    )
-    result = {**result, "metrics": metrics[: validated.top_n]}
+    # Apply overflow-prevention filters (immutable — new dicts, no mutation).
+    if validated.summary_only:
+        result = {
+            "status": result.get("status", "success"),
+            "stats": result.get("stats", {}),
+            "tool": result.get("tool", "get_coupling_metrics"),
+        }
+    else:
+        metrics = sorted(
+            result.get("metrics", []),
+            key=lambda m: m.get("distance", 0),
+            reverse=True,
+        )
+        result = {**result, "metrics": metrics[: validated.top_n]}
 
     logger.info(
         "Coupling metrics: %d modules analyzed in %s",

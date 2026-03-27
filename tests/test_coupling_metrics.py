@@ -258,3 +258,15 @@ async def test_coupling_metrics_empty_repo(mock_access_control, tmp_path):
     data = json.loads(result[0].text)
     assert data["status"] == "success"
     assert data["metrics"] == []
+
+
+async def test_coupling_metrics_summary_only(mock_access_control, pkg_repo):
+    """summary_only=true returns stats without full metrics list."""
+    result = await handle_get_coupling_metrics(
+        {"repo_path": str(pkg_repo), "summary_only": True}
+    )
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert "metrics" not in data
+    assert "stats" in data
+    assert isinstance(data["stats"]["total_modules"], int)

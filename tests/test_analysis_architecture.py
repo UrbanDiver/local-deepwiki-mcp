@@ -162,6 +162,24 @@ class TestHandleGetLayerDependencies:
         # Falls back to directory name
         assert data["project_name"] == mini_project.name
 
+    async def test_summary_only(
+        self, mini_project: Path, mock_access_control, mock_manifest
+    ) -> None:
+        with patch(
+            "local_deepwiki.generators.manifest.get_cached_manifest",
+            return_value=mock_manifest,
+        ):
+            result = await handle_get_layer_dependencies(
+                {"repo_path": str(mini_project), "summary_only": True}
+            )
+
+        data = json.loads(result[0].text)
+        assert data["status"] == "success"
+        assert "total_violations" in data
+        assert "layer_file_counts" not in data
+        assert "layer_edges" not in data
+        assert "violations" not in data
+
 
 # ---------------------------------------------------------------------------
 # handle_get_architecture_summary tests
