@@ -14,7 +14,9 @@ All analysis handlers have been split into focused submodules:
                            handle_get_design_smells,
                            handle_get_architecture_health,
                            handle_compare_architecture,
-                           handle_get_module_health
+                           handle_get_module_health,
+                           handle_get_onboarding_guide,
+                           handle_get_recommendations
 """
 
 from __future__ import annotations
@@ -30,6 +32,8 @@ from local_deepwiki.handlers.analysis_architecture import (
     handle_get_hotspots,
     handle_get_layer_dependencies,
     handle_get_module_health,
+    handle_get_onboarding_guide,
+    handle_get_recommendations,
 )
 from local_deepwiki.handlers.analysis_diff import (
     handle_analyze_diff,
@@ -75,4 +79,6 @@ __all__ = [
     "handle_analyze_architecture",
     "handle_compare_architecture",
     "handle_get_module_health",
+    "handle_get_onboarding_guide",
+    "handle_get_recommendations",
 ]

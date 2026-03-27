@@ -96,3 +96,48 @@ def test_format_report_no_concerns_when_healthy():
 def test_format_report_zero_layer_violations_is_strength():
     report = format_architecture_report(_make_health(), _make_deps())
     assert "Zero layer violations" in report
+
+
+def test_format_recommendations_section():
+    """Recommendations are formatted as numbered list."""
+    from local_deepwiki.generators.analysis.architecture_report import (
+        _format_recommendations,
+    )
+
+    recs = [
+        {
+            "title": "Extract helpers from parse_node",
+            "category": "complexity",
+            "description": "CC=23, 145 lines",
+            "file": "src/parser.py",
+            "line": 42,
+            "effort": "low",
+            "impact": "high",
+            "priority": 3.0,
+        },
+        {
+            "title": "Split BigManager into focused components",
+            "category": "smells",
+            "description": "20 methods, 800 lines",
+            "file": "src/big.py",
+            "line": 1,
+            "effort": "medium",
+            "impact": "high",
+            "priority": 1.5,
+        },
+    ]
+    result = _format_recommendations(recs)
+    assert "## Recommendations" in result
+    assert "parse_node" in result
+    assert "BigManager" in result
+    assert "1." in result
+    assert "2." in result
+
+
+def test_format_recommendations_empty():
+    """Empty recommendations returns empty string."""
+    from local_deepwiki.generators.analysis.architecture_report import (
+        _format_recommendations,
+    )
+
+    assert _format_recommendations([]) == ""

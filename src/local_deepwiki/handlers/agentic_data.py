@@ -98,6 +98,25 @@ _TOOL_KEYWORDS: dict[str, list[str]] = {
         "coupling",
         "complexity",
     ],
+    "get_onboarding_guide": [
+        "onboard",
+        "onboarding",
+        "getting started",
+        "new developer",
+        "orientation",
+        "entry point",
+        "overview",
+    ],
+    "get_recommendations": [
+        "recommend",
+        "recommendation",
+        "refactor",
+        "improve",
+        "suggestion",
+        "priority",
+        "action",
+        "fix",
+    ],
 }
 
 

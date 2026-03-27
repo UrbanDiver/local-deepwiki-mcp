@@ -697,6 +697,64 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         annotations=_READ_ONLY,
     ),
     Tool(
+        name="get_onboarding_guide",
+        description=(
+            "Generate a developer onboarding guide for a codebase. Returns a "
+            "markdown narrative with project overview, getting started instructions, "
+            "repository layout, entry points, key modules, and testing info. "
+            "No prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "detail_level": {
+                    "type": "string",
+                    "enum": ["summary", "standard", "full"],
+                    "description": "Output detail level (default: standard)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
+        name="get_recommendations",
+        description=(
+            "Generate prioritized refactoring recommendations from architecture "
+            "health analysis. Returns actionable suggestions with effort/impact "
+            "scoring. Set enrich=true for LLM-generated detailed descriptions. "
+            "No prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "max_items": {
+                    "type": "integer",
+                    "description": "Maximum recommendations (default: 10, max: 50)",
+                },
+                "category_filter": {
+                    "type": "string",
+                    "enum": ["complexity", "coupling", "smells", "layers"],
+                    "description": "Filter to a specific category (optional)",
+                },
+                "enrich": {
+                    "type": "boolean",
+                    "description": "Use LLM for richer descriptions (default: false)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
         name="get_module_health",
         description=(
             "Deep health analysis of a single module. Shows complexity "

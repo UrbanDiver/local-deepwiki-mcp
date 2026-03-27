@@ -17,6 +17,7 @@ def format_architecture_report(
     deps: dict[str, Any] | None,
     *,
     detail_level: str = "standard",
+    recommendations: list[dict[str, Any]] | None = None,
 ) -> str:
     """Format architecture analysis data into a markdown narrative report."""
     sections: list[str] = []
@@ -27,6 +28,8 @@ def format_architecture_report(
 
     sections.append(_format_strengths(health))
     sections.append(_format_concerns(health))
+    if recommendations:
+        sections.append(_format_recommendations(recommendations))
     if deps is not None:
         sections.append(_format_dependency_structure(deps))
 
@@ -154,3 +157,17 @@ def _format_dependency_structure(deps: dict[str, Any]) -> str:
                 )
 
     return "## Dependency Structure\n\n" + "\n".join(parts)
+
+
+def _format_recommendations(recommendations: list[dict[str, Any]]) -> str:
+    """Format recommendations as a numbered markdown list."""
+    if not recommendations:
+        return ""
+    parts = ["## Recommendations\n"]
+    for i, r in enumerate(recommendations, 1):
+        parts.append(
+            f"{i}. **{r['title']}** ({r['category']}, "
+            f"effort: {r['effort']}, impact: {r['impact']})\n"
+            f"   `{r['file']}:{r['line']}` — {r['description']}"
+        )
+    return "\n".join(parts)

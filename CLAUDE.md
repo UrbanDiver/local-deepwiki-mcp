@@ -98,11 +98,12 @@ uv run deepwiki cache cleanup
 │    detect_stale_docs, detect_secrets, get_index_status,             │
 │    list_indexed_repos                                               │
 │                                                                     │
-│  Analysis & Search Tools (11):                                      │
+│  Analysis & Search Tools (13):                                      │
 │    search_wiki, fuzzy_search, get_file_context, explain_entity,     │
 │    impact_analysis, get_complexity_metrics, analyze_diff,           │
 │    ask_about_diff, get_project_manifest, get_wiki_stats,            │
-│    analyze_architecture                                              │
+│    analyze_architecture, get_onboarding_guide,                       │
+│    get_recommendations                                               │
 │                                                                     │
 │  Codemap Tools (2):                                                 │
 │    generate_codemap, suggest_codemap_topics                         │
@@ -200,6 +201,8 @@ Organized into 4 subpackages plus root utilities:
 | Stale Detection | `analysis/stale_detection.py` | Detects outdated wiki pages |
 | Architecture Report | `analysis/architecture_report.py` | Narrative formatter for composite architecture reports |
 | Architecture Composite | `analysis/architecture_composite.py` | Composite orchestrator: runs health + deps + smells + hotspots |
+| Onboarding | `analysis/onboarding.py` | Developer onboarding guide generator |
+| Recommendations | `analysis/recommendations.py` | Prioritized refactoring recommendations |
 
 #### `generators/examples/` — Example Extraction
 
@@ -282,6 +285,8 @@ Key workflow chains:
 | `get_project_manifest` | Parsed metadata from pyproject.toml, package.json, etc. | No |
 | `get_wiki_stats` | Wiki health dashboard: index, pages, coverage, status | Yes |
 | `analyze_architecture` | Composite: health + deps + smells + hotspots → markdown narrative | No |
+| `get_onboarding_guide` | Developer onboarding guide with entry points, key modules, and testing info | No |
+| `get_recommendations` | Prioritized refactoring recommendations from health analysis | No |
 
 Key workflow chains:
 - `fuzzy_search` -> `explain_entity` (find entity, then get full explanation)
@@ -289,6 +294,8 @@ Key workflow chains:
 - `analyze_diff` -> `ask_about_diff` (structural view, then natural-language Q&A)
 - `search_wiki` -> `get_file_context` (find a file, then explore its role)
 - `analyze_architecture` -> `get_module_health` (overall view, then drill into specific module)
+- `get_onboarding_guide` -> `explain_entity` (overview, then deep-dive on specific entity)
+- `get_recommendations` -> `get_module_health` (prioritized list, then drill into specific module)
 
 ### Provider Abstraction
 
