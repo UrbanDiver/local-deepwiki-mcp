@@ -17,6 +17,7 @@ from local_deepwiki.models import (
     AnalyzeArchitectureArgs,
     CompareArchitectureArgs,
     GetArchitectureHealthArgs,
+    GetArchitectureTrendsArgs,
     GetCouplingMetricsArgs,
     GetCrossModuleDependenciesArgs,
     GetDesignSmellsArgs,
@@ -653,3 +654,60 @@ async def handle_get_module_health(
         repo_path,
     )
     return make_tool_text_content("get_module_health", result)
+
+
+@handle_tool_errors
+async def handle_get_architecture_trends(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_architecture_trends tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetArchitectureTrendsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from datetime import datetime, timedelta, timezone
+
+    from local_deepwiki.core.health_history import load_snapshots
+
+    wiki_path = repo_path / ".deepwiki"
+    since = validated.since
+    if since is None:
+        since = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+
+    snapshots = load_snapshots(wiki_path, since=since)
+
+    summary = None
+    if snapshots:
+        summary = {
+            "snapshot_count": len(snapshots),
+            "date_range": {
+                "from": snapshots[0].get("timestamp", ""),
+                "to": snapshots[-1].get("timestamp", ""),
+            },
+            "score_change": snapshots[-1].get("score", 0)
+            - snapshots[0].get("score", 0),
+            "current_grade": snapshots[-1].get("grade", "?"),
+        }
+
+    result: dict[str, Any] = {
+        "status": "success",
+        "snapshots": snapshots,
+        "summary": summary,
+        "tool": "get_architecture_trends",
+    }
+
+    logger.info(
+        "Architecture trends: %d snapshots since %s in %s",
+        len(snapshots),
+        since,
+        repo_path,
+    )
+    return make_tool_text_content("get_architecture_trends", result)

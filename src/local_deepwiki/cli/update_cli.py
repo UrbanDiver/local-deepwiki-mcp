@@ -275,7 +275,7 @@ def run_update(
         return _run_dry_run(repo_path, effective_wiki_path, console)
 
     try:
-        return asyncio.run(
+        exit_code = asyncio.run(
             _run_update_async(
                 repo_path,
                 effective_wiki_path,
@@ -284,6 +284,22 @@ def run_update(
                 console=console,
             )
         )
+        if exit_code == 0:
+            # Save health snapshot for trend tracking (non-critical)
+            try:
+                from local_deepwiki.core.health_history import save_snapshot
+                from local_deepwiki.generators.analysis.architecture_health import (
+                    analyze_architecture_health,
+                )
+                from local_deepwiki.generators.manifest import get_cached_manifest
+
+                manifest = get_cached_manifest(repo_path)
+                project_name = manifest.name or repo_path.name
+                health = analyze_architecture_health(repo_path, project_name)
+                save_snapshot(effective_wiki_path, health)
+            except Exception:
+                pass
+        return exit_code
     except KeyboardInterrupt:
         console.print(
             "\n[yellow]Update interrupted.[/yellow] Partial progress may have been saved."

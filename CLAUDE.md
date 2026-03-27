@@ -79,6 +79,10 @@ uv run deepwiki config profile list
 uv run deepwiki cache stats
 uv run deepwiki cache clear --llm --embedding
 uv run deepwiki cache cleanup
+
+# Architecture quality gate (CI)
+uv run deepwiki check
+uv run deepwiki check --json
 ```
 
 ## Architecture
@@ -98,12 +102,12 @@ uv run deepwiki cache cleanup
 │    detect_stale_docs, detect_secrets, get_index_status,             │
 │    list_indexed_repos                                               │
 │                                                                     │
-│  Analysis & Search Tools (13):                                      │
+│  Analysis & Search Tools (14):                                      │
 │    search_wiki, fuzzy_search, get_file_context, explain_entity,     │
 │    impact_analysis, get_complexity_metrics, analyze_diff,           │
 │    ask_about_diff, get_project_manifest, get_wiki_stats,            │
 │    analyze_architecture, get_onboarding_guide,                       │
-│    get_recommendations                                               │
+│    get_recommendations, get_architecture_trends                      │
 │                                                                     │
 │  Codemap Tools (2):                                                 │
 │    generate_codemap, suggest_codemap_topics                         │
@@ -146,6 +150,7 @@ uv run deepwiki cache cleanup
 | Git Utils | `core/git_utils.py` | Secure git operations, path validation, remote URL functions |
 | Git Blame | `core/git_blame.py` | Git blame dataclasses (`BlameInfo`, `EntityBlameInfo`) and blame functions |
 | Audit Logger | `core/audit.py` | Operation audit logging |
+| Health History | `core/health_history.py` | JSONL-based health snapshot storage for trend tracking |
 | Events | `events.py` | Pub-sub event system with lifecycle hooks |
 | Validation | `validation.py` | Input validation with resource limits (CWE-400) |
 | Handlers: Indexing | `handlers/indexing.py` | Repository indexing handler (`handle_index_repository`) and pipeline |
@@ -287,6 +292,7 @@ Key workflow chains:
 | `analyze_architecture` | Composite: health + deps + smells + hotspots → markdown narrative | No |
 | `get_onboarding_guide` | Developer onboarding guide with entry points, key modules, and testing info | No |
 | `get_recommendations` | Prioritized refactoring recommendations from health analysis | No |
+| `get_architecture_trends` | Health score history with trend summary | No (reads saved history) |
 
 Key workflow chains:
 - `fuzzy_search` -> `explain_entity` (find entity, then get full explanation)
@@ -296,6 +302,7 @@ Key workflow chains:
 - `analyze_architecture` -> `get_module_health` (overall view, then drill into specific module)
 - `get_onboarding_guide` -> `explain_entity` (overview, then deep-dive on specific entity)
 - `get_recommendations` -> `get_module_health` (prioritized list, then drill into specific module)
+- `get_architecture_trends` -> `analyze_architecture` (see history, then get current details)
 
 ### Provider Abstraction
 

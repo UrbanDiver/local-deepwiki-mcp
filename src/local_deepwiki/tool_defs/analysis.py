@@ -781,4 +781,28 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         },
         annotations=_READ_ONLY,
     ),
+    Tool(
+        name="get_architecture_trends",
+        description=(
+            "View architecture health score trends over time. Returns historical "
+            "snapshots with overall and per-dimension scores. Snapshots are saved "
+            "automatically by 'deepwiki check' and 'deepwiki update'. "
+            "No prior indexing required (reads saved history)."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "since": {
+                    "type": "string",
+                    "description": "ISO date to filter from (default: last 30 days)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
 )

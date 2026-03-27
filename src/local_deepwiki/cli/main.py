@@ -46,6 +46,11 @@ SUBCOMMANDS: dict[str, tuple[str, str, str]] = {
         "Interactive code search",
     ),
     "cache": ("local_deepwiki.cli.cache_cli", "main", "Cache management"),
+    "check": (
+        "local_deepwiki.cli.check_cli",
+        "main",
+        "Run architecture quality gate",
+    ),
 }
 
 

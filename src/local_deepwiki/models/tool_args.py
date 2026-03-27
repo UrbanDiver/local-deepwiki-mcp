@@ -753,6 +753,16 @@ class GetRecommendationsArgs(BaseModel):
     )
 
 
+class GetArchitectureTrendsArgs(BaseModel):
+    """Arguments for the get_architecture_trends tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    since: str | None = Field(
+        default=None,
+        description="ISO date to filter from (e.g., '2026-03-01'). Default: last 30 days",
+    )
+
+
 class CompareArchitectureArgs(BaseModel):
     """Arguments for the compare_architecture tool."""
 
