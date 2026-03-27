@@ -8,6 +8,7 @@ All analysis handlers have been split into focused submodules:
                        handle_get_wiki_stats, handle_get_complexity_metrics
   - analysis_architecture: handle_get_layer_dependencies,
                            handle_get_architecture_summary,
+                           handle_get_architecture_trends,
                            handle_get_hotspots,
                            handle_get_cross_module_dependencies,
                            handle_get_coupling_metrics,
