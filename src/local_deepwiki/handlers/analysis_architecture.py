@@ -24,6 +24,7 @@ from local_deepwiki.models import (
     GetLayerDependenciesArgs,
     GetModuleHealthArgs,
     GetOnboardingGuideArgs,
+    GetRecommendationsArgs,
 )
 from local_deepwiki.security import Permission, get_access_controller
 
@@ -572,6 +573,57 @@ async def handle_get_onboarding_guide(
             "tool": "get_onboarding_guide",
         },
     )
+
+
+@handle_tool_errors
+async def handle_get_recommendations(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_recommendations tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetRecommendationsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.recommendations import (
+        enrich_recommendations,
+        generate_recommendations,
+    )
+
+    result = generate_recommendations(
+        repo_path,
+        max_items=validated.max_items,
+        category_filter=validated.category_filter,
+    )
+
+    if validated.enrich and result["recommendations"]:
+        try:
+            from local_deepwiki.providers.llm import get_llm_provider
+
+            provider = get_llm_provider()
+            result = {
+                **result,
+                "recommendations": await enrich_recommendations(
+                    result["recommendations"], provider
+                ),
+            }
+        except Exception:
+            logger.debug("LLM enrichment unavailable, using template-only")
+
+    logger.info(
+        "Recommendations: %d returned (of %d) in %s",
+        result["stats"]["returned"],
+        result["stats"]["total_findings"],
+        repo_path,
+    )
+    return make_tool_text_content("get_recommendations", result)
 
 
 @handle_tool_errors

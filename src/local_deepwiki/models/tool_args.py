@@ -733,6 +733,26 @@ class GetOnboardingGuideArgs(BaseModel):
     )
 
 
+class GetRecommendationsArgs(BaseModel):
+    """Arguments for the get_recommendations tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    max_items: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="Maximum recommendations to return (1-50)",
+    )
+    category_filter: str | None = Field(
+        default=None,
+        description="Filter by category: complexity, coupling, smells, or layers",
+    )
+    enrich: bool = Field(
+        default=False,
+        description="Use LLM to generate richer descriptions (slower)",
+    )
+
+
 class CompareArchitectureArgs(BaseModel):
     """Arguments for the compare_architecture tool."""
 
