@@ -491,6 +491,7 @@ async def handle_compare_architecture(
         project_name,
         base_ref=validated.base_ref,
         head_ref=validated.head_ref,
+        detail_level=validated.detail_level,
     )
     logger.info(
         "Architecture comparison %s..%s in %s",

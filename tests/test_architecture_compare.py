@@ -368,3 +368,57 @@ def test_compute_verdict_no_change() -> None:
     assert "no significant change" in verdict["summary"].lower()
     assert len(verdict["improved"]) == 0
     assert len(verdict["degraded"]) == 0
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for _compute_coupling_diff and _compute_smell_diff
+# ---------------------------------------------------------------------------
+
+
+def test_compute_coupling_diff() -> None:
+    from local_deepwiki.generators.analysis.architecture_compare import (
+        _compute_coupling_diff,
+    )
+
+    base = [
+        {"module": "core", "distance": 0.8},
+        {"module": "utils", "distance": 0.3},
+    ]
+    head = [
+        {"module": "core", "distance": 0.5},
+        {"module": "utils", "distance": 0.3},
+        {"module": "web", "distance": 0.9},
+    ]
+    diff = _compute_coupling_diff(base, head)
+    assert diff["base_modules"] == 2
+    assert diff["head_modules"] == 3
+    assert any(m["module"] == "web" for m in diff["new_high_distance"])
+    assert any(m["module"] == "core" for m in diff["resolved_high_distance"])
+
+
+def test_compute_smell_diff() -> None:
+    from local_deepwiki.generators.analysis.architecture_compare import (
+        _compute_smell_diff,
+    )
+
+    base = {
+        "top_findings": {
+            "high_severity_smells": [
+                {"type": "long_method", "file": "a.py", "entity": "func_a"},
+                {"type": "god_class", "file": "b.py", "entity": "BigB"},
+            ]
+        }
+    }
+    head = {
+        "top_findings": {
+            "high_severity_smells": [
+                {"type": "long_method", "file": "a.py", "entity": "func_a"},
+                {"type": "god_class", "file": "c.py", "entity": "BigC"},
+            ]
+        }
+    }
+    diff = _compute_smell_diff(base, head)
+    new_entities = [s["entity"] for s in diff["new_smells"]]
+    resolved_entities = [s["entity"] for s in diff["resolved_smells"]]
+    assert "BigC" in new_entities
+    assert "BigB" in resolved_entities

@@ -784,6 +784,10 @@ class CompareArchitectureArgs(BaseModel):
         max_length=256,
         description="Git ref for comparison target (default: HEAD)",
     )
+    detail_level: str = Field(
+        default="standard",
+        description="Output detail: standard (scores + verdict) or full (+ coupling changes + smell diff)",
+    )
 
 
 class GetModuleHealthArgs(BaseModel):

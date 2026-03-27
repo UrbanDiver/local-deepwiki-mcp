@@ -125,6 +125,8 @@ def _compute_deltas(
     }
 
 
+_HIGH_DISTANCE_THRESHOLD = 0.7
+
 _VERDICT_THRESHOLD = 2.0
 
 
@@ -161,11 +163,74 @@ def _compute_verdict(deltas: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _compute_coupling_diff(
+    base_metrics: list[dict[str, Any]],
+    head_metrics: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Diff high-distance modules between base and head coupling metrics."""
+    base_high = {
+        m["module"]: m["distance"]
+        for m in base_metrics
+        if m.get("distance", 0) > _HIGH_DISTANCE_THRESHOLD
+    }
+    head_high = {
+        m["module"]: m["distance"]
+        for m in head_metrics
+        if m.get("distance", 0) > _HIGH_DISTANCE_THRESHOLD
+    }
+    new_high = [
+        {"module": mod, "distance": dist}
+        for mod, dist in head_high.items()
+        if mod not in base_high
+    ]
+    resolved_high = [
+        {"module": mod, "distance": dist}
+        for mod, dist in base_high.items()
+        if mod not in head_high
+    ]
+    return {
+        "base_modules": len(base_metrics),
+        "head_modules": len(head_metrics),
+        "new_high_distance": new_high,
+        "resolved_high_distance": resolved_high,
+    }
+
+
+def _compute_smell_diff(
+    base_health: dict[str, Any],
+    head_health: dict[str, Any],
+) -> dict[str, Any]:
+    """Diff high-severity smells between base and head health reports."""
+
+    def _smell_key(s: dict[str, Any]) -> tuple[str, str, str]:
+        return (s.get("type", ""), s.get("file", ""), s.get("entity", ""))
+
+    base_smells = base_health.get("top_findings", {}).get("high_severity_smells", [])
+    head_smells = head_health.get("top_findings", {}).get("high_severity_smells", [])
+    base_keys = {_smell_key(s) for s in base_smells}
+    head_keys = {_smell_key(s) for s in head_smells}
+    new_keys = head_keys - base_keys
+    resolved_keys = base_keys - head_keys
+    new_smells = [
+        {"type": s.get("type"), "file": s.get("file"), "entity": s.get("entity")}
+        for s in head_smells
+        if _smell_key(s) in new_keys
+    ]
+    resolved_smells = [
+        {"type": s.get("type"), "file": s.get("file"), "entity": s.get("entity")}
+        for s in base_smells
+        if _smell_key(s) in resolved_keys
+    ]
+    return {"new_smells": new_smells, "resolved_smells": resolved_smells}
+
+
 def compare_architecture(
     repo_path: Path,
     project_name: str,
     base_ref: str = "HEAD~1",
     head_ref: str = "HEAD",
+    *,
+    detail_level: str = "standard",
 ) -> dict[str, Any]:
     """Compare architecture health between two git refs.
 
@@ -233,7 +298,7 @@ def compare_architecture(
         deltas["overall_delta"],
     )
 
-    return {
+    result: dict[str, Any] = {
         "status": "success",
         "project_name": project_name,
         "base_ref": {"ref": base_ref, "sha": base_sha},
@@ -243,3 +308,28 @@ def compare_architecture(
         "base_health": base_health.get("overall", {}),
         "head_health": head_health.get("overall", {}),
     }
+
+    if detail_level == "full":
+        from local_deepwiki.generators.analysis.coupling import (
+            analyze_coupling_metrics,
+        )
+
+        head_coupling = analyze_coupling_metrics(repo_path).get("metrics", [])
+        tmp_base_coupling = Path(tempfile.mkdtemp(prefix="deepwiki_coupling_"))
+        try:
+            if _create_worktree(repo_path, base_ref, tmp_base_coupling):
+                base_coupling = analyze_coupling_metrics(tmp_base_coupling).get(
+                    "metrics", []
+                )
+            else:
+                base_coupling = []
+        finally:
+            _remove_worktree(repo_path, tmp_base_coupling)
+
+        result = {
+            **result,
+            "coupling_changes": _compute_coupling_diff(base_coupling, head_coupling),
+            "smell_diff": _compute_smell_diff(base_health, head_health),
+        }
+
+    return result

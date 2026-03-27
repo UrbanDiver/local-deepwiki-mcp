@@ -666,6 +666,11 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "string",
                     "description": "Git ref for comparison target (default: HEAD)",
                 },
+                "detail_level": {
+                    "type": "string",
+                    "enum": ["standard", "full"],
+                    "description": "Output detail: standard (default, scores + verdict) or full (adds coupling and smell diffs)",
+                },
             },
             "required": ["repo_path"],
         },
