@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -211,3 +212,60 @@ async def test_handle_get_architecture_health_missing_repo() -> None:
 
     assert len(result) == 1
     assert "error" in result[0].text.lower() or "not found" in result[0].text.lower()
+
+
+async def test_architecture_health_summary_detail(tmp_path):
+    """detail_level=summary returns grade + dimensions without stats."""
+    (tmp_path / "mod.py").write_text("def f():\n    return 1\n")
+
+    from unittest.mock import MagicMock, patch
+
+    from local_deepwiki.handlers.analysis_architecture import (
+        handle_get_architecture_health,
+    )
+
+    mock_controller = MagicMock()
+    mock_controller.require_permission.return_value = None
+
+    with patch(
+        "local_deepwiki.handlers.analysis_architecture.get_access_controller",
+        return_value=mock_controller,
+    ):
+        result = await handle_get_architecture_health(
+            {"repo_path": str(tmp_path), "detail_level": "summary"}
+        )
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert "overall" in data
+    assert "grade" in data["overall"]
+    assert "dimensions" in data["overall"]
+    assert "stats" not in data
+    assert len(result[0].text) < 1500
+
+
+async def test_architecture_health_full_detail(tmp_path):
+    """detail_level=full returns everything including file metrics."""
+    (tmp_path / "mod.py").write_text("def f():\n    return 1\n")
+
+    from unittest.mock import MagicMock, patch
+
+    from local_deepwiki.handlers.analysis_architecture import (
+        handle_get_architecture_health,
+    )
+
+    mock_controller = MagicMock()
+    mock_controller.require_permission.return_value = None
+
+    with patch(
+        "local_deepwiki.handlers.analysis_architecture.get_access_controller",
+        return_value=mock_controller,
+    ):
+        result = await handle_get_architecture_health(
+            {"repo_path": str(tmp_path), "detail_level": "full"}
+        )
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert "overall" in data
+    assert "top_findings" in data
+    assert "stats" in data
+    assert "file_metrics" in data

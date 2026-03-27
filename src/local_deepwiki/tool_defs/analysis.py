@@ -629,6 +629,11 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "integer",
                     "description": "Number of top findings per category (default: 5, max: 20)",
                 },
+                "detail_level": {
+                    "type": "string",
+                    "enum": ["summary", "standard", "full"],
+                    "description": "Output detail level: summary (~1K chars), standard (~4K, default), full (~12K with file metrics)",
+                },
             },
             "required": ["repo_path"],
         },

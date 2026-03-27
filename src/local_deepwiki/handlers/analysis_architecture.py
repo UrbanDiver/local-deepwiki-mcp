@@ -467,6 +467,26 @@ async def handle_get_architecture_health(
         project_name,
         top_findings=validated.top_findings,
     )
+
+    detail = validated.detail_level
+    if detail == "summary":
+        overall = result.get("overall", {})
+        findings = result.get("top_findings", {})
+        trimmed_findings = {
+            k: v[:3] if isinstance(v, list) else v for k, v in findings.items()
+        }
+        result = {
+            "status": "success",
+            "project_name": result.get("project_name", ""),
+            "overall": overall,
+            "top_findings": trimmed_findings,
+            "tool": "get_architecture_health",
+        }
+    elif detail == "full":
+        file_metrics = _collect_file_metrics(repo_path)
+        result = {**result, "file_metrics": file_metrics}
+    # "standard" — return as-is (current behavior)
+
     logger.info(
         "Architecture health: %s (%s) in %s",
         result.get("overall", {}).get("grade"),

@@ -703,6 +703,10 @@ class GetArchitectureHealthArgs(BaseModel):
         le=20,
         description="Number of top findings per category (1-20)",
     )
+    detail_level: str = Field(
+        default="standard",
+        description="Output detail: summary (~1K), standard (~4K), full (~12K with file metrics)",
+    )
 
 
 class CompareArchitectureArgs(BaseModel):
