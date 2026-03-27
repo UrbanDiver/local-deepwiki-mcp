@@ -4,11 +4,19 @@
 
 Add two new MCP tools that make architecture analysis actionable: `get_onboarding_guide` generates a "start here" narrative for developers new to a codebase, and `get_recommendations` turns health findings into prioritized refactoring suggestions. Template-based recommendations are also integrated into the existing `analyze_architecture` composite tool output.
 
+## Scope Notes
+
+This spec supersedes the parent spec's Sections 2.1 and 2.2 (`docs/superpowers/specs/2026-03-21-mcp-server-improvements-design.md`). Key simplifications from the parent spec:
+- **Onboarding**: No indexing required (file-system scanning only, no call graph or wiki content). The parent spec's `audience` parameter is dropped — always targets developers. The richer indexed version can be added later.
+- **Recommendations**: Uses `low/medium/high` for effort/impact (not S/M/L). The `min_impact` parameter from the parent spec is dropped — priority sorting makes it unnecessary.
+- **CLI**: `deepwiki onboard` CLI command is deferred to a later phase. MCP tools first.
+
 ## Constraints
 
 - No prior indexing required for either tool
 - No LLM calls for default operation (template-based)
 - Optional LLM enrichment only in standalone `get_recommendations` with `enrich=True`
+- When `enrich=True` and no LLM provider is configured, fall back to template-only (no error)
 - Follow existing patterns: Pydantic args → tool def → handler → generator pure function
 - Recommendations in `analyze_architecture` are always template-only (fast)
 
@@ -33,7 +41,7 @@ Separate formatter `format_onboarding_guide(data: dict, *, detail_level: str = "
 |---------|---------|----------|------|
 | Project Overview | Yes | Yes | Yes |
 | Getting Started | Yes | Yes | Yes |
-| Repository Layout | Flat | Annotated | Annotated + file counts |
+| Repository Layout | Top-level dirs only | Annotated tree | Annotated tree + file counts |
 | Entry Points | — | Yes | Yes |
 | Key Modules | — | Top 5 | Top 8 with descriptions |
 | Testing | — | Yes | Yes + coverage info |
@@ -132,9 +140,9 @@ If `health_data` is None, calls `analyze_architecture_health()` internally. If p
 }
 ```
 
-**LLM enrichment function**: `enrich_recommendations(recommendations: list[dict], llm_provider) -> list[dict]`
+**LLM enrichment function**: `enrich_recommendations(recommendations: list[dict], llm_provider: LLMProvider) -> list[dict]`
 
-Takes the template recommendations and passes them through the LLM to generate richer descriptions with specific refactoring steps. Called only by the standalone handler when `enrich=True`. Adds an `enriched_description` field to each recommendation without replacing the template description.
+Takes the template recommendations and passes them through the LLM to generate richer descriptions with specific refactoring steps. Called only by the standalone handler when `enrich=True`. Adds an `enriched_description` field to each recommendation without replacing the template description. The handler resolves the provider via `get_cached_llm_provider()` from `local_deepwiki.providers.llm`. If no LLM is configured, the handler silently falls back to template-only (no error).
 
 ### 2.2 Args Model
 
@@ -157,7 +165,7 @@ class GetRecommendationsArgs(BaseModel):
 
 ### 2.3 Handler
 
-Standard pattern. When `enrich=True`, resolves LLM provider and calls `enrich_recommendations()` after generating template recommendations.
+Standard pattern. When `enrich=True`, attempts to resolve LLM provider via `get_cached_llm_provider()` and calls `enrich_recommendations()`. If provider resolution fails (no API key configured), silently returns template-only results — no error.
 
 ### 2.4 Tool Definition
 
@@ -265,14 +273,22 @@ Called in `format_architecture_report()` after concerns, before dependency struc
 ## 5. Testing Strategy
 
 ### Onboarding Tests (`test_onboarding.py`)
+
+**Generator tests:**
 - Generator returns all expected sections for a synthetic repo
 - `detail_level=summary` returns only overview + layout
 - `detail_level=full` includes config files
-- Entry point detection for common patterns (main.py, server.py, cli.py, __main__.py)
+- Entry point detection for common patterns (main.py, server.py, cli.py, `__main__.py`)
 - Empty repo returns graceful minimal guide
-- Missing repo returns error
+
+**Handler tests:**
+- Handler returns success with formatted markdown
+- Missing repo returns error response
+- Invalid `detail_level` falls back to standard (no crash)
 
 ### Recommendations Tests (`test_recommendations.py`)
+
+**Generator tests:**
 - God Class finding → generates "Split class" recommendation
 - Long Method finding → generates "Extract helpers" recommendation
 - Recommendations sorted by priority (high impact/low effort first)
@@ -280,7 +296,15 @@ Called in `format_architecture_report()` after concerns, before dependency struc
 - `category_filter` filters correctly
 - `health_data` parameter reuses provided data (no re-analysis)
 - Empty health data returns empty recommendations list
-- Missing repo returns error
+
+**LLM enrichment tests:**
+- `enrich=True` with mocked LLM provider adds `enriched_description` field
+- `enrich=True` with no LLM configured falls back to template-only (no error)
+
+**Handler tests:**
+- Handler returns success with recommendations list
+- Missing repo returns error response
+- `enrich=False` (default) does not call LLM
 
 ### Integration Tests
 - `analyze_architecture` standard detail includes `## Recommendations` section
