@@ -117,6 +117,15 @@ _TOOL_KEYWORDS: dict[str, list[str]] = {
         "action",
         "fix",
     ],
+    "get_architecture_trends": [
+        "trend",
+        "history",
+        "health",
+        "score",
+        "grade",
+        "snapshot",
+        "over time",
+    ],
 }
 
 
