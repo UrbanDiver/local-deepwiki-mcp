@@ -723,6 +723,16 @@ class AnalyzeArchitectureArgs(BaseModel):
     )
 
 
+class GetOnboardingGuideArgs(BaseModel):
+    """Arguments for the get_onboarding_guide tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    detail_level: str = Field(
+        default="standard",
+        description="Output detail: summary (~1K), standard (~3K), full (~6K)",
+    )
+
+
 class CompareArchitectureArgs(BaseModel):
     """Arguments for the compare_architecture tool."""
 

@@ -697,6 +697,31 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         annotations=_READ_ONLY,
     ),
     Tool(
+        name="get_onboarding_guide",
+        description=(
+            "Generate a developer onboarding guide for a codebase. Returns a "
+            "markdown narrative with project overview, getting started instructions, "
+            "repository layout, entry points, key modules, and testing info. "
+            "No prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "detail_level": {
+                    "type": "string",
+                    "enum": ["summary", "standard", "full"],
+                    "description": "Output detail level (default: standard)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
         name="get_module_health",
         description=(
             "Deep health analysis of a single module. Shows complexity "

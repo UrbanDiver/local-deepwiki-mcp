@@ -23,6 +23,7 @@ from local_deepwiki.models import (
     GetHotspotsArgs,
     GetLayerDependenciesArgs,
     GetModuleHealthArgs,
+    GetOnboardingGuideArgs,
 )
 from local_deepwiki.security import Permission, get_access_controller
 
@@ -535,6 +536,42 @@ async def handle_analyze_architecture(
         repo_path,
     )
     return make_tool_text_content("analyze_architecture", result)
+
+
+@handle_tool_errors
+async def handle_get_onboarding_guide(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_onboarding_guide tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetOnboardingGuideArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.onboarding import (
+        format_onboarding_guide,
+        generate_onboarding_guide,
+    )
+
+    result = generate_onboarding_guide(repo_path, detail_level=validated.detail_level)
+    guide = format_onboarding_guide(result, detail_level=validated.detail_level)
+
+    logger.info("Onboarding guide generated for %s", repo_path)
+    return make_tool_text_content(
+        "get_onboarding_guide",
+        {
+            "status": "success",
+            "guide": guide,
+            "tool": "get_onboarding_guide",
+        },
+    )
 
 
 @handle_tool_errors

@@ -1,8 +1,10 @@
-"""Tests for the onboarding guide generator."""
+"""Tests for the onboarding guide generator and handler."""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -136,3 +138,53 @@ def test_generate_onboarding_guide_empty_repo(tmp_path):
     # Formatting should also work gracefully
     md = format_onboarding_guide(data, detail_level="standard")
     assert "# Onboarding Guide" in md
+
+
+# ---------------------------------------------------------------------------
+# Handler tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def mock_access_control():
+    with patch(
+        "local_deepwiki.handlers.analysis_architecture.get_access_controller"
+    ) as mock:
+        controller = MagicMock()
+        mock.return_value = controller
+        yield controller
+
+
+async def test_handler_returns_success(mock_access_control, synthetic_repo):
+    from local_deepwiki.handlers.analysis_architecture import (
+        handle_get_onboarding_guide,
+    )
+
+    result = await handle_get_onboarding_guide({"repo_path": str(synthetic_repo)})
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert "## Project Overview" in data["guide"]
+
+
+async def test_handler_missing_repo(mock_access_control, tmp_path):
+    from local_deepwiki.handlers.analysis_architecture import (
+        handle_get_onboarding_guide,
+    )
+
+    result = await handle_get_onboarding_guide(
+        {"repo_path": str(tmp_path / "nonexistent")}
+    )
+    data = json.loads(result[0].text)
+    assert data["status"] == "error"
+
+
+async def test_handler_invalid_detail_level(mock_access_control, synthetic_repo):
+    from local_deepwiki.handlers.analysis_architecture import (
+        handle_get_onboarding_guide,
+    )
+
+    result = await handle_get_onboarding_guide(
+        {"repo_path": str(synthetic_repo), "detail_level": "verbose"}
+    )
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
