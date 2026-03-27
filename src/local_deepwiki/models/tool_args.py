@@ -315,6 +315,10 @@ class GetFileContextArgs(BaseModel):
         min_length=1,
         description="File path relative to repo root (e.g., 'src/local_deepwiki/server.py')",
     )
+    detail_level: str = Field(
+        default="standard",
+        description="Output detail: standard (imports, callers, related files) or full (+ entities, tests, commits)",
+    )
 
 
 class FuzzySearchArgs(BaseModel):
