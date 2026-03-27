@@ -86,6 +86,18 @@ _TOOL_KEYWORDS: dict[str, list[str]] = {
     "analyze_diff": ["diff", "change", "commit", "pr", "pull request", "review"],
     "index_repository": ["index", "reindex", "rebuild", "generate"],
     "suggest_codemap_topics": ["topic", "discover", "explore", "flow", "entry point"],
+    "analyze_architecture": [
+        "architecture",
+        "health",
+        "analysis",
+        "composite",
+        "report",
+        "grade",
+        "score",
+        "smells",
+        "coupling",
+        "complexity",
+    ],
 }
 
 

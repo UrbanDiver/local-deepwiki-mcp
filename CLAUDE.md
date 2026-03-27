@@ -98,10 +98,11 @@ uv run deepwiki cache cleanup
 │    detect_stale_docs, detect_secrets, get_index_status,             │
 │    list_indexed_repos                                               │
 │                                                                     │
-│  Analysis & Search Tools (10):                                      │
+│  Analysis & Search Tools (11):                                      │
 │    search_wiki, fuzzy_search, get_file_context, explain_entity,     │
 │    impact_analysis, get_complexity_metrics, analyze_diff,           │
-│    ask_about_diff, get_project_manifest, get_wiki_stats             │
+│    ask_about_diff, get_project_manifest, get_wiki_stats,            │
+│    analyze_architecture                                              │
 │                                                                     │
 │  Codemap Tools (2):                                                 │
 │    generate_codemap, suggest_codemap_topics                         │
