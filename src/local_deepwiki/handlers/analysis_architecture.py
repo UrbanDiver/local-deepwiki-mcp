@@ -284,16 +284,14 @@ async def handle_get_cross_module_dependencies(
     )
 
     # Apply overflow-prevention filter (immutable — new dict, no mutation).
-    if validated.top_n is not None:
-        edges = result.get("edges", [])
-        # Count edges per module (source + target appearances).
-        edge_counts: dict[str, int] = _count_module_edges(edges)
-        modules = sorted(
-            result.get("modules", []),
-            key=lambda m: edge_counts.get(m.get("name", ""), 0),
-            reverse=True,
-        )
-        result = {**result, "modules": modules[: validated.top_n]}
+    edges = result.get("edges", [])
+    edge_counts: dict[str, int] = _count_module_edges(edges)
+    modules = sorted(
+        result.get("modules", []),
+        key=lambda m: edge_counts.get(m.get("name", ""), 0),
+        reverse=True,
+    )
+    result = {**result, "modules": modules[: validated.top_n]}
 
     logger.info(
         "Cross-module deps: %d modules, %d edges in %s",
@@ -333,13 +331,12 @@ async def handle_get_coupling_metrics(
     )
 
     # Apply overflow-prevention filter (immutable — new dict, no mutation).
-    if validated.top_n is not None:
-        metrics = sorted(
-            result.get("metrics", []),
-            key=lambda m: m.get("distance", 0),
-            reverse=True,
-        )
-        result = {**result, "metrics": metrics[: validated.top_n]}
+    metrics = sorted(
+        result.get("metrics", []),
+        key=lambda m: m.get("distance", 0),
+        reverse=True,
+    )
+    result = {**result, "metrics": metrics[: validated.top_n]}
 
     logger.info(
         "Coupling metrics: %d modules analyzed in %s",

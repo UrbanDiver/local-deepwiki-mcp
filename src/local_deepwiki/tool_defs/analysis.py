@@ -500,7 +500,7 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "integer",
                     "description": (
                         "Limit output to the top N modules sorted by total "
-                        "edge count (optional, returns all if omitted)"
+                        "edge count (default: 20, max: 500)"
                     ),
                 },
             },
@@ -534,7 +534,7 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "integer",
                     "description": (
                         "Limit output to the top N modules sorted by distance "
-                        "from the main sequence (optional, returns all if omitted)"
+                        "from the main sequence (default: 20, max: 500)"
                     ),
                 },
             },

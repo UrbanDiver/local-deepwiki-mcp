@@ -626,10 +626,11 @@ class GetCrossModuleDependenciesArgs(BaseModel):
         ge=1,
         description="Minimum import count for an edge to be included",
     )
-    top_n: int | None = Field(
-        default=None,
+    top_n: int = Field(
+        default=20,
         ge=1,
-        description="Limit output to the top N modules by edge count",
+        le=500,
+        description="Limit output to the top N modules by edge count (default: 20)",
     )
 
 
@@ -641,10 +642,11 @@ class GetCouplingMetricsArgs(BaseModel):
         default=None,
         description="Filter to modules whose label starts with this prefix",
     )
-    top_n: int | None = Field(
-        default=None,
+    top_n: int = Field(
+        default=20,
         ge=1,
-        description="Limit output to the top N modules by distance from main sequence",
+        le=500,
+        description="Limit output to the top N modules by distance (default: 20)",
     )
 
 
