@@ -158,7 +158,9 @@ async def test_coupling_metrics_models_has_abstractness(mock_access_control, tmp
         "        return 42\n"
     )
 
-    result = await handle_get_coupling_metrics({"repo_path": str(tmp_path)})
+    result = await handle_get_coupling_metrics(
+        {"repo_path": str(tmp_path), "include_leaves": True}
+    )
     data = json.loads(result[0].text)
     # Find the module that maps to basepkg/abstract.py -> "basepkg.abstract".
     abstract_metrics = [m for m in data["metrics"] if m["module"] == "basepkg.abstract"]
@@ -172,7 +174,9 @@ async def test_coupling_metrics_models_has_abstractness(mock_access_control, tmp
 
 async def test_coupling_metrics_depended_module_high_ca(mock_access_control, pkg_repo):
     """The most-imported module has higher Ca than others."""
-    result = await handle_get_coupling_metrics({"repo_path": str(pkg_repo)})
+    result = await handle_get_coupling_metrics(
+        {"repo_path": str(pkg_repo), "include_leaves": True}
+    )
     data = json.loads(result[0].text)
     ca_values = [m["afferent_coupling"] for m in data["metrics"]]
     # At least one module should have Ca > 0.
@@ -258,6 +262,28 @@ async def test_coupling_metrics_empty_repo(mock_access_control, tmp_path):
     data = json.loads(result[0].text)
     assert data["status"] == "success"
     assert data["metrics"] == []
+
+
+async def test_coupling_metrics_excludes_leaves_by_default(
+    mock_access_control, pkg_repo
+):
+    """Default call excludes modules with efferent_coupling == 0 (pure leaves)."""
+    result = await handle_get_coupling_metrics({"repo_path": str(pkg_repo)})
+    data = json.loads(result[0].text)
+    for m in data["metrics"]:
+        assert m["efferent_coupling"] > 0, (
+            f"Leaf module {m['module']} (Ce=0) should be excluded by default"
+        )
+
+
+async def test_coupling_metrics_include_leaves(mock_access_control, pkg_repo):
+    """include_leaves=true restores all modules including pure leaves."""
+    result = await handle_get_coupling_metrics(
+        {"repo_path": str(pkg_repo), "include_leaves": True}
+    )
+    data = json.loads(result[0].text)
+    has_leaf = any(m["efferent_coupling"] == 0 for m in data["metrics"])
+    assert has_leaf, "Expected at least one leaf module when include_leaves=True"
 
 
 async def test_coupling_metrics_summary_only(mock_access_control, pkg_repo):

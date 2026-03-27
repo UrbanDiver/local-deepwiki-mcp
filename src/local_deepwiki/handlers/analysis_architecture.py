@@ -352,6 +352,19 @@ async def handle_get_coupling_metrics(
         module_filter=validated.module_filter,
     )
 
+    # Filter out pure leaf modules (Ce == 0) unless explicitly requested.
+    if not validated.include_leaves:
+        metrics = result.get("metrics", [])
+        filtered = [m for m in metrics if m.get("efferent_coupling", 0) > 0]
+        result = {
+            **result,
+            "metrics": filtered,
+            "stats": {
+                **result.get("stats", {}),
+                "filtered_modules": len(metrics) - len(filtered),
+            },
+        }
+
     # Apply overflow-prevention filters (immutable — new dicts, no mutation).
     if validated.summary_only:
         result = {

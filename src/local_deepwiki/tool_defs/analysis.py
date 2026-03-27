@@ -549,6 +549,10 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                         "from the main sequence (default: 20, max: 500)"
                     ),
                 },
+                "include_leaves": {
+                    "type": "boolean",
+                    "description": "Include modules with zero efferent coupling (default: false, excludes pure leaf modules)",
+                },
                 "summary_only": {
                     "type": "boolean",
                     "description": "Return only stats without individual module metrics (default: false)",

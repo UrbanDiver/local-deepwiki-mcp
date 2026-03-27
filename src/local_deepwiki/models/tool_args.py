@@ -660,6 +660,10 @@ class GetCouplingMetricsArgs(BaseModel):
         le=500,
         description="Limit output to the top N modules by distance (default: 20)",
     )
+    include_leaves: bool = Field(
+        default=False,
+        description="Include modules with zero efferent coupling (pure leaves)",
+    )
     summary_only: bool = Field(
         default=False,
         description="Return only stats without individual module metrics",
