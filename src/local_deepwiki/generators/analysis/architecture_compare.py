@@ -125,6 +125,42 @@ def _compute_deltas(
     }
 
 
+_VERDICT_THRESHOLD = 2.0
+
+
+def _compute_verdict(deltas: dict[str, Any]) -> dict[str, Any]:
+    """Compute architecture verdict from deltas."""
+    overall_delta = deltas.get("overall_delta", 0)
+    dims = deltas.get("dimensions", {})
+
+    improved: list[str] = []
+    degraded: list[str] = []
+    unchanged: list[str] = []
+
+    for dim_name, dim_data in dims.items():
+        delta = dim_data.get("delta", 0)
+        if delta > _VERDICT_THRESHOLD:
+            improved.append(dim_name)
+        elif delta < -_VERDICT_THRESHOLD:
+            degraded.append(dim_name)
+        else:
+            unchanged.append(dim_name)
+
+    if overall_delta > _VERDICT_THRESHOLD:
+        summary = f"Architecture improved (+{overall_delta})"
+    elif overall_delta < -_VERDICT_THRESHOLD:
+        summary = f"Architecture degraded ({overall_delta})"
+    else:
+        summary = f"No significant change ({overall_delta:+.1f})"
+
+    return {
+        "summary": summary,
+        "improved": improved,
+        "degraded": degraded,
+        "unchanged": unchanged,
+    }
+
+
 def compare_architecture(
     repo_path: Path,
     project_name: str,
@@ -186,6 +222,7 @@ def compare_architecture(
         _remove_worktree(repo_path, tmp_base)
 
     deltas = _compute_deltas(base_health, head_health)
+    verdict = _compute_verdict(deltas)
 
     logger.info(
         "Architecture comparison %s..%s: %s -> %s (delta: %+.1f)",
@@ -202,6 +239,7 @@ def compare_architecture(
         "base_ref": {"ref": base_ref, "sha": base_sha},
         "head_ref": {"ref": head_ref, "sha": head_sha},
         "deltas": deltas,
+        "verdict": verdict,
         "base_health": base_health.get("overall", {}),
         "head_health": head_health.get("overall", {}),
     }

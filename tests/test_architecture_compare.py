@@ -307,3 +307,64 @@ async def test_handle_compare_architecture_missing_repo() -> None:
 
     assert len(result) == 1
     assert "error" in result[0].text.lower() or "not found" in result[0].text.lower()
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for _compute_verdict
+# ---------------------------------------------------------------------------
+
+
+def test_compute_verdict_improved() -> None:
+    from local_deepwiki.generators.analysis.architecture_compare import _compute_verdict
+
+    deltas = {
+        "overall_delta": 5.0,
+        "dimensions": {
+            "complexity": {"delta": 3.0},
+            "coupling": {"delta": -1.0},
+            "smells": {"delta": 8.0},
+            "layers": {"delta": 0.0},
+        },
+    }
+    verdict = _compute_verdict(deltas)
+    assert "improved" in verdict["summary"].lower()
+    assert "complexity" in verdict["improved"]
+    assert "smells" in verdict["improved"]
+    assert "coupling" in verdict["unchanged"]
+    assert "layers" in verdict["unchanged"]
+
+
+def test_compute_verdict_degraded() -> None:
+    from local_deepwiki.generators.analysis.architecture_compare import _compute_verdict
+
+    deltas = {
+        "overall_delta": -6.0,
+        "dimensions": {
+            "complexity": {"delta": -5.0},
+            "coupling": {"delta": -3.0},
+            "smells": {"delta": 1.0},
+            "layers": {"delta": 0.0},
+        },
+    }
+    verdict = _compute_verdict(deltas)
+    assert "degraded" in verdict["summary"].lower()
+    assert "complexity" in verdict["degraded"]
+    assert "coupling" in verdict["degraded"]
+
+
+def test_compute_verdict_no_change() -> None:
+    from local_deepwiki.generators.analysis.architecture_compare import _compute_verdict
+
+    deltas = {
+        "overall_delta": 0.5,
+        "dimensions": {
+            "complexity": {"delta": 1.0},
+            "coupling": {"delta": -0.5},
+            "smells": {"delta": 0.0},
+            "layers": {"delta": 0.0},
+        },
+    }
+    verdict = _compute_verdict(deltas)
+    assert "no significant change" in verdict["summary"].lower()
+    assert len(verdict["improved"]) == 0
+    assert len(verdict["degraded"]) == 0
