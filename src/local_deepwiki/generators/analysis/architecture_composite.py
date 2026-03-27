@@ -58,7 +58,27 @@ def analyze_architecture_composite(
             min_edge_weight=3,
         )
 
-    report = format_architecture_report(health, deps, detail_level=detail_level)
+    # Generate template-only recommendations (no LLM)
+    recs_count = {"summary": 0, "standard": 5, "full": 10}.get(detail_level, 5)
+    recommendations: list[dict[str, Any]] = []
+    if recs_count > 0:
+        from local_deepwiki.generators.analysis.recommendations import (
+            generate_recommendations,
+        )
+
+        recs_result = generate_recommendations(
+            repo_path,
+            health_data=health,
+            max_items=recs_count,
+        )
+        recommendations = recs_result.get("recommendations", [])
+
+    report = format_architecture_report(
+        health,
+        deps,
+        detail_level=detail_level,
+        recommendations=recommendations,
+    )
 
     return {
         "status": "success",

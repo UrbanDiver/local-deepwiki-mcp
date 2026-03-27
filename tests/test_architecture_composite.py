@@ -87,3 +87,15 @@ async def test_analyze_architecture_output_size(mock_access_control, simple_repo
     """Standard output should stay under 8K characters."""
     result = await handle_analyze_architecture({"repo_path": str(simple_repo)})
     assert len(result[0].text) < 8000
+
+
+async def test_analyze_architecture_summary_no_recommendations(
+    mock_access_control,
+    simple_repo,
+):
+    """Summary detail does NOT include recommendations section."""
+    result = await handle_analyze_architecture(
+        {"repo_path": str(simple_repo), "detail_level": "summary"}
+    )
+    data = json.loads(result[0].text)
+    assert "## Recommendations" not in data["report"]
