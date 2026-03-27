@@ -409,10 +409,9 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
     Tool(
         name="get_architecture_summary",
         description=(
-            "Get a composite architecture overview combining layer dependency "
-            "analysis with file metrics. Returns layer violation counts, file "
-            "counts per layer, total files and lines, largest files, and files "
-            "exceeding 800 lines."
+            "Deprecated: use get_architecture_health with detail_level='full' instead. "
+            "Returns a composite architecture overview combining health grade, "
+            "layer dependency analysis, and file metrics."
             "\n\nNo prior indexing required."
         ),
         inputSchema={

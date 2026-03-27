@@ -16,7 +16,6 @@ from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
     CompareArchitectureArgs,
     GetArchitectureHealthArgs,
-    GetArchitectureSummaryArgs,
     GetCouplingMetricsArgs,
     GetCrossModuleDependenciesArgs,
     GetDesignSmellsArgs,
@@ -148,47 +147,10 @@ async def handle_get_architecture_summary(
 ) -> list[TextContent]:
     """Handle get_architecture_summary tool call.
 
-    Composite tool that combines layer dependency analysis with file metrics
-    to give a high-level architecture overview.
+    Deprecated: delegates to get_architecture_health with detail_level=full.
     """
-    controller = get_access_controller()
-    controller.require_permission(Permission.INDEX_READ)
-
-    try:
-        validated = GetArchitectureSummaryArgs.model_validate(args)
-    except PydanticValidationError as e:
-        raise ValueError(str(e)) from e
-
-    repo_path = Path(validated.repo_path).resolve()
-
-    if not repo_path.exists():
-        raise path_not_found_error(str(repo_path), "repository")
-
-    from local_deepwiki.generators.analysis.layer_analysis import (
-        analyze_layer_dependencies,
-    )
-    from local_deepwiki.generators.manifest import get_cached_manifest
-
-    manifest = get_cached_manifest(repo_path)
-    project_name = manifest.name or repo_path.name
-
-    layer_analysis = analyze_layer_dependencies(repo_path, project_name)
-    file_metrics = _collect_file_metrics(repo_path)
-
-    result: dict[str, Any] = {
-        "status": "success",
-        "project_name": project_name,
-        "layer_analysis": layer_analysis,
-        "file_metrics": file_metrics,
-    }
-
-    logger.info(
-        "Architecture summary: %d violations, %d files in %s",
-        layer_analysis["total_violations"],
-        file_metrics["total_files"],
-        repo_path,
-    )
-    return make_tool_text_content("get_architecture_summary", result)
+    health_args = {**args, "detail_level": "full"}
+    return await handle_get_architecture_health(health_args)
 
 
 @handle_tool_errors
