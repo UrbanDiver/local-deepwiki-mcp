@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -188,3 +188,155 @@ async def test_handler_invalid_detail_level(mock_access_control, synthetic_repo)
     )
     data = json.loads(result[0].text)
     assert data["status"] == "success"
+
+
+class TestGenerateRichOnboarding:
+    """Tests for generate_rich_onboarding."""
+
+    @pytest.fixture
+    def mock_vector_store(self):
+        mock = MagicMock()
+        mock.search = AsyncMock(return_value=[])
+        mock.get_chunks_by_file = AsyncMock(return_value=[])
+        return mock
+
+    @pytest.fixture
+    def mock_llm(self):
+        mock = MagicMock()
+        # Flow selection returns valid JSON
+        mock.generate = AsyncMock(
+            side_effect=[
+                # Call 1: flow selection
+                json.dumps(
+                    [
+                        {
+                            "entry_point": "main",
+                            "query": "How does the CLI work?",
+                            "title": "CLI Pipeline",
+                        },
+                        {
+                            "entry_point": "server",
+                            "query": "How does the server work?",
+                            "title": "Server Lifecycle",
+                        },
+                        {
+                            "entry_point": "index",
+                            "query": "How does indexing work?",
+                            "title": "Indexing Pipeline",
+                        },
+                    ]
+                ),
+                # Call 2: synthesis
+                "# Developer Onboarding Guide\n\n## What This Project Does\n\nA test project.\n",
+            ]
+        )
+        return mock
+
+    @pytest.fixture
+    def mock_codemap_result(self):
+        from local_deepwiki.generators.codemap.models import CodemapResult
+
+        return CodemapResult(
+            query="How does the CLI work?",
+            focus="execution_flow",
+            entry_point="main",
+            mermaid_diagram="flowchart TD\n    A[main] --> B[run]",
+            narrative="## Summary\nThe CLI dispatches commands.\n",
+            nodes=[],
+            edges=[],
+            files_involved=["src/cli.py"],
+            total_nodes=2,
+            total_edges=1,
+            cross_file_edges=0,
+        )
+
+    @patch("local_deepwiki.generators.analysis.onboarding.generate_codemap")
+    async def test_rich_onboarding_produces_markdown(
+        self,
+        mock_gen_codemap,
+        synthetic_repo,
+        mock_vector_store,
+        mock_llm,
+        mock_codemap_result,
+    ):
+        from local_deepwiki.generators.analysis.onboarding import (
+            generate_rich_onboarding,
+        )
+
+        mock_gen_codemap.return_value = mock_codemap_result
+
+        result = await generate_rich_onboarding(
+            repo_path=synthetic_repo,
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+        )
+
+        assert result["status"] == "success"
+        assert "guide" in result
+        assert isinstance(result["guide"], str)
+        assert "Onboarding" in result["guide"]
+        # LLM was called twice: flow selection + synthesis
+        assert mock_llm.generate.call_count == 2
+        # Codemap was called 3 times (one per flow)
+        assert mock_gen_codemap.call_count == 3
+
+    @patch("local_deepwiki.generators.analysis.onboarding.generate_codemap")
+    async def test_rich_onboarding_handles_bad_flow_json(
+        self,
+        mock_gen_codemap,
+        synthetic_repo,
+        mock_vector_store,
+        mock_llm,
+        mock_codemap_result,
+    ):
+        from local_deepwiki.generators.analysis.onboarding import (
+            generate_rich_onboarding,
+        )
+
+        # LLM returns invalid JSON for flow selection
+        mock_llm.generate = AsyncMock(
+            side_effect=[
+                "not valid json at all",
+                "# Developer Onboarding Guide\n\nFallback guide.\n",
+            ]
+        )
+        mock_gen_codemap.return_value = mock_codemap_result
+
+        result = await generate_rich_onboarding(
+            repo_path=synthetic_repo,
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+        )
+
+        assert result["status"] == "success"
+        # Still produced a guide via fallback
+        assert "guide" in result
+
+    @patch("local_deepwiki.generators.analysis.onboarding.generate_codemap")
+    async def test_rich_onboarding_handles_codemap_failure(
+        self, mock_gen_codemap, synthetic_repo, mock_vector_store, mock_llm
+    ):
+        from local_deepwiki.generators.analysis.onboarding import (
+            generate_rich_onboarding,
+        )
+
+        mock_gen_codemap.side_effect = RuntimeError("codemap failed")
+        mock_llm.generate = AsyncMock(
+            side_effect=[
+                json.dumps(
+                    [
+                        {"entry_point": "main", "query": "How?", "title": "Flow 1"},
+                    ]
+                ),
+                "# Developer Onboarding Guide\n\nGuide without codemaps.\n",
+            ]
+        )
+
+        result = await generate_rich_onboarding(
+            repo_path=synthetic_repo,
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+        )
+
+        assert result["status"] == "success"
+        assert "guide" in result

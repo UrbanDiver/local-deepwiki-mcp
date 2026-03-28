@@ -6,11 +6,16 @@ project overview, entry points, key modules, test layout, and configuration.
 
 from __future__ import annotations
 
+import json as _json
 from pathlib import Path
 from typing import Any
 
+from local_deepwiki.generators.codemap.generator import generate_codemap
 from local_deepwiki.generators.dir_tree import get_directory_tree
 from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
+from local_deepwiki.logging import get_logger
+
+logger = get_logger(__name__)
 
 # Well-known entry point filenames
 ENTRY_POINT_PATTERNS: tuple[str, ...] = (
@@ -331,3 +336,270 @@ def format_onboarding_guide(
         sections.append(_format_configuration(data["config_files"]))
 
     return "\n".join(sections)
+
+
+# ---------------------------------------------------------------------------
+# Rich onboarding (LLM + codemap powered)
+# ---------------------------------------------------------------------------
+
+
+async def _select_flows_with_llm(
+    llm: Any,
+    manifest: ProjectManifest,
+    entry_points: list[Path],
+    directory_tree: str,
+) -> list[dict[str, str]]:
+    """Ask the LLM to pick the 3 most important flows for newcomers."""
+    entry_list = "\n".join(f"- {ep}" for ep in entry_points) or "- (none detected)"
+    tech_stack = manifest.get_tech_stack_summary() or "Unknown"
+
+    prompt = (
+        "You are helping a developer who is new to this codebase. "
+        "Given the project structure below, pick the 3 most important "
+        "execution flows a newcomer should understand first.\n\n"
+        f"Project: {manifest.name or 'Unknown'}\n"
+        f"Description: {manifest.description or 'No description'}\n"
+        f"Tech stack: {tech_stack}\n\n"
+        f"Entry points:\n{entry_list}\n\n"
+        f"Directory structure:\n{directory_tree[:3000]}\n\n"
+        "Return ONLY a JSON array of exactly 3 objects, each with:\n"
+        '- "entry_point": function or filename to start tracing from\n'
+        '- "query": a "How does X work?" question for the codemap\n'
+        '- "title": short title for this flow (2-5 words)\n\n'
+        "Return ONLY the JSON array, no other text."
+    )
+
+    try:
+        raw = await llm.generate(
+            prompt, system_prompt="You are a code architecture expert."
+        )
+        cleaned = raw.strip()
+        if cleaned.startswith("```"):
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3]
+            cleaned = cleaned.strip()
+        flows = _json.loads(cleaned)
+        if isinstance(flows, list) and len(flows) > 0:
+            return [
+                {
+                    "entry_point": f.get("entry_point", ""),
+                    "query": f.get("query", ""),
+                    "title": f.get("title", ""),
+                }
+                for f in flows[:3]
+            ]
+    except Exception:
+        logger.warning(
+            "LLM flow selection failed, falling back to entry point heuristics"
+        )
+
+    fallback: list[dict[str, str]] = []
+    for ep in entry_points[:3]:
+        name = ep.stem
+        fallback.append(
+            {
+                "entry_point": name,
+                "query": f"How does {name} work?",
+                "title": f"{name.replace('_', ' ').title()} Flow",
+            }
+        )
+    return fallback
+
+
+async def _generate_codemaps_for_flows(
+    flows: list[dict[str, str]],
+    vector_store: Any,
+    repo_path: Path,
+    llm: Any,
+) -> list[dict[str, Any]]:
+    """Generate codemaps for each selected flow."""
+    results: list[dict[str, Any]] = []
+    for flow in flows:
+        try:
+            codemap = await generate_codemap(
+                query=flow["query"],
+                vector_store=vector_store,
+                repo_path=repo_path,
+                llm=llm,
+                entry_point=flow["entry_point"] or None,
+                max_depth=5,
+                max_nodes=30,
+            )
+            if codemap.total_nodes > 0:
+                results.append(
+                    {
+                        "title": flow["title"],
+                        "query": flow["query"],
+                        "mermaid_diagram": codemap.mermaid_diagram,
+                        "narrative": codemap.narrative,
+                        "files_involved": codemap.files_involved,
+                    }
+                )
+        except Exception:
+            logger.warning("Codemap generation failed for %r", flow.get("query"))
+    return results
+
+
+async def _synthesize_onboarding_guide(
+    llm: Any,
+    manifest: ProjectManifest,
+    directory_tree: str,
+    entry_points: list[Path],
+    codemaps: list[dict[str, Any]],
+    wiki_pages: list[str],
+    test_layout: list[Path],
+    config_files: list[Path],
+) -> str:
+    """Ask the LLM to synthesize the full onboarding guide."""
+    codemap_sections: list[str] = []
+    for cm in codemaps:
+        codemap_sections.append(
+            f"### Flow: {cm['title']}\n"
+            f"Question: {cm['query']}\n"
+            f"Files: {', '.join(cm['files_involved'][:10])}\n\n"
+            f"Mermaid diagram:\n{cm['mermaid_diagram']}\n\n"
+            f"Narrative:\n{cm['narrative']}\n"
+        )
+    codemap_text = (
+        "\n---\n".join(codemap_sections)
+        if codemap_sections
+        else "(no codemaps generated)"
+    )
+
+    entry_list = "\n".join(f"- `{ep}`" for ep in entry_points) or "- (none detected)"
+    test_list = "\n".join(f"- `{td}`" for td in test_layout) or "- (none detected)"
+    config_list = "\n".join(f"- `{cf}`" for cf in config_files) or "- (none detected)"
+    wiki_links = (
+        "\n".join(f"- `{wp}`" for wp in wiki_pages[:30]) or "- (none available)"
+    )
+    tech_stack = manifest.get_tech_stack_summary() or "Unknown"
+
+    prompt = f"""Generate a comprehensive Developer Onboarding Guide for the project below.
+
+PROJECT METADATA:
+- Name: {manifest.name or "Unknown"}
+- Description: {manifest.description or "No description"}
+- Tech stack: {tech_stack}
+
+ENTRY POINTS:
+{entry_list}
+
+DIRECTORY STRUCTURE:
+{directory_tree[:3000]}
+
+EXECUTION FLOW DIAGRAMS (include these verbatim):
+{codemap_text}
+
+AVAILABLE WIKI PAGES (use for linking):
+{wiki_links}
+
+TEST LAYOUT:
+{test_list}
+
+CONFIGURATION FILES:
+{config_list}
+
+INSTRUCTIONS:
+Produce a single markdown document with these sections:
+
+1. **What This Project Does** -- 2-3 paragraphs explaining the purpose, who it's for, \
+and what problem it solves. Write narrative prose, not bullet lists.
+
+2. **Architecture at a Glance** -- A Mermaid component diagram showing how the main \
+subsystems connect. Below the diagram, briefly describe each layer and link to wiki pages \
+where available using relative links like `[ComponentName](files/path/to/file.md)`.
+
+3. **How It Works** -- For each execution flow diagram provided above, create a subsection \
+with:
+   - The flow title as an H3 heading
+   - The Mermaid diagram inlined VERBATIM (do not modify it)
+   - A narrative walkthrough that references wiki pages with links like \
+`[FileName](files/path/to/file.md)`
+
+4. **Getting Started** -- Prerequisites, install commands, how to run. Based on the tech \
+stack and config files.
+
+5. **Key Concepts** -- A markdown table of important terms/concepts a newcomer needs to \
+know, derived from the code entities visible in the execution flows.
+
+6. **Development Workflow** -- How to run tests, lint, and do common development tasks. \
+Based on the test layout and config files.
+
+7. **Further Reading** -- Links to Architecture, Dependencies, Glossary, and Changelog wiki \
+pages using relative links: `[Architecture](architecture.md)`, \
+`[Dependencies](dependencies.md)`, `[Glossary](glossary.md)`, `[Changelog](changelog.md)`.
+
+CRITICAL RULES:
+- Use relative wiki links for file references: `[Name](files/path/to/file.md)`
+- Inline Mermaid diagrams from the execution flows VERBATIM -- do not regenerate them
+- Write narrative prose, not bullet lists, for descriptive sections
+- The Key Concepts table should have columns: Concept | What It Means
+- Start the document with `# Developer Onboarding Guide`
+"""
+
+    guide = await llm.generate(
+        prompt,
+        system_prompt="You are a technical writer creating developer documentation.",
+    )
+    return guide
+
+
+async def generate_rich_onboarding(
+    repo_path: Path,
+    vector_store: Any,
+    llm: Any,
+    *,
+    detail_level: str = "full",
+) -> dict[str, Any]:
+    """Generate a rich onboarding guide with diagrams, narrative, and wiki links.
+
+    Requires prior indexing -- uses vector store for codemap generation
+    and LLM for flow selection and synthesis.
+
+    Args:
+        repo_path: Path to the indexed repository.
+        vector_store: Initialized VectorStore instance.
+        llm: LLM provider for flow selection and synthesis.
+        detail_level: Detail level (currently always produces full output).
+
+    Returns:
+        Dict with ``status``, ``guide`` (markdown string), and ``codemaps``
+        (list of codemap dicts).
+    """
+    basics = generate_onboarding_guide(repo_path, detail_level=detail_level)
+    manifest: ProjectManifest = basics["manifest"]
+    entry_points: list[Path] = basics["entry_points"]
+    directory_tree: str = basics["directory_tree"]
+    test_layout: list[Path] = basics["test_layout"]
+    config_files: list[Path] = basics["config_files"]
+
+    flows = await _select_flows_with_llm(llm, manifest, entry_points, directory_tree)
+
+    codemaps = await _generate_codemaps_for_flows(flows, vector_store, repo_path, llm)
+
+    wiki_path = repo_path / ".deepwiki"
+    wiki_pages: list[str] = []
+    if wiki_path.exists():
+        for md_file in sorted(wiki_path.rglob("*.md")):
+            try:
+                wiki_pages.append(str(md_file.relative_to(wiki_path)))
+            except ValueError:
+                continue
+
+    guide = await _synthesize_onboarding_guide(
+        llm,
+        manifest,
+        directory_tree,
+        entry_points,
+        codemaps,
+        wiki_pages,
+        test_layout,
+        config_files,
+    )
+
+    return {
+        "status": "success",
+        "guide": guide,
+        "codemaps": codemaps,
+    }
