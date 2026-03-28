@@ -553,27 +553,25 @@ async def generate_auxiliary_pages(
 
     status_manager = generator.status_manager
 
-    if await _try_load_cached_auxiliary_pages(
+    if not await _try_load_cached_auxiliary_pages(
         ctx, _AUX_PAGE_METADATA, index_status, status_manager
     ):
-        return
-
-    contents = await _gather_auxiliary_contents(
-        index_status,
-        generator.vector_store,
-        ctx.warnings,
-    )
-
-    for (page_path, title), content in zip(_AUX_PAGE_METADATA, contents):
-        await _add_auxiliary_page(
-            ctx,
-            content,
-            page_path,
-            title,
+        contents = await _gather_auxiliary_contents(
             index_status,
-            status_manager,
-            generator._write_page,
+            generator.vector_store,
+            ctx.warnings,
         )
+
+        for (page_path, title), content in zip(_AUX_PAGE_METADATA, contents):
+            await _add_auxiliary_page(
+                ctx,
+                content,
+                page_path,
+                title,
+                index_status,
+                status_manager,
+                generator._write_page,
+            )
 
     # Generate onboarding guide (requires vector store + LLM)
     onboarding_page = await generate_onboarding_page(
@@ -587,6 +585,9 @@ async def generate_auxiliary_pages(
     )
     if onboarding_page is not None:
         ctx.pages.append(onboarding_page)
+        status_manager.record_summary_page_status(
+            onboarding_page, ctx.all_source_files, index_status
+        )
         await generator._write_page(onboarding_page)
         ctx.pages_generated += 1
 
@@ -603,11 +604,23 @@ async def generate_onboarding_page(
     """Generate the rich onboarding page for the wiki.
 
     Returns a WikiPage if successful, None if generation fails.
-    This is called during the auxiliary pages phase of wiki generation.
+    Skips regeneration if the structural fingerprint is unchanged.
     """
     from local_deepwiki.generators.analysis.onboarding import generate_rich_onboarding
 
     page_path = "onboarding.md"
+
+    # Check if regeneration is needed (structural fingerprint)
+    if (
+        not full_rebuild
+        and status_manager is not None
+        and index_status is not None
+        and not status_manager.needs_regeneration_structural(page_path, index_status)
+    ):
+        existing = await status_manager.load_existing_page(page_path)
+        if existing is not None:
+            logger.info("Onboarding guide unchanged, using cached version")
+            return existing
 
     try:
         result = await generate_rich_onboarding(
