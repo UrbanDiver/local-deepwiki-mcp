@@ -6,11 +6,10 @@ project overview, entry points, key modules, test layout, and configuration.
 
 from __future__ import annotations
 
-import json as _json
+import json
 from pathlib import Path
 from typing import Any
 
-from local_deepwiki.generators.codemap.generator import generate_codemap
 from local_deepwiki.generators.dir_tree import get_directory_tree
 from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
 from local_deepwiki.logging import get_logger
@@ -379,7 +378,7 @@ async def _select_flows_with_llm(
             if cleaned.endswith("```"):
                 cleaned = cleaned[:-3]
             cleaned = cleaned.strip()
-        flows = _json.loads(cleaned)
+        flows = json.loads(cleaned)
         if isinstance(flows, list) and len(flows) > 0:
             return [
                 {
@@ -414,6 +413,8 @@ async def _generate_codemaps_for_flows(
     llm: Any,
 ) -> list[dict[str, Any]]:
     """Generate codemaps for each selected flow."""
+    from local_deepwiki.generators.codemap.generator import generate_codemap
+
     results: list[dict[str, Any]] = []
     for flow in flows:
         try:

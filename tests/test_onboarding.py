@@ -250,7 +250,7 @@ class TestGenerateRichOnboarding:
             cross_file_edges=0,
         )
 
-    @patch("local_deepwiki.generators.analysis.onboarding.generate_codemap")
+    @patch("local_deepwiki.generators.codemap.generator.generate_codemap")
     async def test_rich_onboarding_produces_markdown(
         self,
         mock_gen_codemap,
@@ -280,7 +280,7 @@ class TestGenerateRichOnboarding:
         # Codemap was called 3 times (one per flow)
         assert mock_gen_codemap.call_count == 3
 
-    @patch("local_deepwiki.generators.analysis.onboarding.generate_codemap")
+    @patch("local_deepwiki.generators.codemap.generator.generate_codemap")
     async def test_rich_onboarding_handles_bad_flow_json(
         self,
         mock_gen_codemap,
@@ -312,7 +312,7 @@ class TestGenerateRichOnboarding:
         # Still produced a guide via fallback
         assert "guide" in result
 
-    @patch("local_deepwiki.generators.analysis.onboarding.generate_codemap")
+    @patch("local_deepwiki.generators.codemap.generator.generate_codemap")
     async def test_rich_onboarding_handles_codemap_failure(
         self, mock_gen_codemap, synthetic_repo, mock_vector_store, mock_llm
     ):
