@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.events import EventType, get_event_emitter
@@ -573,3 +574,57 @@ async def generate_auxiliary_pages(
             status_manager,
             generator._write_page,
         )
+
+    # Generate onboarding guide (requires vector store + LLM)
+    onboarding_page = await generate_onboarding_page(
+        repo_path=Path(index_status.repo_path),
+        wiki_path=generator.wiki_path,
+        vector_store=generator.vector_store,
+        llm=generator.llm,
+        index_status=index_status,
+        status_manager=status_manager,
+        full_rebuild=ctx.full_rebuild,
+    )
+    if onboarding_page is not None:
+        ctx.pages.append(onboarding_page)
+        await generator._write_page(onboarding_page)
+        ctx.pages_generated += 1
+
+
+async def generate_onboarding_page(
+    repo_path: Path,
+    wiki_path: Path,
+    vector_store: Any,
+    llm: Any,
+    index_status: IndexStatus | None = None,
+    status_manager: Any | None = None,
+    full_rebuild: bool = False,
+) -> WikiPage | None:
+    """Generate the rich onboarding page for the wiki.
+
+    Returns a WikiPage if successful, None if generation fails.
+    This is called during the auxiliary pages phase of wiki generation.
+    """
+    from local_deepwiki.generators.analysis.onboarding import generate_rich_onboarding
+
+    page_path = "onboarding.md"
+
+    try:
+        result = await generate_rich_onboarding(
+            repo_path=repo_path,
+            vector_store=vector_store,
+            llm=llm,
+        )
+        guide = result.get("guide", "")
+        if not guide:
+            return None
+
+        return WikiPage(
+            path=page_path,
+            title="Developer Onboarding Guide",
+            content=guide,
+            generated_at=time.time(),
+        )
+    except Exception:
+        logger.warning("Rich onboarding generation failed, skipping")
+        return None

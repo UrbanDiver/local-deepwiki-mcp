@@ -419,6 +419,52 @@ class TestEnsureTocEntry:
         _ensure_toc_entry(wiki_path)  # Should not raise
 
 
+class TestOnboardingInPipeline:
+    """Tests for onboarding generation during wiki pipeline."""
+
+    @patch("local_deepwiki.generators.analysis.onboarding.generate_rich_onboarding")
+    async def test_generate_onboarding_page_called(self, mock_rich, tmp_path):
+        from local_deepwiki.generators.wiki.phases import generate_onboarding_page
+
+        mock_rich.return_value = {
+            "status": "success",
+            "guide": "# Developer Onboarding Guide\n\nGenerated.",
+            "codemaps": [],
+        }
+
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+
+        result = await generate_onboarding_page(
+            repo_path=tmp_path,
+            wiki_path=wiki_path,
+            vector_store=MagicMock(),
+            llm=MagicMock(),
+        )
+
+        assert result is not None
+        assert result.path == "onboarding.md"
+        assert "Onboarding" in result.content
+        mock_rich.assert_called_once()
+
+    @patch("local_deepwiki.generators.analysis.onboarding.generate_rich_onboarding")
+    async def test_generate_onboarding_page_failure_returns_none(
+        self, mock_rich, tmp_path
+    ):
+        from local_deepwiki.generators.wiki.phases import generate_onboarding_page
+
+        mock_rich.side_effect = RuntimeError("LLM unavailable")
+
+        result = await generate_onboarding_page(
+            repo_path=tmp_path,
+            wiki_path=tmp_path / ".deepwiki",
+            vector_store=MagicMock(),
+            llm=MagicMock(),
+        )
+
+        assert result is None
+
+
 class TestHandleGetOnboardingGuide:
     """Tests for the updated MCP handler."""
 
