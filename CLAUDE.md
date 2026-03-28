@@ -102,12 +102,12 @@ uv run deepwiki check --json
 │    detect_stale_docs, detect_secrets, get_index_status,             │
 │    list_indexed_repos                                               │
 │                                                                     │
-│  Analysis & Search Tools (14):                                      │
+│  Analysis & Search Tools (15):                                      │
 │    search_wiki, fuzzy_search, get_file_context, explain_entity,     │
 │    impact_analysis, get_complexity_metrics, analyze_diff,           │
 │    ask_about_diff, get_project_manifest, get_wiki_stats,            │
 │    analyze_architecture, get_onboarding_guide,                       │
-│    get_recommendations, get_architecture_trends                      │
+│    get_recommendations, get_architecture_trends, get_guided_tour     │
 │                                                                     │
 │  Codemap Tools (2):                                                 │
 │    generate_codemap, suggest_codemap_topics                         │
@@ -160,6 +160,7 @@ uv run deepwiki check --json
 | Web Chat | `web/routes_chat.py` | RAG Q&A chat blueprint with SSE streaming |
 | Web Research | `web/routes_research.py` | Deep research blueprint with progress tracking |
 | Web Codemap | `web/routes_codemap.py` | Interactive codemap explorer blueprint |
+| Web Architecture | `web/routes_architecture.py` | Architecture dashboard blueprint with vis.js graph |
 
 ### Generators
 
@@ -208,6 +209,7 @@ Organized into 4 subpackages plus root utilities:
 | Architecture Composite | `analysis/architecture_composite.py` | Composite orchestrator: runs health + deps + smells + hotspots |
 | Onboarding | `analysis/onboarding.py` | Developer onboarding guide generator |
 | Recommendations | `analysis/recommendations.py` | Prioritized refactoring recommendations |
+| Tours | `analysis/tours.py` | Guided tour generator with topic detection |
 
 #### `generators/examples/` — Example Extraction
 
@@ -293,6 +295,7 @@ Key workflow chains:
 | `get_onboarding_guide` | Developer onboarding guide with entry points, key modules, and testing info | No |
 | `get_recommendations` | Prioritized refactoring recommendations from health analysis | No |
 | `get_architecture_trends` | Health score history with trend summary | No (reads saved history) |
+| `get_guided_tour` | Topic-focused codebase tour with ordered file stops | No |
 
 Key workflow chains:
 - `fuzzy_search` -> `explain_entity` (find entity, then get full explanation)
@@ -303,6 +306,8 @@ Key workflow chains:
 - `get_onboarding_guide` -> `explain_entity` (overview, then deep-dive on specific entity)
 - `get_recommendations` -> `get_module_health` (prioritized list, then drill into specific module)
 - `get_architecture_trends` -> `analyze_architecture` (see history, then get current details)
+- `get_guided_tour` -> `explain_entity` (tour stop, then deep-dive on specific entity)
+- `get_guided_tour` -> `get_file_context` (tour stop, then explore file role)
 
 ### Provider Abstraction
 

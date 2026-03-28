@@ -7,6 +7,7 @@ Route modules:
 - routes_chat: /chat and /api/chat (RAG Q&A)
 - routes_research: /api/research (deep multi-step research)
 - routes_codemap: /codemap, /api/codemap/* (interactive code flow maps)
+- routes_architecture: /architecture, /architecture/api/* (architecture dashboard)
 """
 
 from __future__ import annotations

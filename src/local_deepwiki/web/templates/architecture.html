@@ -619,6 +619,27 @@
         network.focus(nodeId, { scale: 1.2, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
     }
 
+    function findMatchingNode(modulePath) {
+        /* Tour stop modules may be fully-qualified (e.g. "local_deepwiki.handlers.api")
+           while graph node IDs are shorter (e.g. "handlers"). Try exact match first,
+           then progressively strip leading segments to find a match. */
+        if (!network || !modulePath) return null;
+        var allNodeIds = network.body.data.nodes.getIds();
+        if (allNodeIds.indexOf(modulePath) !== -1) return modulePath;
+        var parts = modulePath.split('.');
+        for (var i = 1; i < parts.length; i++) {
+            var candidate = parts.slice(i).join('.');
+            if (allNodeIds.indexOf(candidate) !== -1) return candidate;
+        }
+        /* Try matching just the first segment of each node ID against any segment */
+        for (var j = 0; j < parts.length; j++) {
+            for (var k = 0; k < allNodeIds.length; k++) {
+                if (allNodeIds[k] === parts[j]) return allNodeIds[k];
+            }
+        }
+        return null;
+    }
+
     /* ── Stats footer ────────────────────────────────────────────── */
     function gradeClass(grade) {
         if (!grade) return 'grade-unknown';
@@ -899,7 +920,7 @@
                 el('div', { className: 'stop-num', textContent: String(idx + 1) }),
                 el('div', { className: 'stop-text' }, [
                     el('div', { className: 'stop-name', textContent: stop.module || stop.name || ('Stop ' + (idx + 1)) }),
-                    el('div', { className: 'stop-desc', textContent: stop.description || stop.reason || '' })
+                    el('div', { className: 'stop-desc', textContent: stop.explanation || stop.description || '' })
                 ])
             ]);
             item.addEventListener('click', (function (i) {
@@ -944,7 +965,7 @@
 
         var stop = currentTourStops[idx];
         if (stop) {
-            var nodeId = stop.module || stop.id;
+            var nodeId = findMatchingNode(stop.module || stop.id || '');
             if (nodeId) highlightNode(nodeId);
         }
     }

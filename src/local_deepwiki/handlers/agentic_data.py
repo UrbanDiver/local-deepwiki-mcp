@@ -126,6 +126,15 @@ _TOOL_KEYWORDS: dict[str, list[str]] = {
         "snapshot",
         "over time",
     ],
+    "get_guided_tour": [
+        "tour",
+        "guide",
+        "walkthrough",
+        "explore",
+        "learn",
+        "onboard",
+        "reading order",
+    ],
 }
 
 
