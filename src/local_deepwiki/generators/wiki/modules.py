@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 from pathlib import Path
+from typing import Any
 
 from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.vectorstore import VectorStore
@@ -14,6 +15,91 @@ from local_deepwiki.models import SearchResult, WikiPage
 from local_deepwiki.providers.base import LLMProvider
 
 logger = get_logger(__name__)
+
+
+async def _collect_modules_to_generate(
+    directories: dict[str, list[str]],
+    status_manager: Any,
+    full_rebuild: bool,
+) -> tuple[list[tuple[str, list[str]]], list[WikiPage], int]:
+    """Filter directories and return modules that need (re)generation.
+
+    Args:
+        directories: Mapping of directory name to file paths.
+        status_manager: Wiki status manager for checking page freshness.
+        full_rebuild: Whether to force regeneration of all pages.
+
+    Returns:
+        Tuple of (modules_to_generate, cached_pages, pages_skipped).
+    """
+    modules_to_generate: list[tuple[str, list[str]]] = []
+    cached_pages: list[WikiPage] = []
+    pages_skipped = 0
+
+    for dir_name, files in directories.items():
+        if len(files) < 2:
+            continue
+        if is_test_file(dir_name + "/dummy", check_filename=False):
+            continue
+
+        page_path = f"modules/{dir_name}.md"
+
+        if not full_rebuild and not status_manager.needs_regeneration(page_path, files):
+            existing_page = await status_manager.load_existing_page(page_path)
+            if existing_page is not None:
+                cached_pages.append(existing_page)
+                status_manager.record_page_status(existing_page, files)
+                pages_skipped += 1
+                continue
+
+        modules_to_generate.append((dir_name, files))
+
+    return modules_to_generate, cached_pages, pages_skipped
+
+
+async def _create_modules_index_page(
+    pages: list[WikiPage],
+    directories: dict[str, list[str]],
+    index_status: Any,
+    status_manager: Any,
+    full_rebuild: bool,
+) -> tuple[WikiPage, bool]:
+    """Create or load the modules index page.
+
+    Args:
+        pages: Module pages to list in the index.
+        directories: All directory groupings (for dependency tracking).
+        index_status: Index status for structural fingerprinting.
+        status_manager: Wiki status manager for cache checking.
+        full_rebuild: Whether to force regeneration.
+
+    Returns:
+        Tuple of (index_page, was_generated). ``was_generated`` is True if the
+        page was freshly created, False if loaded from cache.
+    """
+    index_path = "modules/index.md"
+    all_module_files = [f for files in directories.values() for f in files]
+
+    if not full_rebuild and not status_manager.needs_regeneration_structural(
+        index_path, index_status
+    ):
+        existing = await status_manager.load_existing_page(index_path)
+        if existing is not None:
+            status_manager.record_summary_page_status(
+                existing, all_module_files, index_status
+            )
+            return existing, False
+
+    modules_index = WikiPage(
+        path=index_path,
+        title="Modules",
+        content=_generate_modules_index(pages),
+        generated_at=time.time(),
+    )
+    status_manager.record_summary_page_status(
+        modules_index, all_module_files, index_status
+    )
+    return modules_index, True
 
 
 async def generate_module_docs(
@@ -42,7 +128,6 @@ async def generate_module_docs(
 
     pages: list[WikiPage] = []
     pages_generated = 0
-    pages_skipped = 0
 
     # Group files by top-level directory
     directories: dict[str, list[str]] = {}
@@ -54,27 +139,15 @@ async def generate_module_docs(
             dir_name = "root"
         directories.setdefault(dir_name, []).append(file_info.path)
 
-    # Collect modules to generate (skip test dirs and tiny directories)
-    modules_to_generate: list[tuple[str, list[str]]] = []
-    for dir_name, files in directories.items():
-        if len(files) < 2:
-            continue
-        if is_test_file(dir_name + "/dummy", check_filename=False):
-            continue
+    # Collect modules needing generation
+    (
+        modules_to_generate,
+        cached_pages,
+        pages_skipped,
+    ) = await _collect_modules_to_generate(directories, status_manager, full_rebuild)
+    pages.extend(cached_pages)
 
-        page_path = f"modules/{dir_name}.md"
-
-        # Check if page needs regeneration (module pages depend on all files in that module)
-        if not full_rebuild and not status_manager.needs_regeneration(page_path, files):
-            existing_page = await status_manager.load_existing_page(page_path)
-            if existing_page is not None:
-                pages.append(existing_page)
-                status_manager.record_page_status(existing_page, files)
-                pages_skipped += 1
-                continue
-
-        modules_to_generate.append((dir_name, files))
-
+    # Generate module docs concurrently
     if modules_to_generate:
         sem = semaphore or asyncio.Semaphore(max_concurrent)
         logger.info(
@@ -113,46 +186,16 @@ async def generate_module_docs(
             except Exception:  # noqa: BLE001 — module failure must not abort wiki build
                 logger.exception("Error generating module doc")
 
-    # Create modules index — uses structural fingerprint since content only
-    # changes when modules are added/removed
+    # Create modules index
     if pages:
-        index_path = "modules/index.md"
-        all_module_files = [f for files in directories.values() for f in files]
-
-        if not full_rebuild and not status_manager.needs_regeneration_structural(
-            index_path, index_status
-        ):
-            existing = await status_manager.load_existing_page(index_path)
-            if existing is not None:
-                pages.insert(0, existing)
-                status_manager.record_summary_page_status(
-                    existing, all_module_files, index_status
-                )
-                pages_skipped += 1
-            else:
-                modules_index = WikiPage(
-                    path=index_path,
-                    title="Modules",
-                    content=_generate_modules_index(pages),
-                    generated_at=time.time(),
-                )
-                pages.insert(0, modules_index)
-                status_manager.record_summary_page_status(
-                    modules_index, all_module_files, index_status
-                )
-                pages_generated += 1
-        else:
-            modules_index = WikiPage(
-                path=index_path,
-                title="Modules",
-                content=_generate_modules_index(pages),
-                generated_at=time.time(),
-            )
-            pages.insert(0, modules_index)
-            status_manager.record_summary_page_status(
-                modules_index, all_module_files, index_status
-            )
+        index_page, was_generated = await _create_modules_index_page(
+            pages, directories, index_status, status_manager, full_rebuild
+        )
+        pages.insert(0, index_page)
+        if was_generated:
             pages_generated += 1
+        else:
+            pages_skipped += 1
 
     return pages, pages_generated, pages_skipped
 
