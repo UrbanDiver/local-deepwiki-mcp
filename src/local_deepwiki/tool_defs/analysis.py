@@ -815,4 +815,36 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         },
         annotations=_READ_ONLY,
     ),
+    Tool(
+        name="get_guided_tour",
+        description=(
+            "Generate a guided tour of a codebase organized by topic. Returns an "
+            "ordered list of file stops with explanations. Topics: architecture, "
+            "data_flow, request_handling, testing, or custom:<query>. "
+            "No prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "topic": {
+                    "type": "string",
+                    "description": "Tour topic (default: architecture)",
+                },
+                "max_stops": {
+                    "type": "integer",
+                    "description": "Maximum stops (default: 10, max: 30)",
+                },
+                "enrich": {
+                    "type": "boolean",
+                    "description": "Use LLM for richer explanations (default: false)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
 )

@@ -801,6 +801,26 @@ class GetModuleHealthArgs(BaseModel):
     )
 
 
+class GetGuidedTourArgs(BaseModel):
+    """Arguments for the get_guided_tour tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    topic: str = Field(
+        default="architecture",
+        description="Tour topic: architecture, data_flow, request_handling, testing, or custom:<query>",
+    )
+    max_stops: int = Field(
+        default=10,
+        ge=1,
+        le=30,
+        description="Maximum tour stops (1-30)",
+    )
+    enrich: bool = Field(
+        default=False,
+        description="Use LLM for richer explanations (slower)",
+    )
+
+
 class ServeWikiArgs(BaseModel):
     """Arguments for the serve_wiki tool."""
 
