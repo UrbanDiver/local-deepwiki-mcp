@@ -155,7 +155,7 @@ def mock_access_control():
         yield controller
 
 
-@patch("local_deepwiki.handlers.analysis_architecture.generate_rich_onboarding")
+@patch("local_deepwiki.generators.analysis.onboarding.generate_rich_onboarding")
 async def test_handler_returns_success(mock_rich, mock_access_control, synthetic_repo):
     from local_deepwiki.handlers.analysis_architecture import (
         handle_get_onboarding_guide,
@@ -182,7 +182,7 @@ async def test_handler_missing_repo(mock_access_control, tmp_path):
     assert data["status"] == "error"
 
 
-@patch("local_deepwiki.handlers.analysis_architecture.generate_rich_onboarding")
+@patch("local_deepwiki.generators.analysis.onboarding.generate_rich_onboarding")
 async def test_handler_invalid_detail_level(
     mock_rich, mock_access_control, synthetic_repo
 ):
@@ -352,10 +352,77 @@ class TestGenerateRichOnboarding:
         assert "guide" in result
 
 
+class TestEnsureTocEntry:
+    """Tests for the _ensure_toc_entry helper."""
+
+    def test_inserts_onboarding_entry_at_position_1(self, tmp_path):
+        from local_deepwiki.generators.toc import TocEntry, TableOfContents, write_toc
+        from local_deepwiki.handlers.analysis_architecture import _ensure_toc_entry
+
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+
+        # Create a TOC with Overview and Architecture
+        toc = TableOfContents(
+            entries=[
+                TocEntry(number="1", title="Overview", path="overview.md"),
+                TocEntry(number="2", title="Architecture", path="architecture.md"),
+            ]
+        )
+        write_toc(toc, wiki_path)
+
+        _ensure_toc_entry(wiki_path)
+
+        from local_deepwiki.generators.toc import read_toc
+
+        updated = read_toc(wiki_path)
+        assert updated is not None
+        assert len(updated.entries) == 3
+        assert updated.entries[0].title == "Overview"
+        assert updated.entries[1].title == "Onboarding Guide"
+        assert updated.entries[1].path == "onboarding.md"
+        assert updated.entries[2].title == "Architecture"
+        # Renumbered
+        assert updated.entries[0].number == "1"
+        assert updated.entries[1].number == "2"
+        assert updated.entries[2].number == "3"
+
+    def test_skips_if_already_present(self, tmp_path):
+        from local_deepwiki.generators.toc import TocEntry, TableOfContents, write_toc
+        from local_deepwiki.handlers.analysis_architecture import _ensure_toc_entry
+
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+
+        toc = TableOfContents(
+            entries=[
+                TocEntry(number="1", title="Overview", path="overview.md"),
+                TocEntry(number="2", title="Onboarding Guide", path="onboarding.md"),
+            ]
+        )
+        write_toc(toc, wiki_path)
+
+        _ensure_toc_entry(wiki_path)
+
+        from local_deepwiki.generators.toc import read_toc
+
+        updated = read_toc(wiki_path)
+        assert updated is not None
+        assert len(updated.entries) == 2  # No duplicate
+
+    def test_no_toc_file_is_noop(self, tmp_path):
+        from local_deepwiki.handlers.analysis_architecture import _ensure_toc_entry
+
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+        # No toc.json
+        _ensure_toc_entry(wiki_path)  # Should not raise
+
+
 class TestHandleGetOnboardingGuide:
     """Tests for the updated MCP handler."""
 
-    @patch("local_deepwiki.handlers.analysis_architecture.generate_rich_onboarding")
+    @patch("local_deepwiki.generators.analysis.onboarding.generate_rich_onboarding")
     @patch("local_deepwiki.handlers.analysis_architecture.get_access_controller")
     async def test_handler_calls_rich_onboarding(self, mock_acl, mock_rich, tmp_path):
         from local_deepwiki.handlers.analysis_architecture import (
@@ -385,7 +452,7 @@ class TestHandleGetOnboardingGuide:
         assert onboarding_path.exists()
         assert "Onboarding" in onboarding_path.read_text()
 
-    @patch("local_deepwiki.handlers.analysis_architecture.generate_rich_onboarding")
+    @patch("local_deepwiki.generators.analysis.onboarding.generate_rich_onboarding")
     @patch("local_deepwiki.handlers.analysis_architecture.get_access_controller")
     async def test_handler_falls_back_on_missing_index(
         self, mock_acl, mock_rich, tmp_path

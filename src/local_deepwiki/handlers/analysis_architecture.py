@@ -8,9 +8,7 @@ from typing import Any
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
-from local_deepwiki.config import get_config
 from local_deepwiki.errors import path_not_found_error
-from local_deepwiki.generators.analysis.onboarding import generate_rich_onboarding
 from local_deepwiki.generators.analysis.source_filter import iter_python_files
 from local_deepwiki.handlers._error_handling import handle_tool_errors
 from local_deepwiki.handlers._response import make_tool_text_content
@@ -597,6 +595,10 @@ async def handle_get_onboarding_guide(
 
     # Try rich onboarding (requires index + vector store + LLM)
     try:
+        from local_deepwiki.config import get_config
+        from local_deepwiki.generators.analysis.onboarding import (
+            generate_rich_onboarding,
+        )
         from local_deepwiki.handlers._index_helpers import _create_vector_store
         from local_deepwiki.providers.llm import get_llm_provider
 
