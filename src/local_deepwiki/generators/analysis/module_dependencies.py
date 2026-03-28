@@ -88,6 +88,44 @@ def _discover_project_tops(repo_path: Path) -> set[str]:
     return project_tops
 
 
+def _resolve_import_target(
+    dotted: str,
+    project_tops: set[str],
+    src_module: str,
+    module_filter: str | None,
+    include_external: bool,
+) -> str | None:
+    """Classify a dotted import and return the target module label.
+
+    Returns the target module label string, or ``None`` if the import
+    should be skipped (e.g. self-import, filtered out, or unwanted external).
+    """
+    top = _top_level(dotted)
+    is_internal = top in project_tops
+
+    if not include_external and not is_internal:
+        return None
+
+    if is_internal:
+        parts = dotted.split(".")
+        if parts[0] in project_tops:
+            parts = parts[1:]
+        if not parts:
+            return None
+        tgt_module = ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
+    else:
+        tgt_module = top
+
+    if tgt_module == src_module:
+        return None
+
+    if module_filter and not tgt_module.startswith(module_filter):
+        if not include_external:
+            return None
+
+    return tgt_module
+
+
 def _build_module_graph(
     repo_path: Path,
     project_tops: set[str],
@@ -132,28 +170,11 @@ def _build_module_graph(
         module_line_counts[src_module] += source.count("\n") + 1
 
         for dotted in _extract_full_imports(source):
-            top = _top_level(dotted)
-            is_internal = top in project_tops
-
-            if not include_external and not is_internal:
+            tgt_module = _resolve_import_target(
+                dotted, project_tops, src_module, module_filter, include_external
+            )
+            if tgt_module is None:
                 continue
-
-            if is_internal:
-                parts = dotted.split(".")
-                if parts[0] in project_tops:
-                    parts = parts[1:]
-                if not parts:
-                    continue
-                tgt_module = ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
-            else:
-                tgt_module = top
-
-            if tgt_module == src_module:
-                continue
-
-            if module_filter and not tgt_module.startswith(module_filter):
-                if not include_external:
-                    continue
 
             edge = (src_module, tgt_module)
             edge_counts[edge] += 1
