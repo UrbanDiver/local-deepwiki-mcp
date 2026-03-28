@@ -574,22 +574,24 @@ async def generate_auxiliary_pages(
             )
 
     # Generate onboarding guide (requires vector store + LLM)
-    onboarding_page = await generate_onboarding_page(
-        repo_path=Path(index_status.repo_path),
-        wiki_path=generator.wiki_path,
-        vector_store=generator.vector_store,
-        llm=generator.llm,
-        index_status=index_status,
-        status_manager=status_manager,
-        full_rebuild=ctx.full_rebuild,
-    )
-    if onboarding_page is not None:
-        ctx.pages.append(onboarding_page)
-        status_manager.record_summary_page_status(
-            onboarding_page, ctx.all_source_files, index_status
+    llm = getattr(generator, "llm", None)
+    if llm is not None:
+        onboarding_page = await generate_onboarding_page(
+            repo_path=Path(index_status.repo_path),
+            wiki_path=generator.wiki_path,
+            vector_store=generator.vector_store,
+            llm=llm,
+            index_status=index_status,
+            status_manager=status_manager,
+            full_rebuild=ctx.full_rebuild,
         )
-        await generator._write_page(onboarding_page)
-        ctx.pages_generated += 1
+        if onboarding_page is not None:
+            ctx.pages.append(onboarding_page)
+            status_manager.record_summary_page_status(
+                onboarding_page, ctx.all_source_files, index_status
+            )
+            await generator._write_page(onboarding_page)
+            ctx.pages_generated += 1
 
 
 async def generate_onboarding_page(
