@@ -555,10 +555,12 @@ def _ensure_toc_entry(wiki_path: Path) -> None:
         if entry.path == "onboarding.md":
             return
 
-    # Insert at position 1 (after Overview which is position 0)
+    # Build new entries list with onboarding inserted at position 1
     new_entry = TocEntry(number="", title="Onboarding Guide", path="onboarding.md")
     insert_pos = min(1, len(toc.entries))
-    toc.entries.insert(insert_pos, new_entry)
+    all_entries = (
+        list(toc.entries[:insert_pos]) + [new_entry] + list(toc.entries[insert_pos:])
+    )
 
     # Renumber all entries (TocEntry is frozen, so build new list)
     toc.entries = [
@@ -568,7 +570,7 @@ def _ensure_toc_entry(wiki_path: Path) -> None:
             path=entry.path,
             children=entry.children,
         )
-        for i, entry in enumerate(toc.entries)
+        for i, entry in enumerate(all_entries)
     ]
 
     write_toc(toc, wiki_path)

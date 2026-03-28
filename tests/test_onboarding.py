@@ -423,13 +423,21 @@ class TestHandleGetOnboardingGuide:
     """Tests for the updated MCP handler."""
 
     @patch("local_deepwiki.generators.analysis.onboarding.generate_rich_onboarding")
+    @patch("local_deepwiki.providers.llm.get_llm_provider")
+    @patch("local_deepwiki.handlers._index_helpers._create_vector_store")
+    @patch("local_deepwiki.config.loader.get_config")
     @patch("local_deepwiki.handlers.analysis_architecture.get_access_controller")
-    async def test_handler_calls_rich_onboarding(self, mock_acl, mock_rich, tmp_path):
+    async def test_handler_calls_rich_onboarding(
+        self, mock_acl, mock_config, mock_vs, mock_llm, mock_rich, tmp_path
+    ):
         from local_deepwiki.handlers.analysis_architecture import (
             handle_get_onboarding_guide,
         )
 
         mock_acl.return_value = MagicMock()
+        mock_config.return_value = MagicMock()
+        mock_vs.return_value = MagicMock()
+        mock_llm.return_value = MagicMock()
         mock_rich.return_value = {
             "status": "success",
             "guide": "# Developer Onboarding Guide\n\nTest guide.",
@@ -447,6 +455,8 @@ class TestHandleGetOnboardingGuide:
         data = json.loads(result[0].text)
         assert data["status"] == "success"
         assert "Onboarding" in data["guide"]
+        # Verify rich path was actually called
+        mock_rich.assert_called_once()
         # Verify it was saved to disk
         onboarding_path = tmp_path / ".deepwiki" / "onboarding.md"
         assert onboarding_path.exists()
