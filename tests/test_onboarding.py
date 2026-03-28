@@ -155,10 +155,14 @@ def mock_access_control():
         yield controller
 
 
-async def test_handler_returns_success(mock_access_control, synthetic_repo):
+@patch("local_deepwiki.handlers.analysis_architecture.generate_rich_onboarding")
+async def test_handler_returns_success(mock_rich, mock_access_control, synthetic_repo):
     from local_deepwiki.handlers.analysis_architecture import (
         handle_get_onboarding_guide,
     )
+
+    # Rich onboarding fails -> falls back to basic generator
+    mock_rich.side_effect = Exception("No vector store")
 
     result = await handle_get_onboarding_guide({"repo_path": str(synthetic_repo)})
     data = json.loads(result[0].text)
@@ -178,10 +182,16 @@ async def test_handler_missing_repo(mock_access_control, tmp_path):
     assert data["status"] == "error"
 
 
-async def test_handler_invalid_detail_level(mock_access_control, synthetic_repo):
+@patch("local_deepwiki.handlers.analysis_architecture.generate_rich_onboarding")
+async def test_handler_invalid_detail_level(
+    mock_rich, mock_access_control, synthetic_repo
+):
     from local_deepwiki.handlers.analysis_architecture import (
         handle_get_onboarding_guide,
     )
+
+    # Rich onboarding fails -> falls back to basic generator
+    mock_rich.side_effect = Exception("No vector store")
 
     result = await handle_get_onboarding_guide(
         {"repo_path": str(synthetic_repo), "detail_level": "verbose"}
@@ -340,3 +350,59 @@ class TestGenerateRichOnboarding:
 
         assert result["status"] == "success"
         assert "guide" in result
+
+
+class TestHandleGetOnboardingGuide:
+    """Tests for the updated MCP handler."""
+
+    @patch("local_deepwiki.handlers.analysis_architecture.generate_rich_onboarding")
+    @patch("local_deepwiki.handlers.analysis_architecture.get_access_controller")
+    async def test_handler_calls_rich_onboarding(self, mock_acl, mock_rich, tmp_path):
+        from local_deepwiki.handlers.analysis_architecture import (
+            handle_get_onboarding_guide,
+        )
+
+        mock_acl.return_value = MagicMock()
+        mock_rich.return_value = {
+            "status": "success",
+            "guide": "# Developer Onboarding Guide\n\nTest guide.",
+            "codemaps": [],
+        }
+
+        # Create repo dir and .deepwiki dir
+        (tmp_path / ".deepwiki").mkdir()
+
+        result = await handle_get_onboarding_guide(
+            {"repo_path": str(tmp_path), "detail_level": "full"}
+        )
+
+        assert len(result) == 1
+        data = json.loads(result[0].text)
+        assert data["status"] == "success"
+        assert "Onboarding" in data["guide"]
+        # Verify it was saved to disk
+        onboarding_path = tmp_path / ".deepwiki" / "onboarding.md"
+        assert onboarding_path.exists()
+        assert "Onboarding" in onboarding_path.read_text()
+
+    @patch("local_deepwiki.handlers.analysis_architecture.generate_rich_onboarding")
+    @patch("local_deepwiki.handlers.analysis_architecture.get_access_controller")
+    async def test_handler_falls_back_on_missing_index(
+        self, mock_acl, mock_rich, tmp_path
+    ):
+        from local_deepwiki.handlers.analysis_architecture import (
+            handle_get_onboarding_guide,
+        )
+
+        mock_acl.return_value = MagicMock()
+        mock_rich.side_effect = Exception("No vector store")
+
+        # Fallback should use the basic generator
+        result = await handle_get_onboarding_guide(
+            {"repo_path": str(tmp_path), "detail_level": "standard"}
+        )
+
+        assert len(result) == 1
+        data = json.loads(result[0].text)
+        assert data["status"] == "success"
+        assert "guide" in data

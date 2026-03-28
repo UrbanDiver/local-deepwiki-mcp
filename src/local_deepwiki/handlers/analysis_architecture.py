@@ -8,7 +8,9 @@ from typing import Any
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
+from local_deepwiki.config import get_config
 from local_deepwiki.errors import path_not_found_error
+from local_deepwiki.generators.analysis.onboarding import generate_rich_onboarding
 from local_deepwiki.generators.analysis.source_filter import iter_python_files
 from local_deepwiki.handlers._error_handling import handle_tool_errors
 from local_deepwiki.handlers._response import make_tool_text_content
@@ -542,6 +544,38 @@ async def handle_analyze_architecture(
     return make_tool_text_content("analyze_architecture", result)
 
 
+def _ensure_toc_entry(wiki_path: Path) -> None:
+    """Insert an Onboarding Guide entry into toc.json if not already present."""
+    from local_deepwiki.generators.toc import TocEntry, read_toc, write_toc
+
+    toc = read_toc(wiki_path)
+    if toc is None:
+        return
+
+    # Check if already present
+    for entry in toc.entries:
+        if entry.path == "onboarding.md":
+            return
+
+    # Insert at position 1 (after Overview which is position 0)
+    new_entry = TocEntry(number="", title="Onboarding Guide", path="onboarding.md")
+    insert_pos = min(1, len(toc.entries))
+    toc.entries.insert(insert_pos, new_entry)
+
+    # Renumber all entries (TocEntry is frozen, so build new list)
+    toc.entries = [
+        TocEntry(
+            number=str(i + 1),
+            title=entry.title,
+            path=entry.path,
+            children=entry.children,
+        )
+        for i, entry in enumerate(toc.entries)
+    ]
+
+    write_toc(toc, wiki_path)
+
+
 @handle_tool_errors
 async def handle_get_onboarding_guide(
     args: dict[str, Any],
@@ -559,15 +593,56 @@ async def handle_get_onboarding_guide(
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
+    wiki_path = repo_path / ".deepwiki"
+
+    # Try rich onboarding (requires index + vector store + LLM)
+    try:
+        from local_deepwiki.handlers._index_helpers import _create_vector_store
+        from local_deepwiki.providers.llm import get_llm_provider
+
+        config = get_config()
+        vector_store = _create_vector_store(repo_path, config)
+        llm = get_llm_provider()
+
+        result = await generate_rich_onboarding(
+            repo_path=repo_path,
+            vector_store=vector_store,
+            llm=llm,
+            detail_level=validated.detail_level,
+        )
+        guide = result["guide"]
+
+        # Save to wiki
+        if wiki_path.exists():
+            (wiki_path / "onboarding.md").write_text(guide)
+            _ensure_toc_entry(wiki_path)
+
+        logger.info("Rich onboarding guide generated for %s", repo_path)
+        return make_tool_text_content(
+            "get_onboarding_guide",
+            {
+                "status": "success",
+                "guide": guide,
+                "tool": "get_onboarding_guide",
+            },
+        )
+    except Exception:
+        logger.info(
+            "Rich onboarding unavailable, falling back to basic for %s", repo_path
+        )
+
+    # Fallback to basic onboarding
     from local_deepwiki.generators.analysis.onboarding import (
         format_onboarding_guide,
         generate_onboarding_guide,
     )
 
-    result = generate_onboarding_guide(repo_path, detail_level=validated.detail_level)
-    guide = format_onboarding_guide(result, detail_level=validated.detail_level)
+    basic_result = generate_onboarding_guide(
+        repo_path, detail_level=validated.detail_level
+    )
+    guide = format_onboarding_guide(basic_result, detail_level=validated.detail_level)
 
-    logger.info("Onboarding guide generated for %s", repo_path)
+    logger.info("Basic onboarding guide generated for %s", repo_path)
     return make_tool_text_content(
         "get_onboarding_guide",
         {
