@@ -123,6 +123,102 @@ def _check_thresholds(
     return violations
 
 
+def _format_json_output(
+    overall: dict[str, Any],
+    thresholds: dict[str, Any],
+    violations: list[dict[str, Any]],
+    console: Console,
+) -> None:
+    """Format and print check results as JSON."""
+    output = {
+        "grade": overall.get("grade", "F"),
+        "score": overall.get("score", 0),
+        "dimensions": {
+            name: dim_data.get("score", 0)
+            for name, dim_data in overall.get("dimensions", {}).items()
+        },
+        "thresholds": thresholds,
+        "violations": violations,
+        "passed": len(violations) == 0,
+    }
+    console.print(json.dumps(output, indent=2))
+
+
+def _format_rich_table(
+    overall: dict[str, Any],
+    thresholds: dict[str, Any],
+    violations: list[dict[str, Any]],
+    project_name: str,
+    console: Console,
+) -> None:
+    """Format and print check results as a Rich table."""
+    table = Table(
+        title=f"Architecture Health: {project_name}",
+        show_header=True,
+        header_style="bold cyan",
+    )
+    table.add_column("Metric", style="bold")
+    table.add_column("Value", justify="right")
+    table.add_column("Threshold", justify="right")
+    table.add_column("Status", justify="center")
+
+    grade = overall.get("grade", "F")
+    score = overall.get("score", 0)
+
+    # Overall row
+    min_grade = thresholds.get("min_grade")
+    grade_status = (
+        "[green]PASS[/green]"
+        if min_grade is None or _grade_passes(grade, min_grade)
+        else "[red]FAIL[/red]"
+    )
+    table.add_row(
+        "Grade",
+        grade,
+        str(min_grade) if min_grade else "-",
+        grade_status,
+    )
+
+    min_score = thresholds.get("min_score")
+    score_status = (
+        "[green]PASS[/green]"
+        if min_score is None or score >= min_score
+        else "[red]FAIL[/red]"
+    )
+    table.add_row(
+        "Score",
+        str(score),
+        str(min_score) if min_score else "-",
+        score_status,
+    )
+
+    # Dimension rows
+    for dim in ("complexity", "coupling", "smells", "layers"):
+        dim_score = overall.get("dimensions", {}).get(dim, {}).get("score", 0)
+        threshold_key = f"min_{dim}"
+        min_dim = thresholds.get(threshold_key)
+        dim_status = (
+            "[green]PASS[/green]"
+            if min_dim is None or dim_score >= min_dim
+            else "[red]FAIL[/red]"
+        )
+        table.add_row(
+            dim.capitalize(),
+            str(dim_score),
+            str(min_dim) if min_dim else "-",
+            dim_status,
+        )
+
+    console.print(table)
+
+    if violations:
+        console.print(f"\n[red]{len(violations)} violation(s) found.[/red]")
+        for v in violations:
+            console.print(f"  [red]- {v['message']}[/red]")
+    else:
+        console.print("\n[green]All checks passed.[/green]")
+
+
 def run_check(
     repo_path: Path,
     *,
@@ -170,89 +266,12 @@ def run_check(
 
     # Check thresholds
     violations = _check_thresholds(health_data, thresholds)
-
     overall = health_data.get("overall", {})
 
     if json_output:
-        output = {
-            "grade": overall.get("grade", "F"),
-            "score": overall.get("score", 0),
-            "dimensions": {
-                name: dim_data.get("score", 0)
-                for name, dim_data in overall.get("dimensions", {}).items()
-            },
-            "thresholds": thresholds,
-            "violations": violations,
-            "passed": len(violations) == 0,
-        }
-        console.print(json.dumps(output, indent=2))
+        _format_json_output(overall, thresholds, violations, console)
     else:
-        # Rich table output
-        table = Table(
-            title=f"Architecture Health: {project_name}",
-            show_header=True,
-            header_style="bold cyan",
-        )
-        table.add_column("Metric", style="bold")
-        table.add_column("Value", justify="right")
-        table.add_column("Threshold", justify="right")
-        table.add_column("Status", justify="center")
-
-        grade = overall.get("grade", "F")
-        score = overall.get("score", 0)
-
-        # Overall row
-        min_grade = thresholds.get("min_grade")
-        grade_status = (
-            "[green]PASS[/green]"
-            if min_grade is None or _grade_passes(grade, min_grade)
-            else "[red]FAIL[/red]"
-        )
-        table.add_row(
-            "Grade",
-            grade,
-            str(min_grade) if min_grade else "-",
-            grade_status,
-        )
-
-        min_score = thresholds.get("min_score")
-        score_status = (
-            "[green]PASS[/green]"
-            if min_score is None or score >= min_score
-            else "[red]FAIL[/red]"
-        )
-        table.add_row(
-            "Score",
-            str(score),
-            str(min_score) if min_score else "-",
-            score_status,
-        )
-
-        # Dimension rows
-        for dim in ("complexity", "coupling", "smells", "layers"):
-            dim_score = overall.get("dimensions", {}).get(dim, {}).get("score", 0)
-            threshold_key = f"min_{dim}"
-            min_dim = thresholds.get(threshold_key)
-            dim_status = (
-                "[green]PASS[/green]"
-                if min_dim is None or dim_score >= min_dim
-                else "[red]FAIL[/red]"
-            )
-            table.add_row(
-                dim.capitalize(),
-                str(dim_score),
-                str(min_dim) if min_dim else "-",
-                dim_status,
-            )
-
-        console.print(table)
-
-        if violations:
-            console.print(f"\n[red]{len(violations)} violation(s) found.[/red]")
-            for v in violations:
-                console.print(f"  [red]- {v['message']}[/red]")
-        else:
-            console.print("\n[green]All checks passed.[/green]")
+        _format_rich_table(overall, thresholds, violations, project_name, console)
 
     return 1 if violations else 0
 
