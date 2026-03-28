@@ -239,8 +239,10 @@ def find_broken_links(wiki_path: Path) -> list[tuple[str, str, str]]:
         content_no_code = _strip_code_blocks(content)
 
         for link_text, link_target in extract_markdown_links(content_no_code):
-            # Skip external links, anchors, and mailto
+            # Skip external links, anchors, mailto, and template variables
             if link_target.startswith(("http://", "https://", "#", "mailto:")):
+                continue
+            if "{" in link_target or "{" in link_text:
                 continue
 
             # Strip anchor from target

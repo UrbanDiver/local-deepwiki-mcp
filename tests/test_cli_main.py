@@ -22,6 +22,7 @@ class TestSubcommandTable:
             "config",
             "search",
             "cache",
+            "check",
         }
         assert set(SUBCOMMANDS.keys()) == expected
 
