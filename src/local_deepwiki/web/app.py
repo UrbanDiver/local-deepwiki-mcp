@@ -80,9 +80,12 @@ if _HAS_FLASK:
     from local_deepwiki.web.routes_codemap import codemap_bp  # noqa: E402
     from local_deepwiki.web.routes_research import research_bp  # noqa: E402
 
+    from local_deepwiki.web.routes_architecture import architecture_bp  # noqa: E402
+
     app.register_blueprint(chat_bp)
     app.register_blueprint(research_bp)
     app.register_blueprint(codemap_bp)
+    app.register_blueprint(architecture_bp)
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +317,9 @@ def inject_active_page() -> dict[str, str]:
     from flask import request as _req
 
     path = _req.path
-    if path.startswith("/codemap"):
+    if path.startswith("/architecture"):
+        page = "architecture"
+    elif path.startswith("/codemap"):
         page = "codemap"
     elif path.startswith("/chat"):
         page = "chat"
