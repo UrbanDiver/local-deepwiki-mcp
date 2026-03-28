@@ -1,0 +1,1011 @@
+{% extends "base.html" %}
+
+{% block title %}Architecture — DeepWiki{% endblock %}
+
+{% block head %}
+<!-- vis.js Network for graph rendering -->
+<script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/dist/vis-network.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/styles/vis-network.min.css">
+<!-- Chart.js for sparkline -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+<style>
+    body {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    /* ── Main layout ─────────────────────────────────────────────── */
+    .arch-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* ── Loading overlay ─────────────────────────────────────────── */
+    #loading-overlay {
+        position: absolute;
+        inset: 0;
+        background: var(--bg-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        flex-direction: column;
+        gap: 14px;
+    }
+    #loading-overlay.hidden { display: none; }
+    .spinner {
+        width: 28px;
+        height: 28px;
+        border: 3px solid var(--border-color);
+        border-top-color: var(--link-color);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading-msg { color: var(--muted-color); font-size: 0.9em; }
+
+    /* ── Error banner ────────────────────────────────────────────── */
+    #error-banner {
+        display: none;
+        padding: 12px 20px;
+        background: #5a1a1a;
+        color: #ffb3b3;
+        border-bottom: 1px solid #8b2222;
+        font-size: 0.9em;
+    }
+    [data-theme="light"] #error-banner {
+        background: #ffeaea;
+        color: #8b0000;
+        border-bottom: 1px solid #f5c6cb;
+    }
+    #error-banner.visible { display: block; }
+
+    /* ── Graph canvas ────────────────────────────────────────────── */
+    #graph-canvas {
+        flex: 1;
+        width: 100%;
+        min-height: 0;
+        background: var(--bg-color);
+        position: relative;
+    }
+
+    /* ── Stats footer ────────────────────────────────────────────── */
+    .stats-footer {
+        background: var(--sidebar-bg);
+        border-top: 1px solid var(--border-color);
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+    }
+    .grade-badge {
+        font-size: 1.4em;
+        font-weight: 700;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        color: #fff;
+        flex-shrink: 0;
+    }
+    .grade-A { background: #2d6a4f; }
+    .grade-B { background: #1d4e89; }
+    .grade-C { background: #9a6700; }
+    .grade-D { background: #c15e00; }
+    .grade-F { background: #8b0000; }
+    .grade-unknown { background: var(--border-color); color: var(--muted-color); }
+
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+    .stat-value {
+        font-size: 1.1em;
+        font-weight: 600;
+        color: var(--heading-color);
+    }
+    .stat-label {
+        font-size: 0.72em;
+        color: var(--muted-color);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .stat-divider {
+        width: 1px;
+        height: 32px;
+        background: var(--border-color);
+        flex-shrink: 0;
+    }
+
+    .sparkline-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+    #sparkline-canvas {
+        display: block;
+    }
+    .sparkline-label {
+        font-size: 0.72em;
+        color: var(--muted-color);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .footer-spacer { flex: 1; }
+
+    .tours-btn {
+        padding: 7px 16px;
+        background: transparent;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        color: var(--text-color);
+        font-size: 0.85em;
+        cursor: pointer;
+        transition: background 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .tours-btn:hover { background: var(--border-color); }
+    .tours-btn.active {
+        background: var(--link-color);
+        border-color: var(--link-color);
+        color: #fff;
+    }
+
+    /* ── Slide-out panel ─────────────────────────────────────────── */
+    .slide-panel {
+        position: fixed;
+        top: 0;
+        right: -420px;
+        width: 420px;
+        height: 100vh;
+        background: var(--sidebar-bg);
+        border-left: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        z-index: 50;
+        transition: right 0.25s ease;
+        overflow: hidden;
+    }
+    .slide-panel.open { right: 0; }
+
+    .panel-header {
+        padding: 16px 18px 12px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        flex-shrink: 0;
+    }
+    .panel-title {
+        font-size: 1em;
+        font-weight: 600;
+        color: var(--heading-color);
+        word-break: break-word;
+        line-height: 1.4;
+    }
+    .panel-subtitle {
+        font-size: 0.8em;
+        color: var(--muted-color);
+        margin-top: 2px;
+    }
+    .panel-close {
+        background: transparent;
+        border: none;
+        color: var(--muted-color);
+        cursor: pointer;
+        font-size: 1.3em;
+        padding: 0 4px;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+    .panel-close:hover { color: var(--text-color); }
+
+    .panel-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    /* ── Panel sections ──────────────────────────────────────────── */
+    .panel-section h3 {
+        font-size: 0.78em;
+        font-weight: 600;
+        color: var(--muted-color);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 8px;
+    }
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    .metric-cell {
+        background: var(--code-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 8px 10px;
+        text-align: center;
+    }
+    .metric-cell .m-val {
+        font-size: 1.05em;
+        font-weight: 600;
+        color: var(--heading-color);
+    }
+    .metric-cell .m-key {
+        font-size: 0.72em;
+        color: var(--muted-color);
+        margin-top: 2px;
+    }
+
+    .smell-list, .dep-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .smell-list li {
+        font-size: 0.85em;
+        color: var(--text-color);
+        padding: 5px 8px;
+        background: var(--code-bg);
+        border-radius: 4px;
+        border-left: 3px solid #e76f51;
+    }
+    .dep-list li {
+        font-size: 0.85em;
+        color: var(--link-color);
+        padding: 3px 0;
+        cursor: pointer;
+    }
+    .dep-list li:hover { text-decoration: underline; }
+    .dep-list li::before { content: "\2192  "; color: var(--muted-color); }
+    .dep-list.incoming li::before { content: "\2190  "; }
+
+    .empty-note {
+        font-size: 0.85em;
+        color: var(--muted-color);
+        font-style: italic;
+    }
+
+    /* ── Tour panel specifics ────────────────────────────────────── */
+    .tour-stops-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .tour-stop-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: background 0.15s, border-color 0.15s;
+    }
+    .tour-stop-item:hover {
+        background: var(--code-bg);
+        border-color: var(--border-color);
+    }
+    .tour-stop-item.active-stop {
+        background: var(--code-bg);
+        border-color: var(--link-color);
+    }
+    .stop-num {
+        font-size: 0.75em;
+        font-weight: 700;
+        color: var(--link-color);
+        background: var(--bg-color);
+        border: 1px solid var(--link-color);
+        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .stop-text {
+        flex: 1;
+    }
+    .stop-name {
+        font-size: 0.88em;
+        font-weight: 600;
+        color: var(--heading-color);
+    }
+    .stop-desc {
+        font-size: 0.8em;
+        color: var(--muted-color);
+        margin-top: 2px;
+    }
+
+    .tour-nav {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border-color);
+        flex-shrink: 0;
+    }
+    .tour-nav-btn {
+        padding: 6px 14px;
+        background: transparent;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        color: var(--text-color);
+        font-size: 0.85em;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .tour-nav-btn:hover:not(:disabled) { background: var(--border-color); }
+    .tour-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .tour-nav-pos {
+        flex: 1;
+        text-align: center;
+        font-size: 0.82em;
+        color: var(--muted-color);
+    }
+
+    /* ── Topics menu ─────────────────────────────────────────────── */
+    .tour-topics-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .tour-topic-item {
+        padding: 10px 12px;
+        background: var(--code-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.88em;
+        color: var(--text-color);
+        transition: border-color 0.15s, background 0.15s;
+    }
+    .tour-topic-item:hover {
+        border-color: var(--link-color);
+        background: var(--bg-color);
+    }
+    .tour-topic-name {
+        font-weight: 600;
+        color: var(--heading-color);
+    }
+    .tour-topic-desc {
+        font-size: 0.82em;
+        color: var(--muted-color);
+        margin-top: 3px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="arch-wrapper">
+    <!-- Loading overlay -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div id="loading-msg">Loading architecture data&#8230;</div>
+    </div>
+
+    <!-- Error banner -->
+    <div id="error-banner"></div>
+
+    <!-- Graph -->
+    <div id="graph-canvas"></div>
+
+    <!-- Stats footer -->
+    <div class="stats-footer">
+        <div id="grade-badge" class="grade-badge grade-unknown">?</div>
+
+        <div class="stat-divider"></div>
+
+        <div class="stat-item">
+            <span id="stat-modules" class="stat-value">&#8212;</span>
+            <span class="stat-label">Modules</span>
+        </div>
+
+        <div class="stat-divider"></div>
+
+        <div class="stat-item">
+            <span id="stat-coupling" class="stat-value">&#8212;</span>
+            <span class="stat-label">High Coupling</span>
+        </div>
+
+        <div class="stat-divider"></div>
+
+        <div class="stat-item">
+            <span id="stat-smells" class="stat-value">&#8212;</span>
+            <span class="stat-label">Smells</span>
+        </div>
+
+        <div class="stat-divider"></div>
+
+        <div class="sparkline-wrap">
+            <canvas id="sparkline-canvas" width="100" height="32"></canvas>
+            <span class="sparkline-label">Trend</span>
+        </div>
+
+        <div class="footer-spacer"></div>
+
+        <button id="tours-btn" class="tours-btn" title="Guided tours">
+            &#9654; Tours
+        </button>
+    </div>
+</div>
+
+<!-- Slide-out panel (module detail or tour) -->
+<div id="slide-panel" class="slide-panel" role="complementary" aria-label="Detail panel">
+    <div class="panel-header">
+        <div>
+            <div id="panel-title" class="panel-title">Module Detail</div>
+            <div id="panel-subtitle" class="panel-subtitle"></div>
+        </div>
+        <button id="panel-close" class="panel-close" title="Close panel" aria-label="Close panel">&#x2715;</button>
+    </div>
+    <div id="panel-body" class="panel-body">
+        <!-- Populated dynamically -->
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    'use strict';
+
+    /* ── Helpers ────────────────────────────────────────────────── */
+    var repoPath = new URLSearchParams(window.location.search).get('repo_path') || '';
+
+    function apiUrl(path) {
+        var sep = path.includes('?') ? '&' : '?';
+        return repoPath ? path + sep + 'repo_path=' + encodeURIComponent(repoPath) : path;
+    }
+
+    function showError(msg) {
+        var banner = document.getElementById('error-banner');
+        banner.textContent = msg;
+        banner.classList.add('visible');
+    }
+
+    function hideLoading() {
+        document.getElementById('loading-overlay').classList.add('hidden');
+    }
+
+    function clearChildren(node) {
+        while (node.firstChild) { node.removeChild(node.firstChild); }
+    }
+
+    function el(tag, attrs, children) {
+        var node = document.createElement(tag);
+        if (attrs) {
+            Object.keys(attrs).forEach(function (k) {
+                if (k === 'className') { node.className = attrs[k]; }
+                else if (k === 'textContent') { node.textContent = attrs[k]; }
+                else if (k === 'id') { node.id = attrs[k]; }
+                else { node.setAttribute(k, attrs[k]); }
+            });
+        }
+        (children || []).forEach(function (c) {
+            if (typeof c === 'string') { node.appendChild(document.createTextNode(c)); }
+            else { node.appendChild(c); }
+        });
+        return node;
+    }
+
+    /* ── State ───────────────────────────────────────────────────── */
+    var graphData = { nodes: [], edges: [] };
+    var network = null;
+    var sparklineChart = null;
+    var panelMode = null; // 'module' | 'tour-topics' | 'tour'
+    var currentTourStops = [];
+    var currentTourIdx = 0;
+
+    /* ── Theme helpers ───────────────────────────────────────────── */
+    function getEdgeColor() {
+        var theme = document.documentElement.getAttribute('data-theme') || 'dark';
+        return theme === 'dark' ? '#30363d' : '#d0d7de';
+    }
+
+    /* ── vis.js network setup ────────────────────────────────────── */
+    function buildNetwork(nodes, edges) {
+        var container = document.getElementById('graph-canvas');
+
+        var visNodes = new vis.DataSet(nodes.map(function (n) {
+            var fileCount = Math.max(n.file_count || 1, 1);
+            return {
+                id: n.id,
+                label: n.label || n.id,
+                title: (n.label || n.id) + '\nFiles: ' + (n.file_count || 0) + '\nLines: ' + (n.line_count || 0),
+                value: fileCount,
+                color: {
+                    background: n.color || '#2d6a4f',
+                    border: n.color || '#2d6a4f',
+                    highlight: { background: '#58a6ff', border: '#1a6fb5' },
+                    hover: { background: '#58a6ff', border: '#1a6fb5' }
+                },
+                font: { color: '#ffffff', size: 12 },
+                shape: 'dot'
+            };
+        }));
+
+        var visEdges = new vis.DataSet(edges.map(function (e, i) {
+            var w = e.weight || 1;
+            return {
+                id: i,
+                from: e.from,
+                to: e.to,
+                width: Math.min(Math.max(w * 0.5, 0.5), 5),
+                arrows: { to: { enabled: true, scaleFactor: 0.7 } },
+                color: { color: getEdgeColor(), highlight: '#58a6ff', hover: '#58a6ff' },
+                smooth: { type: 'curvedCW', roundness: 0.1 },
+                title: e.label || ''
+            };
+        }));
+
+        var options = {
+            physics: {
+                solver: 'barnesHut',
+                barnesHut: {
+                    gravitationalConstant: -4000,
+                    centralGravity: 0.3,
+                    springLength: 120,
+                    springConstant: 0.04,
+                    damping: 0.09,
+                    avoidOverlap: 0.5
+                },
+                stabilization: { iterations: 150 }
+            },
+            nodes: {
+                scaling: { min: 10, max: 40, label: { enabled: false } },
+                borderWidth: 1.5,
+                borderWidthSelected: 2.5
+            },
+            edges: {
+                smooth: { enabled: true }
+            },
+            interaction: {
+                hover: true,
+                tooltipDelay: 200,
+                hideEdgesOnDrag: true
+            },
+            layout: { improvedLayout: false }
+        };
+
+        network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, options);
+
+        network.on('click', function (params) {
+            if (params.nodes.length > 0) {
+                openModulePanel(params.nodes[0]);
+            }
+        });
+
+        network.on('stabilizationIterationsDone', function () {
+            network.setOptions({ physics: { enabled: false } });
+        });
+    }
+
+    function highlightNode(nodeId) {
+        if (!network) return;
+        network.selectNodes([nodeId]);
+        network.focus(nodeId, { scale: 1.2, animation: { duration: 400, easingFunction: 'easeInOutQuad' } });
+    }
+
+    /* ── Stats footer ────────────────────────────────────────────── */
+    function gradeClass(grade) {
+        if (!grade) return 'grade-unknown';
+        var g = String(grade).trim().charAt(0).toUpperCase();
+        var map = { A: 'grade-A', B: 'grade-B', C: 'grade-C', D: 'grade-D', F: 'grade-F' };
+        return map[g] || 'grade-unknown';
+    }
+
+    function renderStats(health) {
+        var badge = document.getElementById('grade-badge');
+        var grade = (health.overall && health.overall.grade) ? health.overall.grade : '?';
+        badge.textContent = grade;
+        badge.className = 'grade-badge ' + gradeClass(grade);
+
+        var stats = health.stats || {};
+        document.getElementById('stat-modules').textContent =
+            stats.total_modules !== undefined ? String(stats.total_modules) : '\u2014';
+        document.getElementById('stat-coupling').textContent =
+            stats.high_coupling !== undefined ? String(stats.high_coupling) : '\u2014';
+        document.getElementById('stat-smells').textContent =
+            stats.total_smells !== undefined ? String(stats.total_smells) : '\u2014';
+
+        renderSparkline(health.trend || []);
+    }
+
+    function renderSparkline(trend) {
+        var canvas = document.getElementById('sparkline-canvas');
+        if (!canvas) return;
+        var scores = trend.map(function (t) { return t.score; });
+        if (scores.length === 0) { scores = [0]; }
+
+        var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        var lineColor = isDark ? '#58a6ff' : '#0969da';
+        var fillColor = isDark ? 'rgba(88,166,255,0.15)' : 'rgba(9,105,218,0.12)';
+        var labels = scores.map(function (_, i) { return i; });
+
+        if (sparklineChart) {
+            sparklineChart.data.labels = labels;
+            sparklineChart.data.datasets[0].data = scores;
+            sparklineChart.data.datasets[0].borderColor = lineColor;
+            sparklineChart.data.datasets[0].backgroundColor = fillColor;
+            sparklineChart.update('none');
+        } else {
+            sparklineChart = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: scores,
+                        borderColor: lineColor,
+                        backgroundColor: fillColor,
+                        borderWidth: 1.5,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    animation: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false, min: 0, max: 100 }
+                    }
+                }
+            });
+        }
+    }
+
+    /* ── Panel helpers ───────────────────────────────────────────── */
+    function openPanel(title, subtitle, bodyContent) {
+        document.getElementById('panel-title').textContent = title;
+        document.getElementById('panel-subtitle').textContent = subtitle || '';
+        var body = document.getElementById('panel-body');
+        clearChildren(body);
+        if (bodyContent) body.appendChild(bodyContent);
+        document.getElementById('slide-panel').classList.add('open');
+    }
+
+    function closePanel() {
+        document.getElementById('slide-panel').classList.remove('open');
+        panelMode = null;
+        if (network) network.unselectAll();
+        document.getElementById('tours-btn').classList.remove('active');
+    }
+
+    /* ── Module detail panel ─────────────────────────────────────── */
+    function openModulePanel(nodeId) {
+        panelMode = 'module';
+        document.getElementById('tours-btn').classList.remove('active');
+
+        var node = graphData.nodes.find(function (n) { return n.id === nodeId; });
+
+        fetch(apiUrl('/architecture/api/module/' + encodeURIComponent(nodeId)))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var fileCount = (node && node.file_count !== undefined) ? node.file_count : (data.file_count || '?');
+                var lineCount = (node && node.line_count !== undefined) ? node.line_count : (data.line_count || '?');
+                var frag = buildModuleBody(nodeId, fileCount, lineCount, data);
+                openPanel(nodeId, String(fileCount) + ' file(s) \u00b7 ' + String(lineCount) + ' lines', frag);
+                highlightNode(nodeId);
+            })
+            .catch(function () {
+                var frag = document.createDocumentFragment();
+                frag.appendChild(el('p', { className: 'empty-note', textContent: 'Could not load module details.' }));
+                openPanel(nodeId, '', frag);
+                highlightNode(nodeId);
+            });
+    }
+
+    function buildModuleBody(nodeId, fileCount, lineCount, data) {
+        var frag = document.createDocumentFragment();
+
+        /* Overview */
+        frag.appendChild(el('div', { className: 'panel-section' }, [
+            el('h3', { textContent: 'Overview' }),
+            el('div', { className: 'metric-grid' }, [
+                el('div', { className: 'metric-cell' }, [
+                    el('div', { className: 'm-val', textContent: String(fileCount) }),
+                    el('div', { className: 'm-key', textContent: 'Files' })
+                ]),
+                el('div', { className: 'metric-cell' }, [
+                    el('div', { className: 'm-val', textContent: String(lineCount) }),
+                    el('div', { className: 'm-key', textContent: 'Lines' })
+                ]),
+                el('div', { className: 'metric-cell' }, [
+                    el('div', { className: 'm-val', textContent: data.grade || '\u2014' }),
+                    el('div', { className: 'm-key', textContent: 'Grade' })
+                ])
+            ])
+        ]));
+
+        /* Coupling metrics */
+        var coupling = data.coupling || {};
+        var couplingKeys = Object.keys(coupling).filter(function (k) { return coupling[k] !== undefined; });
+        if (couplingKeys.length > 0) {
+            var metricsSection = el('div', { className: 'panel-section' }, [el('h3', { textContent: 'Coupling Metrics' })]);
+            var grid = el('div', { className: 'metric-grid' });
+            ['Ca', 'Ce', 'I', 'A', 'D'].forEach(function (k) {
+                var v = coupling[k];
+                if (v !== undefined) {
+                    grid.appendChild(el('div', { className: 'metric-cell' }, [
+                        el('div', { className: 'm-val', textContent: typeof v === 'number' ? v.toFixed(2) : String(v) }),
+                        el('div', { className: 'm-key', textContent: k })
+                    ]));
+                }
+            });
+            metricsSection.appendChild(grid);
+            frag.appendChild(metricsSection);
+        }
+
+        /* Smells */
+        var smells = data.smells || [];
+        if (smells.length > 0) {
+            var smellSection = el('div', { className: 'panel-section' }, [el('h3', { textContent: 'Design Smells' })]);
+            var ul = el('ul', { className: 'smell-list' });
+            smells.forEach(function (s) {
+                ul.appendChild(el('li', { textContent: typeof s === 'string' ? s : (s.name || String(s)) }));
+            });
+            smellSection.appendChild(ul);
+            frag.appendChild(smellSection);
+        }
+
+        /* Outgoing deps */
+        var outgoing = graphData.edges
+            .filter(function (e) { return e.from === nodeId; })
+            .map(function (e) { return e.to; });
+        if (outgoing.length > 0) {
+            var outSection = el('div', { className: 'panel-section' }, [el('h3', { textContent: 'Depends On' })]);
+            var outList = el('ul', { className: 'dep-list' });
+            outgoing.forEach(function (target) {
+                var li = el('li', { textContent: target });
+                li.addEventListener('click', (function (t) {
+                    return function () { openModulePanel(t); };
+                }(target)));
+                outList.appendChild(li);
+            });
+            outSection.appendChild(outList);
+            frag.appendChild(outSection);
+        }
+
+        /* Incoming deps */
+        var incoming = graphData.edges
+            .filter(function (e) { return e.to === nodeId; })
+            .map(function (e) { return e.from; });
+        if (incoming.length > 0) {
+            var inSection = el('div', { className: 'panel-section' }, [el('h3', { textContent: 'Depended On By' })]);
+            var inList = el('ul', { className: 'dep-list incoming' });
+            incoming.forEach(function (src) {
+                var li = el('li', { textContent: src });
+                li.addEventListener('click', (function (s) {
+                    return function () { openModulePanel(s); };
+                }(src)));
+                inList.appendChild(li);
+            });
+            inSection.appendChild(inList);
+            frag.appendChild(inSection);
+        }
+
+        if (outgoing.length === 0 && incoming.length === 0 && smells.length === 0) {
+            frag.appendChild(el('p', { className: 'empty-note', textContent: 'No dependency or smell data for this module.' }));
+        }
+
+        return frag;
+    }
+
+    /* ── Tours panel ─────────────────────────────────────────────── */
+    var TOUR_TOPICS = [
+        { id: 'architecture',     name: 'Architecture Overview', desc: 'Key modules, layers, and boundaries' },
+        { id: 'data_flow',        name: 'Data Flow',             desc: 'How data moves through the system' },
+        { id: 'request_handling', name: 'Request Handling',      desc: 'Request lifecycle from entry to response' },
+        { id: 'testing',          name: 'Testing',               desc: 'Test organization and patterns' }
+    ];
+
+    function openTourTopicsPanel() {
+        panelMode = 'tour-topics';
+        document.getElementById('tours-btn').classList.add('active');
+
+        var section = el('div', { className: 'panel-section' }, [el('h3', { textContent: 'Choose a Tour' })]);
+        var topicsList = el('ul', { className: 'tour-topics-list' });
+        TOUR_TOPICS.forEach(function (topic) {
+            var item = el('div', { className: 'tour-topic-item' }, [
+                el('div', { className: 'tour-topic-name', textContent: topic.name }),
+                el('div', { className: 'tour-topic-desc', textContent: topic.desc })
+            ]);
+            item.addEventListener('click', (function (t) {
+                return function () { loadTour(t.id, t.name); };
+            }(topic)));
+            topicsList.appendChild(item);
+        });
+        section.appendChild(topicsList);
+
+        var frag = document.createDocumentFragment();
+        frag.appendChild(section);
+        openPanel('Guided Tours', 'Select a topic to explore', frag);
+    }
+
+    function loadTour(topicId, topicName) {
+        document.getElementById('panel-title').textContent = topicName || topicId;
+        document.getElementById('panel-subtitle').textContent = 'Loading\u2026';
+        clearChildren(document.getElementById('panel-body'));
+
+        fetch(apiUrl('/architecture/api/tour/' + encodeURIComponent(topicId)))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                currentTourStops = data.stops || [];
+                currentTourIdx = 0;
+                panelMode = 'tour';
+                renderTourPanel(data.title || topicName, data.summary || '');
+            })
+            .catch(function () {
+                document.getElementById('panel-subtitle').textContent = 'Failed to load tour.';
+            });
+    }
+
+    function renderTourPanel(title, summary) {
+        document.getElementById('panel-title').textContent = title;
+        document.getElementById('panel-subtitle').textContent = summary;
+
+        var body = document.getElementById('panel-body');
+        clearChildren(body);
+
+        if (currentTourStops.length === 0) {
+            body.appendChild(el('p', { className: 'empty-note', textContent: 'No stops available for this tour.' }));
+            return;
+        }
+
+        var section = el('div', { className: 'panel-section' },
+            [el('h3', { textContent: currentTourStops.length + ' Stops' })]);
+        var stopsList = el('ul', { className: 'tour-stops-list' });
+
+        currentTourStops.forEach(function (stop, idx) {
+            var item = el('div', {
+                className: 'tour-stop-item',
+                id: 'tour-stop-' + idx
+            }, [
+                el('div', { className: 'stop-num', textContent: String(idx + 1) }),
+                el('div', { className: 'stop-text' }, [
+                    el('div', { className: 'stop-name', textContent: stop.module || stop.name || ('Stop ' + (idx + 1)) }),
+                    el('div', { className: 'stop-desc', textContent: stop.description || stop.reason || '' })
+                ])
+            ]);
+            item.addEventListener('click', (function (i) {
+                return function () { jumpToTourStop(i); };
+            }(idx)));
+            stopsList.appendChild(item);
+        });
+        section.appendChild(stopsList);
+        body.appendChild(section);
+
+        /* Navigation bar */
+        var prevBtn = el('button', { className: 'tour-nav-btn', id: 'tour-prev', textContent: '\u2190 Prev' });
+        var posLabel = el('span', { className: 'tour-nav-pos', id: 'tour-pos' });
+        var nextBtn = el('button', { className: 'tour-nav-btn', id: 'tour-next', textContent: 'Next \u2192' });
+        prevBtn.addEventListener('click', function () { jumpToTourStop(currentTourIdx - 1); });
+        nextBtn.addEventListener('click', function () { jumpToTourStop(currentTourIdx + 1); });
+        body.appendChild(el('div', { className: 'tour-nav' }, [prevBtn, posLabel, nextBtn]));
+
+        jumpToTourStop(0);
+    }
+
+    function jumpToTourStop(idx) {
+        if (idx < 0 || idx >= currentTourStops.length) return;
+        currentTourIdx = idx;
+
+        currentTourStops.forEach(function (_, i) {
+            var item = document.getElementById('tour-stop-' + i);
+            if (item) {
+                item.className = 'tour-stop-item' + (i === idx ? ' active-stop' : '');
+            }
+        });
+
+        var activeItem = document.getElementById('tour-stop-' + idx);
+        if (activeItem) activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+        var prevBtn = document.getElementById('tour-prev');
+        var nextBtn = document.getElementById('tour-next');
+        var posLabel = document.getElementById('tour-pos');
+        if (prevBtn) prevBtn.disabled = idx === 0;
+        if (nextBtn) nextBtn.disabled = idx === currentTourStops.length - 1;
+        if (posLabel) posLabel.textContent = (idx + 1) + ' / ' + currentTourStops.length;
+
+        var stop = currentTourStops[idx];
+        if (stop) {
+            var nodeId = stop.module || stop.id;
+            if (nodeId) highlightNode(nodeId);
+        }
+    }
+
+    /* ── Theme change hook (called by base.html) ─────────────────── */
+    window.onThemeChange = function (theme) {
+        var isDark = theme !== 'light';
+        if (sparklineChart) {
+            sparklineChart.data.datasets[0].borderColor = isDark ? '#58a6ff' : '#0969da';
+            sparklineChart.data.datasets[0].backgroundColor = isDark ? 'rgba(88,166,255,0.15)' : 'rgba(9,105,218,0.12)';
+            sparklineChart.update('none');
+        }
+        if (network) {
+            var edgeColor = getEdgeColor();
+            network.body.data.edges.forEach(function (edge) {
+                network.body.data.edges.update({ id: edge.id, color: { color: edgeColor, highlight: '#58a6ff', hover: '#58a6ff' } });
+            });
+        }
+    };
+
+    /* ── Boot ────────────────────────────────────────────────────── */
+    function init() {
+        Promise.all([
+            fetch(apiUrl('/architecture/api/graph')).then(function (r) {
+                if (!r.ok) throw new Error('Graph API ' + r.status);
+                return r.json();
+            }),
+            fetch(apiUrl('/architecture/api/health')).then(function (r) {
+                if (!r.ok) throw new Error('Health API ' + r.status);
+                return r.json();
+            })
+        ]).then(function (results) {
+            var graph = results[0];
+            var health = results[1];
+            graphData = graph;
+            buildNetwork(graph.nodes || [], graph.edges || []);
+            renderStats(health);
+            hideLoading();
+        }).catch(function (err) {
+            hideLoading();
+            var hint = repoPath ? '' : ' \u2014 add ?repo_path=<path> to the URL';
+            showError('Failed to load architecture data: ' + err.message + hint);
+        });
+    }
+
+    /* ── Event wiring ────────────────────────────────────────────── */
+    document.getElementById('panel-close').addEventListener('click', closePanel);
+
+    document.getElementById('tours-btn').addEventListener('click', function () {
+        if (panelMode === 'tour-topics' || panelMode === 'tour') {
+            closePanel();
+        } else {
+            openTourTopicsPanel();
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closePanel();
+    });
+
+    init();
+}());
+</script>
+{% endblock %}
