@@ -148,7 +148,9 @@ This guides agents toward the *unique* value of individual tools rather than hav
 
 ### Phase 2: Parameter Objects
 
-*Introduce dataclasses to consolidate repeated parameter groups. Fixes ~30 medium-severity `long_parameter_list` smells and improves coupling abstractness.*
+*Introduce dataclasses to consolidate repeated parameter groups. Fixes ~30 medium-severity `long_parameter_list` smells.*
+
+**Note on coupling:** Adding concrete dataclasses does NOT improve the abstractness metric — the coupling analyzer only counts ABCs, Protocol classes, and classes with `@abstractmethod` as abstract. Dataclasses increase the concrete class count, which can slightly lower abstractness. Coupling improvements must come from real structural changes in Phase 4.
 
 #### 2.1 WikiGenerationContext
 
@@ -219,7 +221,7 @@ Refactor the search pipeline to accept `SearchRequest` and the constructor to ac
 
 ~30 `long_parameter_list` smells fixed (medium severity, weight 1). Weighted count: ~358 -> ~328. Density: 4.31/1K. Smells score: **~65.5** (up from 62.4, +3.1).
 
-Coupling abstractness improves from ~8-10 new dataclasses. Exact coupling impact measured after Phase 1 bug fix.
+Coupling impact: neutral to slightly negative. New dataclasses increase concrete class counts, which cannot improve abstractness. Coupling improvements are deferred to Phase 4.
 
 ---
 
@@ -250,7 +252,6 @@ Three patterns cover the majority:
 | `_analyze_file` | `generators/analysis/design_smells.py:418` | 21 | 94 |
 | `handle_batch_explain_entities` | `handlers/agentic.py:212` | 21 | 128 |
 | `generate_overview_page` | `generators/wiki/pages.py:209` | 18 | 81 |
-| `_extract_names_from_table` | `core/fuzzy_search.py:345` | 18 | 52 |
 | `research` | `core/deep_research/pipeline.py:327` | 16 | 80 |
 | `generate_file_graph` | `generators/analysis/dependency_graph.py:493` | 16 | 80 |
 | And ~20 more in the CC 16-19 range | | | |
@@ -310,21 +311,22 @@ Current penalties: avg_distance=0.42 (-21), unstable_pct=4.6% (-9.2).
 **Re-measure after Phase 1 bug fix** to get accurate module-level data. Then:
 
 **Reduce avg_distance (target: 0.42 -> 0.30):**
-- Phase 2 parameter objects add ~8-10 new dataclasses, increasing abstractness in `core/vectorstore/`, `generators/wiki/`, `core/deep_research/`, and `services/`. This should reduce distance for those modules.
-- Where modules still show high distance, add Protocol/ABC interfaces for the most-depended-on modules. Candidates: `core/vectorstore` (184 inbound), `providers/llm` (152 inbound), `models` (128 inbound).
+- Add Protocol interfaces for the most-depended-on modules where they don't already exist. Only ABCs, Protocols, and classes with `@abstractmethod` count as abstract in the coupling metric — concrete dataclasses do not help. Candidates: `core/vectorstore` (184 inbound), `providers/llm` (152 inbound), `models` (128 inbound). These Protocols must serve a real design purpose (e.g., enabling dependency injection or defining provider contracts), not just inflate abstractness.
+- Reduce efferent coupling in modules with high Ce by consolidating shared imports into common facades.
 
 **Reduce unstable modules (target: 18 -> ~10):**
-- For each highly unstable module (I > 0.8, Ce > 5), evaluate: (a) reduce outbound imports by consolidating shared dependencies, or (b) determine if the module is correctly unstable (CLI entry points, test utilities) and should be excluded from the metric.
-- If test/CLI modules inflate the unstable count, evaluate whether the coupling scorer should exclude known-unstable-by-design modules (with an opt-in flag, not silently).
+- For each highly unstable module (I > 0.8, Ce > 5), reduce outbound imports by consolidating shared dependencies or extracting common import facades.
+- **Note:** Test and CLI modules are expected to be unstable (high Ce, low Ca) by design. However, excluding them from the metric would constitute a scoring model change, which is a non-goal. Instead, reduce their Ce by consolidating test utilities and shared fixtures, or accept that these modules will remain unstable and focus effort on production modules where coupling reduction has real design benefit.
 
 **Estimated impact:** avg_distance 0.42 -> 0.30 saves 6 penalty points. unstable_pct 4.6% -> 2.5% saves 4.2 penalty points. Score: **~80** (up from 69.9).
 
-**Files:** Determined after re-measurement. Likely: `core/vectorstore/__init__.py`, `providers/llm/base.py`, possibly `generators/analysis/coupling.py` if test exclusion is warranted.
+**Files:** Determined after re-measurement. Likely: `providers/llm/base.py` (Protocol for LLM providers), `providers/embeddings/base.py` (Protocol for embedding providers), plus targeted Ce-reduction in high-Ce production modules.
 
 **Acceptance criteria:**
 - Coupling score reaches 78+ (verified by `get_architecture_health`)
-- Any scoring changes (like test module exclusion) are opt-in, not default behavior changes
-- No artificial abstractness (don't add ABCs that serve no design purpose)
+- No scoring model changes (test/CLI modules are NOT excluded from the metric)
+- Every Protocol/ABC added must serve a real design purpose (enabling DI, defining contracts, or replacing isinstance checks) — not just inflating abstractness
+- If coupling cannot reach 78 through justified structural changes alone, accept the lower score and document why
 
 #### 4.2 Remaining Long Methods (target: smells 81.3 -> ~86)
 
@@ -375,9 +377,18 @@ Fix the top ~15 by line count using extract-method. These are long but not compl
 | Phase | Items | Dependencies | Estimated Scope |
 |-------|-------|-------------|-----------------|
 | **Phase 1** | 1.1 Coupling bug fix, 1.2 Recommendation types, 1.3 Next-steps guidance | None | 3 files changed, ~100 lines |
-| **Phase 2** | 2.1 WikiGenerationContext, 2.2 SearchRequest/VectorStoreConfig, 2.3 Other param objects | Phase 1 (for accurate measurement) | ~15 files changed, 3 new model files |
-| **Phase 3** | 3.1-3.2 Decompose 50 CC>15 functions | Phase 2 (param objects reduce some CC) | ~40 files changed, 8 commit groups |
-| **Phase 4** | 4.1 Coupling push, 4.2 Remaining long methods | Phases 1-3 | ~15-20 files, scope refined by measurement |
+| **Phase 2** | 2.1 WikiGenerationContext, 2.2 SearchRequest/VectorStoreConfig, 2.3 Other param objects | None (soft: Phase 1 for measurement) | ~15 files changed, 3 new model files |
+| **Phase 3** | 3.1-3.2 Decompose 50 CC>15 functions | None (soft: Phase 2 reduces some function signatures) | ~40 files changed, 8 commit groups |
+| **Phase 4** | 4.1 Coupling push, 4.2 Remaining long methods | Phase 1 (coupling bug fix required for accurate targeting) | ~15-20 files, scope refined by measurement |
+
+**Dependency notes:** Phases 1-3 have no hard dependencies and could run in parallel or be reordered. Phase 2 doesn't need the coupling bug fix to proceed — parameter objects are driven by the smell list, not coupling metrics. Phase 3 doesn't need parameter objects to reduce CC — CC counts decision points, not parameters. Phase 4 has a hard dependency on Phase 1 (accurate coupling measurement is required to target the right modules). The recommended order (1 -> 2 -> 3 -> 4) optimizes for progressive measurement, not technical necessity.
+
+## Housekeeping
+
+- Update CLAUDE.md architecture tables and tool descriptions after Phase 1 (MCP tool changes)
+- Update CLAUDE.md component tables after Phase 2 (new model files)
+- Re-run `get_architecture_health` after each phase and record the score in the commit message
+- The full list of 50 CC>15 functions should be generated from `get_hotspots(metric="complexity", min_threshold=16)` at implementation time, since the working tree may have changed since this spec was written
 
 ## Testing Strategy
 
@@ -393,7 +404,9 @@ Fix the top ~15 by line count using extract-method. These are long but not compl
 |------|-----------|
 | Parameter objects break existing callers | Frozen dataclasses with defaults; update all internal callers in same commit |
 | Method extraction changes behavior | Extract-only refactoring: new private helpers called from original function body |
-| Coupling improvements don't reach target | Phase 4 is measurement-driven; re-assess after Phases 2-3 side effects |
+| Coupling improvements don't reach target | Phase 4 is measurement-driven; re-assess after Phases 2-3. Dataclasses do NOT improve abstractness — only Protocols/ABCs do. If coupling remains below 78 after adding justified Protocols, accept a lower overall score rather than add artificial abstractions |
 | 50 CC>15 functions is a lot of refactoring | Grouped by module (8 groups); each group is independently testable and committable |
 | Scoring model rewards artificial abstraction | Only add ABCs/Protocols where they serve a design purpose; document any exceptions |
 | Phase 3 introduces regressions in wiki generation | Wiki generation has extensive test coverage; run wiki generation integration tests after each group |
+| Phase 2 breaks test mocks | Tests that mock function signatures (e.g., patching `search()` or `generate_wiki()`) will need mock updates when signatures change to accept dataclass objects. Update mocks in the same commit as the signature change |
+| Actual CC>15 function count differs from 50 | Re-enumerate from `get_hotspots` at implementation time; the working tree has uncommitted changes that may shift counts |
