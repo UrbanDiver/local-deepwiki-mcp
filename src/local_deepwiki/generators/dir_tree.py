@@ -55,26 +55,9 @@ def _load_gitignored_paths(repo_path: Path) -> set[str]:
         return set()
 
 
-def get_directory_tree(repo_path: Path, max_depth: int = 3, max_items: int = 50) -> str:
-    """Generate a directory tree structure for the repository.
-
-    Respects ``.gitignore`` when inside a git repository so that build
-    artifacts, coverage reports, and other non-source directories are
-    excluded.  Falls back to a hardcoded skip-list for non-git repos.
-
-    Args:
-        repo_path: Path to repository root.
-        max_depth: Maximum depth to traverse.
-        max_items: Maximum total items to include.
-
-    Returns:
-        Formatted directory tree string.
-    """
-    lines: list[str] = []
-    items_shown = 0
-
-    # Common directories/files to always skip
-    always_skip = {
+# Common directories/files to always skip
+_ALWAYS_SKIP: frozenset[str] = frozenset(
+    {
         ".git",
         ".hg",
         ".svn",
@@ -96,55 +79,95 @@ def get_directory_tree(repo_path: Path, max_depth: int = 3, max_items: int = 50)
         ".mypy_cache",
         ".ruff_cache",
     }
+)
 
-    # Augment with gitignored paths so output dirs don't appear
+
+def _should_skip_entry(name: str, gitignored: set[str]) -> bool:
+    """Return True if a directory entry should be excluded from the tree."""
+    if name in _ALWAYS_SKIP or name in gitignored:
+        return True
+    if name.startswith("."):
+        return True
+    # Skip names that look like Python repr strings (e.g. MagicMock dirs)
+    if name.startswith(("<", "'", '"')):
+        return True
+    return False
+
+
+def _traverse_directory(
+    path: Path,
+    prefix: str,
+    depth: int,
+    max_depth: int,
+    max_items: int,
+    gitignored: set[str],
+    lines: list[str],
+    items_shown_ref: list[int],
+) -> None:
+    """Recursively traverse *path* and append tree lines to *lines*.
+
+    Uses a single-element list *items_shown_ref* to pass the mutable
+    counter across recursive calls without a nonlocal closure.
+    """
+    if depth > max_depth or items_shown_ref[0] >= max_items:
+        return
+
+    try:
+        items = sorted(path.iterdir(), key=lambda x: (x.is_file(), x.name))
+    except PermissionError:
+        return
+
+    items = [i for i in items if not _should_skip_entry(i.name, gitignored)]
+
+    for i, item in enumerate(items):
+        if items_shown_ref[0] >= max_items:
+            lines.append(f"{prefix}...")
+            return
+
+        is_last = i == len(items) - 1
+        connector = "└── " if is_last else "├── "
+        new_prefix = prefix + ("    " if is_last else "│   ")
+
+        if item.is_dir():
+            lines.append(f"{prefix}{connector}{item.name}/")
+        else:
+            lines.append(f"{prefix}{connector}{item.name}")
+        items_shown_ref[0] += 1
+
+        if item.is_dir():
+            _traverse_directory(
+                item,
+                new_prefix,
+                depth + 1,
+                max_depth,
+                max_items,
+                gitignored,
+                lines,
+                items_shown_ref,
+            )
+
+
+def get_directory_tree(repo_path: Path, max_depth: int = 3, max_items: int = 50) -> str:
+    """Generate a directory tree structure for the repository.
+
+    Respects ``.gitignore`` when inside a git repository so that build
+    artifacts, coverage reports, and other non-source directories are
+    excluded.  Falls back to a hardcoded skip-list for non-git repos.
+
+    Args:
+        repo_path: Path to repository root.
+        max_depth: Maximum depth to traverse.
+        max_items: Maximum total items to include.
+
+    Returns:
+        Formatted directory tree string.
+    """
     gitignored = _load_gitignored_paths(repo_path)
+    lines: list[str] = [f"{repo_path.name}/"]
+    items_shown_ref = [1]  # count root entry
 
-    def should_skip(name: str) -> bool:
-        if name in always_skip:
-            return True
-        if name in gitignored:
-            return True
-        if name.startswith("."):
-            return True
-        # Skip names that look like Python repr strings (e.g. MagicMock dirs)
-        if name.startswith("<") or name.startswith("'") or name.startswith('"'):
-            return True
-        return False
-
-    def traverse(path: Path, prefix: str, depth: int) -> None:
-        nonlocal items_shown
-
-        if depth > max_depth or items_shown >= max_items:
-            return
-
-        try:
-            items = sorted(path.iterdir(), key=lambda x: (x.is_file(), x.name))
-        except PermissionError:
-            return
-
-        # Filter items
-        items = [i for i in items if not should_skip(i.name)]
-
-        for i, item in enumerate(items):
-            if items_shown >= max_items:
-                lines.append(f"{prefix}...")
-                return
-
-            is_last = i == len(items) - 1
-            connector = "└── " if is_last else "├── "
-            new_prefix = prefix + ("    " if is_last else "│   ")
-
-            if item.is_dir():
-                lines.append(f"{prefix}{connector}{item.name}/")
-                items_shown += 1
-                traverse(item, new_prefix, depth + 1)
-            else:
-                lines.append(f"{prefix}{connector}{item.name}")
-                items_shown += 1
-
-    lines.append(f"{repo_path.name}/")
-    items_shown += 1
-    traverse(repo_path, "", 1)
+    _traverse_directory(
+        repo_path, "", 1, max_depth, max_items, gitignored, lines, items_shown_ref
+    )
 
     return "\n".join(lines)

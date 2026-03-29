@@ -106,6 +106,19 @@ def _skip_docstring_lines(lines: list[str]) -> int:
     return 0
 
 
+def _should_start_capture(
+    line: str, entity_name: str, capturing: bool
+) -> tuple[bool, bool]:
+    """Return (new_capturing, dedent_block) after checking if capture should start."""
+    dedent_block = False
+    if "dedent(" in line or 'dedent("""' in line:
+        dedent_block = True
+        capturing = True
+    if entity_name in line and not capturing:
+        capturing = True
+    return capturing, dedent_block
+
+
 def _collect_relevant_lines(
     lines: list[str],
     entity_name: str,
@@ -134,12 +147,8 @@ def _collect_relevant_lines(
         stripped = line.strip()
         paren_depth += line.count("(") - line.count(")")
 
-        if "dedent(" in line or 'dedent("""' in line:
-            dedent_block = True
-            capturing = True
-
-        if entity_name in line and not capturing:
-            capturing = True
+        capturing, new_dedent = _should_start_capture(line, entity_name, capturing)
+        dedent_block = dedent_block or new_dedent
 
         if capturing:
             relevant_lines.append(line)

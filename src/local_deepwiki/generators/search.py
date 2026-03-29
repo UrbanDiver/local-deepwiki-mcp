@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.models import ChunkType, IndexStatus, WikiPage
+from local_deepwiki.models import ChunkType, CodeChunk, IndexStatus, WikiPage
 
 
 def extract_headings(content: str) -> list[str]:
@@ -122,6 +122,68 @@ def generate_search_index(pages: list[WikiPage]) -> list[dict]:
     return [generate_search_entry(page) for page in pages]
 
 
+def _build_entity_signature(
+    entity_type: str,
+    param_types: dict,
+    return_type: str | None,
+) -> str:
+    """Build a short signature preview string for an entity."""
+    if entity_type == "class":
+        return ""
+    params = list(param_types.keys())[:3]
+    if len(param_types) > 3:
+        params.append("...")
+    sig = f"({', '.join(params)})"
+    if return_type:
+        sig += f" → {return_type}"
+    return sig
+
+
+def _build_entity_description(docstring: str | None) -> str:
+    """Extract the first line of a docstring as a brief description."""
+    if not docstring:
+        return ""
+    first_line = docstring.split("\n")[0].strip()
+    if len(first_line) > 80:
+        return first_line[:77] + "..."
+    return first_line
+
+
+def _chunk_to_entity_entry(chunk: CodeChunk, file_path: str) -> dict:
+    """Convert a single code chunk to a search entity entry dict."""
+    entity_type = chunk.chunk_type.value  # 'class', 'function', 'method'
+
+    if chunk.chunk_type == ChunkType.METHOD and chunk.parent_name:
+        display_name = f"{chunk.parent_name}.{chunk.name}"
+    else:
+        display_name = chunk.name or "Unknown"
+
+    metadata = chunk.metadata or {}
+    param_types = metadata.get("parameter_types", {})
+    return_type = metadata.get("return_type")
+    raises = metadata.get("raises", [])
+    is_async = metadata.get("is_async", False)
+
+    wiki_path = f"files/{file_path}".replace(".py", ".md")
+
+    return {
+        "type": "entity",
+        "entity_type": entity_type,
+        "name": chunk.name or "Unknown",
+        "display_name": display_name,
+        "path": wiki_path,
+        "file": file_path,
+        "signature": _build_entity_signature(entity_type, param_types, return_type),
+        "description": _build_entity_description(chunk.docstring),
+        "is_async": is_async,
+        "raises": raises,
+        "keywords": _build_keywords(chunk.name, param_types, return_type, raises),
+    }
+
+
+_ENTITY_CHUNK_TYPES = frozenset({ChunkType.CLASS, ChunkType.FUNCTION, ChunkType.METHOD})
+
+
 async def generate_entity_entries(
     index_status: IndexStatus,
     vector_store: VectorStore,
@@ -142,74 +204,12 @@ async def generate_entity_entries(
 
     for file_info in index_status.files:
         chunks = await vector_store.get_chunks_by_file(file_info.path)
-
         for chunk in chunks:
-            if chunk.chunk_type not in (
-                ChunkType.CLASS,
-                ChunkType.FUNCTION,
-                ChunkType.METHOD,
-            ):
+            if chunk.chunk_type not in _ENTITY_CHUNK_TYPES:
                 continue
+            entries.append(_chunk_to_entity_entry(chunk, file_info.path))
 
-            # Determine entity type
-            entity_type = chunk.chunk_type.value  # 'class', 'function', 'method'
-
-            # Build display name
-            if chunk.chunk_type == ChunkType.METHOD and chunk.parent_name:
-                display_name = f"{chunk.parent_name}.{chunk.name}"
-            else:
-                display_name = chunk.name or "Unknown"
-
-            # Extract metadata
-            metadata = chunk.metadata or {}
-            param_types = metadata.get("parameter_types", {})
-            return_type = metadata.get("return_type")
-            raises = metadata.get("raises", [])
-            is_async = metadata.get("is_async", False)
-
-            # Build signature preview
-            signature = ""
-            if entity_type != "class":
-                params = list(param_types.keys())[:3]
-                if len(param_types) > 3:
-                    params.append("...")
-                signature = f"({', '.join(params)})"
-                if return_type:
-                    signature += f" → {return_type}"
-
-            # Build brief description from docstring
-            description = ""
-            if chunk.docstring:
-                first_line = chunk.docstring.split("\n")[0].strip()
-                if len(first_line) > 80:
-                    description = first_line[:77] + "..."
-                else:
-                    description = first_line
-
-            # Build wiki path
-            wiki_path = f"files/{file_info.path}".replace(".py", ".md")
-
-            entry = {
-                "type": "entity",
-                "entity_type": entity_type,
-                "name": chunk.name or "Unknown",
-                "display_name": display_name,
-                "path": wiki_path,
-                "file": file_info.path,
-                "signature": signature,
-                "description": description,
-                "is_async": is_async,
-                "raises": raises,
-                # Keywords for search matching
-                "keywords": _build_keywords(
-                    chunk.name, param_types, return_type, raises
-                ),
-            }
-            entries.append(entry)
-
-    # Sort by name for consistent output
-    entries = sorted(entries, key=lambda e: e["display_name"].lower())
-    return entries
+    return sorted(entries, key=lambda e: e["display_name"].lower())
 
 
 def _build_keywords(

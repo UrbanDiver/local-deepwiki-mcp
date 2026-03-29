@@ -40,20 +40,9 @@ class CommitInfo:
     files: list[str] = field(default_factory=list)
 
 
-def get_commit_history(repo_path: Path, limit: int = 30) -> list[CommitInfo]:
-    """Get recent commit history with file changes.
-
-    Args:
-        repo_path: Path to the repository.
-        limit: Maximum number of commits to retrieve.
-
-    Returns:
-        List of CommitInfo objects, newest first.
-    """
+def _run_git_log(repo_path: Path, limit: int) -> str | None:
+    """Run git log and return stdout, or None on failure."""
     try:
-        # Get commit info with changed files
-        # Format: short_hash|full_hash|author|date|message
-        # Followed by file names (one per line) until empty line
         result = subprocess.run(
             [
                 "git",
@@ -67,55 +56,71 @@ def get_commit_history(repo_path: Path, limit: int = 30) -> list[CommitInfo]:
             text=True,
             timeout=GIT_LOG_TIMEOUT,
         )
-
         if result.returncode != 0:
             logger.debug("Git log failed: %s", result.stderr)
-            return []
-
-        commits: list[CommitInfo] = []
-        current_commit: CommitInfo | None = None
-
-        for line in result.stdout.split("\n"):
-            line = line.strip()
-
-            if "|" in line and line.count("|") >= 4:
-                # This is a commit header line
-                if current_commit:
-                    commits.append(current_commit)
-
-                parts = line.split("|", 4)
-                if len(parts) >= 5:
-                    try:
-                        # Parse date (format: 2026-01-13 10:30:00 -0500)
-                        date_str = parts[3].rsplit(" ", 1)[0]  # Remove timezone
-                        date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
-                    except ValueError:
-                        date = datetime.now()
-
-                    current_commit = CommitInfo(
-                        hash=parts[0],
-                        full_hash=parts[1],
-                        author=parts[2],
-                        date=date,
-                        message=parts[4],
-                        files=[],
-                    )
-            elif line and current_commit:
-                # This is a file path
-                current_commit.files.append(line)
-
-        # Don't forget the last commit
-        if current_commit:
-            commits.append(current_commit)
-
-        return commits
-
+            return None
+        return result.stdout
     except subprocess.TimeoutExpired:
         logger.warning("Git log timed out")
-        return []
+        return None
     except (FileNotFoundError, OSError) as e:
         logger.debug("Failed to get git history: %s", e)
+        return None
+
+
+def _parse_commit_header(line: str) -> CommitInfo | None:
+    """Parse a git log header line into a CommitInfo (files list empty)."""
+    parts = line.split("|", 4)
+    if len(parts) < 5:
+        return None
+    try:
+        date_str = parts[3].rsplit(" ", 1)[0]
+        date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        date = datetime.now()
+    return CommitInfo(
+        hash=parts[0],
+        full_hash=parts[1],
+        author=parts[2],
+        date=date,
+        message=parts[4],
+        files=[],
+    )
+
+
+def _parse_git_log_output(output: str) -> list[CommitInfo]:
+    """Parse git log output into a list of CommitInfo objects."""
+    commits: list[CommitInfo] = []
+    current_commit: CommitInfo | None = None
+
+    for line in output.split("\n"):
+        line = line.strip()
+        if "|" in line and line.count("|") >= 4:
+            if current_commit:
+                commits.append(current_commit)
+            current_commit = _parse_commit_header(line)
+        elif line and current_commit:
+            current_commit.files.append(line)
+
+    if current_commit:
+        commits.append(current_commit)
+    return commits
+
+
+def get_commit_history(repo_path: Path, limit: int = 30) -> list[CommitInfo]:
+    """Get recent commit history with file changes.
+
+    Args:
+        repo_path: Path to the repository.
+        limit: Maximum number of commits to retrieve.
+
+    Returns:
+        List of CommitInfo objects, newest first.
+    """
+    output = _run_git_log(repo_path, limit)
+    if output is None:
         return []
+    return _parse_git_log_output(output)
 
 
 def build_commit_url(repo_info: GitRepoInfo, commit_hash: str) -> str | None:

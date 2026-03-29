@@ -236,6 +236,36 @@ class CodeExampleExtractor:
 
         return examples
 
+    def _collect_snippet_lines(
+        self,
+        lines: list[str],
+        entity_name: str,
+        max_lines: int,
+    ) -> list[str]:
+        """Collect the lines that demonstrate entity usage from *lines*."""
+        relevant: list[str] = []
+        capturing = False
+        paren_depth = 0
+        assertions_found = 0
+
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith(('"""', "'''")):
+                continue
+            paren_depth += line.count("(") - line.count(")")
+            if entity_name in line and not capturing:
+                capturing = True
+            if capturing:
+                relevant.append(line)
+                if stripped.startswith("assert") and paren_depth <= 0:
+                    assertions_found += 1
+                    if assertions_found >= 2:
+                        break
+                if len(relevant) >= max_lines:
+                    break
+
+        return relevant
+
     def _extract_relevant_snippet(
         self,
         content: str,
@@ -253,36 +283,7 @@ class CodeExampleExtractor:
             Extracted snippet or None.
         """
         lines = content.split("\n")
-        relevant: list[str] = []
-        capturing = False
-        paren_depth = 0
-        assertions_found = 0
-
-        for line in lines:
-            stripped = line.strip()
-
-            # Skip docstrings
-            if stripped.startswith(('"""', "'''")):
-                continue
-
-            # Track parentheses
-            paren_depth += line.count("(") - line.count(")")
-
-            # Start capturing at entity usage
-            if entity_name in line and not capturing:
-                capturing = True
-
-            if capturing:
-                relevant.append(line)
-
-                # Stop after assertions
-                if stripped.startswith("assert") and paren_depth <= 0:
-                    assertions_found += 1
-                    if assertions_found >= 2:
-                        break
-
-                if len(relevant) >= max_lines:
-                    break
+        relevant = self._collect_snippet_lines(lines, entity_name, max_lines)
 
         if not relevant:
             return None
@@ -290,8 +291,6 @@ class CodeExampleExtractor:
         try:
             result = dedent("\n".join(relevant)).strip()
         except (TypeError, ValueError):
-            # TypeError: dedent received non-string input
-            # ValueError: unexpected indentation issues
             result = "\n".join(relevant).strip()
 
         return result if len(result) >= 10 else None

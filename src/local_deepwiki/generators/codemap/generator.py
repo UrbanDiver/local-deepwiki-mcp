@@ -98,6 +98,57 @@ _FALLBACK_NARRATIVE = (
 )
 
 
+def _format_node_lines(node: CodemapNode, full_mode: bool) -> list[str]:
+    """Format a single node as prompt lines (full or truncated)."""
+    header = (
+        f"- {node.qualified_name} ({node.chunk_type}) "
+        f"at {node.file_path}:{node.start_line}-{node.end_line}"
+    )
+    lines = [header]
+    if full_mode:
+        preview = node.content_preview or "(no preview)"
+        lines.append(f"  Preview: {preview}")
+        if node.docstring:
+            lines.append(f"  Docstring: {node.docstring}")
+    else:
+        first_line = (node.content_preview or "").split("\n")[0]
+        if first_line:
+            lines.append(f"  Preview: {first_line}")
+    return lines
+
+
+def _build_narrative_prompt(
+    graph: CodemapGraph,
+    query: str,
+    focus: CodemapFocus,
+    ordered: list[CodemapNode],
+) -> str:
+    """Assemble the user prompt for narrative generation."""
+    edge_lines = [f"  {e.source} --[{e.edge_type}]--> {e.target}" for e in graph.edges]
+
+    header_parts: list[str] = [
+        f"Query: {query}",
+        f"Focus: {focus.value}",
+        "",
+        "Nodes (BFS order):",
+    ]
+    total_chars = sum(len(p) for p in header_parts) + sum(len(e) for e in edge_lines)
+    full_mode = total_chars < 6000
+
+    parts = list(header_parts)
+    for node in ordered:
+        parts.extend(_format_node_lines(node, full_mode))
+
+    parts.append("")
+    parts.append("Edges:")
+    parts.extend(edge_lines)
+
+    prompt = "\n".join(parts)
+    if len(prompt) > 8000:
+        prompt = prompt[:8000] + "\n...(truncated)"
+    return prompt
+
+
 async def generate_codemap_narrative(
     graph: CodemapGraph,
     query: str,
@@ -108,68 +159,20 @@ async def generate_codemap_narrative(
     if not graph.nodes:
         return "No nodes in the graph to narrate."
 
-    # Build BFS-ordered node list (entry point first, then BFS order)
     ordered = _bfs_ordered_nodes(graph)
-
-    # Assemble user prompt parts
-    parts: list[str] = [
-        f"Query: {query}",
-        f"Focus: {focus.value}",
-        "",
-        "Nodes (BFS order):",
-    ]
-    edge_lines = [f"  {e.source} --[{e.edge_type}]--> {e.target}" for e in graph.edges]
-
-    total_chars = sum(len(p) for p in parts) + sum(len(e) for e in edge_lines)
-
-    # Decide truncation level
-    full_mode = total_chars < 6000
-
-    for node in ordered:
-        header = (
-            f"- {node.qualified_name} ({node.chunk_type}) "
-            f"at {node.file_path}:{node.start_line}-{node.end_line}"
-        )
-        if full_mode:
-            preview = node.content_preview or "(no preview)"
-            doc = f"  Docstring: {node.docstring}" if node.docstring else ""
-            parts.append(header)
-            parts.append(f"  Preview: {preview}")
-            if doc:
-                parts.append(doc)
-        else:
-            # Truncated: first line of preview only, no docstring
-            first_line = (node.content_preview or "").split("\n")[0]
-            parts.append(header)
-            if first_line:
-                parts.append(f"  Preview: {first_line}")
-
-    parts.append("")
-    parts.append("Edges:")
-    parts.extend(edge_lines)
-
-    user_prompt = "\n".join(parts)
-
-    # Final truncation guard
-    if len(user_prompt) > 8000:
-        user_prompt = user_prompt[:8000] + "\n...(truncated)"
-
+    user_prompt = _build_narrative_prompt(graph, query, focus, ordered)
     system_prompt = (
         _DATA_FLOW_SYSTEM_PROMPT if focus == CodemapFocus.DATA_FLOW else _SYSTEM_PROMPT
     )
 
     try:
-        narrative = await llm.generate(
+        return await llm.generate(
             prompt=user_prompt,
             system_prompt=system_prompt,
             max_tokens=2048,
             temperature=0.3,
         )
-        return narrative
     except (ValueError, RuntimeError, OSError, TypeError):
-        # LLM provider calls may raise ValueError (bad params),
-        # RuntimeError (provider errors), OSError (network/IO),
-        # or TypeError (unexpected response shape)
         logger.exception("LLM narrative generation failed")
         return _FALLBACK_NARRATIVE
 
@@ -329,13 +332,10 @@ def _build_combined_call_graph(
     return combined_cg
 
 
-def _rank_functions_by_connections(
+def _count_call_graph_connections(
     combined_cg: dict[str, list[str]],
-    all_chunks: list[CodeChunk],
-    chunk_by_name: dict[str, CodeChunk],
-    repo: Path,
 ) -> Counter[str]:
-    """Score every function by call-graph connections, chunk-type weight, and import popularity."""
+    """Count caller/callee mentions in the call graph, skipping noise."""
     connection_count: Counter[str] = Counter()
     for caller, callees in combined_cg.items():
         if _is_noise(caller):
@@ -344,38 +344,71 @@ def _rank_functions_by_connections(
         for callee in callees:
             if not _is_noise(callee):
                 connection_count[callee] += 1
+    return connection_count
 
-    # Apply chunk-type weighting
+
+def _apply_chunk_type_weights(
+    connection_count: Counter[str],
+    chunk_by_name: dict[str, CodeChunk],
+) -> None:
+    """Apply chunk-type weights to connection counts (in-place)."""
     for func_name in list(connection_count):
         chunk = chunk_by_name.get(func_name)
         if chunk:
             weight = CHUNK_TYPE_WEIGHTS.get(chunk.chunk_type.value, 1.0)
             connection_count[func_name] = int(connection_count[func_name] * weight)
 
-    # Boost score for functions in heavily-imported modules
+
+def _build_file_import_count(all_chunks: list[CodeChunk]) -> Counter[str]:
+    """Count how many times each module is imported across all import chunks."""
     file_import_count: Counter[str] = Counter()
     for chunk in all_chunks:
-        if chunk.chunk_type == ChunkType.IMPORT:
-            for line in chunk.content.splitlines():
-                stripped = line.strip()
-                if stripped.startswith(("import ", "from ")):
-                    match = re.match(r"(?:from\s+(\S+)|import\s+(\S+))", stripped)
-                    if match:
-                        module = match.group(1) or match.group(2)
-                        if module:
-                            file_import_count[module] += 1
+        if chunk.chunk_type != ChunkType.IMPORT:
+            continue
+        for line in chunk.content.splitlines():
+            stripped = line.strip()
+            if stripped.startswith(("import ", "from ")):
+                match = re.match(r"(?:from\s+(\S+)|import\s+(\S+))", stripped)
+                if match:
+                    module = match.group(1) or match.group(2)
+                    if module:
+                        file_import_count[module] += 1
+    return file_import_count
 
+
+def _boost_by_import_popularity(
+    connection_count: Counter[str],
+    chunk_by_name: dict[str, CodeChunk],
+    file_import_count: Counter[str],
+    repo: Path,
+) -> None:
+    """Boost scores for functions in heavily-imported modules (in-place)."""
     for func_name in list(connection_count):
         chunk = chunk_by_name.get(func_name)
-        if chunk and chunk.file_path:
-            try:
-                rel = str(Path(chunk.file_path).relative_to(repo))
-            except (ValueError, TypeError):
-                rel = chunk.file_path
-            module = rel.rsplit(".", 1)[0].replace("/", ".").replace("\\", ".")
-            if module in file_import_count:
-                connection_count[func_name] += file_import_count[module]
+        if not chunk or not chunk.file_path:
+            continue
+        try:
+            rel = str(Path(chunk.file_path).relative_to(repo))
+        except (ValueError, TypeError):
+            rel = chunk.file_path
+        module = rel.rsplit(".", 1)[0].replace("/", ".").replace("\\", ".")
+        if module in file_import_count:
+            connection_count[func_name] += file_import_count[module]
 
+
+def _rank_functions_by_connections(
+    combined_cg: dict[str, list[str]],
+    all_chunks: list[CodeChunk],
+    chunk_by_name: dict[str, CodeChunk],
+    repo: Path,
+) -> Counter[str]:
+    """Score every function by call-graph connections, chunk-type weight, and import popularity."""
+    connection_count = _count_call_graph_connections(combined_cg)
+    _apply_chunk_type_weights(connection_count, chunk_by_name)
+    file_import_count = _build_file_import_count(all_chunks)
+    _boost_by_import_popularity(
+        connection_count, chunk_by_name, file_import_count, repo
+    )
     return connection_count
 
 

@@ -31,6 +31,32 @@ class CodeExample:
     entity_name: str | None = None  # Name of the function/class being demonstrated
 
 
+def _build_doctest_example(
+    code_lines: list[str],
+    output_lines: list[str],
+) -> CodeExample:
+    """Build a CodeExample from accumulated doctest lines."""
+    return CodeExample(
+        source="docstring",
+        code="\n".join(code_lines),
+        expected_output="\n".join(output_lines) if output_lines else None,
+        language="python",
+    )
+
+
+def _classify_doctest_line(stripped: str, in_code: bool) -> str:
+    """Classify a stripped doctest line into one of: prompt, continuation, output, empty, other."""
+    if stripped.startswith(">>>"):
+        return "prompt"
+    if stripped.startswith("...") and in_code:
+        return "continuation"
+    if not stripped:
+        return "empty"
+    if in_code:
+        return "output"
+    return "other"
+
+
 def parse_doctest_examples(docstring: str) -> list[CodeExample]:
     """Extract >>> doctest examples from a docstring.
 
@@ -55,78 +81,35 @@ def parse_doctest_examples(docstring: str) -> list[CodeExample]:
         return []
 
     examples: list[CodeExample] = []
-    lines = docstring.split("\n")
-
-    current_code_lines: list[str] = []
-    current_output_lines: list[str] = []
+    code_lines: list[str] = []
+    output_lines: list[str] = []
     in_code = False
 
-    for line in lines:
+    for line in docstring.split("\n"):
         stripped = line.strip()
+        kind = _classify_doctest_line(stripped, in_code)
 
-        # Check for >>> prompt (start of code)
-        if stripped.startswith(">>>"):
-            # If we have accumulated code from before, save it
-            if current_code_lines:
-                code = "\n".join(current_code_lines)
-                output = (
-                    "\n".join(current_output_lines) if current_output_lines else None
-                )
-                examples.append(
-                    CodeExample(
-                        source="docstring",
-                        code=code,
-                        expected_output=output,
-                        language="python",
-                    )
-                )
-                current_code_lines = []
-                current_output_lines = []
-
-            # Start new code block
-            code_part = stripped[3:].strip()  # Remove >>>
+        if kind == "prompt":
+            if code_lines:
+                examples.append(_build_doctest_example(code_lines, output_lines))
+                code_lines = []
+                output_lines = []
+            code_part = stripped[3:].strip()
             if code_part:
-                current_code_lines.append(code_part)
+                code_lines.append(code_part)
             in_code = True
-
-        # Check for ... continuation
-        elif stripped.startswith("...") and in_code:
-            cont_part = stripped[3:].strip()  # Remove ...
-            current_code_lines.append(cont_part)
-
-        # Expected output (non-empty line after code, not starting with >>> or ...)
-        elif in_code and stripped and not stripped.startswith((">>>", "...")):
-            current_output_lines.append(stripped)
-
-        # Empty line may end the example
-        elif in_code and not stripped and current_code_lines:
-            # Save the accumulated example
-            code = "\n".join(current_code_lines)
-            output = "\n".join(current_output_lines) if current_output_lines else None
-            examples.append(
-                CodeExample(
-                    source="docstring",
-                    code=code,
-                    expected_output=output,
-                    language="python",
-                )
-            )
-            current_code_lines = []
-            current_output_lines = []
+        elif kind == "continuation":
+            code_lines.append(stripped[3:].strip())
+        elif kind == "output":
+            output_lines.append(stripped)
+        elif kind == "empty" and code_lines:
+            examples.append(_build_doctest_example(code_lines, output_lines))
+            code_lines = []
+            output_lines = []
             in_code = False
 
-    # Don't forget the last example
-    if current_code_lines:
-        code = "\n".join(current_code_lines)
-        output = "\n".join(current_output_lines) if current_output_lines else None
-        examples.append(
-            CodeExample(
-                source="docstring",
-                code=code,
-                expected_output=output,
-                language="python",
-            )
-        )
+    if code_lines:
+        examples.append(_build_doctest_example(code_lines, output_lines))
 
     return examples
 

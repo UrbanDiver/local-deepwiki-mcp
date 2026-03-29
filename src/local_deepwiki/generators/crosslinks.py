@@ -45,23 +45,11 @@ def camel_to_spaced(name: str) -> str | None:
         return None
 
     # Insert space before uppercase letters that follow lowercase letters
-    # Also handle sequences of uppercase (e.g., LLMProvider -> LLM Provider)
-    result = []
-    prev_upper = False
-    for i, char in enumerate(name):
-        if char.isupper():
-            if i > 0 and not prev_upper:
-                result.append(" ")
-            elif i > 0 and prev_upper and i + 1 < len(name) and name[i + 1].islower():
-                # Handle LLMProvider -> LLM Provider
-                result.append(" ")
-            prev_upper = True
-        else:
-            prev_upper = False
-        result.append(char)
+    # Step 1: handle Abc -> " Abc" transitions (lower->upper boundary)
+    spaced = re.sub(r"([a-z])([A-Z])", r"\1 \2", name)
+    # Step 2: handle ABcDef -> "AB cDef" (upper sequence followed by upper+lower)
+    spaced = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", spaced)
 
-    spaced = "".join(result)
-    # Only return if actually different
     return spaced if spaced != name else None
 
 
@@ -488,6 +476,20 @@ class CrossLinker:
         return "\n".join(processed_parts)
 
     @staticmethod
+    def _is_fence_line(line: str, in_code_block: bool) -> bool:
+        """Return True if *line* is a markdown fence (opening or closing)."""
+        stripped = line.lstrip()
+        indent = len(line) - len(stripped)
+        if indent > 3:
+            return False
+        if not (stripped.startswith("```") or stripped.startswith("~~~")):
+            return False
+        if in_code_block:
+            # Closing fence must have no content after the fence chars
+            return not stripped[3:].strip()
+        return True
+
+    @staticmethod
     def _split_by_code_blocks(content: str) -> list[tuple[str, bool]]:
         """Split content into code and non-code sections.
 
@@ -506,30 +508,13 @@ class CrossLinker:
         in_code_block = False
 
         for line in lines:
-            stripped = line.lstrip()
-            indent = len(line) - len(stripped)
-            is_fence = False
-
-            if indent <= 3 and (
-                stripped.startswith("```") or stripped.startswith("~~~")
-            ):
+            if CrossLinker._is_fence_line(line, in_code_block):
                 if in_code_block:
-                    # Closing fence: fence chars with optional trailing whitespace only
-                    after = stripped[3:].strip()
-                    if not after:
-                        is_fence = True
-                else:
-                    is_fence = True
-
-            if is_fence:
-                if in_code_block:
-                    # End code block: include the closing fence
                     current_lines.append(line)
                     parts.append(("\n".join(current_lines), True))
                     current_lines = []
                     in_code_block = False
                 else:
-                    # Start code block: flush non-code text
                     if current_lines:
                         parts.append(("\n".join(current_lines), False))
                         current_lines = []
@@ -538,7 +523,6 @@ class CrossLinker:
             else:
                 current_lines.append(line)
 
-        # Flush remaining lines
         if current_lines:
             parts.append(("\n".join(current_lines), in_code_block))
 

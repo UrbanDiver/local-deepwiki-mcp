@@ -234,21 +234,8 @@ class PrefetchQueue:
                 self.drain_status.current_page = None
                 self._queue.task_done()
 
-    async def _maybe_start_drain(self) -> None:
-        """Wait for idle period, then enqueue all uncached pages for background generation."""
-        if not self._drain_enabled or self._drain_started:
-            return
-        logger.info(
-            "Drain mode: waiting %ds for idle before backfilling...",
-            self._drain_idle_seconds,
-        )
-        await asyncio.sleep(self._drain_idle_seconds)
-        if not self._queue.empty():
-            return
-        self._drain_started = True
-        self.drain_status.started = True
-        self.drain_status.started_at = time.time()
-
+    def _collect_all_page_paths(self) -> set[str]:
+        """Return all page paths from the virtual structure."""
         virtual = self._generator.get_virtual_structure()
         all_pages: set[str] = set()
         for p in virtual.get("pages", []):
@@ -256,7 +243,14 @@ class PrefetchQueue:
         for section_pages in virtual.get("sections", {}).values():
             for p in section_pages:
                 all_pages.add(p["path"])
+        return all_pages
 
+    def _enqueue_drain_pages(self, all_pages: set[str]) -> tuple[int, int]:
+        """Enqueue uncached pages for background drain generation.
+
+        Returns:
+            Tuple of (enqueued_count, cached_count).
+        """
         enqueued = 0
         cached = 0
         for page_path in sorted(all_pages):
@@ -276,6 +270,26 @@ class PrefetchQueue:
                 enqueued += 1
             except asyncio.QueueFull:
                 break
+        return enqueued, cached
+
+    async def _maybe_start_drain(self) -> None:
+        """Wait for idle period, then enqueue all uncached pages for background generation."""
+        if not self._drain_enabled or self._drain_started:
+            return
+        logger.info(
+            "Drain mode: waiting %ds for idle before backfilling...",
+            self._drain_idle_seconds,
+        )
+        await asyncio.sleep(self._drain_idle_seconds)
+        if not self._queue.empty():
+            return
+
+        self._drain_started = True
+        self.drain_status.started = True
+        self.drain_status.started_at = time.time()
+
+        all_pages = self._collect_all_page_paths()
+        enqueued, cached = self._enqueue_drain_pages(all_pages)
 
         self.drain_status.pages_cached = cached
         self.drain_status.total_pages = enqueued + cached

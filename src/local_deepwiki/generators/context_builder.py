@@ -206,6 +206,45 @@ async def find_related_files(
     return sorted(related)[:max_files]
 
 
+def _extract_type_names_from_chunks(chunks: list[CodeChunk]) -> set[str]:
+    """Collect all uppercase type names referenced in chunk content."""
+    type_names: set[str] = set()
+    type_pattern = re.compile(r":\s*([A-Z][a-zA-Z0-9_]+)")
+    return_pattern = re.compile(r"->\s*([A-Z][a-zA-Z0-9_]+)")
+
+    for chunk in chunks:
+        for match in type_pattern.finditer(chunk.content):
+            type_name = match.group(1)
+            if len(type_name) > 3:
+                type_names.add(type_name)
+        for match in return_pattern.finditer(chunk.content):
+            type_name = match.group(1)
+            if len(type_name) > 3:
+                type_names.add(type_name)
+
+    return type_names
+
+
+async def _lookup_type_definition(
+    type_name: str,
+    vector_store: VectorStore,
+    warnings: list[str] | None,
+) -> str | None:
+    """Search for the class definition of *type_name* and return a summary line."""
+    try:
+        results = await vector_store.search(f"class {type_name}", limit=3)
+        for result in results:
+            if result.chunk.chunk_type == ChunkType.CLASS:
+                first_line = result.chunk.content.split("\n")[0]
+                if type_name in first_line:
+                    return f"{type_name}: {first_line}"
+    except (RuntimeError, OSError, ValueError, KeyError) as e:
+        logger.debug("Error searching for type definition '%s': %s", type_name, e)
+        if warnings is not None:
+            warnings.append(f"Type definition search failed for '{type_name}': {e}")
+    return None
+
+
 async def get_type_definitions_used(
     chunks: list[CodeChunk],
     vector_store: VectorStore,
@@ -223,46 +262,13 @@ async def get_type_definitions_used(
     Returns:
         List of type definition snippets.
     """
+    type_names = _extract_type_names_from_chunks(chunks)
     type_defs: list[str] = []
-    type_names: set[str] = set()
 
-    # Find type annotations in chunks
-    type_pattern = re.compile(r":\s*([A-Z][a-zA-Z0-9_]+)")
-    return_pattern = re.compile(r"->\s*([A-Z][a-zA-Z0-9_]+)")
-
-    for chunk in chunks:
-        # Find type annotations
-        for match in type_pattern.finditer(chunk.content):
-            type_name = match.group(1)
-            if type_name not in type_names and len(type_name) > 3:
-                type_names.add(type_name)
-        # Find return type annotations
-        for match in return_pattern.finditer(chunk.content):
-            type_name = match.group(1)
-            if type_name not in type_names and len(type_name) > 3:
-                type_names.add(type_name)
-
-    # Look up definitions of these types
     for type_name in list(type_names)[:max_types]:
-        try:
-            results = await vector_store.search(
-                f"class {type_name}",
-                limit=3,
-            )
-            for result in results:
-                if result.chunk.chunk_type == ChunkType.CLASS:
-                    # Get just the class definition line
-                    first_line = result.chunk.content.split("\n")[0]
-                    if type_name in first_line:
-                        type_defs.append(f"{type_name}: {first_line}")
-                        break
-        except (RuntimeError, OSError, ValueError, KeyError) as e:
-            # RuntimeError: Vector search/LanceDB failures
-            # OSError: Network/file system issues
-            # ValueError/KeyError: Invalid data during search
-            logger.debug("Error searching for type definition '%s': %s", type_name, e)
-            if warnings is not None:
-                warnings.append(f"Type definition search failed for '{type_name}': {e}")
+        definition = await _lookup_type_definition(type_name, vector_store, warnings)
+        if definition:
+            type_defs.append(definition)
 
     return type_defs
 

@@ -212,6 +212,59 @@ def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]:
     return file_to_wiki
 
 
+def _collect_see_also_entries(
+    relationships: FileRelationships,
+    file_to_wiki: dict[str, str],
+    current_wiki_path: str,
+) -> list[tuple[str, str, str]]:
+    """Collect (wiki_path, title, relationship_type) tuples from all relationship types."""
+    related: list[tuple[str, str, str]] = []
+
+    for file_path in relationships.imported_by:
+        wiki_path = file_to_wiki.get(file_path)
+        if wiki_path and wiki_path != current_wiki_path:
+            related.append((wiki_path, Path(file_path).stem, "uses this"))
+
+    for file_path in relationships.imports:
+        wiki_path = file_to_wiki.get(file_path)
+        if wiki_path and wiki_path != current_wiki_path:
+            related.append((wiki_path, Path(file_path).stem, "dependency"))
+
+    shared_sorted = sorted(
+        relationships.shared_deps_with.items(), key=lambda x: x[1], reverse=True
+    )
+    seen_wiki_paths = {wp for wp, _, _ in related}
+    for file_path, count in shared_sorted[:3]:
+        wiki_path = file_to_wiki.get(file_path)
+        if (
+            wiki_path
+            and wiki_path != current_wiki_path
+            and wiki_path not in seen_wiki_paths
+        ):
+            related.append(
+                (wiki_path, Path(file_path).stem, f"shares {count} dependencies")
+            )
+            seen_wiki_paths.add(wiki_path)
+
+    return related
+
+
+def _deduplicate_related(
+    related: list[tuple[str, str, str]],
+    max_items: int,
+) -> list[tuple[str, str, str]]:
+    """Deduplicate by wiki_path and truncate to *max_items*."""
+    seen: set[str] = set()
+    unique: list[tuple[str, str, str]] = []
+    for wiki_path, title, rel_type in related:
+        if wiki_path not in seen:
+            seen.add(wiki_path)
+            unique.append((wiki_path, title, rel_type))
+            if len(unique) >= max_items:
+                break
+    return unique
+
+
 def generate_see_also_section(
     relationships: FileRelationships,
     file_to_wiki: dict[str, str],
@@ -229,51 +282,14 @@ def generate_see_also_section(
     Returns:
         Markdown string for See Also section, or None if no related pages.
     """
-    related: list[tuple[str, str, str]] = []  # (wiki_path, title, relationship_type)
-
-    # Add files that import this file
-    for file_path in relationships.imported_by:
-        wiki_path = file_to_wiki.get(file_path)
-        if wiki_path and wiki_path != current_wiki_path:
-            title = Path(file_path).stem
-            related.append((wiki_path, title, "uses this"))
-
-    # Add files this file imports
-    for file_path in relationships.imports:
-        wiki_path = file_to_wiki.get(file_path)
-        if wiki_path and wiki_path != current_wiki_path:
-            title = Path(file_path).stem
-            related.append((wiki_path, title, "dependency"))
-
-    # Add files with shared dependencies (sorted by count)
-    shared_sorted = sorted(
-        relationships.shared_deps_with.items(), key=lambda x: x[1], reverse=True
-    )
-    for file_path, count in shared_sorted[:3]:  # Limit shared deps
-        wiki_path = file_to_wiki.get(file_path)
-        if wiki_path and wiki_path != current_wiki_path:
-            # Check if already added
-            if not any(wp == wiki_path for wp, _, _ in related):
-                title = Path(file_path).stem
-                related.append((wiki_path, title, f"shares {count} dependencies"))
-
+    related = _collect_see_also_entries(relationships, file_to_wiki, current_wiki_path)
     if not related:
         return None
 
-    # Deduplicate and limit
-    seen_paths: set[str] = set()
-    unique_related: list[tuple[str, str, str]] = []
-    for wiki_path, title, rel_type in related:
-        if wiki_path not in seen_paths:
-            seen_paths.add(wiki_path)
-            unique_related.append((wiki_path, title, rel_type))
-            if len(unique_related) >= max_items:
-                break
+    unique_related = _deduplicate_related(related, max_items)
 
-    # Generate markdown
     lines = ["## See Also", ""]
     for wiki_path, title, rel_type in unique_related:
-        # Calculate relative path from current page
         rel_path = relative_wiki_path(current_wiki_path, wiki_path)
         lines.append(f"- [{title}]({rel_path}) - {rel_type}")
 

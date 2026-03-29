@@ -99,6 +99,88 @@ _FALLBACK_CHUNK_TYPES = frozenset(
 )
 
 
+def _scan_chunk_imports(
+    chunk: object,
+    project_name: str,
+    *,
+    show_external: bool,
+    exclude_tests: bool,
+    files_with_import_chunks: set[str],
+    fallback_chunks: list,
+    dependencies: dict[str, set[str]],
+    external_deps: Counter[str],
+    module_external_deps: dict[str, set[str]],
+    all_internal_modules: set[str],
+) -> None:
+    """Process one chunk in the first dependency-collection pass."""
+    if hasattr(chunk, "chunk"):
+        chunk = chunk.chunk  # type: ignore[union-attr]
+
+    if chunk.chunk_type == ChunkType.IMPORT:
+        file_path = chunk.file_path
+        module = _path_to_module(file_path)
+        if not module:
+            return
+        if exclude_tests and _is_test_module(module, file_path):
+            return
+        files_with_import_chunks.add(file_path)
+        all_internal_modules.add(module)
+        _scan_import_lines(
+            chunk.content,
+            module,
+            project_name,
+            show_external=show_external,
+            exclude_tests=exclude_tests,
+            dependencies=dependencies,
+            external_deps=external_deps,
+            module_external_deps=module_external_deps,
+            all_internal_modules=all_internal_modules,
+        )
+    elif chunk.chunk_type in _FALLBACK_CHUNK_TYPES:
+        fallback_chunks.append(chunk)
+
+
+def _scan_fallback_chunks(
+    fallback_chunks: list,
+    project_name: str,
+    *,
+    show_external: bool,
+    exclude_tests: bool,
+    files_with_import_chunks: set[str],
+    dependencies: dict[str, set[str]],
+    external_deps: Counter[str],
+    module_external_deps: dict[str, set[str]],
+    all_internal_modules: set[str],
+) -> None:
+    """Process fallback (non-IMPORT) chunks for files that have no dedicated IMPORT chunks."""
+    for chunk in fallback_chunks:
+        if hasattr(chunk, "chunk"):
+            chunk = chunk.chunk  # type: ignore[union-attr]
+
+        file_path = chunk.file_path
+        if file_path in files_with_import_chunks:
+            continue
+
+        module = _path_to_module(file_path)
+        if not module:
+            continue
+        if exclude_tests and _is_test_module(module, file_path):
+            continue
+
+        all_internal_modules.add(module)
+        _scan_import_lines(
+            chunk.content,
+            module,
+            project_name,
+            show_external=show_external,
+            exclude_tests=exclude_tests,
+            dependencies=dependencies,
+            external_deps=external_deps,
+            module_external_deps=module_external_deps,
+            all_internal_modules=all_internal_modules,
+        )
+
+
 def _collect_dependencies(
     chunks: list,
     project_name: str,
@@ -126,71 +208,34 @@ def _collect_dependencies(
     external_deps: Counter[str] = Counter()
     module_external_deps: dict[str, set[str]] = defaultdict(set)
     all_internal_modules: set[str] = set()
-
-    # Track which files have dedicated IMPORT chunks
     files_with_import_chunks: set[str] = set()
-    # Buffer non-import chunks for the fallback pass
     fallback_chunks: list = []
 
     for chunk in chunks:
-        if hasattr(chunk, "chunk"):
-            chunk = chunk.chunk
-
-        if chunk.chunk_type == ChunkType.IMPORT:
-            file_path = chunk.file_path
-            module = _path_to_module(file_path)
-            if not module:
-                continue
-
-            if exclude_tests and _is_test_module(module, file_path):
-                continue
-
-            files_with_import_chunks.add(file_path)
-            all_internal_modules.add(module)
-
-            _scan_import_lines(
-                chunk.content,
-                module,
-                project_name,
-                show_external=show_external,
-                exclude_tests=exclude_tests,
-                dependencies=dependencies,
-                external_deps=external_deps,
-                module_external_deps=module_external_deps,
-                all_internal_modules=all_internal_modules,
-            )
-        elif chunk.chunk_type in _FALLBACK_CHUNK_TYPES:
-            fallback_chunks.append(chunk)
-
-    # Second pass: scan non-import chunks for files without dedicated IMPORT chunks
-    for chunk in fallback_chunks:
-        if hasattr(chunk, "chunk"):
-            chunk = chunk.chunk
-
-        file_path = chunk.file_path
-        if file_path in files_with_import_chunks:
-            continue
-
-        module = _path_to_module(file_path)
-        if not module:
-            continue
-
-        if exclude_tests and _is_test_module(module, file_path):
-            continue
-
-        all_internal_modules.add(module)
-
-        _scan_import_lines(
-            chunk.content,
-            module,
+        _scan_chunk_imports(
+            chunk,
             project_name,
             show_external=show_external,
             exclude_tests=exclude_tests,
+            files_with_import_chunks=files_with_import_chunks,
+            fallback_chunks=fallback_chunks,
             dependencies=dependencies,
             external_deps=external_deps,
             module_external_deps=module_external_deps,
             all_internal_modules=all_internal_modules,
         )
+
+    _scan_fallback_chunks(
+        fallback_chunks,
+        project_name,
+        show_external=show_external,
+        exclude_tests=exclude_tests,
+        files_with_import_chunks=files_with_import_chunks,
+        dependencies=dependencies,
+        external_deps=external_deps,
+        module_external_deps=module_external_deps,
+        all_internal_modules=all_internal_modules,
+    )
 
     return _DependencyData(
         dependencies=dependencies,

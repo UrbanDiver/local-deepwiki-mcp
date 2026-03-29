@@ -168,6 +168,54 @@ def _package_from_file_path(file_path: str) -> str:
     return "top-level"
 
 
+def _build_single_class_diagram(
+    classes: dict[str, ClassInfo],
+    methods_by_class: dict[str, list[tuple[str, str | None]]],
+    max_methods: int,
+    show_types: bool,
+) -> str:
+    """Build a single Mermaid classDiagram block for all classes."""
+    lines = ["```mermaid", "classDiagram"]
+    for class_name, class_info in sorted(classes.items()):
+        lines.extend(
+            _build_class_lines(
+                class_name, class_info, methods_by_class, max_methods, show_types
+            )
+        )
+    lines.extend(_build_inheritance_lines(classes))
+    lines.append("```")
+    return "\n".join(lines)
+
+
+def _build_per_package_class_diagram(
+    classes: dict[str, ClassInfo],
+    methods_by_class: dict[str, list[tuple[str, str | None]]],
+    class_to_package: dict[str, str],
+    max_methods: int,
+    show_types: bool,
+) -> str:
+    """Build per-package Mermaid classDiagram sections."""
+    packages: dict[str, dict[str, ClassInfo]] = {}
+    for class_name, class_info in classes.items():
+        pkg = class_to_package.get(class_name, "top-level")
+        packages.setdefault(pkg, {})[class_name] = class_info
+
+    sections: list[str] = []
+    for pkg_name in sorted(packages):
+        pkg_classes = packages[pkg_name]
+        lines = [f"### {pkg_name}", "", "```mermaid", "classDiagram"]
+        for class_name, class_info in sorted(pkg_classes.items()):
+            lines.extend(
+                _build_class_lines(
+                    class_name, class_info, methods_by_class, max_methods, show_types
+                )
+            )
+        lines.extend(_build_inheritance_lines(pkg_classes))
+        lines.append("```")
+        sections.append("\n".join(lines))
+    return "\n\n".join(sections)
+
+
 def generate_class_diagram(
     chunks: list,
     *,
@@ -201,7 +249,6 @@ def generate_class_diagram(
     methods_by_class: dict[str, list[tuple[str, str | None]]] = {}
     class_to_package: dict[str, str] = {}
 
-    # Collect class and method info from chunks
     for chunk in chunks:
         chunk = _unwrap_chunk(chunk)
         if chunk.chunk_type == ChunkType.CLASS:
@@ -212,57 +259,60 @@ def generate_class_diagram(
         elif chunk.chunk_type == ChunkType.METHOD:
             _collect_method_from_chunk(chunk, methods_by_class, show_types)
 
-    # Extract methods from class content for classes without METHOD chunks
     _extract_methods_from_class_content(chunks, classes, methods_by_class, show_types)
 
-    # Assign methods to classes
     for class_name, method_list in methods_by_class.items():
         if class_name in classes:
             classes[class_name].methods = [m[0] for m in method_list[:max_methods]]
 
-    # Filter to classes with content
     classes_with_content = {
         k: v for k, v in classes.items() if v.methods or v.attributes
     }
     if not classes_with_content:
         return None
 
-    # If small enough, build a single diagram
     if len(classes_with_content) <= max_classes_per_diagram:
-        lines = ["```mermaid", "classDiagram"]
-        for class_name, class_info in sorted(classes_with_content.items()):
-            lines.extend(
-                _build_class_lines(
-                    class_name, class_info, methods_by_class, max_methods, show_types
-                )
-            )
-        lines.extend(_build_inheritance_lines(classes_with_content))
-        lines.append("```")
-        return "\n".join(lines)
+        return _build_single_class_diagram(
+            classes_with_content, methods_by_class, max_methods, show_types
+        )
 
-    # Split into per-package diagrams
-    packages: dict[str, dict[str, ClassInfo]] = {}
-    for class_name, class_info in classes_with_content.items():
-        pkg = class_to_package.get(class_name, "top-level")
-        if pkg not in packages:
-            packages[pkg] = {}
-        packages[pkg][class_name] = class_info
+    return _build_per_package_class_diagram(
+        classes_with_content,
+        methods_by_class,
+        class_to_package,
+        max_methods,
+        show_types,
+    )
 
-    sections: list[str] = []
-    for pkg_name in sorted(packages):
-        pkg_classes = packages[pkg_name]
-        lines = [f"### {pkg_name}", "", "```mermaid", "classDiagram"]
-        for class_name, class_info in sorted(pkg_classes.items()):
-            lines.extend(
-                _build_class_lines(
-                    class_name, class_info, methods_by_class, max_methods, show_types
-                )
-            )
-        lines.extend(_build_inheritance_lines(pkg_classes))
-        lines.append("```")
-        sections.append("\n".join(lines))
 
-    return "\n\n".join(sections)
+def _format_attribute(name: str, type_hint: str | None) -> str:
+    """Format a single attribute as a Mermaid attribute string."""
+    prefix = "-" if name.startswith("_") else "+"
+    if type_hint:
+        return f"{prefix}{name}: {type_hint.strip()}"
+    return f"{prefix}{name}"
+
+
+def _extract_python_class_attributes(content: str) -> list[str]:
+    """Extract Python class attributes from class body content."""
+    attributes: list[str] = []
+
+    attr_pattern = re.compile(r"^\s{4}(\w+)\s*:\s*([^=\n]+?)(?:\s*=|$)", re.MULTILINE)
+    init_pattern = re.compile(r"self\.(\w+)\s*(?::\s*([^\s=]+))?\s*=")
+
+    for match in attr_pattern.finditer(content):
+        name, type_hint = match.groups()
+        if name not in ("self", "cls") and not name.startswith("__"):
+            attributes.append(_format_attribute(name, type_hint))
+
+    existing_names = {a.split(":")[0].strip("+-") for a in attributes}
+    for match in init_pattern.finditer(content):
+        name, type_hint = match.groups()
+        if name not in existing_names and not name.startswith("__"):
+            attributes.append(_format_attribute(name, type_hint))
+            existing_names.add(name)
+
+    return attributes
 
 
 def _extract_class_attributes(content: str, language: str = "python") -> list[str]:
@@ -275,37 +325,9 @@ def _extract_class_attributes(content: str, language: str = "python") -> list[st
     Returns:
         List of attribute strings like "+name: str" or "-_count: int".
     """
-    attributes = []
-
-    if language in ("python", "py"):
-        # Match class-level type annotations: name: Type or self.name: Type
-        # Also match __init__ assignments
-        attr_pattern = re.compile(
-            r"^\s{4}(\w+)\s*:\s*([^=\n]+?)(?:\s*=|$)", re.MULTILINE
-        )
-        init_pattern = re.compile(r"self\.(\w+)\s*(?::\s*([^\s=]+))?\s*=")
-
-        for match in attr_pattern.finditer(content):
-            name, type_hint = match.groups()
-            if name not in ("self", "cls") and not name.startswith("__"):
-                prefix = "-" if name.startswith("_") else "+"
-                type_str = type_hint.strip() if type_hint else ""
-                if type_str:
-                    attributes.append(f"{prefix}{name}: {type_str}")
-                else:
-                    attributes.append(f"{prefix}{name}")
-
-        for match in init_pattern.finditer(content):
-            name, type_hint = match.groups()
-            if name not in [a.split(":")[0].strip("+-") for a in attributes]:
-                if not name.startswith("__"):
-                    prefix = "-" if name.startswith("_") else "+"
-                    if type_hint:
-                        attributes.append(f"{prefix}{name}: {type_hint}")
-                    else:
-                        attributes.append(f"{prefix}{name}")
-
-    return attributes[:10]  # Limit to 10 attributes
+    if language not in ("python", "py"):
+        return []
+    return _extract_python_class_attributes(content)[:10]
 
 
 def _extract_method_signature(content: str) -> str | None:

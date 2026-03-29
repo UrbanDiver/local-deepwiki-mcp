@@ -63,6 +63,58 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
         """Run after the api_docs generator if present."""
         return []
 
+    async def _collect_function_examples(
+        self,
+        function_results: list[Any],
+        extractor: CodeExampleExtractor,
+        all_examples: dict[str, list[CodeExample]],
+    ) -> None:
+        """Collect examples for function chunks, updating *all_examples* in-place."""
+        for result in function_results:
+            chunk = result.chunk
+            if not chunk.name or len(chunk.name) <= 2:
+                continue
+            if chunk.name.startswith(("test_", "_")):
+                continue
+
+            examples = await extractor.extract_examples_for_function(
+                chunk.name, max_examples=2
+            )
+            if chunk.docstring:
+                doc_examples = parse_docstring_examples(chunk.docstring)
+                examples.extend(
+                    dataclasses.replace(ex, entity_name=chunk.name)
+                    for ex in doc_examples
+                )
+            if examples:
+                all_examples[chunk.name] = examples[:3]
+
+    async def _collect_class_examples(
+        self,
+        class_results: list[Any],
+        extractor: CodeExampleExtractor,
+        all_examples: dict[str, list[CodeExample]],
+    ) -> None:
+        """Collect examples for class chunks, updating *all_examples* in-place."""
+        for result in class_results:
+            chunk = result.chunk
+            if not chunk.name or len(chunk.name) <= 2:
+                continue
+            if chunk.name.startswith("_"):
+                continue
+
+            examples = await extractor.extract_examples_for_class(
+                chunk.name, max_examples=2
+            )
+            if chunk.docstring:
+                doc_examples = parse_docstring_examples(chunk.docstring)
+                examples.extend(
+                    dataclasses.replace(ex, entity_name=chunk.name)
+                    for ex in doc_examples
+                )
+            if examples:
+                all_examples[chunk.name] = examples[:3]
+
     async def generate(
         self,
         index_status: IndexStatus,
@@ -85,78 +137,21 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
             return WikiGeneratorResult(pages=[])
 
         repo_path = Path(index_status.repo_path)
-
-        # Create the extractor
         extractor = CodeExampleExtractor(vector_store, repo_path)
-
-        # Collect examples from all documented entities
         all_examples: dict[str, list[CodeExample]] = {}
 
-        # Get all function and class chunks
         try:
-            # Search for functions and classes
             function_results = await vector_store.search(
-                query="function definition",
-                limit=100,
-                chunk_type="function",
+                query="function definition", limit=100, chunk_type="function"
             )
             class_results = await vector_store.search(
-                query="class definition",
-                limit=50,
-                chunk_type="class",
+                query="class definition", limit=50, chunk_type="class"
             )
-
-            # Extract examples for functions
-            for result in function_results:
-                chunk = result.chunk
-                if not chunk.name or len(chunk.name) <= 2:
-                    continue
-
-                # Skip test functions and private functions
-                if chunk.name.startswith(("test_", "_")):
-                    continue
-
-                # Get examples for this function
-                examples = await extractor.extract_examples_for_function(
-                    chunk.name, max_examples=2
-                )
-
-                # Also extract from docstring directly
-                if chunk.docstring:
-                    doc_examples = parse_docstring_examples(chunk.docstring)
-                    examples.extend(
-                        dataclasses.replace(ex, entity_name=chunk.name)
-                        for ex in doc_examples
-                    )
-
-                if examples:
-                    all_examples[chunk.name] = examples[:3]  # Limit per entity
-
-            # Extract examples for classes
-            for result in class_results:
-                chunk = result.chunk
-                if not chunk.name or len(chunk.name) <= 2:
-                    continue
-
-                # Skip private classes
-                if chunk.name.startswith("_"):
-                    continue
-
-                examples = await extractor.extract_examples_for_class(
-                    chunk.name, max_examples=2
-                )
-
-                if chunk.docstring:
-                    doc_examples = parse_docstring_examples(chunk.docstring)
-                    examples.extend(
-                        dataclasses.replace(ex, entity_name=chunk.name)
-                        for ex in doc_examples
-                    )
-
-                if examples:
-                    all_examples[chunk.name] = examples[:3]
-
-        except Exception as e:  # noqa: BLE001 — plugin isolation: example extraction failure must not block wiki generation
+            await self._collect_function_examples(
+                function_results, extractor, all_examples
+            )
+            await self._collect_class_examples(class_results, extractor, all_examples)
+        except Exception as e:  # noqa: BLE001 — plugin isolation
             logger.debug("Error extracting examples: %s", e)
             return WikiGeneratorResult(pages=[])
 
@@ -164,9 +159,7 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
             logger.debug("No examples found in codebase")
             return WikiGeneratorResult(pages=[])
 
-        # Generate the examples page
         content = self._generate_examples_page(all_examples, index_status)
-
         page = WikiPage(
             path="examples.md",
             title="Code Examples",
@@ -175,11 +168,58 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
         )
 
         logger.info("Generated examples page with %s entities", len(all_examples))
-
         return WikiGeneratorResult(
             pages=[page],
             metadata={"total_entities": len(all_examples)},
         )
+
+    @staticmethod
+    def _add_test_examples_section(
+        lines: list[str],
+        test_examples: dict[str, list[CodeExample]],
+    ) -> None:
+        """Append the 'Examples from Tests' section to *lines* in-place."""
+        lines.extend(
+            [
+                "## Examples from Tests",
+                "",
+                "Real-world usage patterns extracted from test files.",
+                "",
+            ]
+        )
+        for entity_name in sorted(test_examples):
+            lines.append(f"### `{entity_name}`\n")
+            for ex in test_examples[entity_name][:2]:
+                if ex.description:
+                    lines.append(f"*{ex.description}*\n")
+                if ex.test_file:
+                    lines.append(f"From `{ex.test_file}`:\n")
+                lang = ex.language or "python"
+                lines.append(f"```{lang}\n{ex.code}\n```\n")
+
+    @staticmethod
+    def _add_docstring_examples_section(
+        lines: list[str],
+        docstring_examples: dict[str, list[CodeExample]],
+    ) -> None:
+        """Append the 'Examples from Documentation' section to *lines* in-place."""
+        lines.extend(
+            [
+                "## Examples from Documentation",
+                "",
+                "Examples extracted from docstrings.",
+                "",
+            ]
+        )
+        for entity_name in sorted(docstring_examples):
+            lines.append(f"### `{entity_name}`\n")
+            for ex in docstring_examples[entity_name][:2]:
+                if ex.description:
+                    lines.append(f"*{ex.description}*\n")
+                lang = ex.language or "python"
+                lines.append(f"```{lang}\n{ex.code}\n```\n")
+                if ex.expected_output:
+                    lines.append(f"Output:\n```\n{ex.expected_output}\n```\n")
 
     @staticmethod
     def _generate_examples_page(
@@ -204,10 +244,8 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
             "",
         ]
 
-        # Group by source (test vs docstring)
         test_examples: dict[str, list[CodeExample]] = {}
         docstring_examples: dict[str, list[CodeExample]] = {}
-
         for entity_name, examples in examples_by_entity.items():
             for ex in examples:
                 if ex.source == "test":
@@ -215,54 +253,12 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
                 else:
                     docstring_examples.setdefault(entity_name, []).append(ex)
 
-        # Section for test examples
         if test_examples:
-            lines.extend(
-                [
-                    "## Examples from Tests",
-                    "",
-                    "Real-world usage patterns extracted from test files.",
-                    "",
-                ]
-            )
-
-            for entity_name in sorted(test_examples.keys()):
-                examples = test_examples[entity_name]
-                lines.append(f"### `{entity_name}`\n")
-
-                for ex in examples[:2]:
-                    if ex.description:
-                        lines.append(f"*{ex.description}*\n")
-                    if ex.test_file:
-                        lines.append(f"From `{ex.test_file}`:\n")
-
-                    lang = ex.language or "python"
-                    lines.append(f"```{lang}\n{ex.code}\n```\n")
-
-        # Section for docstring examples
+            ExamplesWikiGenerator._add_test_examples_section(lines, test_examples)
         if docstring_examples:
-            lines.extend(
-                [
-                    "## Examples from Documentation",
-                    "",
-                    "Examples extracted from docstrings.",
-                    "",
-                ]
+            ExamplesWikiGenerator._add_docstring_examples_section(
+                lines, docstring_examples
             )
-
-            for entity_name in sorted(docstring_examples.keys()):
-                examples = docstring_examples[entity_name]
-                lines.append(f"### `{entity_name}`\n")
-
-                for ex in examples[:2]:
-                    if ex.description:
-                        lines.append(f"*{ex.description}*\n")
-
-                    lang = ex.language or "python"
-                    lines.append(f"```{lang}\n{ex.code}\n```\n")
-
-                    if ex.expected_output:
-                        lines.append(f"Output:\n```\n{ex.expected_output}\n```\n")
 
         return "\n".join(lines)
 

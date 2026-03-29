@@ -15,32 +15,29 @@ if TYPE_CHECKING:
     from local_deepwiki.generators.manifest import ProjectManifest
 
 
-def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
-    """Parse pyproject.toml (Python)."""
-    import tomllib
+def _parse_pyproject_license(project: dict[str, Any]) -> str | None:
+    """Extract license from project metadata dict."""
+    lic = project.get("license")
+    if isinstance(lic, dict):
+        return lic.get("text")
+    return lic
 
-    content = filepath.read_text()
-    data = tomllib.loads(content)
 
-    manifest.language = "Python"
-
-    # Project metadata
+def _populate_pyproject_standard(
+    data: dict[str, Any],
+    manifest: "ProjectManifest",
+) -> None:
+    """Populate manifest from [project] table of pyproject.toml."""
     project = data.get("project", {})
     manifest.name = project.get("name")
     manifest.version = project.get("version")
     manifest.description = project.get("description")
-    manifest.license = (
-        project.get("license", {}).get("text")
-        if isinstance(project.get("license"), dict)
-        else project.get("license")
-    )
+    manifest.license = _parse_pyproject_license(project)
 
-    # Python version
     requires_python = project.get("requires-python")
     if requires_python:
         manifest.language_version = requires_python
 
-    # Authors
     authors = project.get("authors", [])
     manifest.authors = [
         str(a.get("name") or a.get("email") or "")
@@ -48,39 +45,52 @@ def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
         if isinstance(a, dict)
     ]
 
-    # Dependencies
-    deps = project.get("dependencies", [])
-    for dep in deps:
+    for dep in project.get("dependencies", []):
         name, version = _parse_python_dep(dep)
         manifest.dependencies[name] = version
 
-    # Optional/dev dependencies
-    optional = project.get("optional-dependencies", {})
-    for group, deps in optional.items():
-        for dep in deps:
+    for _group, group_deps in project.get("optional-dependencies", {}).items():
+        for dep in group_deps:
             name, version = _parse_python_dep(dep)
             manifest.dev_dependencies[name] = version
 
-    # Entry points / scripts
-    scripts = project.get("scripts", {})
-    manifest.entry_points.update(scripts)
+    manifest.entry_points.update(project.get("scripts", {}))
 
-    # Also check [tool.poetry] for Poetry projects
+
+def _populate_pyproject_poetry(
+    data: dict[str, Any],
+    manifest: "ProjectManifest",
+) -> None:
+    """Populate manifest from [tool.poetry] table if present."""
     poetry = data.get("tool", {}).get("poetry", {})
-    if poetry:
-        if not manifest.name:
-            manifest.name = poetry.get("name")
-        if not manifest.description:
-            manifest.description = poetry.get("description")
+    if not poetry:
+        return
 
-        for name, spec in poetry.get("dependencies", {}).items():
-            if name.lower() != "python":
-                version = spec if isinstance(spec, str) else spec.get("version", "*")
-                manifest.dependencies[name] = version
+    if not manifest.name:
+        manifest.name = poetry.get("name")
+    if not manifest.description:
+        manifest.description = poetry.get("description")
 
-        for name, spec in poetry.get("dev-dependencies", {}).items():
+    for name, spec in poetry.get("dependencies", {}).items():
+        if name.lower() != "python":
             version = spec if isinstance(spec, str) else spec.get("version", "*")
-            manifest.dev_dependencies[name] = version
+            manifest.dependencies[name] = version
+
+    for name, spec in poetry.get("dev-dependencies", {}).items():
+        version = spec if isinstance(spec, str) else spec.get("version", "*")
+        manifest.dev_dependencies[name] = version
+
+
+def _parse_pyproject_toml(filepath: Path, manifest: "ProjectManifest") -> None:
+    """Parse pyproject.toml (Python)."""
+    import tomllib
+
+    content = filepath.read_text()
+    data = tomllib.loads(content)
+
+    manifest.language = "Python"
+    _populate_pyproject_standard(data, manifest)
+    _populate_pyproject_poetry(data, manifest)
 
 
 def _parse_python_dep(dep: str) -> tuple[str, str]:
@@ -271,22 +281,27 @@ def _pom_set_text_field(
         setattr(manifest, attr, elem.text)
 
 
+def _pom_find_text(dep: Any, tag: str, ns: dict[str, str]) -> str:
+    """Return text of a POM XML element by tag, trying namespace then bare."""
+    elem = dep.find(f"m:{tag}", ns) or dep.find(tag)
+    return elem.text if elem is not None and elem.text else ""
+
+
 def _pom_parse_dependencies(
     root: Any, ns: dict[str, str], manifest: "ProjectManifest"
 ) -> None:
     """Parse Maven dependency elements into manifest dependencies."""
     deps = root.findall(".//m:dependency", ns) or root.findall(".//dependency")
     for dep in deps:
-        artifact = dep.find("m:artifactId", ns) or dep.find("artifactId")
-        version = dep.find("m:version", ns) or dep.find("version")
-        scope = dep.find("m:scope", ns) or dep.find("scope")
-        if artifact is not None and artifact.text:
-            version_text = version.text if version is not None else "*"
-            scope_text = scope.text if scope is not None else ""
-            if scope_text == "test":
-                manifest.dev_dependencies[artifact.text] = version_text or "*"
-            else:
-                manifest.dependencies[artifact.text] = version_text or "*"
+        artifact_text = _pom_find_text(dep, "artifactId", ns)
+        if not artifact_text:
+            continue
+        version_text = _pom_find_text(dep, "version", ns) or "*"
+        scope_text = _pom_find_text(dep, "scope", ns)
+        target = (
+            manifest.dev_dependencies if scope_text == "test" else manifest.dependencies
+        )
+        target[artifact_text] = version_text
 
 
 def _parse_pom_xml(filepath: Path, manifest: ProjectManifest) -> None:

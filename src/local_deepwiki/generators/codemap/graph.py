@@ -265,6 +265,51 @@ def _match_query_to_functions(
     return exact if exact else callable_results
 
 
+def _load_call_graph_extractor() -> type | None:
+    """Import and return the CallGraphExtractor class, or None on failure."""
+    try:
+        from local_deepwiki.generators.analysis.callgraph import (
+            CallGraphExtractor,
+        )
+
+        return CallGraphExtractor
+    except ImportError:  # pragma: no cover
+        logger.warning("Could not import CallGraphExtractor")
+        return None
+
+
+async def _apply_fallback_search(
+    search_query: str,
+    scored: list[tuple[float, CodemapNode]],
+    file_call_graphs: dict[str, dict[str, list[str]]],
+    max_candidates: int,
+    extractor: Any | None,
+    repo_path: Path,
+    vector_store: "VectorStore",
+) -> list[tuple[float, CodemapNode]]:
+    """Run fallback search and merge results when top candidates are all shallow."""
+    top_candidates = scored[:max_candidates]
+    all_shallow = all(
+        _max_callees_for(node, file_call_graphs) <= 1 for _, node in top_candidates
+    )
+    if not all_shallow:
+        return scored
+
+    logger.debug(
+        "All top candidates are shallow, running fallback search for functions and methods"
+    )
+    fallback_results = await _run_fallback_search(search_query, vector_store)
+    if not fallback_results:
+        return scored
+
+    if extractor is not None:
+        extra_graphs = _build_file_call_graphs(fallback_results, repo_path, extractor)
+        file_call_graphs.update(extra_graphs)
+
+    fallback_scored = _score_candidates(fallback_results, file_call_graphs, repo_path)
+    return _deduplicate_candidates(scored, fallback_scored)
+
+
 async def discover_entry_points(
     query: str,
     vector_store: "VectorStore",
@@ -283,15 +328,7 @@ async def discover_entry_points(
     with no outgoing calls), a fallback search is performed filtering to
     functions and methods only to find actual pipeline orchestrators.
     """
-    _CallGraphExtractor: type | None
-    try:
-        from local_deepwiki.generators.analysis.callgraph import (
-            CallGraphExtractor as _CallGraphExtractor,
-        )
-    except ImportError:  # pragma: no cover
-        logger.warning("Could not import CallGraphExtractor")
-        _CallGraphExtractor = None  # fallback if callgraph module unavailable
-
+    _CallGraphExtractor = _load_call_graph_extractor()
     extractor = _CallGraphExtractor() if _CallGraphExtractor is not None else None
 
     search_query = entry_point_hint if entry_point_hint else query
@@ -307,13 +344,11 @@ async def discover_entry_points(
         if r.chunk.chunk_type.value in CALLABLE_CHUNK_TYPES
         and not is_test_file(r.chunk.file_path)
     ]
-
     callable_results = _match_query_to_functions(callable_results, entry_point_hint)
 
     if not callable_results:
         return []
 
-    # Build per-file call graphs and score candidates
     file_call_graphs: dict[str, dict[str, list[str]]] = {}
     if extractor is not None:
         file_call_graphs = _build_file_call_graphs(
@@ -322,33 +357,16 @@ async def discover_entry_points(
 
     scored = _score_candidates(callable_results, file_call_graphs, repo_path)
 
-    # Fallback: if top candidates are shallow (<=1 callee each), the query
-    # likely matched a single module's internals (e.g. dataclasses, tracing)
-    # rather than pipeline orchestrators.
-    top_candidates = scored[:max_candidates]
-    all_shallow = all(
-        _max_callees_for(node, file_call_graphs) <= 1 for _, node in top_candidates
-    )
-
-    if all_shallow and not entry_point_hint:
-        logger.debug(
-            "All top candidates are shallow, running fallback search "
-            "for functions and methods"
+    if not entry_point_hint:
+        scored = await _apply_fallback_search(
+            search_query,
+            scored,
+            file_call_graphs,
+            max_candidates,
+            extractor,
+            repo_path,
+            vector_store,
         )
-        fallback_results = await _run_fallback_search(search_query, vector_store)
-
-        if fallback_results:
-            # Build call graphs for the new files
-            if extractor is not None:
-                extra_graphs = _build_file_call_graphs(
-                    fallback_results, repo_path, extractor
-                )
-                file_call_graphs.update(extra_graphs)
-
-            fallback_scored = _score_candidates(
-                fallback_results, file_call_graphs, repo_path
-            )
-            scored = _deduplicate_candidates(scored, fallback_scored)
 
     return [node for _, node in scored[:max_candidates]]
 
