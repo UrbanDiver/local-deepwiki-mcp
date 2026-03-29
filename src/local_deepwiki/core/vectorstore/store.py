@@ -6,7 +6,7 @@ import json
 import threading
 from pathlib import Path
 from types import TracebackType
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
@@ -32,6 +32,49 @@ from .search_engine import SearchEngine
 from .utils import RateLimiter, _sanitize_string_value
 
 logger = get_logger(__name__)
+
+
+@runtime_checkable
+class VectorStoreProtocol(Protocol):
+    """Protocol defining the public interface for vector stores.
+
+    Components that accept a vector store should use this Protocol as the
+    type annotation instead of the concrete ``VectorStore`` class.  This
+    enables dependency injection — in particular, test doubles can satisfy
+    the protocol without subclassing the full implementation.
+
+    The ``@runtime_checkable`` decorator allows ``isinstance(obj, VectorStoreProtocol)``
+    checks in guards and diagnostic code.
+    """
+
+    async def create_or_update_table(
+        self, chunks: list[CodeChunk], embedding_batch_size: int = 100
+    ) -> int:
+        """Create or replace the vector table from a list of code chunks."""
+        ...
+
+    async def add_chunks(
+        self, chunks: list[CodeChunk], embedding_batch_size: int = 100
+    ) -> int:
+        """Append code chunks to the existing table."""
+        ...
+
+    async def delete_chunks_by_file(self, file_path: str) -> int:
+        """Remove all chunks belonging to the given source file."""
+        ...
+
+    async def search(self, query: str, limit: int = 10, **kwargs: Any) -> list[Any]:
+        """Return the top-k chunks most similar to *query*."""
+        ...
+
+    @property
+    def stats(self) -> dict[str, Any]:
+        """Return a snapshot of storage and search statistics."""
+        ...
+
+    def close(self) -> None:
+        """Release any resources held by the store."""
+        ...
 
 
 def _chunk_to_text(chunk: CodeChunk) -> str:

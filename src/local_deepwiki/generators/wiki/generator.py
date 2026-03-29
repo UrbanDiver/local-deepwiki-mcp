@@ -6,7 +6,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from local_deepwiki.generators.wiki.context import WikiPipelineContext
@@ -56,6 +56,27 @@ from local_deepwiki.prompts import PromptManager
 from local_deepwiki.providers.llm import get_cached_llm_provider
 
 logger = get_logger(__name__)
+
+
+@runtime_checkable
+class WikiGeneratorProtocol(Protocol):
+    """Protocol defining the interface for wiki documentation generators.
+
+    Components that trigger wiki generation should accept this Protocol so
+    that lightweight test stubs and alternative implementations (e.g. a no-op
+    generator for CI) can be substituted without inheriting from the concrete
+    ``WikiGenerator`` class.
+    """
+
+    async def generate(
+        self,
+        index_status: IndexStatus,
+        progress_callback: ProgressCallback | None = None,
+        full_rebuild: bool = False,
+        max_file_pages: int | None = None,
+    ) -> WikiStructure:
+        """Generate wiki documentation and return the resulting structure."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)

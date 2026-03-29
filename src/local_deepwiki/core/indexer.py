@@ -6,7 +6,7 @@ import asyncio
 import fnmatch
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.chunker import CodeChunker
@@ -40,7 +40,42 @@ __all__ = [
     "INDEX_STATUS_FILE",
     "ParseResult",
     "RepositoryIndexer",
+    "RepositoryIndexerProtocol",
 ]
+
+
+@runtime_checkable
+class RepositoryIndexerProtocol(Protocol):
+    """Protocol defining the public interface for repository indexers.
+
+    Handlers and services that drive the indexing pipeline should accept this
+    Protocol rather than the concrete ``RepositoryIndexer`` so that:
+
+    - Tests can pass lightweight stubs without constructing a full indexer.
+    - Alternative indexer implementations (e.g. remote, read-only) can satisfy
+      the contract without inheriting from the concrete class.
+    """
+
+    async def index(
+        self,
+        full_rebuild: bool = False,
+        progress_callback: ProgressCallback | None = None,
+    ) -> IndexStatus:
+        """Index the repository and return the resulting status."""
+        ...
+
+    def get_status(self) -> IndexStatus | None:
+        """Return the current index status, or None if not yet indexed."""
+        ...
+
+    async def search(
+        self,
+        query: str,
+        limit: int = 10,
+        language: str | None = None,
+    ) -> list[SearchResult]:
+        """Search the indexed repository and return matching chunks."""
+        ...
 
 
 class RepositoryIndexer:

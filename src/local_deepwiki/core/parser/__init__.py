@@ -11,11 +11,16 @@ All public names are re-exported here for backward compatibility with
 from __future__ import annotations
 
 from local_deepwiki.core.parser.ast_cache import ASTCache, ASTCacheStats, CachedAST
-from local_deepwiki.core.parser.ast_utils import find_nodes_by_type, get_node_name, get_node_text
+from local_deepwiki.core.parser.ast_utils import (
+    find_nodes_by_type,
+    get_node_name,
+    get_node_text,
+)
 from local_deepwiki.core.parser.code_parser import (
     HASH_CHUNK_SIZE,
     MMAP_THRESHOLD_BYTES,
     CodeParser,
+    CodeParserProtocol,
     _compute_file_hash,
     _read_file_content,
 )
@@ -36,6 +41,7 @@ from local_deepwiki.core.parser.languages import EXTENSION_MAP, LANGUAGE_MODULES
 __all__ = [
     # Core classes
     "CodeParser",
+    "CodeParserProtocol",
     "ASTCache",
     "ASTCacheStats",
     "CachedAST",

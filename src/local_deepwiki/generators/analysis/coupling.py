@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.core.parser import CodeParser
 from local_deepwiki.generators.analysis.module_dependencies import (
+    _discover_project_tops,
     analyze_cross_module_dependencies,
 )
 from local_deepwiki.generators.analysis.source_filter import iter_python_files
@@ -89,24 +90,90 @@ def _count_classes_in_file(full_path: Path) -> tuple[int, int]:
     return total, abstract
 
 
+def _candidate_labels(rel_path: Path, project_tops: set[str]) -> list[str]:
+    """Return candidate module labels for *rel_path* in order of specificity.
+
+    The dependency graph builds two kinds of node labels for the same file:
+
+    1. The **source label** (via :func:`_module_label`): takes the first two
+       parts of the path after stripping ``src/``, e.g.
+       ``src/local_deepwiki/providers/base.py`` → ``local_deepwiki.providers``.
+
+    2. The **import target label** (via :func:`_resolve_import_target`): strips
+       the project top-level package name from import paths, e.g.
+       ``from local_deepwiki.providers.base import X`` → ``providers.base``.
+
+    Both labels may appear in the graph.  We return the stripped label first
+    (most specific, e.g. ``providers.base``) followed by the unstripped label
+    (``local_deepwiki.providers``) so that abstractness is attributed to the
+    most precise module node that actually exists.
+    """
+    parts = list(rel_path.with_suffix("").parts)
+    # Drop common source-layout wrapper directories.
+    while parts and parts[0] in ("src", "lib", "pkg"):
+        parts = parts[1:]
+    if not parts:
+        return ["root"]
+
+    # Unstripped label (matches _module_label output).
+    def _take2(ps: list[str]) -> str:
+        meaningful = [p for p in ps[:2] if p != "__init__"]
+        return ".".join(meaningful) if meaningful else (ps[0] if ps else "root")
+
+    unstripped = _take2(parts)
+
+    # Stripped label (matches _resolve_import_target output for imports).
+    stripped: str | None = None
+    if parts[0] in project_tops:
+        tail = parts[1:]
+        if tail:
+            stripped = _take2(tail)
+
+    candidates: list[str] = []
+    if stripped and stripped != unstripped:
+        candidates.append(stripped)
+    candidates.append(unstripped)
+    return candidates
+
+
 def _compute_abstractness(
     repo_path: Path, modules: list[dict[str, Any]]
 ) -> dict[str, float]:
-    """Return a dict mapping module label -> abstractness score (0.0–1.0)."""
+    """Return a dict mapping module label -> abstractness score (0.0–1.0).
+
+    The dependency graph contains two kinds of module nodes for files in
+    projects with a top-level wrapper package (e.g. ``local_deepwiki``):
+
+    - **Source nodes** such as ``local_deepwiki.providers`` — created from
+      file paths via :func:`~module_dependencies._module_label`.
+    - **Import-target nodes** such as ``providers.base`` — created when other
+      modules import from ``local_deepwiki.providers.base``.
+
+    We generate both candidate labels for each file and attribute the class
+    counts to whichever graph node is found first (preferring the more
+    specific stripped label).  This ensures that ABCs and Protocols defined in
+    ``providers/base.py`` are counted against ``providers.base`` (Ca=30) rather
+    than only against ``local_deepwiki.providers`` (Ce=12), giving an accurate
+    abstractness score for the heavily-depended-on module.
+    """
     result: dict[str, float] = {}
 
     # We need to map each module label back to the files that belong to it.
     # We re-walk the repo since we don't persist the file->module mapping.
     module_names = {m["name"] for m in modules}
-
-    from local_deepwiki.generators.analysis.module_dependencies import _module_label
+    project_tops = _discover_project_tops(repo_path)
 
     module_total: dict[str, int] = {m: 0 for m in module_names}
     module_abstract: dict[str, int] = {m: 0 for m in module_names}
 
     for py_file, rel_path in iter_python_files(repo_path, exclude_tests=False):
-        label = _module_label(rel_path)
-        if label not in module_names:
+        # Find the first candidate label that exists as a module node.
+        label: str | None = None
+        for candidate in _candidate_labels(rel_path, project_tops):
+            if candidate in module_names:
+                label = candidate
+                break
+        if label is None:
             continue
         total, abstr = _count_classes_in_file(py_file)
         module_total[label] += total

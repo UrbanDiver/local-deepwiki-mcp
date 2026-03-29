@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import mmap
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from tree_sitter import Language, Node, Parser
 
@@ -80,6 +80,26 @@ def _compute_file_hash(file_path: Path) -> str:
         while chunk := f.read(HASH_CHUNK_SIZE):
             hasher.update(chunk)
     return hasher.hexdigest()
+
+
+@runtime_checkable
+class CodeParserProtocol(Protocol):
+    """Protocol defining the interface for code parsers.
+
+    Any object implementing ``parse_file`` and ``detect_language`` satisfies
+    this contract.  Used for dependency injection and testability — mock
+    objects passed to components that require a parser can be validated with
+    ``isinstance(obj, CodeParserProtocol)``.
+    """
+
+    def parse_file(self, file_path: Path) -> tuple[Node, LangEnum, bytes] | None:
+        """Parse a source file and return the AST root, language, and bytes."""
+        ...
+
+    @staticmethod
+    def detect_language(file_path: Path) -> LangEnum | None:
+        """Detect the programming language from the file extension."""
+        ...
 
 
 class CodeParser:

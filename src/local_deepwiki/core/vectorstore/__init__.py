@@ -31,7 +31,7 @@ from local_deepwiki.core.vectorstore.schema import (
     SearchResultPage,
 )
 from local_deepwiki.core.vectorstore.search_engine import SearchEngine
-from local_deepwiki.core.vectorstore.store import VectorStore
+from local_deepwiki.core.vectorstore.store import VectorStore, VectorStoreProtocol
 from local_deepwiki.core.vectorstore.utils import (
     RateLimiter,
     _row_to_chunk_default,
@@ -41,6 +41,7 @@ from local_deepwiki.core.vectorstore.utils import (
 __all__ = [
     # Core store
     "VectorStore",
+    "VectorStoreProtocol",
     "SearchEngine",
     # Search request
     "SearchRequest",
