@@ -1,0 +1,55 @@
+CC=23  lines= 98  src/local_deepwiki/generators/examples/docstring.py:34  parse_doctest_examples
+CC=23  lines=126  src/local_deepwiki/generators/wiki/pages.py:436  generate_dependencies_page
+CC=23  lines= 51  src/local_deepwiki/providers/errors.py:202  handle_api_status_error
+CC=22  lines=100  src/local_deepwiki/generators/analysis/design_smells.py:453  _analyze_file
+CC=22  lines= 48  src/local_deepwiki/generators/codemap/generator.py:332  _rank_functions_by_connections
+CC=22  lines= 36  src/local_deepwiki/generators/crosslinks.py:30  camel_to_spaced
+CC=22  lines=136  src/local_deepwiki/generators/wiki/codemap_pages.py:159  generate_codemap_pages
+CC=22  lines=116  src/local_deepwiki/generators/wiki/files.py:577  generate_file_docs
+CC=22  lines=137  src/local_deepwiki/services/query_service.py:46  answer_question
+CC=21  lines= 85  src/local_deepwiki/generators/analysis/dependency_graph.py:589  _build_dependency_graph
+CC=21  lines= 16  src/local_deepwiki/generators/manifest_parsers.py:274  _pom_parse_dependencies
+CC=21  lines=128  src/local_deepwiki/handlers/agentic.py:212  handle_batch_explain_entities
+CC=21  lines= 79  src/local_deepwiki/providers/llm/openai.py:127  validate_model
+CC=20  lines= 93  src/local_deepwiki/generators/dir_tree.py:58  get_directory_tree
+CC=20  lines= 88  src/local_deepwiki/generators/search.py:125  generate_entity_entries
+CC=20  lines=154  src/local_deepwiki/web/routes_research.py:30  api_research
+CC=19  lines= 78  src/local_deepwiki/core/chunker.py:495  _create_file_summary_chunk
+CC=19  lines= 86  src/local_deepwiki/generators/diagrams/module_diagram.py:13  generate_module_overview
+CC=19  lines= 50  src/local_deepwiki/generators/examples/orchestrator.py:109  _collect_relevant_lines
+CC=19  lines=117  src/local_deepwiki/generators/examples/plugin.py:66  generate
+CC=19  lines= 83  src/local_deepwiki/generators/examples/plugin.py:185  _generate_examples_page
+CC=19  lines= 66  src/local_deepwiki/generators/see_also.py:215  generate_see_also_section
+CC=19  lines= 88  src/local_deepwiki/providers/retry.py:47  _execute_with_backoff
+CC=19  lines= 80  src/local_deepwiki/web/routes_chat.py:161  api_chat
+CC=18  lines= 52  src/local_deepwiki/core/fuzzy_search.py:345  _extract_names_from_table
+CC=18  lines= 42  src/local_deepwiki/core/git_utils.py:307  build_source_url
+CC=18  lines= 62  src/local_deepwiki/generators/analysis/onboarding.py:345  _select_flows_with_llm
+CC=18  lines= 95  src/local_deepwiki/generators/diagrams/class_diagram.py:171  generate_class_diagram
+CC=18  lines= 66  src/local_deepwiki/generators/manifest_parsers.py:18  _parse_pyproject_toml
+CC=18  lines= 81  src/local_deepwiki/generators/wiki/pages.py:208  generate_overview_page
+CC=18  lines= 58  src/local_deepwiki/handlers/analysis_entity.py:382  _find_cross_file_callers
+CC=18  lines= 52  src/local_deepwiki/services/analysis_service.py:529  _find_cross_file_callers
+CC=18  lines= 48  src/local_deepwiki/web/routes_codemap.py:162  _validate_codemap_request
+CC=17  lines= 73  src/local_deepwiki/cli/check_cli.py:147  _format_rich_table
+CC=17  lines=102  src/local_deepwiki/generators/analysis/onboarding.py:445  _synthesize_onboarding_guide
+CC=17  lines= 76  src/local_deepwiki/generators/changelog.py:43  get_commit_history
+CC=17  lines= 59  src/local_deepwiki/generators/context_builder.py:209  get_type_definitions_used
+CC=17  lines= 55  src/local_deepwiki/generators/prefetch.py:237  _maybe_start_drain
+CC=17  lines= 75  src/local_deepwiki/handlers/research.py:193  _create_progress_callbacks
+CC=16  lines= 55  src/local_deepwiki/cli/check_cli.py:222  run_check
+CC=16  lines= 30  src/local_deepwiki/config/loader.py:485  _validate_wiki_config
+CC=16  lines= 51  src/local_deepwiki/core/chunk_extractors.py:309  extract_python_parameter_types
+CC=16  lines= 80  src/local_deepwiki/core/deep_research/pipeline.py:350  research
+CC=16  lines= 80  src/local_deepwiki/generators/analysis/dependency_graph.py:493  generate_file_graph
+CC=16  lines= 48  src/local_deepwiki/generators/analysis/design_smells.py:494  _walk_root
+CC=16  lines=126  src/local_deepwiki/generators/analysis/glossary.py:183  generate_glossary_page
+CC=16  lines= 74  src/local_deepwiki/generators/codemap/generator.py:101  generate_codemap_narrative
+CC=16  lines= 86  src/local_deepwiki/generators/codemap/graph.py:268  discover_entry_points
+CC=16  lines= 55  src/local_deepwiki/generators/crosslinks.py:491  _split_by_code_blocks
+CC=16  lines= 41  src/local_deepwiki/generators/diagrams/class_diagram.py:268  _extract_class_attributes
+CC=16  lines= 99  src/local_deepwiki/generators/diagrams/dependency_diagram.py:102  _collect_dependencies
+CC=16  lines= 59  src/local_deepwiki/generators/examples/extractor.py:239  _extract_relevant_snippet
+CC=16  lines= 70  src/local_deepwiki/handlers/analysis_search.py:66  _build_wiki_search_results
+CC=16  lines= 81  src/local_deepwiki/services/analysis_service.py:67  explain_entity
+Total: 54 functions with CC > 15
