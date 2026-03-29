@@ -142,6 +142,7 @@ uv run deepwiki check --json
 | VectorStore | `core/vectorstore.py` | LanceDB vector storage and retrieval |
 | Indexer | `core/indexer.py` | Orchestrates parsing, chunking, embedding, wiki generation |
 | Deep Research | `core/deep_research.py` | Multi-step reasoning pipeline with query decomposition |
+| Research Config | `core/deep_research/config.py` | `ResearchConfig` frozen dataclass for pipeline configuration |
 | Secret Detector | `core/secret_detector.py` | Hardcoded credential scanning |
 | LLM Cache | `core/llm_cache.py` | LRU response cache for LLM calls |
 | Rate Limiter | `core/rate_limiter.py` | API rate limiting with token bucket |
@@ -369,10 +370,13 @@ The `events.py` module implements a pub-sub event system:
 - **RBAC with configurable enforcement**: Access control can be enforced, permissive, or disabled
 - **LRU caching for LLM responses**: Avoids redundant LLM calls for identical prompts
 - **Parallel file parsing**: ThreadPoolExecutor for concurrent tree-sitter parsing
+- **Parameter objects**: `ResearchConfig`, `ImpactAnalysisRequest`, `SearchRequest` consolidate long parameter lists into frozen dataclasses
+- **Architecture health next_steps**: `get_architecture_health` output includes dynamic drill-down tool suggestions
+- **Dispatch table smell detection**: `dispatch_table_candidate` smell type flags high-CC/low-line functions as refactoring targets
 
 ## Testing Notes
 
-- 5,976 tests across 203 test files with 95% coverage
+- 6,054 tests across 203 test files with 95% coverage
 - Tests use `pytest-asyncio` with `asyncio_mode = "auto"` (no need for `@pytest.mark.asyncio`)
 - Most tests mock LLM/embedding providers to avoid external calls
 - Test files follow pattern `test_<module>.py`
