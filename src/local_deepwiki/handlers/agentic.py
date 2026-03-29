@@ -208,6 +208,75 @@ async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]
     ]
 
 
+async def _explain_entity_full(repo_path: Path, name: str) -> dict[str, Any]:
+    """Explain one entity at full depth, returning a result dict."""
+    from local_deepwiki.handlers.analysis_entity import handle_explain_entity
+
+    try:
+        res = await handle_explain_entity(
+            {"repo_path": str(repo_path), "entity_name": name}
+        )
+        text = res[0].text if res else ""
+        try:
+            return {"entity": name, "found": True, **json.loads(text)}
+        except (json.JSONDecodeError, TypeError):
+            return {"entity": name, "found": True, "raw": text[:500]}
+    except Exception as exc:  # noqa: BLE001
+        return {"entity": name, "found": False, "error": str(exc)}
+
+
+async def _batch_explain_full(
+    repo_path: Path, entity_names: list[str]
+) -> list[dict[str, Any]]:
+    """Explain all entity names at full depth concurrently."""
+    return list(
+        await asyncio.gather(
+            *[_explain_entity_full(repo_path, n) for n in entity_names]
+        )
+    )
+
+
+def _build_name_index(all_entities: list[dict]) -> dict[str, list[dict]]:
+    """Build a lowercase name -> entity list index for fast lookups."""
+    index: dict[str, list[dict]] = {}
+    for entity in all_entities:
+        name = (entity.get("name") or "").lower()
+        display_name = (entity.get("display_name") or "").lower()
+        for key in (name, display_name):
+            if key:
+                index.setdefault(key, []).append(entity)
+    return index
+
+
+def _lookup_shallow_entities(
+    entity_names: list[str], name_index: dict[str, list[dict]]
+) -> list[dict[str, Any]]:
+    """Look up each entity name in the index, returning result dicts."""
+    results: list[dict[str, Any]] = []
+    for entity_name in entity_names:
+        matches = name_index.get(entity_name.lower(), [])
+        if matches:
+            results.append(
+                {
+                    "entity": entity_name,
+                    "found": True,
+                    "matches": [
+                        {
+                            "name": m.get("display_name", m.get("name")),
+                            "type": m.get("entity_type"),
+                            "file": m.get("file"),
+                            "signature": m.get("signature", ""),
+                            "description": m.get("description", ""),
+                        }
+                        for m in matches[:5]
+                    ],
+                }
+            )
+        else:
+            results.append({"entity": entity_name, "found": False, "matches": []})
+    return results
+
+
 @handle_tool_errors
 async def handle_batch_explain_entities(args: dict[str, Any]) -> list[TextContent]:
     """Explain multiple entities in a single call.
@@ -232,28 +301,9 @@ async def handle_batch_explain_entities(args: dict[str, Any]) -> list[TextConten
 
     _index_status, wiki_path, _config = await _load_index_status(repo_path)
 
-    # Full depth: delegate to explain_entity for each name (Item 7)
+    # Full depth: delegate to explain_entity for each name
     if depth == "full":
-        from local_deepwiki.handlers.analysis_entity import handle_explain_entity
-
-        async def _explain_single_entity(name: str) -> dict[str, Any]:
-            """Explain one entity, returning a result dict with found/error status."""
-            try:
-                res = await handle_explain_entity(
-                    {"repo_path": str(repo_path), "entity_name": name}
-                )
-                text = res[0].text if res else ""
-                try:
-                    return {"entity": name, "found": True, **json.loads(text)}
-                except (json.JSONDecodeError, TypeError):
-                    return {"entity": name, "found": True, "raw": text[:500]}
-            except Exception as exc:  # noqa: BLE001
-                return {"entity": name, "found": False, "error": str(exc)}
-
-        results = await asyncio.gather(
-            *[_explain_single_entity(n) for n in entity_names]
-        )
-
+        results = await _batch_explain_full(repo_path, entity_names)
         data: dict[str, Any] = {
             "repo_path": str(repo_path),
             "total_requested": len(entity_names),
@@ -284,45 +334,8 @@ async def handle_batch_explain_entities(args: dict[str, Any]) -> list[TextConten
     search_content = search_index_path.read_text(encoding="utf-8")
     search_data = json.loads(search_content)
     all_entities = search_data.get("entities", [])
-
-    # Build name index for fast lookups
-    name_index: dict[str, list[dict]] = {}
-    for entity in all_entities:
-        name = (entity.get("name") or "").lower()
-        display_name = (entity.get("display_name") or "").lower()
-        for key in (name, display_name):
-            if key:
-                name_index.setdefault(key, []).append(entity)
-
-    # Look up each requested entity
-    results_list = []
-    for entity_name in entity_names:
-        matches = name_index.get(entity_name.lower(), [])
-        if matches:
-            results_list.append(
-                {
-                    "entity": entity_name,
-                    "found": True,
-                    "matches": [
-                        {
-                            "name": m.get("display_name", m.get("name")),
-                            "type": m.get("entity_type"),
-                            "file": m.get("file"),
-                            "signature": m.get("signature", ""),
-                            "description": m.get("description", ""),
-                        }
-                        for m in matches[:5]
-                    ],
-                }
-            )
-        else:
-            results_list.append(
-                {
-                    "entity": entity_name,
-                    "found": False,
-                    "matches": [],
-                }
-            )
+    name_index = _build_name_index(all_entities)
+    results_list = _lookup_shallow_entities(entity_names, name_index)
 
     data = {
         "repo_path": str(repo_path),

@@ -63,6 +63,61 @@ def _score_entity_match(entity: dict[str, Any], query: str) -> float:
     return 0.0
 
 
+def _collect_page_matches(
+    pages: list[dict[str, Any]],
+    query: str,
+    wiki_path: Path,
+) -> list[dict[str, Any]]:
+    """Score and collect matching wiki pages."""
+    matches: list[dict[str, Any]] = []
+    for page in pages:
+        score = _score_page_match(page, query)
+        if score > 0:
+            page_match: dict[str, Any] = {
+                "type": "page",
+                "title": page.get("title"),
+                "path": page.get("path"),
+                "snippet": page.get("snippet", ""),
+                "score": score,
+            }
+            page_path_str = page.get("path", "")
+            if page_path_str:
+                page_match["wiki_resource"] = build_wiki_resource_uri(
+                    wiki_path, page_path_str
+                )
+            matches.append(page_match)
+    return matches
+
+
+def _collect_entity_matches(
+    entities: list[dict[str, Any]],
+    query: str,
+    allowed_entity_types: list[str] | None,
+) -> list[dict[str, Any]]:
+    """Score and collect matching code entities, filtered by type."""
+    matches: list[dict[str, Any]] = []
+    for entity in entities:
+        if (
+            allowed_entity_types
+            and entity.get("entity_type") not in allowed_entity_types
+        ):
+            continue
+        score = _score_entity_match(entity, query)
+        if score > 0:
+            matches.append(
+                {
+                    "type": "entity",
+                    "entity_type": entity.get("entity_type"),
+                    "name": entity.get("display_name"),
+                    "file": entity.get("file"),
+                    "signature": entity.get("signature", ""),
+                    "description": entity.get("description", ""),
+                    "score": score,
+                }
+            )
+    return matches
+
+
 def _build_wiki_search_results(
     pages: list[dict[str, Any]],
     entities: list[dict[str, Any]],
@@ -86,51 +141,15 @@ def _build_wiki_search_results(
     """
     matches: list[dict[str, Any]] = []
 
-    # Search pages
     if entity_types is None or "page" in entity_types:
-        for page in pages:
-            score = _score_page_match(page, query)
-            if score > 0:
-                page_match: dict[str, Any] = {
-                    "type": "page",
-                    "title": page.get("title"),
-                    "path": page.get("path"),
-                    "snippet": page.get("snippet", ""),
-                    "score": score,
-                }
-                page_path_str = page.get("path", "")
-                if page_path_str:
-                    page_match["wiki_resource"] = build_wiki_resource_uri(
-                        wiki_path, page_path_str
-                    )
-                matches.append(page_match)
+        matches.extend(_collect_page_matches(pages, query, wiki_path))
 
-    # Search entities
     allowed_entity_types = None
     if entity_types is not None:
         allowed_entity_types = [t for t in entity_types if t != "page"]
 
     if entity_types is None or allowed_entity_types:
-        for entity in entities:
-            if (
-                allowed_entity_types
-                and entity.get("entity_type") not in allowed_entity_types
-            ):
-                continue
-
-            score = _score_entity_match(entity, query)
-            if score > 0:
-                matches.append(
-                    {
-                        "type": "entity",
-                        "entity_type": entity.get("entity_type"),
-                        "name": entity.get("display_name"),
-                        "file": entity.get("file"),
-                        "signature": entity.get("signature", ""),
-                        "description": entity.get("description", ""),
-                        "score": score,
-                    }
-                )
+        matches.extend(_collect_entity_matches(entities, query, allowed_entity_types))
 
     return sorted(matches, key=itemgetter("score"), reverse=True)[:limit]
 

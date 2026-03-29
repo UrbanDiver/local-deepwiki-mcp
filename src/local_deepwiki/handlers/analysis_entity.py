@@ -379,6 +379,40 @@ def _has_import_of_module(content: str, module_stem: str) -> bool:
     return re.search(pattern, content) is not None
 
 
+def _is_source_candidate(
+    candidate: Path,
+    repo_path: Path,
+    resolved_target: Path,
+    supported_suffixes: set[str],
+) -> bool:
+    """Return True if *candidate* should be scanned for callers."""
+    if not candidate.is_file():
+        return False
+    if candidate.suffix.lower() not in supported_suffixes:
+        return False
+    if candidate.resolve() == resolved_target:
+        return False
+    rel_parts = candidate.relative_to(repo_path).parts
+    return not any(part.startswith(".") or part == "node_modules" for part in rel_parts)
+
+
+def _collect_callers_from_graph(
+    cand_call_graph: dict[str, Any],
+    rel_path: str,
+    target_entities: set[str],
+    cross_callers: dict[str, list[str]],
+) -> None:
+    """Merge callers from *cand_call_graph* into *cross_callers* in place."""
+    for caller_func, callees in cand_call_graph.items():
+        for callee in callees:
+            if callee in target_entities:
+                qualified = f"{rel_path}:{caller_func}"
+                if callee not in cross_callers:
+                    cross_callers[callee] = []
+                if qualified not in cross_callers[callee]:
+                    cross_callers[callee].append(qualified)
+
+
 def _find_cross_file_callers(
     extractor: Any,
     repo_path: Path,
@@ -398,15 +432,9 @@ def _find_cross_file_callers(
     supported_suffixes = set(EXTENSION_MAP.keys())
 
     for candidate in repo_path.rglob("*"):
-        if not candidate.is_file():
-            continue
-        if candidate.suffix.lower() not in supported_suffixes:
-            continue
-        if candidate.resolve() == resolved_target:
-            continue
-        # Skip hidden directories and common non-source trees
-        rel_parts = candidate.relative_to(repo_path).parts
-        if any(part.startswith(".") or part == "node_modules" for part in rel_parts):
+        if not _is_source_candidate(
+            candidate, repo_path, resolved_target, supported_suffixes
+        ):
             continue
 
         try:
@@ -426,15 +454,9 @@ def _find_cross_file_callers(
             continue
 
         rel_path = str(candidate.relative_to(repo_path))
-
-        for caller_func, callees in cand_call_graph.items():
-            for callee in callees:
-                if callee in target_entities:
-                    qualified = f"{rel_path}:{caller_func}"
-                    if callee not in cross_callers:
-                        cross_callers[callee] = []
-                    if qualified not in cross_callers[callee]:
-                        cross_callers[callee].append(qualified)
+        _collect_callers_from_graph(
+            cand_call_graph, rel_path, target_entities, cross_callers
+        )
 
     return cross_callers
 

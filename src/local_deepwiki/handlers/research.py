@@ -190,6 +190,58 @@ def _create_research_pipeline(
     return pipeline, vector_store, llm
 
 
+def _is_cancelled(ctx: _DeepResearchContext) -> bool:
+    """Check if the research should be cancelled."""
+    if ctx.cancellation_event.is_set():
+        return True
+    try:
+        task = asyncio.current_task()
+        if task and task.cancelled():
+            return True
+    except RuntimeError:
+        logger.debug("Failed to check asyncio task cancellation state", exc_info=True)
+    return False
+
+
+async def _send_progress(ctx: _DeepResearchContext, progress: Any) -> None:
+    """Send MCP progress notifications."""
+    if ctx.progress_token is None or ctx.server is None:
+        return
+    try:
+        request_ctx = ctx.server.request_context
+        await request_ctx.session.send_progress_notification(
+            progress_token=ctx.progress_token,
+            progress=float(progress.step),
+            total=float(progress.total_steps),
+            message=progress.model_dump_json(),
+        )
+    except (RuntimeError, OSError, AttributeError) as e:
+        logger.warning("Failed to send progress notification: %s", e)
+
+
+async def _send_cancellation(ctx: _DeepResearchContext, step: str) -> None:
+    """Send a cancellation progress notification."""
+    if ctx.progress_token is None or ctx.server is None:
+        return
+    from local_deepwiki.models import ResearchProgress, ResearchProgressType
+
+    try:
+        request_ctx = ctx.server.request_context
+        progress = ResearchProgress(
+            step=0,
+            step_type=ResearchProgressType.CANCELLED,
+            message=f"Research cancelled during {step}",
+        )
+        await request_ctx.session.send_progress_notification(
+            progress_token=ctx.progress_token,
+            progress=0.0,
+            total=5.0,
+            message=progress.model_dump_json(),
+        )
+    except (RuntimeError, OSError, AttributeError) as e:
+        logger.warning("Failed to send cancellation notification: %s", e)
+
+
 def _create_progress_callbacks(
     ctx: _DeepResearchContext,
 ) -> tuple[
@@ -205,64 +257,15 @@ def _create_progress_callbacks(
     Returns:
         Tuple of (is_cancelled, progress_callback, send_cancellation_notification).
     """
-    from local_deepwiki.models import ResearchProgress, ResearchProgressType
 
     def is_cancelled() -> bool:
-        """Check if the research should be cancelled."""
-        # Check both our event and the current task's cancellation state
-        if ctx.cancellation_event.is_set():
-            return True
-        # Check if current asyncio task is being cancelled
-        try:
-            task = asyncio.current_task()
-            if task and task.cancelled():
-                return True
-        except RuntimeError:
-            logger.debug(
-                "Failed to check asyncio task cancellation state", exc_info=True
-            )
-        return False
+        return _is_cancelled(ctx)
 
-    async def progress_callback(progress: ResearchProgress) -> None:
-        """Send MCP progress notifications."""
-        if ctx.progress_token is None or ctx.server is None:
-            return
-        try:
-            request_ctx = ctx.server.request_context
-            await request_ctx.session.send_progress_notification(
-                progress_token=ctx.progress_token,
-                progress=float(progress.step),
-                total=float(progress.total_steps),
-                message=progress.model_dump_json(),
-            )
-        except (RuntimeError, OSError, AttributeError) as e:
-            # RuntimeError: Session or context issues
-            # OSError: Network communication failures
-            # AttributeError: Missing session/context attributes
-            logger.warning("Failed to send progress notification: %s", e)
+    async def progress_callback(progress: Any) -> None:
+        await _send_progress(ctx, progress)
 
     async def send_cancellation_notification(step: str) -> None:
-        """Send a cancellation progress notification."""
-        if ctx.progress_token is None or ctx.server is None:
-            return
-        try:
-            request_ctx = ctx.server.request_context
-            progress = ResearchProgress(
-                step=0,
-                step_type=ResearchProgressType.CANCELLED,
-                message=f"Research cancelled during {step}",
-            )
-            await request_ctx.session.send_progress_notification(
-                progress_token=ctx.progress_token,
-                progress=0.0,
-                total=5.0,
-                message=progress.model_dump_json(),
-            )
-        except (RuntimeError, OSError, AttributeError) as e:
-            # RuntimeError: Session or context issues
-            # OSError: Network communication failures
-            # AttributeError: Missing session/context attributes
-            logger.warning("Failed to send cancellation notification: %s", e)
+        await _send_cancellation(ctx, step)
 
     return is_cancelled, progress_callback, send_cancellation_notification
 
