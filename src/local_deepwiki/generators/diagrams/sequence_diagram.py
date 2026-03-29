@@ -5,6 +5,51 @@ from __future__ import annotations
 from ._utils import sanitize_mermaid_name
 
 
+def _collect_all_participants(
+    call_graph: dict[str, list[str]],
+    entry_point: str,
+    max_depth: int,
+) -> set[str]:
+    """Collect all functions reachable from *entry_point* up to *max_depth*."""
+    participants: set[str] = {entry_point}
+
+    def _recurse(func: str, depth: int) -> None:
+        if depth > max_depth:
+            return
+        for callee in call_graph.get(func, []):
+            participants.add(callee)
+            _recurse(callee, depth + 1)
+
+    _recurse(entry_point, 0)
+    return participants
+
+
+def _emit_call_arrows(
+    call_graph: dict[str, list[str]],
+    entry_point: str,
+    max_depth: int,
+    lines: list[str],
+) -> None:
+    """Recursively emit Mermaid call/return arrows starting from *entry_point*."""
+    visited: set[tuple[str, str]] = set()
+
+    def _recurse(caller: str, depth: int) -> None:
+        if depth > max_depth:
+            return
+        safe_caller = sanitize_mermaid_name(caller)
+        for callee in call_graph.get(caller, []):
+            if (caller, callee) in visited:
+                continue
+            visited.add((caller, callee))
+            safe_callee = sanitize_mermaid_name(callee)
+            lines.append(f"    {safe_caller}->>+{safe_callee}: call")
+            if callee in call_graph:
+                _recurse(callee, depth + 1)
+            lines.append(f"    {safe_callee}-->>-{safe_caller}: return")
+
+    _recurse(entry_point, 0)
+
+
 def generate_sequence_diagram(
     call_graph: dict[str, list[str]],
     entry_point: str | None = None,
@@ -25,9 +70,7 @@ def generate_sequence_diagram(
     if not call_graph:
         return None
 
-    # Find entry point if not specified
     if not entry_point:
-        # Find function with most outgoing calls
         entry_point = max(
             call_graph.keys(), key=lambda k: len(call_graph.get(k, [])), default=None
         )
@@ -35,55 +78,18 @@ def generate_sequence_diagram(
     if not entry_point or entry_point not in call_graph:
         return None
 
-    # Build sequence
     lines = ["```mermaid", "sequenceDiagram"]
 
-    # Collect participants
-    participants: set[str] = {entry_point}
-
-    def collect_participants(func: str, depth: int) -> None:
-        """Recursively collect all functions reachable from func up to max_depth."""
-        if depth > max_depth:
-            return
-        for callee in call_graph.get(func, []):
-            participants.add(callee)
-            collect_participants(callee, depth + 1)
-
-    collect_participants(entry_point, 0)
-
-    # Add participants
+    participants = _collect_all_participants(call_graph, entry_point, max_depth)
     for p in sorted(participants):
         safe_name = sanitize_mermaid_name(p)
         display = p.split(".")[-1] if "." in p else p
         lines.append(f"    participant {safe_name} as {display}")
 
-    # Add calls
-    visited: set[tuple[str, str]] = set()
+    _emit_call_arrows(call_graph, entry_point, max_depth, lines)
 
-    def add_calls(caller: str, depth: int) -> None:
-        """Recursively emit Mermaid call/return arrows for each caller-callee pair."""
-        if depth > max_depth:
-            return
-        safe_caller = sanitize_mermaid_name(caller)
-        for callee in call_graph.get(caller, []):
-            if (caller, callee) in visited:
-                continue
-            visited.add((caller, callee))
-
-            safe_callee = sanitize_mermaid_name(callee)
-            lines.append(f"    {safe_caller}->>+{safe_callee}: call")
-
-            # Recurse
-            if callee in call_graph:
-                add_calls(callee, depth + 1)
-
-            lines.append(f"    {safe_callee}-->>-{safe_caller}: return")
-
-    add_calls(entry_point, 0)
-
-    if len(lines) <= 3:  # Only header and participants
+    if len(lines) <= 3:  # Only header and participants — no actual calls
         return None
 
     lines.append("```")
-
     return "\n".join(lines)

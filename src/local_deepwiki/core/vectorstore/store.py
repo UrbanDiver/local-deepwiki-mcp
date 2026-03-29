@@ -181,13 +181,25 @@ class VectorStore(StatsMixin, LazyIndexMixin, SearchMixin):
         self._default_search_mode = default_search_mode
         self._bm25_weight = bm25_weight
 
-        # Initialize adaptive searcher
         self._adaptive_searcher = AdaptiveSearcher()
         self._adaptive_searcher.set_store(self)
+        self._search_engine = self._init_search_engine(
+            default_search_profile=default_search_profile,
+            adaptive_search_enabled=adaptive_search_enabled,
+            default_search_mode=default_search_mode,
+            bm25_weight=bm25_weight,
+        )
 
-        # Build the composition-based SearchEngine with explicit deps.
-        # SearchMixin methods delegate to this instance.
-        self._search_engine = SearchEngine(
+    def _init_search_engine(
+        self,
+        *,
+        default_search_profile: SearchProfile,
+        adaptive_search_enabled: bool,
+        default_search_mode: str,
+        bm25_weight: float,
+    ) -> SearchEngine:
+        """Build and return the composition-based SearchEngine with explicit deps."""
+        return SearchEngine(
             get_table=self._get_table,
             row_to_chunk=self._row_to_chunk,
             embedding_provider=self.embedding_provider,

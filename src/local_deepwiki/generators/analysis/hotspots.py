@@ -149,6 +149,26 @@ def _parse_file_functions(full_path: Path, rel_path: Path) -> list[dict[str, Any
     ]
 
 
+def _scan_all_functions(
+    repo_path: Path,
+    exclude_tests: bool,
+) -> tuple[list[dict[str, Any]], int]:
+    """Walk all source files and collect per-function metrics.
+
+    Returns (all_functions, files_scanned).
+    """
+    all_functions: list[dict[str, Any]] = []
+    files_scanned = 0
+    for full_path, rel_path in iter_source_files(
+        repo_path, exclude_tests=exclude_tests
+    ):
+        rows = _parse_file_functions(full_path, rel_path)
+        if rows:
+            all_functions.extend(rows)
+        files_scanned += 1
+    return all_functions, files_scanned
+
+
 def analyze_hotspots(
     repo_path: Path,
     metric: str = "complexity",
@@ -178,25 +198,13 @@ def analyze_hotspots(
             ),
         }
 
-    # Map metric name to the dict key used in per-function rows.
     metric_key = "cyclomatic" if metric == "complexity" else metric
 
-    all_functions: list[dict[str, Any]] = []
-    files_scanned = 0
+    all_functions, files_scanned = _scan_all_functions(repo_path, exclude_tests)
 
-    for full_path, rel_path in iter_source_files(
-        repo_path, exclude_tests=exclude_tests
-    ):
-        rows = _parse_file_functions(full_path, rel_path)
-        if rows:
-            all_functions.extend(rows)
-        files_scanned += 1
-
-    # Apply threshold filter.
     if min_threshold is not None:
         all_functions = [f for f in all_functions if f[metric_key] >= min_threshold]
 
-    # Sort descending by chosen metric.
     all_functions.sort(key=lambda f: f[metric_key], reverse=True)
 
     hotspots = [

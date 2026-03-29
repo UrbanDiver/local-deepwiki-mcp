@@ -101,6 +101,69 @@ class QueryService:
             return reranked
         return search_results[:max_context]
 
+    async def _retrieve_and_expand(
+        self,
+        question: str,
+        repo_path: Path,
+        fetch_limit: int,
+        agentic_rag: bool,
+        trace: Any,
+        t0: float,
+    ) -> tuple[list[Any], dict[str, Any] | None]:
+        """Run retrieval (standard or agentic) then graph expansion.
+
+        Returns (search_results, agentic_metadata).
+        """
+        from local_deepwiki.services.graph_expansion import expand_with_graph
+
+        agentic_metadata: dict[str, Any] | None = None
+        if agentic_rag:
+            search_results, agentic_metadata = await self._retrieve_agentic(
+                question, fetch_limit, trace, t0
+            )
+        else:
+            search_results = await self._retrieve_standard(question, fetch_limit)
+
+        search_results = await expand_with_graph(
+            search_results, self._vector_store, self._config, repo_path
+        )
+        if trace:
+            trace.record_retrieval(search_results, (time.monotonic() - t0) * 1000)
+        return search_results, agentic_metadata
+
+    async def _generate_answer(
+        self,
+        question: str,
+        search_results: list[Any],
+        trace: Any,
+    ) -> str:
+        """Build context, construct prompt, and call the LLM."""
+        context = _build_context(search_results)
+        if trace:
+            trace.record_context(len(search_results), len(context))
+
+        prompt = (
+            f"Question: {question}\n\n"
+            f"Relevant source code:\n{context}\n\n"
+            "Answer the question clearly and accurately. "
+            "Reference specific files and line numbers when possible."
+        )
+        system_prompt = (
+            "You are a knowledgeable assistant for this codebase. "
+            "Answer questions as if you have read the entire repository. "
+            "Never say 'the provided code' or 'the code context' — "
+            "speak as if you naturally know the codebase."
+        )
+        t2 = time.monotonic()
+        rate_limiter = get_rate_limiter()
+        async with rate_limiter:
+            answer = await self._llm_provider.generate(
+                prompt, system_prompt=system_prompt
+            )
+        if trace:
+            trace.record_llm((time.monotonic() - t2) * 1000)
+        return answer
+
     async def answer_question(
         self,
         repo_path: Path,
@@ -128,30 +191,14 @@ class QueryService:
         from local_deepwiki.core.tracing import RAGTrace
 
         trace = RAGTrace(query=question) if debug else None
-        agentic_metadata: dict[str, Any] | None = None
 
-        # --- Retrieval ---
         reranker = get_reranker(self._config.search.reranker_model)
-        # Over-fetch when reranking so the reranker has enough candidates
         fetch_limit = max_context * 2 if reranker else max_context
 
         t0 = time.monotonic()
-        if agentic_rag:
-            search_results, agentic_metadata = await self._retrieve_agentic(
-                question, fetch_limit, trace, t0
-            )
-        else:
-            search_results = await self._retrieve_standard(question, fetch_limit)
-
-        # --- Graph expansion (optional) ---
-        from local_deepwiki.services.graph_expansion import expand_with_graph
-
-        search_results = await expand_with_graph(
-            search_results, self._vector_store, self._config, repo_path
+        search_results, agentic_metadata = await self._retrieve_and_expand(
+            question, repo_path, fetch_limit, agentic_rag, trace, t0
         )
-
-        if trace:
-            trace.record_retrieval(search_results, (time.monotonic() - t0) * 1000)
 
         if not search_results:
             return QueryResult(
@@ -160,38 +207,11 @@ class QueryService:
                 trace=trace.to_dict() if trace else None,
             )
 
-        # --- Reranking (optional) ---
         search_results = await self._rerank_results(
             reranker, question, search_results, max_context, trace
         )
 
-        # --- Context construction ---
-        context = _build_context(search_results)
-        if trace:
-            trace.record_context(len(search_results), len(context))
-
-        prompt = (
-            f"Question: {question}\n\n"
-            f"Relevant source code:\n{context}\n\n"
-            "Answer the question clearly and accurately. "
-            "Reference specific files and line numbers when possible."
-        )
-        system_prompt = (
-            "You are a knowledgeable assistant for this codebase. "
-            "Answer questions as if you have read the entire repository. "
-            "Never say 'the provided code' or 'the code context' — "
-            "speak as if you naturally know the codebase."
-        )
-
-        # --- LLM generation ---
-        t2 = time.monotonic()
-        rate_limiter = get_rate_limiter()
-        async with rate_limiter:
-            answer = await self._llm_provider.generate(
-                prompt, system_prompt=system_prompt
-            )
-        if trace:
-            trace.record_llm((time.monotonic() - t2) * 1000)
+        answer = await self._generate_answer(question, search_results, trace)
 
         effective_wiki_path = wiki_path or self._config.get_wiki_path(repo_path)
         sources = _build_source_entries(search_results, effective_wiki_path)

@@ -25,6 +25,39 @@ logger = get_logger(__name__)
 ToolHandler: TypeAlias = Callable[..., Awaitable[list[TextContent]]]
 
 
+def _handle_access_denied(
+    func_name: str, e: AccessDeniedException
+) -> list[TextContent]:
+    """Format an access-denied error response."""
+    logger.warning("Access denied in %s: %s", func_name, e)
+    error = DeepWikiError(
+        message=f"Access denied: {e}",
+        hint="You don't have permission for this operation. Contact an administrator to request access.",
+    )
+    return [TextContent(type="text", text=format_error_response(error))]
+
+
+def _handle_auth_required(
+    func_name: str, e: AuthenticationException
+) -> list[TextContent]:
+    """Format an authentication-required error response."""
+    logger.warning("Authentication required in %s: %s", func_name, e)
+    error = DeepWikiError(
+        message=f"Authentication required: {e}",
+        hint="Please authenticate before performing this operation.",
+    )
+    return [TextContent(type="text", text=format_error_response(error))]
+
+
+def _handle_network_error(func_name: str, e: Exception) -> list[TextContent]:
+    """Format a retryable network error response."""
+    error = map_exception_to_deepwiki_error(e)
+    error.retryable = True
+    error.retry_after_seconds = 5
+    logger.error("Network error in %s: %s", func_name, e)
+    return [TextContent(type="text", text=format_error_response(error))]
+
+
 def handle_tool_errors(func: ToolHandler) -> ToolHandler:
     """Decorator for consistent error handling in tool handlers.
 
@@ -50,21 +83,9 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
         try:
             return await func(args, **kwargs)
         except AccessDeniedException as e:
-            # RBAC: User lacks required permission
-            logger.warning("Access denied in %s: %s", func.__name__, e)
-            error = DeepWikiError(
-                message=f"Access denied: {e}",
-                hint="You don't have permission for this operation. Contact an administrator to request access.",
-            )
-            return [TextContent(type="text", text=format_error_response(error))]
+            return _handle_access_denied(func.__name__, e)
         except AuthenticationException as e:
-            # RBAC: No authenticated subject
-            logger.warning("Authentication required in %s: %s", func.__name__, e)
-            error = DeepWikiError(
-                message=f"Authentication required: {e}",
-                hint="Please authenticate before performing this operation.",
-            )
-            return [TextContent(type="text", text=format_error_response(error))]
+            return _handle_auth_required(func.__name__, e)
         except DeepWikiError as e:
             # Our custom errors already have good messages and hints
             logger.error("DeepWiki error in %s: %s", func.__name__, e.message)
@@ -85,12 +106,7 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
             logger.error("File system error in %s: %s", func.__name__, e)
             return [TextContent(type="text", text=format_error_response(error))]
         except (ConnectionError, TimeoutError) as e:
-            # Map common network errors — retryable
-            error = map_exception_to_deepwiki_error(e)
-            error.retryable = True
-            error.retry_after_seconds = 5
-            logger.error("Network error in %s: %s", func.__name__, e)
-            return [TextContent(type="text", text=format_error_response(error))]
+            return _handle_network_error(func.__name__, e)
         except RateLimitExceeded as e:
             # Rate limit exceeded — retryable after cooldown
             logger.warning("Rate limit exceeded in %s: %s", func.__name__, e)

@@ -186,6 +186,21 @@ def _compute_abstractness(
     return result
 
 
+def _compute_ca_ce(
+    modules: list[dict[str, Any]],
+    edges: list[dict[str, Any]],
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Compute afferent (Ca) and efferent (Ce) coupling counts per module."""
+    ca: dict[str, int] = {m["name"]: 0 for m in modules}
+    ce: dict[str, int] = {m["name"]: 0 for m in modules}
+    for edge in edges:
+        if edge["target"] in ca:
+            ca[edge["target"]] += 1
+        if edge["source"] in ce:
+            ce[edge["source"]] += 1
+    return ca, ce
+
+
 def analyze_coupling_metrics(
     repo_path: Path,
     module_filter: str | None = None,
@@ -205,22 +220,10 @@ def analyze_coupling_metrics(
         include_external=False,
         min_edge_weight=1,
     )
-
     modules = dep_result["modules"]
     edges = dep_result["edges"]
 
-    # Build Ca (afferent) and Ce (efferent) per module.
-    ca: dict[str, int] = {m["name"]: 0 for m in modules}
-    ce: dict[str, int] = {m["name"]: 0 for m in modules}
-
-    for edge in edges:
-        src = edge["source"]
-        tgt = edge["target"]
-        if tgt in ca:
-            ca[tgt] += 1
-        if src in ce:
-            ce[src] += 1
-
+    ca, ce = _compute_ca_ce(modules, edges)
     abstractness = _compute_abstractness(repo_path, modules)
 
     metrics: list[dict[str, Any]] = []
@@ -243,14 +246,8 @@ def analyze_coupling_metrics(
             }
         )
 
-    # Sort by distance descending (most problematic first).
     metrics.sort(key=lambda m: m["distance"], reverse=True)
-
-    logger.info(
-        "Coupling metrics: %d modules analyzed in %s",
-        len(metrics),
-        repo_path,
-    )
+    logger.info("Coupling metrics: %d modules analyzed in %s", len(metrics), repo_path)
 
     return {
         "status": "success",

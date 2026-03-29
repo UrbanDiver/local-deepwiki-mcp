@@ -8,7 +8,7 @@ import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 from local_deepwiki.config import Config
 from local_deepwiki.core.git_utils import get_repo_info
@@ -385,6 +385,74 @@ async def _generate_file_enrichments(
     return content + "".join(results)
 
 
+async def _generate_new_file_page(
+    *,
+    file_info: FileInfo,
+    file_path: Path,
+    repo_path: Path,
+    wiki_path: str,
+    source_files: list[str],
+    file_chunks: list[Any],
+    context: str,
+    rich_context_text: str,
+    ctx: FileDocContext,
+) -> WikiPage:
+    """Build the prompt, generate content, add enrichments, and return a new WikiPage."""
+    prompt = _build_llm_prompt(
+        file_info=file_info,
+        context=context,
+        rich_context_text=rich_context_text,
+    )
+    content = await _generate_and_format_doc(
+        prompt=prompt,
+        llm=ctx.llm,
+        system_prompt=ctx.system_prompt,
+    )
+    abs_file_path = repo_path / file_info.path
+    content = await _generate_file_enrichments(
+        content=content,
+        abs_file_path=abs_file_path,
+        repo_path=repo_path,
+        file_path=file_info.path,
+        all_file_chunks=file_chunks,
+    )
+    lang_str = file_info.language.value if file_info.language else None
+    repo_info = get_repo_info(repo_path)
+    content = _inject_inline_source_code(content, file_chunks, lang_str, repo_info)
+    ctx.entity_registry.register_from_chunks(file_chunks, wiki_path)
+    page = WikiPage(
+        path=wiki_path,
+        title=f"{file_path.name}",
+        content=content,
+        generated_at=time.time(),
+    )
+    ctx.status_manager.record_page_status(page, source_files)
+    return page
+
+
+async def _try_load_cached_file_page(
+    file_info: FileInfo,
+    wiki_path: str,
+    source_files: list[str],
+    ctx: FileDocContext,
+) -> WikiPage | None:
+    """Return the existing cached page if regeneration is not needed, else None.
+
+    Also registers entities for cross-linking when returning a cached page.
+    """
+    if ctx.full_rebuild or ctx.status_manager.needs_regeneration(
+        wiki_path, source_files
+    ):
+        return None
+    existing_page = await ctx.status_manager.load_existing_page(wiki_path)
+    if existing_page is None:
+        return None
+    all_file_chunks = await ctx.vector_store.get_chunks_by_file(file_info.path)
+    ctx.entity_registry.register_from_chunks(all_file_chunks, wiki_path)
+    ctx.status_manager.record_page_status(existing_page, source_files)
+    return existing_page
+
+
 async def generate_single_file_doc(
     file_info: FileInfo,
     ctx: FileDocContext,
@@ -412,7 +480,6 @@ async def generate_single_file_doc(
     file_path = Path(file_info.path)
     repo_path = Path(ctx.index_status.repo_path)
 
-    # Create nested path structure: files/module/filename.md
     parts = file_path.parts
     if len(parts) > 1:
         wiki_path = f"files/{'/'.join(parts[:-1])}/{file_path.stem}.md"
@@ -421,19 +488,10 @@ async def generate_single_file_doc(
 
     source_files = [file_info.path]
 
-    # Check if this file page needs regeneration
-    if not ctx.full_rebuild and not ctx.status_manager.needs_regeneration(
-        wiki_path, source_files
-    ):
-        existing_page = await ctx.status_manager.load_existing_page(wiki_path)
-        if existing_page is not None:
-            # Still need to register entities for cross-linking
-            all_file_chunks = await ctx.vector_store.get_chunks_by_file(file_info.path)
-            ctx.entity_registry.register_from_chunks(all_file_chunks, wiki_path)
-            ctx.status_manager.record_page_status(existing_page, source_files)
-            return existing_page, True  # Skipped (reused existing)
+    cached = await _try_load_cached_file_page(file_info, wiki_path, source_files, ctx)
+    if cached is not None:
+        return cached, True
 
-    # Step 1: Gather file context (chunks, imports, related context)
     context_result = await _gather_file_context(
         file_info=file_info,
         index_status=ctx.index_status,
@@ -447,45 +505,17 @@ async def generate_single_file_doc(
 
     file_chunks, context, rich_context_text = context_result
 
-    # Step 2: Build the LLM prompt
-    prompt = _build_llm_prompt(
+    page = await _generate_new_file_page(
         file_info=file_info,
+        file_path=file_path,
+        repo_path=repo_path,
+        wiki_path=wiki_path,
+        source_files=source_files,
+        file_chunks=file_chunks,
         context=context,
         rich_context_text=rich_context_text,
+        ctx=ctx,
     )
-
-    # Step 3: Generate and format the documentation
-    content = await _generate_and_format_doc(
-        prompt=prompt,
-        llm=ctx.llm,
-        system_prompt=ctx.system_prompt,
-    )
-
-    # Step 4: Generate enrichments (diagrams, call graphs, examples, blame)
-    abs_file_path = repo_path / file_info.path
-    content = await _generate_file_enrichments(
-        content=content,
-        abs_file_path=abs_file_path,
-        repo_path=repo_path,
-        file_path=file_info.path,
-        all_file_chunks=file_chunks,
-    )
-
-    # Inject inline source code after each function/class in API Reference
-    lang_str = file_info.language.value if file_info.language else None
-    repo_info = get_repo_info(repo_path)
-    content = _inject_inline_source_code(content, file_chunks, lang_str, repo_info)
-
-    # Register entities for cross-linking
-    ctx.entity_registry.register_from_chunks(file_chunks, wiki_path)
-
-    page = WikiPage(
-        path=wiki_path,
-        title=f"{file_path.name}",
-        content=content,
-        generated_at=time.time(),
-    )
-    ctx.status_manager.record_page_status(page, source_files)
     return page, False  # Generated new
 
 

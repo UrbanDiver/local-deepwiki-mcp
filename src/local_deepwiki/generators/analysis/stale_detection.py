@@ -74,6 +74,56 @@ def analyze_staleness(
     )
 
 
+def _build_freshness_summary_section(report: StaleReport) -> list[str]:
+    """Build the summary section lines for the freshness report."""
+    if report.stale_pages == 0:
+        return [
+            "## ✅ All Documentation Up to Date",
+            "",
+            f"All {report.total_pages} file documentation pages are current with their source code.",
+            "",
+        ]
+    freshness_pct = (
+        ((report.total_pages - report.stale_pages) / report.total_pages * 100)
+        if report.total_pages > 0
+        else 100
+    )
+    return [
+        "## Summary",
+        "",
+        "| Metric | Value |",
+        "|--------|-------|",
+        f"| Total file pages | {report.total_pages} |",
+        f"| Potentially stale | {report.stale_pages} |",
+        f"| Up to date | {report.total_pages - report.stale_pages} |",
+        f"| Freshness | {freshness_pct:.0f}% |",
+        "",
+    ]
+
+
+def _build_stale_table_section(report: StaleReport) -> list[str]:
+    """Build the stale pages table section lines (empty list if nothing is stale)."""
+    if report.stale_pages == 0:
+        return []
+    lines: list[str] = [
+        "## ⚠️ Potentially Stale Documentation",
+        "",
+        "The following pages may need review. Source files were modified after documentation was generated.",
+        "",
+        "| Page | Days Stale | Last Doc Update | Source Modified |",
+        "|------|------------|-----------------|-----------------|",
+    ]
+    for info in report.stale_info:
+        page_link = f"[{Path(info.page_path).stem}]({info.page_path})"
+        doc_date = format_blame_date(info.generated_at)
+        source_date = format_blame_date(info.newest_source_date)
+        lines.append(
+            f"| {page_link} | {info.days_stale} | {doc_date} | {source_date} |"
+        )
+    lines.append("")
+    return lines
+
+
 def generate_stale_report_page(
     repo_path: Path,
     wiki_status: WikiGenerationStatus,
@@ -91,7 +141,7 @@ def generate_stale_report_page(
     """
     report = analyze_staleness(repo_path, wiki_status, stale_threshold_days)
 
-    lines = [
+    lines: list[str] = [
         "# Documentation Freshness Report",
         "",
         "This page identifies documentation that may be outdated compared to the source code.",
@@ -99,61 +149,9 @@ def generate_stale_report_page(
         "",
     ]
 
-    # Summary section
-    if report.stale_pages == 0:
-        lines.extend(
-            [
-                "## ✅ All Documentation Up to Date",
-                "",
-                f"All {report.total_pages} file documentation pages are current with their source code.",
-                "",
-            ]
-        )
-    else:
-        freshness_pct = (
-            ((report.total_pages - report.stale_pages) / report.total_pages * 100)
-            if report.total_pages > 0
-            else 100
-        )
-        lines.extend(
-            [
-                "## Summary",
-                "",
-                f"| Metric | Value |",
-                f"|--------|-------|",
-                f"| Total file pages | {report.total_pages} |",
-                f"| Potentially stale | {report.stale_pages} |",
-                f"| Up to date | {report.total_pages - report.stale_pages} |",
-                f"| Freshness | {freshness_pct:.0f}% |",
-                "",
-            ]
-        )
+    lines.extend(_build_freshness_summary_section(report))
+    lines.extend(_build_stale_table_section(report))
 
-        # Stale pages list
-        lines.extend(
-            [
-                "## ⚠️ Potentially Stale Documentation",
-                "",
-                "The following pages may need review. Source files were modified after documentation was generated.",
-                "",
-                "| Page | Days Stale | Last Doc Update | Source Modified |",
-                "|------|------------|-----------------|-----------------|",
-            ]
-        )
-
-        for info in report.stale_info:
-            # Create relative link to the page
-            page_link = f"[{Path(info.page_path).stem}]({info.page_path})"
-            doc_date = format_blame_date(info.generated_at)
-            source_date = format_blame_date(info.newest_source_date)
-
-            lines.append(
-                f"| {page_link} | {info.days_stale} | {doc_date} | {source_date} |"
-            )
-
-        lines.append("")
-
-    # Recommendations section
     lines.extend(
         [
             "## Recommendations",

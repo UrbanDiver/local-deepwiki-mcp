@@ -115,6 +115,36 @@ def _generate_next_steps(
     return steps[:_MAX_NEXT_STEPS]
 
 
+def _count_total_lines(repo_path: Path) -> int:
+    """Count total source lines across all Python files (excluding tests)."""
+    total = 0
+    for full_path, _rel in iter_python_files(repo_path, exclude_tests=True):
+        try:
+            total += full_path.read_text(encoding="utf-8", errors="replace").count("\n")
+        except OSError:
+            continue
+    return total
+
+
+def _score_all_dimensions(
+    hotspot_result: dict[str, Any],
+    coupling_result: dict[str, Any],
+    src_smells: list[dict[str, Any]],
+    layer_result: dict[str, Any],
+    total_lines: int,
+) -> dict[str, Any]:
+    """Compute scored dimension dict from raw analysis results."""
+    return {
+        "complexity": score_complexity(
+            hotspot_result.get("hotspots", []),
+            hotspot_result.get("stats", {}).get("total_functions", 0),
+        ),
+        "coupling": score_coupling(coupling_result.get("metrics", [])),
+        "smells": score_smells(src_smells, total_lines),
+        "layers": score_layers(layer_result.get("violations", [])),
+    }
+
+
 def analyze_architecture_health(
     repo_path: Path,
     project_name: str,
@@ -131,15 +161,7 @@ def analyze_architecture_health(
     Returns:
         Dict with overall grade, dimension scores, and top findings.
     """
-    # Count total lines for density calculations
-    total_lines = 0
-    for full_path, _rel in iter_python_files(repo_path, exclude_tests=True):
-        try:
-            total_lines += full_path.read_text(
-                encoding="utf-8", errors="replace"
-            ).count("\n")
-        except OSError:
-            continue
+    total_lines = _count_total_lines(repo_path)
 
     # Run all analyses
     hotspot_result = analyze_hotspots(repo_path, metric="complexity", top_n=50)
@@ -154,21 +176,9 @@ def analyze_architecture_health(
         if s.get("file", "").startswith("src/")
     ]
 
-    # Score each dimension
-    complexity_score = score_complexity(
-        hotspot_result.get("hotspots", []),
-        hotspot_result.get("stats", {}).get("total_functions", 0),
+    dimensions = _score_all_dimensions(
+        hotspot_result, coupling_result, src_smells, layer_result, total_lines
     )
-    coupling_score_result = score_coupling(coupling_result.get("metrics", []))
-    smell_score = score_smells(src_smells, total_lines)
-    layer_score = score_layers(layer_result.get("violations", []))
-
-    dimensions = {
-        "complexity": complexity_score,
-        "coupling": coupling_score_result,
-        "smells": smell_score,
-        "layers": layer_score,
-    }
     overall = compute_overall(dimensions)
 
     # Build top findings

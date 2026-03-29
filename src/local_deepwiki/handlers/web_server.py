@@ -144,6 +144,113 @@ def _clear_running_servers() -> None:
     _running_servers.clear()
 
 
+def _check_existing_server(port: int) -> list[TextContent] | None:
+    """Return an already_running response if a live server is on this port, else None.
+
+    Removes the registry entry if the process has already exited.
+    """
+    existing = _running_servers.get(port)
+    if existing is None:
+        return None
+    if existing.process.poll() is None:
+        return make_tool_text_content(
+            "serve_wiki",
+            {
+                "status": "already_running",
+                "message": f"Wiki server already running on port {port}",
+                "url": existing.url,
+                "pid": existing.pid,
+                "wiki_path": existing.wiki_path,
+            },
+        )
+    del _running_servers[port]
+    return None
+
+
+async def _spawn_wiki_server(wiki_path: Path, host: str, port: int) -> subprocess.Popen:
+    """Spawn the Flask wiki subprocess and return the process handle."""
+    safe_env = _build_safe_env()
+    return await asyncio.to_thread(
+        subprocess.Popen,
+        [
+            sys.executable,
+            "-m",
+            "local_deepwiki.web.app",
+            str(wiki_path),
+            "--host",
+            host,
+            "--port",
+            str(port),
+        ],
+        shell=False,
+        env=safe_env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
+def _handle_startup_failure(process: subprocess.Popen, wiki_path: Path) -> None:
+    """Raise a descriptive ValidationError when the server exits before accepting connections."""
+    stderr_out = ""
+    if process.stderr:
+        stderr_out = process.stderr.read().decode("utf-8", errors="replace")[:500]
+    raise ValidationError(
+        message=f"Wiki server exited with code {process.returncode}",
+        hint=f"Check Flask is installed and wiki path is valid. stderr: {stderr_out}",
+        field="wiki_path",
+        value=str(wiki_path),
+    )
+
+
+async def _spawn_and_register(
+    wiki_path: Path,
+    host: str,
+    port: int,
+) -> tuple[subprocess.Popen, str] | list[TextContent]:
+    """Spawn the wiki server and register it under the registry lock.
+
+    Returns (process, url) on success, or an already_running TextContent list
+    when a live server is already registered on this port.
+
+    Raises ValidationError if the port is in use or the process exits immediately.
+    """
+    async with _registry_lock:
+        already_running = _check_existing_server(port)
+        if already_running is not None:
+            return already_running
+
+        if await asyncio.to_thread(_is_port_in_use, host, port):
+            raise ValidationError(
+                message=f"Port {port} is already in use",
+                hint=f"Choose a different port or stop the process using port {port}.",
+                field="port",
+                value=str(port),
+            )
+
+        process = await _spawn_wiki_server(wiki_path, host, port)
+        url = f"http://{host}:{port}"
+        ready = await _wait_for_server_ready(host, port, SERVER_STARTUP_TIMEOUT)
+
+        if not ready:
+            if process.poll() is not None:
+                _handle_startup_failure(process, wiki_path)
+            logger.warning(
+                "Server started but not accepting connections after %ds",
+                SERVER_STARTUP_TIMEOUT,
+            )
+
+        _running_servers[port] = RunningServer(
+            process=process,
+            wiki_path=str(wiki_path),
+            host=host,
+            port=port,
+            pid=process.pid,
+            url=url,
+            started_at=time.time(),
+        )
+    return process, url
+
+
 @handle_tool_errors
 async def handle_serve_wiki(args: dict[str, Any]) -> list[TextContent]:
     """Start the Flask wiki web server as a subprocess."""
@@ -154,23 +261,19 @@ async def handle_serve_wiki(args: dict[str, Any]) -> list[TextContent]:
     except PydanticValidationError as e:
         raise ValueError(str(e)) from e
 
-    # Host restriction - loopback only
     if validated.host not in ALLOWED_HOSTS:
         raise ValueError(
             f"Host must be a loopback address ({', '.join(sorted(ALLOWED_HOSTS))}), "
             f"got: {validated.host!r}"
         )
 
-    # Path validation - null bytes, option injection, existence
     wiki_path = _validate_wiki_path(validated.wiki_path)
     host = validated.host
     port = validated.port
 
-    # Warn if wiki has no content (but don't block)
     if not (wiki_path / "index.md").exists():
         logger.warning("Wiki directory has no index.md: %s", wiki_path)
 
-    # Concurrent server limit
     _prune_dead_servers()
     if len(_running_servers) >= MAX_CONCURRENT_SERVERS:
         raise ValueError(
@@ -178,92 +281,14 @@ async def handle_serve_wiki(args: dict[str, Any]) -> list[TextContent]:
             f"Stop an existing server first."
         )
 
-    # asyncio.Lock prevents TOCTOU race between port check and registration
-    async with _registry_lock:
-        # Check registry for existing server on this port
-        existing = _running_servers.get(port)
-        if existing is not None:
-            if existing.process.poll() is None:
-                return make_tool_text_content(
-                    "serve_wiki",
-                    {
-                        "status": "already_running",
-                        "message": f"Wiki server already running on port {port}",
-                        "url": existing.url,
-                        "pid": existing.pid,
-                        "wiki_path": existing.wiki_path,
-                    },
-                )
-            del _running_servers[port]
-
-        # Check port not in use by external process
-        if await asyncio.to_thread(_is_port_in_use, host, port):
-            raise ValidationError(
-                message=f"Port {port} is already in use",
-                hint=f"Choose a different port or stop the process using port {port}.",
-                field="port",
-                value=str(port),
-            )
-
-        # Sanitized env - no API keys/DB passwords leak to child
-        safe_env = _build_safe_env()
-
-        # Spawn subprocess
-        process = await asyncio.to_thread(
-            subprocess.Popen,
-            [
-                sys.executable,
-                "-m",
-                "local_deepwiki.web.app",
-                str(wiki_path),
-                "--host",
-                host,
-                "--port",
-                str(port),
-            ],
-            shell=False,
-            env=safe_env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-
-        # Wait for server to accept connections
-        url = f"http://{host}:{port}"
-        ready = await _wait_for_server_ready(host, port, SERVER_STARTUP_TIMEOUT)
-
-        if not ready:
-            # Read stderr for diagnostics on failure
-            if process.poll() is not None:
-                stderr_out = ""
-                if process.stderr:
-                    stderr_out = process.stderr.read().decode(
-                        "utf-8", errors="replace"
-                    )[:500]
-                raise ValidationError(
-                    message=f"Wiki server exited with code {process.returncode}",
-                    hint=f"Check Flask is installed and wiki path is valid. stderr: {stderr_out}",
-                    field="wiki_path",
-                    value=str(wiki_path),
-                )
-            logger.warning(
-                "Server started but not accepting connections after %ds",
-                SERVER_STARTUP_TIMEOUT,
-            )
-
-        # Register in registry (immutable record)
-        _running_servers[port] = RunningServer(
-            process=process,
-            wiki_path=str(wiki_path),
-            host=host,
-            port=port,
-            pid=process.pid,
-            url=url,
-            started_at=time.time(),
-        )
+    spawn_result = await _spawn_and_register(wiki_path, host, port)
+    # If a live server was already registered, return the already_running response.
+    if isinstance(spawn_result, list):
+        return spawn_result
+    process, url = spawn_result
 
     logger.info("Wiki server started: pid=%d, url=%s", process.pid, url)
 
-    # open_browser defaults to False; wrapped in try/except for headless environments
     if validated.open_browser:
         try:
             await asyncio.to_thread(webbrowser.open, url)

@@ -12,6 +12,7 @@ import json
 import re
 import subprocess
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 from flask import Blueprint, Response, abort, jsonify, render_template, request
 
@@ -245,6 +246,86 @@ def _build_codemap_response(result: object) -> dict:
     }
 
 
+async def _codemap_sse_stream(
+    *,
+    query: str,
+    focus: str,
+    max_depth: int,
+    max_nodes: int,
+    entry_point: str | None,
+    wiki_path: "Path",
+    repo_path: "Path",
+    cache_k: str,
+) -> AsyncIterator[str]:
+    """Async generator that streams codemap generation progress and result via SSE."""
+    # Try cache hit
+    cached = read_cache(wiki_path, cache_k)
+    if cached is not None:
+        yield f"data: {json.dumps({'type': 'progress', 'message': 'Loading from cache...'})}\n\n"
+        response = {
+            "type": "result",
+            "query": cached.get("query", query),
+            "focus": cached.get("focus", focus),
+            "entry_point": cached.get("entry_point"),
+            "mermaid_diagram": cached.get("mermaid_diagram", ""),
+            "narrative": cached.get("narrative", ""),
+            "nodes": cached.get("nodes", []),
+            "edges": cached.get("edges", []),
+            "files_involved": cached.get("files_involved", []),
+            "total_nodes": cached.get("total_nodes", 0),
+            "total_edges": cached.get("total_edges", 0),
+            "cross_file_edges": cached.get("cross_file_edges", 0),
+            "from_cache": True,
+        }
+        yield f"data: {json.dumps(response)}\n\n"
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+        return
+
+    from local_deepwiki.generators.codemap import CodemapFocus, generate_codemap
+    from local_deepwiki.web.utils import create_providers
+
+    providers = create_providers(repo_path)
+    vector_db_path = providers.config.get_vector_db_path(repo_path)
+
+    if not vector_db_path.exists():
+        yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
+        return
+
+    yield f"data: {json.dumps({'type': 'progress', 'message': 'Initializing providers...'})}\n\n"
+
+    vector_store = providers.vector_store
+    llm = providers.llm
+
+    yield f"data: {json.dumps({'type': 'progress', 'message': 'Building codemap graph...'})}\n\n"
+
+    try:
+        focus_enum = CodemapFocus(focus)
+        result = await generate_codemap(
+            query=query,
+            vector_store=vector_store,
+            llm=llm,
+            repo_path=repo_path,
+            focus=focus_enum,
+            entry_point=entry_point,
+            max_depth=max_depth,
+            max_nodes=max_nodes,
+        )
+
+        yield f"data: {json.dumps({'type': 'progress', 'message': 'Codemap ready.'})}\n\n"
+
+        response = _build_codemap_response(result)
+        yield f"data: {json.dumps(response)}\n\n"
+
+        # Write to cache
+        write_cache(wiki_path, cache_k, response)
+
+    except Exception as e:  # noqa: BLE001 - Report codemap errors to user via SSE
+        logger.exception("Error generating codemap: %s", e)
+        yield f"data: {json.dumps({'type': 'error', 'message': sanitize_error_message(str(e))})}\n\n"
+
+    yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+
 @codemap_bp.route("/api/codemap", methods=["POST"])
 def api_codemap() -> Response | tuple[Response, int]:
     """Handle codemap generation with streaming response.
@@ -280,80 +361,22 @@ def api_codemap() -> Response | tuple[Response, int]:
     if wiki_path.name == ".deepwiki":
         repo_path = wiki_path.parent
 
-    # Check cache first
     cache_k = cache_key(query, focus, max_depth, max_nodes)
 
-    async def generate_codemap_stream() -> AsyncIterator[str]:
-        """Async generator that streams codemap generation progress and result."""
-        # Try cache hit
-        cached = read_cache(wiki_path, cache_k)
-        if cached is not None:
-            yield f"data: {json.dumps({'type': 'progress', 'message': 'Loading from cache...'})}\n\n"
-            response = {
-                "type": "result",
-                "query": cached.get("query", query),
-                "focus": cached.get("focus", focus),
-                "entry_point": cached.get("entry_point"),
-                "mermaid_diagram": cached.get("mermaid_diagram", ""),
-                "narrative": cached.get("narrative", ""),
-                "nodes": cached.get("nodes", []),
-                "edges": cached.get("edges", []),
-                "files_involved": cached.get("files_involved", []),
-                "total_nodes": cached.get("total_nodes", 0),
-                "total_edges": cached.get("total_edges", 0),
-                "cross_file_edges": cached.get("cross_file_edges", 0),
-                "from_cache": True,
-            }
-            yield f"data: {json.dumps(response)}\n\n"
-            yield f"data: {json.dumps({'type': 'done'})}\n\n"
-            return
-
-        from local_deepwiki.generators.codemap import CodemapFocus, generate_codemap
-        from local_deepwiki.web.utils import create_providers
-
-        providers = create_providers(repo_path)
-        vector_db_path = providers.config.get_vector_db_path(repo_path)
-
-        if not vector_db_path.exists():
-            yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
-            return
-
-        yield f"data: {json.dumps({'type': 'progress', 'message': 'Initializing providers...'})}\n\n"
-
-        vector_store = providers.vector_store
-        llm = providers.llm
-
-        yield f"data: {json.dumps({'type': 'progress', 'message': 'Building codemap graph...'})}\n\n"
-
-        try:
-            focus_enum = CodemapFocus(focus)
-            result = await generate_codemap(
-                query=query,
-                vector_store=vector_store,
-                llm=llm,
-                repo_path=repo_path,
-                focus=focus_enum,
-                entry_point=entry_point,
-                max_depth=max_depth,
-                max_nodes=max_nodes,
-            )
-
-            yield f"data: {json.dumps({'type': 'progress', 'message': 'Codemap ready.'})}\n\n"
-
-            response = _build_codemap_response(result)
-            yield f"data: {json.dumps(response)}\n\n"
-
-            # Write to cache
-            write_cache(wiki_path, cache_k, response)
-
-        except Exception as e:  # noqa: BLE001 - Report codemap errors to user via SSE
-            logger.exception("Error generating codemap: %s", e)
-            yield f"data: {json.dumps({'type': 'error', 'message': sanitize_error_message(str(e))})}\n\n"
-
-        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+    def _stream() -> AsyncIterator[str]:
+        return _codemap_sse_stream(
+            query=query,
+            focus=focus,
+            max_depth=max_depth,
+            max_nodes=max_nodes,
+            entry_point=entry_point,
+            wiki_path=wiki_path,
+            repo_path=repo_path,
+            cache_k=cache_k,
+        )
 
     return Response(
-        stream_async_generator(generate_codemap_stream),
+        stream_async_generator(_stream),
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

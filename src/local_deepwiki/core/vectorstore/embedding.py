@@ -295,6 +295,78 @@ def _merge_batch_results(
     return all_embeddings
 
 
+def _log_parallel_start(
+    unique_texts: list[str],
+    total_batches: int,
+    batch_size: int,
+    concurrency: int,
+) -> None:
+    """Log the start of parallel embedding."""
+    logger.info(
+        "Starting parallel embedding: %d unique texts in %d batches "
+        "(batch_size=%d, concurrency=%d)",
+        len(unique_texts),
+        total_batches,
+        batch_size,
+        concurrency,
+    )
+
+
+def _log_parallel_complete(progress: EmbeddingProgress, unique_count: int) -> None:
+    """Log the completion of parallel embedding with throughput stats."""
+    progress.log_progress()
+    elapsed = progress.elapsed_seconds
+    rate = unique_count / elapsed if elapsed > 0 else 0
+    logger.info(
+        "Embedding complete: %d unique texts in %.2fs (%.1f texts/sec)",
+        unique_count,
+        elapsed,
+        rate,
+    )
+
+
+async def _run_parallel_batches(
+    *,
+    batches: list[list[str]],
+    unique_texts: list[str],
+    embedding_provider: EmbeddingProvider,
+    config: EmbeddingBatchConfig,
+    rate_limiter: RateLimiter | None,
+    batch_size: int,
+    optimal_concurrency: int,
+    total_batches: int,
+    log_progress: bool,
+) -> list[list[float]]:
+    """Run all batches in parallel and return merged embeddings for unique texts."""
+    progress = EmbeddingProgress(
+        total_texts=len(unique_texts), total_batches=total_batches
+    )
+    if log_progress:
+        _log_parallel_start(
+            unique_texts, total_batches, batch_size, optimal_concurrency
+        )
+
+    semaphore = asyncio.Semaphore(optimal_concurrency)
+    tasks = [
+        embed_single_batch_with_retry(
+            i,
+            batch_texts,
+            embedding_provider,
+            config,
+            rate_limiter=rate_limiter,
+            progress=progress,
+            semaphore=semaphore,
+        )
+        for i, batch_texts in enumerate(batches)
+    ]
+    results: list[BatchEmbeddingResult] = await asyncio.gather(*tasks)
+    results = sorted(results, key=attrgetter("batch_index"))
+    all_embeddings = _merge_batch_results(results, total_batches)
+    if log_progress:
+        _log_parallel_complete(progress, len(unique_texts))
+    return all_embeddings
+
+
 async def batch_embed(
     texts: list[str],
     embedding_provider: EmbeddingProvider,
@@ -342,7 +414,6 @@ async def batch_embed(
         config, embedding_provider
     )
     batch_size = batch_size or optimal_batch_size
-
     batches = _split_into_batches(unique_texts, batch_size)
     total_batches = len(batches)
 
@@ -357,55 +428,17 @@ async def batch_embed(
         )
         return _remap_embeddings(unique_embeddings, texts, text_to_index)
 
-    progress = EmbeddingProgress(
-        total_texts=len(unique_texts),
+    all_embeddings = await _run_parallel_batches(
+        batches=batches,
+        unique_texts=unique_texts,
+        embedding_provider=embedding_provider,
+        config=config,
+        rate_limiter=rate_limiter,
+        batch_size=batch_size,
+        optimal_concurrency=optimal_concurrency,
         total_batches=total_batches,
+        log_progress=log_progress,
     )
-
-    if log_progress:
-        logger.info(
-            "Starting parallel embedding: %d unique texts in %d batches "
-            "(batch_size=%d, concurrency=%d)",
-            len(unique_texts),
-            total_batches,
-            batch_size,
-            optimal_concurrency,
-        )
-
-    semaphore = asyncio.Semaphore(optimal_concurrency)
-
-    tasks = [
-        embed_single_batch_with_retry(
-            i,
-            batch_texts,
-            embedding_provider,
-            config,
-            rate_limiter=rate_limiter,
-            progress=progress,
-            semaphore=semaphore,
-        )
-        for i, batch_texts in enumerate(batches)
-    ]
-
-    results: list[BatchEmbeddingResult] = await asyncio.gather(*tasks)
-
-    if log_progress:
-        progress.log_progress()
-
-    results = sorted(results, key=attrgetter("batch_index"))
-
-    all_embeddings = _merge_batch_results(results, total_batches)
-
-    if log_progress:
-        elapsed = progress.elapsed_seconds
-        rate = len(unique_texts) / elapsed if elapsed > 0 else 0
-        logger.info(
-            "Embedding complete: %d unique texts in %.2fs (%.1f texts/sec)",
-            len(unique_texts),
-            elapsed,
-            rate,
-        )
-
     return _remap_embeddings(all_embeddings, texts, text_to_index)
 
 

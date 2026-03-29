@@ -180,6 +180,34 @@ class PaginationEngine:
     # search_paginated()
     # -----------------------------------------------------------------
 
+    def _build_paginated_results(
+        self,
+        all_rows: list[Any],
+        request: SearchRequest,
+        offset: int,
+        effective_min_similarity: float,
+    ) -> list[SearchResult]:
+        """Slice rows for the current page, score them, and apply optional fuzzy re-ranking."""
+        paginated_rows = all_rows[offset : offset + request.limit]
+        search_results: list[SearchResult] = []
+        for row in paginated_rows:
+            dist = row.get("_distance", 0)
+            score = 1.0 - dist * dist / 2.0
+            if score < effective_min_similarity:
+                continue
+            chunk = self._engine._row_to_chunk(row)
+            search_results.append(SearchResult(chunk=chunk, score=score, highlights=[]))
+
+        if request.use_fuzzy and search_results:
+            search_results, _ = search_postprocess.apply_fuzzy_reranking(
+                search_results,
+                request.query,
+                request.fuzzy_weight,
+                use_fuzzy=True,
+                fuzzy_config=self._engine._fuzzy_search_config,
+            )
+        return search_results
+
     async def search_paginated(
         self,
         query: str,
@@ -202,11 +230,10 @@ class PaginationEngine:
         individual keyword arguments.  When ``request`` is provided it takes
         precedence and the individual keyword arguments are ignored.
         """
-        # Build a SearchRequest value object to centralise parameter resolution,
-        # eliminating the duplicated profile / filter / fuzzy logic that was
-        # previously inlined here.  Pagination-specific execution (cursor
-        # parsing, total count estimation, offset slicing, SearchResultPage
-        # construction) is intentionally NOT delegated to search_from_request().
+        # Build a SearchRequest value object to centralise parameter resolution.
+        # Pagination-specific execution (cursor parsing, total count estimation,
+        # offset slicing, SearchResultPage construction) is NOT delegated to
+        # search_from_request().
         if request is None:
             request = SearchRequest(
                 query=query,
@@ -226,11 +253,7 @@ class PaginationEngine:
         if table is None:
             logger.debug("No table found for search")
             return SearchResultPage(
-                results=[],
-                total=0,
-                offset=offset,
-                limit=request.limit,
-                has_more=False,
+                results=[], total=0, offset=offset, limit=request.limit, has_more=False
             )
 
         _, resolved_profile, profile_config, effective_min_similarity = (
@@ -246,11 +269,30 @@ class PaginationEngine:
         )
 
         offset = self._parse_cursor_offset(cursor, offset)
-
         query_embedding = (
             await self._engine._embedding_provider.embed([request.query])
         )[0]
 
+        return await self._execute_paginated_search(
+            table=table,
+            query_embedding=query_embedding,
+            request=request,
+            profile_config=profile_config,
+            effective_min_similarity=effective_min_similarity,
+            offset=offset,
+        )
+
+    async def _execute_paginated_search(
+        self,
+        *,
+        table: Any,
+        query_embedding: list[float],
+        request: SearchRequest,
+        profile_config: Any,
+        effective_min_similarity: float | None,
+        offset: int,
+    ) -> SearchResultPage:
+        """Run the actual paginated search: estimate total, slice, build result page."""
         all_results, total_estimate = self._estimate_total_results(
             table,
             query_embedding,
@@ -259,31 +301,11 @@ class PaginationEngine:
             effective_min_similarity,
             offset,
         )
-
-        # Apply pagination and convert rows to SearchResult objects
-        paginated_rows = all_results[offset : offset + request.limit]
-        search_results: list[SearchResult] = []
-        for row in paginated_rows:
-            dist = row.get("_distance", 0)
-            score = 1.0 - dist * dist / 2.0
-            if score < effective_min_similarity:
-                continue
-            chunk = self._engine._row_to_chunk(row)
-            search_results.append(SearchResult(chunk=chunk, score=score, highlights=[]))
-
-        # Apply fuzzy re-ranking via the shared postprocess module
-        if request.use_fuzzy and search_results:
-            search_results, _ = search_postprocess.apply_fuzzy_reranking(
-                search_results,
-                request.query,
-                request.fuzzy_weight,
-                use_fuzzy=True,
-                fuzzy_config=self._engine._fuzzy_search_config,
-            )
-
+        search_results = self._build_paginated_results(
+            all_results, request, offset, effective_min_similarity
+        )
         has_more = offset + request.limit < total_estimate
         next_cursor = f"offset:{offset + request.limit}" if has_more else None
-
         return SearchResultPage(
             results=search_results,
             total=total_estimate,
@@ -505,6 +527,37 @@ class SearchEngine:
             self._pagination_engine = engine
         return engine
 
+    async def _resolve_embedding_and_cache(
+        self,
+        request: SearchRequest,
+        resolved_profile: Any,
+        effective_min_similarity: float | None,
+        effective_mode: str,
+    ) -> tuple[list[float], list[SearchResult] | None, bool]:
+        """Compute query embedding and check cache.
+
+        Returns:
+            Tuple of (query_embedding, cached_results, use_cache).
+            If cached_results is not None the caller should return it immediately.
+        """
+        query_embedding: list[float] = []
+        if effective_mode != "keyword":
+            query_embedding = (await self._embedding_provider.embed([request.query]))[0]
+
+        use_cache = (
+            not request.use_fuzzy
+            and not request.path_pattern
+            and effective_mode != "keyword"
+        )
+        cached_results = self._try_cache_lookup(
+            request,
+            query_embedding,
+            resolved_profile,
+            effective_min_similarity,
+            effective_mode,
+        )
+        return query_embedding, cached_results, use_cache
+
     # -----------------------------------------------------------------
     # search_from_request() -- SearchRequest-based entry point
     # -----------------------------------------------------------------
@@ -549,31 +602,45 @@ class SearchEngine:
 
         filters = build_search_filters(request.language, request.chunk_type)
 
-        # Compute embedding (needed for vector/hybrid mode and cache)
-        query_embedding: list[float] = []
-        if effective_mode != "keyword":
-            query_embedding = (await self._embedding_provider.embed([request.query]))[0]
-
-        # Check cache (returns None on miss)
-        cached_results = self._try_cache_lookup(
-            request,
+        (
             query_embedding,
-            resolved_profile,
-            effective_min_similarity,
-            effective_mode,
+            cached_results,
+            use_cache,
+        ) = await self._resolve_embedding_and_cache(
+            request, resolved_profile, effective_min_similarity, effective_mode
         )
         if cached_results is not None:
             return cached_results
-        use_cache = (
-            not request.use_fuzzy
-            and not request.path_pattern
-            and effective_mode != "keyword"
+
+        return await self._execute_and_record(
+            request=request,
+            table=table,
+            query_embedding=query_embedding,
+            filters=filters,
+            profile_config=profile_config,
+            resolved_profile=resolved_profile,
+            effective_min_similarity=effective_min_similarity,
+            effective_mode=effective_mode,
+            use_cache=use_cache,
+            store=store,
         )
 
-        # Compute fetch limit
+    async def _execute_and_record(
+        self,
+        *,
+        request: SearchRequest,
+        table: Any,
+        query_embedding: list[float],
+        filters: Any,
+        profile_config: Any,
+        resolved_profile: Any,
+        effective_min_similarity: float | None,
+        effective_mode: str,
+        use_cache: bool,
+        store: Any,
+    ) -> list[SearchResult]:
+        """Dispatch search, post-process, and record results in the cache."""
         fetch_limit = self._compute_fetch_limit(request, profile_config)
-
-        # Execute search pipeline based on mode
         search_results = search_pipeline.dispatch_search(
             effective_mode,
             table,
@@ -586,31 +653,36 @@ class SearchEngine:
             self._row_to_chunk,
             self._lazy_index_manager,
         )
-
-        # Post-processing: path filter, fuzzy rerank, truncate, suggestions
-        search_results = search_postprocess.apply_post_filters(
-            search_results, request.path_pattern
+        search_results, auto_fuzzy_enabled = await self._postprocess_results(
+            search_results, request, store
         )
-
-        search_results, auto_fuzzy_enabled = search_postprocess.apply_fuzzy_reranking(
-            search_results,
-            request.query,
-            request.fuzzy_weight,
-            use_fuzzy=request.use_fuzzy,
-            fuzzy_config=self._fuzzy_search_config,
+        self._record_and_store_results(
+            request=request,
+            query_embedding=query_embedding,
+            search_results=search_results,
+            fetch_limit=fetch_limit,
+            use_cache=use_cache,
+            auto_fuzzy_enabled=auto_fuzzy_enabled,
+            resolved_profile=resolved_profile,
+            effective_min_similarity=effective_min_similarity,
+            effective_mode=effective_mode,
         )
-        search_results = search_results[: request.limit]
+        return search_results
 
-        if request.auto_suggest:
-            search_results = await search_postprocess.attach_suggestions(
-                request.query,
-                search_results,
-                store,
-                self._fuzzy_search_config,
-                self.get_fuzzy_helper,
-            )
-
-        # Record adaptive quality and cache results (inlined from removed record_and_cache)
+    def _record_and_store_results(
+        self,
+        *,
+        request: SearchRequest,
+        query_embedding: list[float],
+        search_results: list[SearchResult],
+        fetch_limit: int,
+        use_cache: bool,
+        auto_fuzzy_enabled: bool,
+        resolved_profile: Any,
+        effective_min_similarity: float | None,
+        effective_mode: str,
+    ) -> None:
+        """Record adaptive search quality and store results in cache if eligible."""
         if self._adaptive_search_enabled and search_results:
             avg_score = sum(r.score for r in search_results) / len(search_results)
             self._adaptive_searcher.record_search_quality(
@@ -629,7 +701,37 @@ class SearchEngine:
                 request.query, query_embedding, search_results, store_filters
             )
 
-        return search_results
+    async def _postprocess_results(
+        self,
+        search_results: list[SearchResult],
+        request: SearchRequest,
+        store: Any,
+    ) -> tuple[list[SearchResult], bool]:
+        """Apply path filtering, fuzzy reranking, truncation, and suggestions.
+
+        Returns:
+            Tuple of (processed_results, auto_fuzzy_enabled).
+        """
+        search_results = search_postprocess.apply_post_filters(
+            search_results, request.path_pattern
+        )
+        search_results, auto_fuzzy_enabled = search_postprocess.apply_fuzzy_reranking(
+            search_results,
+            request.query,
+            request.fuzzy_weight,
+            use_fuzzy=request.use_fuzzy,
+            fuzzy_config=self._fuzzy_search_config,
+        )
+        search_results = search_results[: request.limit]
+        if request.auto_suggest:
+            search_results = await search_postprocess.attach_suggestions(
+                request.query,
+                search_results,
+                store,
+                self._fuzzy_search_config,
+                self.get_fuzzy_helper,
+            )
+        return search_results, auto_fuzzy_enabled
 
     # -----------------------------------------------------------------
     # search() -- main orchestrator (delegates to search_from_request)

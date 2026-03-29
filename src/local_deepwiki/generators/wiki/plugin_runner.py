@@ -26,6 +26,51 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
+def _build_dependency_graph(
+    generators: list[WikiGeneratorPlugin],
+    available_names: set[str],
+) -> tuple[dict[str, int], dict[str, list[str]]]:
+    """Build in-degree and dependents mappings for Kahn's topological sort."""
+    in_degree: dict[str, int] = {g.generator_name: 0 for g in generators}
+    dependents: dict[str, list[str]] = {g.generator_name: [] for g in generators}
+    for generator in generators:
+        for dep in generator.run_after:
+            if dep in available_names:
+                in_degree[generator.generator_name] += 1
+                dependents[dep].append(generator.generator_name)
+    return in_degree, dependents
+
+
+def _kahn_topological_sort(
+    generators: list[WikiGeneratorPlugin],
+    by_name: dict[str, WikiGeneratorPlugin],
+    in_degree: dict[str, int],
+    dependents: dict[str, list[str]],
+) -> list[WikiGeneratorPlugin]:
+    """Run Kahn's algorithm to produce a priority-respecting topological ordering."""
+    ready = sorted(
+        [g for g in generators if in_degree[g.generator_name] == 0],
+        key=attrgetter("priority"),
+        reverse=True,
+    )
+    sorted_generators: list[WikiGeneratorPlugin] = []
+    while ready:
+        current = ready.pop(0)
+        sorted_generators.append(current)
+        for dep_name in dependents[current.generator_name]:
+            in_degree[dep_name] -= 1
+            if in_degree[dep_name] == 0:
+                dep_gen = by_name[dep_name]
+                insert_idx = 0
+                for i, g in enumerate(ready):
+                    if dep_gen.priority > g.priority:
+                        insert_idx = i
+                        break
+                    insert_idx = i + 1
+                ready.insert(insert_idx, dep_gen)
+    return sorted_generators
+
+
 def sort_generators_by_dependencies(
     generators: list[WikiGeneratorPlugin],
 ) -> list[WikiGeneratorPlugin]:
@@ -43,11 +88,10 @@ def sort_generators_by_dependencies(
     if not generators:
         return generators
 
-    # Build name -> generator mapping
     by_name: dict[str, WikiGeneratorPlugin] = {g.generator_name: g for g in generators}
     available_names = set(by_name.keys())
 
-    # Validate dependencies exist and warn about missing ones
+    # Warn about missing dependencies
     for generator in generators:
         missing_deps = set(generator.run_after) - available_names
         if missing_deps:
@@ -58,45 +102,11 @@ def sort_generators_by_dependencies(
                 missing_deps,
             )
 
-    # Build dependency graph for topological sort
-    # in_degree[name] = number of dependencies that must run first
-    in_degree: dict[str, int] = {g.generator_name: 0 for g in generators}
-    # dependents[name] = list of generators that depend on this one
-    dependents: dict[str, list[str]] = {g.generator_name: [] for g in generators}
+    in_degree, dependents = _build_dependency_graph(generators, available_names)
+    sorted_generators = _kahn_topological_sort(
+        generators, by_name, in_degree, dependents
+    )
 
-    for generator in generators:
-        for dep in generator.run_after:
-            if dep in available_names:
-                in_degree[generator.generator_name] += 1
-                dependents[dep].append(generator.generator_name)
-
-    # Kahn's algorithm for topological sort
-    # Start with generators that have no dependencies
-    # Sort by priority (higher first) within each level
-    ready = [g for g in generators if in_degree[g.generator_name] == 0]
-    ready = sorted(ready, key=attrgetter("priority"), reverse=True)
-
-    sorted_generators: list[WikiGeneratorPlugin] = []
-    while ready:
-        # Take the highest priority generator from ready list
-        current = ready.pop(0)
-        sorted_generators.append(current)
-
-        # Update dependents
-        for dep_name in dependents[current.generator_name]:
-            in_degree[dep_name] -= 1
-            if in_degree[dep_name] == 0:
-                # Insert in priority order
-                dep_gen = by_name[dep_name]
-                insert_idx = 0
-                for i, g in enumerate(ready):
-                    if dep_gen.priority > g.priority:
-                        insert_idx = i
-                        break
-                    insert_idx = i + 1
-                ready.insert(insert_idx, dep_gen)
-
-    # Check for cycles (some generators still have unresolved dependencies)
     if len(sorted_generators) != len(generators):
         unresolved = [
             g.generator_name for g in generators if g not in sorted_generators
@@ -159,6 +169,31 @@ async def run_plugin_generators(
         "existing_pages": list(pages),
     }
 
+    new_pages, pages_generated = await _execute_plugin_generators(
+        generators=generators,
+        pages=pages,
+        index_status=index_status,
+        wiki_path=wiki_path,
+        plugin_context=plugin_context,
+        all_source_files=all_source_files,
+        status_manager=status_manager,
+        write_callback=write_callback,
+    )
+    return new_pages, pages_generated
+
+
+async def _execute_plugin_generators(
+    *,
+    generators: list[WikiGeneratorPlugin],
+    pages: list[WikiPage],
+    index_status: IndexStatus,
+    wiki_path: Path,
+    plugin_context: dict[str, object],
+    all_source_files: list[str],
+    status_manager: WikiStatusManager,
+    write_callback: Callable[[WikiPage], Awaitable[None]],
+) -> tuple[list[WikiPage], int]:
+    """Execute each plugin generator in order, collecting generated pages."""
     new_pages: list[WikiPage] = []
     pages_generated = 0
 
@@ -170,24 +205,19 @@ async def run_plugin_generators(
                 wiki_path=wiki_path,
                 context=plugin_context,
             )
-
-            # Add generated pages
             for page in result.pages:
                 new_pages.append(page)
                 status_manager.record_page_status(page, all_source_files)
                 await write_callback(page)
                 pages_generated += 1
-
             # Update existing_pages in context for subsequent plugins
             plugin_context["existing_pages"] = list(pages) + list(new_pages)
-
             logger.debug(
                 "Plugin '%s' generated %d page(s)",
                 generator.generator_name,
                 len(result.pages),
             )
-
-        except Exception as e:  # noqa: BLE001 — plugin isolation: one bad plugin must not crash wiki generation
+        except Exception as e:  # noqa: BLE001 — plugin isolation
             logger.debug(
                 "Wiki generator plugin '%s' failed: %s", generator.generator_name, e
             )

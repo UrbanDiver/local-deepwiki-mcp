@@ -34,6 +34,57 @@ def _refactoring_risk(afferent_coupling: int) -> str:
     return "low"
 
 
+def _aggregate_coupling(
+    coupling_result: dict[str, Any],
+    module_name: str,
+) -> dict[str, Any] | None:
+    """Aggregate afferent/efferent coupling for a module and its sub-modules.
+
+    Performs an exact match first; if not found, aggregates all sub-modules
+    by prefix (e.g. ``module_name="core"`` aggregates ``"core.indexer"``, etc.).
+
+    Returns ``None`` when no coupling data is found for the module.
+    """
+    prefix = module_name + "."
+    aggregate_ca = 0
+    aggregate_ce = 0
+    matched_any = False
+    for m in coupling_result.get("metrics", []):
+        mname = m.get("module", "")
+        if mname == module_name or mname.startswith(prefix):
+            aggregate_ca += m.get("afferent_coupling", 0)
+            aggregate_ce += m.get("efferent_coupling", 0)
+            matched_any = True
+    if not matched_any:
+        return None
+    total = aggregate_ca + aggregate_ce
+    instability = round(aggregate_ce / total, 4) if total > 0 else 0.0
+    return {
+        "afferent_coupling": aggregate_ca,
+        "efferent_coupling": aggregate_ce,
+        "instability": instability,
+        "abstractness": 0.0,
+        "distance": 0.0,
+    }
+
+
+def _build_dependency_lists(
+    deps_result: dict[str, Any],
+    module_name: str,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Build sorted dependents and dependencies lists from the dependency edge list."""
+    dependents: list[dict[str, Any]] = []
+    dependencies: list[dict[str, Any]] = []
+    for edge in deps_result.get("edges", []):
+        if edge.get("target") == module_name:
+            dependents.append({"module": edge["source"], "weight": edge["weight"]})
+        elif edge.get("source") == module_name:
+            dependencies.append({"module": edge["target"], "weight": edge["weight"]})
+    dependents.sort(key=lambda d: d["weight"], reverse=True)
+    dependencies.sort(key=lambda d: d["weight"], reverse=True)
+    return dependents, dependencies
+
+
 def analyze_module_health(
     repo_path: Path,
     module_name: str,
@@ -55,45 +106,20 @@ def analyze_module_health(
         repo_path, module_filter=module_name
     )
 
-    # Filter hotspots to this module's files
+    # Filter hotspots and smells to this module's files
     module_path_prefix = module_name.replace(".", "/")
     module_hotspots = [
         h
         for h in hotspot_result.get("hotspots", [])
         if module_path_prefix in h.get("file", "")
     ]
-
-    # Filter smells to this module's files
     module_smells = [
         s
         for s in smell_result.get("smells", [])
         if module_path_prefix in s.get("file", "")
     ]
 
-    # Find this module's coupling metrics.
-    # Exact match first; if not found, aggregate all sub-modules by prefix
-    # (e.g. module_name="core" aggregates "core.indexer", "core.vectorstore", …).
-    module_coupling: dict[str, Any] | None = None
-    prefix = module_name + "."
-    aggregate_ca = 0
-    aggregate_ce = 0
-    matched_any = False
-    for m in coupling_result.get("metrics", []):
-        mname = m.get("module", "")
-        if mname == module_name or mname.startswith(prefix):
-            aggregate_ca += m.get("afferent_coupling", 0)
-            aggregate_ce += m.get("efferent_coupling", 0)
-            matched_any = True
-    if matched_any:
-        total = aggregate_ca + aggregate_ce
-        instability = round(aggregate_ce / total, 4) if total > 0 else 0.0
-        module_coupling = {
-            "afferent_coupling": aggregate_ca,
-            "efferent_coupling": aggregate_ce,
-            "instability": instability,
-            "abstractness": 0.0,
-            "distance": 0.0,
-        }
+    module_coupling = _aggregate_coupling(coupling_result, module_name)
 
     # Compute module-level scores
     total_functions = len(module_hotspots)
@@ -102,21 +128,10 @@ def analyze_module_health(
     total_lines = sum(h.get("details", {}).get("length", 0) for h in module_hotspots)
     smell_score = score_smells(module_smells, max(total_lines, 1))
 
-    # Overall module score (simple average of complexity + smells)
     avg_score = (complexity_score["score"] + smell_score["score"]) / 2
     ca = module_coupling.get("afferent_coupling", 0) if module_coupling else 0
 
-    # Find dependents and dependencies from the edge list
-    dependents: list[dict[str, Any]] = []
-    dependencies: list[dict[str, Any]] = []
-    for edge in deps_result.get("edges", []):
-        if edge.get("target") == module_name:
-            dependents.append({"module": edge["source"], "weight": edge["weight"]})
-        elif edge.get("source") == module_name:
-            dependencies.append({"module": edge["target"], "weight": edge["weight"]})
-
-    dependents.sort(key=lambda d: d["weight"], reverse=True)
-    dependencies.sort(key=lambda d: d["weight"], reverse=True)
+    dependents, dependencies = _build_dependency_lists(deps_result, module_name)
 
     logger.info("Module health for %s: score=%.1f", module_name, avg_score)
 

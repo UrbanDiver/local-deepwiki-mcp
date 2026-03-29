@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from threading import Lock, Timer
-from typing import TYPE_CHECKING, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 from rich.console import Console
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
@@ -196,6 +196,83 @@ class DebouncedHandler(FileSystemEventHandler):
             # Run in asyncio event loop
             asyncio.run(self._do_reindex(files, changes))
 
+    def _print_change_summary(
+        self,
+        changed_files: list[str],
+        changes: dict[str, FileChange] | None,
+    ) -> None:
+        """Print a rich summary of detected file changes to the console."""
+        console.print()
+        console.rule("[bold blue]Changes Detected[/bold blue]")
+
+        for f in changed_files[:10]:
+            rel_path = Path(f).relative_to(self.repo_path)
+            change_type = ""
+            if changes and f in changes:
+                change_type = f"[{changes[f].change_type.value}] "
+            console.print(f"  [dim]- {change_type}{rel_path}[/dim]")
+        if len(changed_files) > 10:
+            console.print(f"  [dim]... and {len(changed_files) - 10} more[/dim]")
+
+        if changes:
+            type_counts: dict[str, int] = {}
+            for change in changes.values():
+                type_counts[change.change_type.value] = (
+                    type_counts.get(change.change_type.value, 0) + 1
+                )
+            logger.info("Change types: %s", type_counts)
+
+        console.print()
+        console.print("[yellow]Starting incremental reindex...[/yellow]")
+
+    async def _run_incremental_index(
+        self,
+        start_time: float,
+        progress_callback: Callable[[str, int, int], None],
+    ) -> tuple[Any, RepositoryIndexer]:
+        """Run incremental indexing and return (status, indexer)."""
+        indexer = RepositoryIndexer(repo_path=self.repo_path, config=self.config)
+        status = await indexer.index(
+            full_rebuild=False,
+            progress_callback=progress_callback,
+        )
+        index_time = time.time() - start_time
+        console.print(
+            f"[green]Indexed {status.total_files} files in {index_time:.1f}s[/green]"
+        )
+        return status, indexer
+
+    async def _run_wiki_generation(
+        self,
+        indexer: RepositoryIndexer,
+        status: Any,
+        start_time: float,
+        progress_callback: Callable[[str, int, int], None],
+    ) -> int:
+        """Generate wiki documentation and return number of pages produced."""
+        console.print("[yellow]Regenerating wiki...[/yellow]")
+        wiki_start = time.time()
+        wiki_structure = await generate_wiki(
+            repo_path=self.repo_path,
+            wiki_path=indexer.wiki_path,
+            vector_store=indexer.vector_store,
+            index_status=status,
+            config=self.config,
+            llm_provider=self.llm_provider,
+            progress_callback=progress_callback,
+            full_rebuild=False,
+        )
+        wiki_time = time.time() - wiki_start
+        console.print(
+            f"[green]Generated {len(wiki_structure.pages)} pages in {wiki_time:.1f}s[/green]"
+        )
+        total_time = time.time() - start_time
+        console.print()
+        console.print(f"[bold green]Done in {total_time:.1f}s[/bold green]")
+        console.rule()
+        console.print("[dim]Watching for changes... (Ctrl+C to stop)[/dim]")
+        return len(wiki_structure.pages)
+
     async def _do_reindex(
         self,
         changed_files: list[str],
@@ -219,86 +296,26 @@ class DebouncedHandler(FileSystemEventHandler):
 
         logger.info("Starting reindex for %s changed files", len(changed_files))
 
+        def progress_callback(msg: str, current: int, total: int) -> None:
+            if total > 0:
+                console.print(f"  [{current}/{total}] {msg}")
+            else:
+                console.print(f"  {msg}")
+
         try:
-            console.print()
-            console.rule("[bold blue]Changes Detected[/bold blue]")
+            self._print_change_summary(changed_files, changes)
 
-            # Show changes with their types
-            for f in changed_files[:10]:  # Show first 10
-                rel_path = Path(f).relative_to(self.repo_path)
-                change_type = ""
-                if changes and f in changes:
-                    change_type = f"[{changes[f].change_type.value}] "
-                console.print(f"  [dim]- {change_type}{rel_path}[/dim]")
-            if len(changed_files) > 10:
-                console.print(f"  [dim]... and {len(changed_files) - 10} more[/dim]")
-
-            # Log change type summary
-            if changes:
-                type_counts: dict[str, int] = {}
-                for change in changes.values():
-                    type_counts[change.change_type.value] = (
-                        type_counts.get(change.change_type.value, 0) + 1
-                    )
-                logger.info("Change types: %s", type_counts)
-
-            console.print()
-            console.print("[yellow]Starting incremental reindex...[/yellow]")
-
-            # Create indexer
-            indexer = RepositoryIndexer(
-                repo_path=self.repo_path,
-                config=self.config,
-            )
-
-            # Progress callback
-            def progress_callback(msg: str, current: int, total: int) -> None:
-                if total > 0:
-                    console.print(f"  [{current}/{total}] {msg}")
-                else:
-                    console.print(f"  {msg}")
-
-            # Run incremental index
-            status = await indexer.index(
-                full_rebuild=False,
-                progress_callback=progress_callback,
-            )
-
-            index_time = time.time() - start_time
-            console.print(
-                f"[green]Indexed {status.total_files} files in {index_time:.1f}s[/green]"
+            status, indexer = await self._run_incremental_index(
+                start_time, progress_callback
             )
             result.files_processed = status.total_files
 
-            # Generate wiki
-            console.print("[yellow]Regenerating wiki...[/yellow]")
-
-            wiki_start = time.time()
-            wiki_structure = await generate_wiki(
-                repo_path=self.repo_path,
-                wiki_path=indexer.wiki_path,
-                vector_store=indexer.vector_store,
-                index_status=status,
-                config=self.config,
-                llm_provider=self.llm_provider,
-                progress_callback=progress_callback,
-                full_rebuild=False,
+            result.pages_generated = await self._run_wiki_generation(
+                indexer, status, start_time, progress_callback
             )
-
-            wiki_time = time.time() - wiki_start
-            console.print(
-                f"[green]Generated {len(wiki_structure.pages)} pages in {wiki_time:.1f}s[/green]"
-            )
-            result.pages_generated = len(wiki_structure.pages)
-
-            total_time = time.time() - start_time
-            console.print()
-            console.print(f"[bold green]Done in {total_time:.1f}s[/bold green]")
-            console.rule()
-            console.print("[dim]Watching for changes... (Ctrl+C to stop)[/dim]")
 
             result.success = True
-            result.duration_seconds = total_time
+            result.duration_seconds = time.time() - start_time
 
         except Exception as e:  # noqa: BLE001 - Keep watcher alive despite errors
             logger.exception("Error during reindex: %s", e)
@@ -541,8 +558,8 @@ async def initial_index(
     )
 
 
-def main() -> None:
-    """Main entry point for the watch command."""
+def _build_watch_arg_parser() -> argparse.ArgumentParser:
+    """Build the argument parser for the watch command."""
     parser = argparse.ArgumentParser(
         description="Watch a repository for changes and auto-regenerate wiki documentation."
     )
@@ -580,8 +597,25 @@ def main() -> None:
         action="store_true",
         help="Disable progress bars (for non-interactive use)",
     )
+    return parser
 
-    args = parser.parse_args()
+
+def _run_watcher_loop(watcher: RepositoryWatcher) -> None:
+    """Start the watcher and block until KeyboardInterrupt."""
+    try:
+        watcher.start()
+        while watcher.is_running():
+            time.sleep(1)
+    except KeyboardInterrupt:
+        console.print()
+        console.print("[yellow]Stopping watcher...[/yellow]")
+        watcher.stop()
+        console.print("[green]Done.[/green]")
+
+
+def main() -> None:
+    """Main entry point for the watch command."""
+    args = _build_watch_arg_parser().parse_args()
 
     repo_path = Path(args.repo_path).resolve()
     if not repo_path.exists():
@@ -601,7 +635,6 @@ def main() -> None:
     console.print(f"LLM Provider: [cyan]{args.llm or config.llm.provider}[/cyan]")
     console.print()
 
-    # Run initial index unless skipped
     if not args.skip_initial:
         asyncio.run(
             initial_index(
@@ -613,7 +646,6 @@ def main() -> None:
             )
         )
 
-    # Start watching
     console.print()
     console.rule("[bold blue]Starting Watch Mode[/bold blue]")
     console.print("[dim]Watching for changes... (Ctrl+C to stop)[/dim]")
@@ -625,16 +657,7 @@ def main() -> None:
         debounce_seconds=args.debounce,
         llm_provider=args.llm,
     )
-
-    try:
-        watcher.start()
-        while watcher.is_running():
-            time.sleep(1)
-    except KeyboardInterrupt:
-        console.print()
-        console.print("[yellow]Stopping watcher...[/yellow]")
-        watcher.stop()
-        console.print("[green]Done.[/green]")
+    _run_watcher_loop(watcher)
 
 
 if __name__ == "__main__":

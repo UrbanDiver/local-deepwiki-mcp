@@ -471,30 +471,49 @@ def generate_dependency_graph(
     # Add internal dependency edges
     _add_edges(lines, internal_deps, node_ids, circular_edges)
 
-    # Add external dependency edges
-    if show_external and ext_node_ids:
-        for module, ext_imports in sorted(data.module_external_deps.items()):
-            from_id = node_ids.get(module)
-            if not from_id:
-                continue
-            for ext in sorted(ext_imports):
-                target_ext_id = ext_node_ids.get(ext)
-                if target_ext_id:
-                    lines.append(f"    {from_id} -.-> {target_ext_id}")
+    _add_external_edges(lines, data, ext_node_ids, node_ids, show_external)
+    _add_wiki_links(lines, node_ids, project_name, wiki_base_path)
 
-    # Add click handlers for wiki links
-    if wiki_base_path:
-        for module, node_id in sorted(node_ids.items()):
-            wiki_path = _module_to_wiki_path(module, project_name)
-            lines.append(f'    click {node_id} "{wiki_base_path}{wiki_path}"')
-
-    # Add styling
     lines.append("    classDef external fill:#2d2d3d,stroke:#666,stroke-dasharray: 5 5")
     _add_circular_styling(lines, internal_deps, node_ids, circular_edges)
 
     lines.append("```")
 
     return "\n".join(lines)
+
+
+def _add_external_edges(
+    lines: list[str],
+    data: Any,
+    ext_node_ids: dict[str, str],
+    node_ids: dict[str, str],
+    show_external: bool,
+) -> None:
+    """Append external dependency edges to the Mermaid flowchart lines."""
+    if not (show_external and ext_node_ids):
+        return
+    for module, ext_imports in sorted(data.module_external_deps.items()):
+        from_id = node_ids.get(module)
+        if not from_id:
+            continue
+        for ext in sorted(ext_imports):
+            target_ext_id = ext_node_ids.get(ext)
+            if target_ext_id:
+                lines.append(f"    {from_id} -.-> {target_ext_id}")
+
+
+def _add_wiki_links(
+    lines: list[str],
+    node_ids: dict[str, str],
+    project_name: str,
+    wiki_base_path: str,
+) -> None:
+    """Append Mermaid click handlers linking nodes to wiki pages."""
+    if not wiki_base_path:
+        return
+    for module, node_id in sorted(node_ids.items()):
+        wiki_path = _module_to_wiki_path(module, project_name)
+        lines.append(f'    click {node_id} "{wiki_base_path}{wiki_path}"')
 
 
 def _parse_external_import(line: str) -> str | None:

@@ -147,13 +147,21 @@ class RepositoryIndexer:
         self._exclude_compiled: list = []
         self._compile_exclude_patterns()
 
-        # Composition: delegate graph extraction and status tracking.
-        # Use lazy lookups for logger/get_event_emitter so that test patches
-        # applied to this module's globals are picked up at call time.
+        self._graph_helper, self._status_tracker = self._init_composition_objects()
+
+    def _init_composition_objects(
+        self,
+    ) -> tuple[GraphExtractor, IndexStatusTracker]:
+        """Build GraphExtractor and IndexStatusTracker helper objects.
+
+        Uses ``sys.modules[__name__]`` so that test patches on module-level
+        globals (logger, get_event_emitter) are picked up at call time rather
+        than at class definition time.
+        """
         import sys
 
         _this_module = sys.modules[__name__]
-        self._graph_helper = GraphExtractor(
+        graph_helper = GraphExtractor(
             repo_path=self.repo_path,
             parser=self.parser,
             graph_store=self.graph_store,
@@ -161,7 +169,7 @@ class RepositoryIndexer:
             graph_enabled=self._graph_enabled,
             host_module=_this_module,
         )
-        self._status_tracker = IndexStatusTracker(
+        status_tracker = IndexStatusTracker(
             wiki_path=self.wiki_path,
             repo_path=self.repo_path,
             status_manager=self._status_manager,
@@ -170,6 +178,7 @@ class RepositoryIndexer:
             host_module=_this_module,
             ast_cache=self.ast_cache,
         )
+        return graph_helper, status_tracker
 
     def _compile_exclude_patterns(self) -> None:
         """Pre-compile exclude patterns from config into skip_dirs and regexes."""
@@ -417,41 +426,18 @@ class RepositoryIndexer:
         logger.info("Starting indexing for repository: %s", self.repo_path)
         logger.debug("Wiki path: %s, Full rebuild: %s", self.wiki_path, full_rebuild)
 
-        # Emit INDEX_START event
-        emitter = get_event_emitter()
-        await emitter.emit(
-            EventType.INDEX_START,
-            {
-                "repo_path": str(self.repo_path),
-                "full_rebuild": full_rebuild,
-            },
-        )
+        await self._emit_index_start(full_rebuild)
 
         # Security: Scan for hardcoded secrets before indexing
         await self._scan_for_secrets(progress_callback)
 
-        # Phase 1: Load previous status for incremental updates
-        previous_status, prev_files_by_path, full_rebuild = await asyncio.to_thread(
-            self._status_tracker.load_previous_status, full_rebuild
-        )
-
-        # Phase 2: Collect files to process (and detect deleted files)
-        files_to_process, files_unchanged, deleted_file_paths = (
-            self._status_tracker.collect_files_to_process(
-                prev_files_by_path, progress_callback
-            )
-        )
-
-        # Phase 3: Delete old chunks for modified and deleted files (incremental only)
-        if not full_rebuild and prev_files_by_path:
-            if files_to_process:
-                await self._delete_old_chunks_for_modified_files(
-                    files_to_process, prev_files_by_path, progress_callback
-                )
-            if deleted_file_paths:
-                await self._delete_chunks_for_deleted_files(
-                    deleted_file_paths, progress_callback
-                )
+        (
+            full_rebuild,
+            files_to_process,
+            files_unchanged,
+            deleted_file_paths,
+            prev_files_by_path,
+        ) = await self._prepare_incremental_update(full_rebuild, progress_callback)
 
         # Phase 4: Parse files in parallel and store chunks
         (
@@ -488,7 +474,60 @@ class RepositoryIndexer:
         if progress_callback:
             progress_callback("Indexing complete", 1, 1)
 
-        # Emit INDEX_COMPLETE event
+        await self._emit_index_complete(status)
+
+        return status
+
+    async def _prepare_incremental_update(
+        self,
+        full_rebuild: bool,
+        progress_callback: ProgressCallback | None,
+    ) -> tuple[bool, list[Path], list[FileInfo], list[str], dict[str, FileInfo]]:
+        """Load previous status, collect files, and delete stale chunks.
+
+        Returns:
+            Tuple of (full_rebuild, files_to_process, files_unchanged,
+            deleted_file_paths, prev_files_by_path).
+        """
+        _previous_status, prev_files_by_path, full_rebuild = await asyncio.to_thread(
+            self._status_tracker.load_previous_status, full_rebuild
+        )
+        files_to_process, files_unchanged, deleted_file_paths = (
+            self._status_tracker.collect_files_to_process(
+                prev_files_by_path, progress_callback
+            )
+        )
+        if not full_rebuild and prev_files_by_path:
+            if files_to_process:
+                await self._delete_old_chunks_for_modified_files(
+                    files_to_process, prev_files_by_path, progress_callback
+                )
+            if deleted_file_paths:
+                await self._delete_chunks_for_deleted_files(
+                    deleted_file_paths, progress_callback
+                )
+        return (
+            full_rebuild,
+            files_to_process,
+            files_unchanged,
+            deleted_file_paths,
+            prev_files_by_path,
+        )
+
+    async def _emit_index_start(self, full_rebuild: bool) -> None:
+        """Emit the INDEX_START lifecycle event."""
+        emitter = get_event_emitter()
+        await emitter.emit(
+            EventType.INDEX_START,
+            {
+                "repo_path": str(self.repo_path),
+                "full_rebuild": full_rebuild,
+            },
+        )
+
+    async def _emit_index_complete(self, status: "IndexStatus") -> None:
+        """Emit the INDEX_COMPLETE lifecycle event."""
+        emitter = get_event_emitter()
         await emitter.emit(
             EventType.INDEX_COMPLETE,
             {
@@ -498,8 +537,6 @@ class RepositoryIndexer:
                 "languages": list(status.languages.keys()),
             },
         )
-
-        return status
 
     def _find_source_files(self) -> list[Path]:
         """Find all source files in the repository.

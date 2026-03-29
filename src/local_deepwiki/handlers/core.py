@@ -40,6 +40,31 @@ from local_deepwiki.validation import (
 
 logger = get_logger(__name__)
 
+
+def _build_ask_question_result(question: str, query_result: Any) -> dict[str, Any]:
+    """Convert a QueryResult to the ask_question response dict."""
+    sources = [
+        {
+            "file": s.file,
+            "lines": s.lines,
+            "type": s.chunk_type,
+            "score": s.score,
+            **({"wiki_resource": s.wiki_resource} if s.wiki_resource else {}),
+        }
+        for s in query_result.sources
+    ]
+    result: dict[str, Any] = {
+        "question": question,
+        "answer": query_result.answer,
+        "sources": sources,
+    }
+    if query_result.agentic_metadata is not None:
+        result["agentic_rag"] = query_result.agentic_metadata
+    if query_result.trace is not None:
+        result["_trace"] = query_result.trace
+    return result
+
+
 # Re-export indexing handler and helpers for backward compatibility
 from local_deepwiki.handlers.indexing import (  # noqa: F401
     _handle_index_repository_impl,
@@ -99,29 +124,8 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
         debug=validated.debug,
     )
 
-    # Convert service result to handler response format
-    sources = [
-        {
-            "file": s.file,
-            "lines": s.lines,
-            "type": s.chunk_type,
-            "score": s.score,
-            **({"wiki_resource": s.wiki_resource} if s.wiki_resource else {}),
-        }
-        for s in query_result.sources
-    ]
+    result = _build_ask_question_result(question, query_result)
 
-    result: dict[str, Any] = {
-        "question": question,
-        "answer": query_result.answer,
-        "sources": sources,
-    }
-    if query_result.agentic_metadata is not None:
-        result["agentic_rag"] = query_result.agentic_metadata
-    if query_result.trace is not None:
-        result["_trace"] = query_result.trace
-
-    # Audit: Log query execution success
     duration_ms = int((time.time() - start_time) * 1000)
     audit_logger.log_query_execution(
         subject_id=subject_id,
@@ -236,59 +240,84 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     )
 
 
+def _audit_export_started(
+    audit_logger: Any,
+    subject_id: str,
+    wiki_path: Path,
+    output_path: Path,
+    export_type: str,
+) -> None:
+    """Log the start of an export operation."""
+    audit_logger.log_export_operation(
+        subject_id=subject_id,
+        wiki_path=str(wiki_path),
+        output_path=str(output_path),
+        export_type=export_type,
+        operation="started",
+        success=True,
+    )
+
+
+def _audit_export_completed(
+    audit_logger: Any,
+    subject_id: str,
+    wiki_path: Path,
+    output_path: Path,
+    export_type: str,
+    page_count: int,
+    duration_ms: int,
+) -> None:
+    """Log the completion of an export operation."""
+    audit_logger.log_export_operation(
+        subject_id=subject_id,
+        wiki_path=str(wiki_path),
+        output_path=str(output_path),
+        export_type=export_type,
+        operation="completed",
+        success=True,
+        pages_exported=page_count,
+        duration_ms=duration_ms,
+    )
+
+
 @handle_tool_errors
 async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     """Handle export_wiki_html tool call with streaming support for large wikis."""
-    # RBAC check - behavior depends on controller mode (disabled/permissive/enforced)
     controller = get_access_controller()
     controller.require_permission(Permission.EXPORT_HTML)
 
     from local_deepwiki.export.html import export_to_html
-    from local_deepwiki.export.streaming import ExportConfig, WikiPageIterator
+    from local_deepwiki.export.streaming import WikiPageIterator
 
-    # Validate with Pydantic
     try:
         validated = ExportWikiHtmlArgs.model_validate(args)
     except PydanticValidationError as e:
         raise ValueError(str(e)) from e
 
     wiki_path = Path(validated.wiki_path).resolve()
-
     if not wiki_path.exists():
         raise path_not_found_error(str(wiki_path), "wiki")
 
-    # Determine and validate output path
     raw_output = validated.output_path
-    if raw_output:
-        resolved_output = _validate_export_path(Path(raw_output), wiki_path)
-    else:
-        resolved_output = _validate_export_path(
+    resolved_output = (
+        _validate_export_path(Path(raw_output), wiki_path)
+        if raw_output
+        else _validate_export_path(
             wiki_path.parent / f"{wiki_path.name}_html", wiki_path
         )
+    )
 
-    # Get subject ID for audit logging
     subject = controller.get_current_subject()
     subject_id = subject.identifier if subject else "anonymous"
     audit_logger = get_audit_logger()
     start_time = time.time()
 
-    # Audit: Log export operation started
-    actual_output = resolved_output
-    audit_logger.log_export_operation(
-        subject_id=subject_id,
-        wiki_path=str(wiki_path),
-        output_path=str(actual_output),
-        export_type="html",
-        operation="started",
-        success=True,
-    )
+    _audit_export_started(audit_logger, subject_id, wiki_path, resolved_output, "html")
 
-    # Check wiki size and recommend streaming if large
     iterator = WikiPageIterator(wiki_path)
     page_count = iterator.get_page_count()
     total_size_mb = iterator.get_total_size_bytes() / (1024 * 1024)
     use_streaming = iterator.should_use_streaming()
-
     logger.info(
         "Wiki export: %d pages, %.2fMB, streaming: %s",
         page_count,
@@ -298,45 +327,41 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
 
     result = export_to_html(wiki_path, resolved_output)
 
-    # Audit: Log export operation completed
-    duration_ms = int((time.time() - start_time) * 1000)
-    audit_logger.log_export_operation(
-        subject_id=subject_id,
-        wiki_path=str(wiki_path),
-        output_path=str(actual_output),
-        export_type="html",
-        operation="completed",
-        success=True,
-        pages_exported=page_count,
-        duration_ms=duration_ms,
+    _audit_export_completed(
+        audit_logger,
+        subject_id,
+        wiki_path,
+        resolved_output,
+        "html",
+        page_count,
+        int((time.time() - start_time) * 1000),
     )
 
-    response = {
-        "status": "success",
-        "message": result,
-        "output_path": str(actual_output),
-        "open_with": f"open {actual_output}/index.html",
-        "stats": {
-            "pages_exported": page_count,
-            "total_size_mb": round(total_size_mb, 2),
-            "streaming_mode": use_streaming,
+    return make_tool_text_content(
+        "export_wiki_html",
+        {
+            "status": "success",
+            "message": result,
+            "output_path": str(resolved_output),
+            "open_with": f"open {resolved_output}/index.html",
+            "stats": {
+                "pages_exported": page_count,
+                "total_size_mb": round(total_size_mb, 2),
+                "streaming_mode": use_streaming,
+            },
         },
-    }
-
-    return make_tool_text_content("export_wiki_html", response)
+    )
 
 
 @handle_tool_errors
 async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     """Handle export_wiki_pdf tool call with streaming support for large wikis."""
-    # RBAC check - behavior depends on controller mode (disabled/permissive/enforced)
     controller = get_access_controller()
     controller.require_permission(Permission.EXPORT_PDF)
 
     from local_deepwiki.export.pdf import export_to_pdf
-    from local_deepwiki.export.streaming import ExportConfig, WikiPageIterator
+    from local_deepwiki.export.streaming import WikiPageIterator
 
-    # Validate with Pydantic
     try:
         validated = ExportWikiPdfArgs.model_validate(args)
     except PydanticValidationError as e:
@@ -344,46 +369,31 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
 
     wiki_path = Path(validated.wiki_path).resolve()
     single_file = validated.single_file
-
     if not wiki_path.exists():
         raise path_not_found_error(str(wiki_path), "wiki")
 
-    # Determine and validate output path
     raw_output = validated.output_path
     if raw_output:
         resolved_output = _validate_export_path(Path(raw_output), wiki_path)
     else:
-        # Determine default path based on single_file mode
-        if single_file:
-            default_path = wiki_path.parent / f"{wiki_path.name}.pdf"
-        else:
-            default_path = wiki_path.parent / f"{wiki_path.name}_pdfs"
+        default_path = (
+            wiki_path.parent / f"{wiki_path.name}.pdf"
+            if single_file
+            else wiki_path.parent / f"{wiki_path.name}_pdfs"
+        )
         resolved_output = _validate_export_path(default_path, wiki_path)
 
-    # Get subject ID for audit logging
     subject = controller.get_current_subject()
     subject_id = subject.identifier if subject else "anonymous"
     audit_logger = get_audit_logger()
     start_time = time.time()
 
-    actual_output = resolved_output
+    _audit_export_started(audit_logger, subject_id, wiki_path, resolved_output, "pdf")
 
-    # Audit: Log export operation started
-    audit_logger.log_export_operation(
-        subject_id=subject_id,
-        wiki_path=str(wiki_path),
-        output_path=str(actual_output),
-        export_type="pdf",
-        operation="started",
-        success=True,
-    )
-
-    # Check wiki size for stats
     iterator = WikiPageIterator(wiki_path)
     page_count = iterator.get_page_count()
     total_size_mb = iterator.get_total_size_bytes() / (1024 * 1024)
     use_streaming = iterator.should_use_streaming()
-
     logger.info(
         "PDF export: %d pages, %.2fMB, streaming: %s",
         page_count,
@@ -393,28 +403,26 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
 
     result = export_to_pdf(wiki_path, resolved_output, single_file=single_file)
 
-    # Audit: Log export operation completed
-    duration_ms = int((time.time() - start_time) * 1000)
-    audit_logger.log_export_operation(
-        subject_id=subject_id,
-        wiki_path=str(wiki_path),
-        output_path=str(actual_output),
-        export_type="pdf",
-        operation="completed",
-        success=True,
-        pages_exported=page_count,
-        duration_ms=duration_ms,
+    _audit_export_completed(
+        audit_logger,
+        subject_id,
+        wiki_path,
+        resolved_output,
+        "pdf",
+        page_count,
+        int((time.time() - start_time) * 1000),
     )
 
-    response = {
-        "status": "success",
-        "message": result,
-        "output_path": str(actual_output),
-        "stats": {
-            "pages_exported": page_count,
-            "total_size_mb": round(total_size_mb, 2),
-            "streaming_mode": use_streaming,
+    return make_tool_text_content(
+        "export_wiki_pdf",
+        {
+            "status": "success",
+            "message": result,
+            "output_path": str(resolved_output),
+            "stats": {
+                "pages_exported": page_count,
+                "total_size_mb": round(total_size_mb, 2),
+                "streaming_mode": use_streaming,
+            },
         },
-    }
-
-    return make_tool_text_content("export_wiki_pdf", response)
+    )

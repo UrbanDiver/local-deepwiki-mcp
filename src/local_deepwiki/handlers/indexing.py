@@ -211,6 +211,145 @@ async def _generate_wiki_hybrid(
     return wiki_structure
 
 
+async def _generate_wiki_for_mode(
+    repo_path: Path,
+    indexer: RepositoryIndexer,
+    status: Any,
+    config: Any,
+    llm_provider: str | None,
+    progress_callback: Any,
+    full_rebuild: bool,
+) -> WikiStructure:
+    """Dispatch wiki generation based on the configured generation mode."""
+    from local_deepwiki.config import GenerationMode
+
+    gen_mode = config.wiki.generation_mode
+    match gen_mode:
+        case GenerationMode.LAZY:
+            return _generate_wiki_lazy(indexer, status, config)
+        case GenerationMode.HYBRID:
+            return await _generate_wiki_hybrid(
+                repo_path,
+                indexer,
+                status,
+                config,
+                llm_provider,
+                progress_callback,
+                full_rebuild,
+            )
+        case _:
+            return await generate_wiki(
+                repo_path=repo_path,
+                wiki_path=indexer.wiki_path,
+                vector_store=indexer.vector_store,
+                index_status=status,
+                config=config,
+                llm_provider=llm_provider,
+                progress_callback=progress_callback,
+                full_rebuild=full_rebuild,
+            )
+
+
+async def _notify_pipeline_complete(
+    notifier: Any,
+    registry: Any,
+    operation_id: str,
+    status: Any,
+    wiki_structure: WikiStructure,
+) -> None:
+    """Send the final progress notification and mark the operation complete."""
+    await _notify(
+        notifier,
+        current=6,
+        phase=ProgressPhase.COMPLETE,
+        message=(
+            f"Complete: {status.total_files} files, "
+            f"{status.total_chunks} chunks, "
+            f"{len(wiki_structure.pages)} pages"
+        ),
+        metadata={
+            "files_processed": status.total_files,
+            "total_files": status.total_files,
+            "chunks_created": status.total_chunks,
+            "pages_generated": len(wiki_structure.pages),
+        },
+    )
+    if notifier:
+        await notifier.flush()
+    registry.complete_operation(operation_id, record_timing=True)
+
+
+async def _run_index_and_notify(
+    notifier: Any,
+    indexer: RepositoryIndexer,
+    repo_path: Path,
+    config: Any,
+    llm_provider: str | None,
+    full_rebuild: bool,
+    sync_progress_callback: Any,
+) -> tuple[Any, Any]:
+    """Run the parse/index and wiki-generation phases with progress notifications.
+
+    Returns (status, wiki_structure).
+    """
+    await _notify(
+        notifier,
+        current=1,
+        phase=ProgressPhase.SCANNING,
+        message=f"Starting indexing of {repo_path.name}",
+        metadata={
+            "files_processed": 0,
+            "total_files": 0,
+            "chunks_created": 0,
+            "pages_generated": 0,
+        },
+    )
+    await _notify(
+        notifier,
+        current=2,
+        phase=ProgressPhase.PARSING,
+        message="Parsing source files...",
+    )
+
+    status = await indexer.index(
+        full_rebuild=full_rebuild, progress_callback=sync_progress_callback
+    )
+
+    # LanceDB 0.26: compact all dataset versions into a single stable
+    # snapshot so concurrent wiki-generation reads don't collide with
+    # deferred fragment compaction.
+    indexer.vector_store.stabilize()
+
+    await _notify(
+        notifier,
+        current=4,
+        phase=ProgressPhase.STORING,
+        message=f"Indexed {status.total_files} files, {status.total_chunks} chunks",
+        metadata={
+            "files_processed": status.total_files,
+            "total_files": status.total_files,
+            "chunks_created": status.total_chunks,
+        },
+    )
+    await _notify(
+        notifier,
+        current=5,
+        phase=ProgressPhase.WIKI_GENERATION,
+        message="Generating wiki documentation...",
+    )
+
+    wiki_structure = await _generate_wiki_for_mode(
+        repo_path,
+        indexer,
+        status,
+        config,
+        llm_provider,
+        sync_progress_callback,
+        full_rebuild,
+    )
+    return status, wiki_structure
+
+
 async def _run_indexing_pipeline(
     repo_path: Path,
     config: Any,
@@ -226,130 +365,116 @@ async def _run_indexing_pipeline(
     """
     registry = get_progress_registry()
     wiki_path = config.get_wiki_path(repo_path)
-    progress_data_path = wiki_path / "progress_history.json"
-    registry.set_data_path(progress_data_path)
+    registry.set_data_path(wiki_path / "progress_history.json")
 
     notifier, operation_id = create_progress_notifier(
         operation_type=OperationType.INDEX_REPOSITORY,
         server=server,
         total=6,
     )
-
     indexer = RepositoryIndexer(
         repo_path=repo_path,
         config=config,
         embedding_provider_name=embedding_provider,
     )
-
     progress_messages: list[str] = []
 
     def sync_progress_callback(msg: str, current: int, total: int) -> None:
         progress_messages.append(f"[{current}/{total}] {msg}")
 
     try:
-        await _notify(
+        status, wiki_structure = await _run_index_and_notify(
             notifier,
-            current=1,
-            phase=ProgressPhase.SCANNING,
-            message=f"Starting indexing of {repo_path.name}",
-            metadata={
-                "files_processed": 0,
-                "total_files": 0,
-                "chunks_created": 0,
-                "pages_generated": 0,
-            },
+            indexer,
+            repo_path,
+            config,
+            llm_provider,
+            full_rebuild,
+            sync_progress_callback,
         )
-
-        await _notify(
-            notifier,
-            current=2,
-            phase=ProgressPhase.PARSING,
-            message="Parsing source files...",
+        await _notify_pipeline_complete(
+            notifier, registry, operation_id, status, wiki_structure
         )
-
-        status = await indexer.index(
-            full_rebuild=full_rebuild,
-            progress_callback=sync_progress_callback,
-        )
-
-        # LanceDB 0.26: compact all dataset versions into a single stable
-        # snapshot so concurrent wiki-generation reads don't collide with
-        # deferred fragment compaction.
-        indexer.vector_store.stabilize()
-
-        await _notify(
-            notifier,
-            current=4,
-            phase=ProgressPhase.STORING,
-            message=f"Indexed {status.total_files} files, {status.total_chunks} chunks",
-            metadata={
-                "files_processed": status.total_files,
-                "total_files": status.total_files,
-                "chunks_created": status.total_chunks,
-            },
-        )
-
-        await _notify(
-            notifier,
-            current=5,
-            phase=ProgressPhase.WIKI_GENERATION,
-            message="Generating wiki documentation...",
-        )
-
-        from local_deepwiki.config import GenerationMode
-
-        gen_mode = config.wiki.generation_mode
-
-        match gen_mode:
-            case GenerationMode.LAZY:
-                wiki_structure = _generate_wiki_lazy(indexer, status, config)
-
-            case GenerationMode.HYBRID:
-                wiki_structure = await _generate_wiki_hybrid(
-                    repo_path,
-                    indexer,
-                    status,
-                    config,
-                    llm_provider,
-                    sync_progress_callback,
-                    full_rebuild,
-                )
-
-            case _:
-                wiki_structure = await generate_wiki(
-                    repo_path=repo_path,
-                    wiki_path=indexer.wiki_path,
-                    vector_store=indexer.vector_store,
-                    index_status=status,
-                    config=config,
-                    llm_provider=llm_provider,
-                    progress_callback=sync_progress_callback,
-                    full_rebuild=full_rebuild,
-                )
-
-        await _notify(
-            notifier,
-            current=6,
-            phase=ProgressPhase.COMPLETE,
-            message=f"Complete: {status.total_files} files, {status.total_chunks} chunks, {len(wiki_structure.pages)} pages",
-            metadata={
-                "files_processed": status.total_files,
-                "total_files": status.total_files,
-                "chunks_created": status.total_chunks,
-                "pages_generated": len(wiki_structure.pages),
-            },
-        )
-        if notifier:
-            await notifier.flush()
-
-        registry.complete_operation(operation_id, record_timing=True)
-
     except Exception:  # noqa: BLE001 — handler boundary: ensure operation is marked complete before re-raising
         registry.complete_operation(operation_id, record_timing=False)
         raise
 
     all_messages = (notifier.messages if notifier else []) + progress_messages
     return indexer, status, wiki_structure, all_messages, operation_id
+
+
+async def _run_pipeline_with_audit(
+    *,
+    repo_path: Path,
+    config: Any,
+    llm_provider: Any,
+    embedding_provider: Any,
+    full_rebuild: bool,
+    server: Any,
+    audit_logger: Any,
+    subject_id: str,
+    start_time: float,
+) -> tuple[Any, Any, Any, list[str], str]:
+    """Run the indexing pipeline and emit audit log events on failure or success."""
+    try:
+        (
+            indexer,
+            status,
+            wiki_structure,
+            all_messages,
+            operation_id,
+        ) = await _run_indexing_pipeline(
+            repo_path=repo_path,
+            config=config,
+            llm_provider=llm_provider,
+            embedding_provider=embedding_provider,
+            full_rebuild=full_rebuild,
+            server=server,
+        )
+    except Exception as e:  # noqa: BLE001 — handler boundary: audit log failure before re-raising
+        duration_ms = int((time.time() - start_time) * 1000)
+        audit_logger.log_index_operation(
+            subject_id=subject_id,
+            repo_path=str(repo_path),
+            operation="failed",
+            success=False,
+            duration_ms=duration_ms,
+            error_message=str(e),
+        )
+        raise
+
+    duration_ms = int((time.time() - start_time) * 1000)
+    audit_logger.log_index_operation(
+        subject_id=subject_id,
+        repo_path=str(repo_path),
+        operation="completed",
+        success=True,
+        files_processed=status.total_files,
+        chunks_created=status.total_chunks,
+        duration_ms=duration_ms,
+    )
+    return indexer, status, wiki_structure, all_messages, operation_id
+
+
+def _build_index_result(
+    indexer: Any,
+    status: Any,
+    wiki_structure: Any,
+    all_messages: list[str],
+    operation_id: str,
+) -> dict[str, Any]:
+    """Assemble the JSON-serialisable result dict for index_repository."""
+    return {
+        "status": "success",
+        "repo_path": str(indexer.repo_path),
+        "wiki_path": str(indexer.wiki_path),
+        "files_indexed": status.total_files,
+        "chunks_created": status.total_chunks,
+        "languages": status.languages,
+        "wiki_pages": len(wiki_structure.pages),
+        "operation_id": operation_id,
+        "messages": all_messages,
+    }
 
 
 async def _handle_index_repository_impl(
@@ -381,55 +506,27 @@ async def _handle_index_repository_impl(
         _validate_and_build_config, validated
     )
 
-    try:
-        (
-            indexer,
-            status,
-            wiki_structure,
-            all_messages,
-            operation_id,
-        ) = await _run_indexing_pipeline(
-            repo_path=repo_path,
-            config=config,
-            llm_provider=llm_provider,
-            embedding_provider=embedding_provider,
-            full_rebuild=validated.full_rebuild,
-            server=server,
-        )
-    except Exception as e:  # noqa: BLE001 — handler boundary: audit log failure before re-raising
-        duration_ms = int((time.time() - start_time) * 1000)
-        audit_logger.log_index_operation(
-            subject_id=subject_id,
-            repo_path=str(repo_path),
-            operation="failed",
-            success=False,
-            duration_ms=duration_ms,
-            error_message=str(e),
-        )
-        raise
-
-    duration_ms = int((time.time() - start_time) * 1000)
-    audit_logger.log_index_operation(
+    (
+        indexer,
+        status,
+        wiki_structure,
+        all_messages,
+        operation_id,
+    ) = await _run_pipeline_with_audit(
+        repo_path=repo_path,
+        config=config,
+        llm_provider=llm_provider,
+        embedding_provider=embedding_provider,
+        full_rebuild=validated.full_rebuild,
+        server=server,
+        audit_logger=audit_logger,
         subject_id=subject_id,
-        repo_path=str(repo_path),
-        operation="completed",
-        success=True,
-        files_processed=status.total_files,
-        chunks_created=status.total_chunks,
-        duration_ms=duration_ms,
+        start_time=start_time,
     )
 
-    result = {
-        "status": "success",
-        "repo_path": str(repo_path),
-        "wiki_path": str(indexer.wiki_path),
-        "files_indexed": status.total_files,
-        "chunks_created": status.total_chunks,
-        "languages": status.languages,
-        "wiki_pages": len(wiki_structure.pages),
-        "operation_id": operation_id,
-        "messages": all_messages,
-    }
+    result = _build_index_result(
+        indexer, status, wiki_structure, all_messages, operation_id
+    )
 
     logger.info(
         "Indexing complete: %d files, %d chunks, %d wiki pages",

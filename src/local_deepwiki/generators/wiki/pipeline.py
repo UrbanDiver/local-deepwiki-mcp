@@ -374,6 +374,64 @@ def log_cache_stats(generator: WikiGenerator) -> None:
 # ---------------------------------------------------------------------------
 
 
+async def _emit_wiki_complete_event(
+    index_status: IndexStatus,
+    ctx: Any,
+) -> None:
+    """Emit the WIKI_COMPLETE event with page statistics."""
+    emitter = get_event_emitter()
+    await emitter.emit(
+        EventType.WIKI_COMPLETE,
+        {
+            "repo_path": index_status.repo_path,
+            "total_pages": len(ctx.pages),
+            "pages_generated": ctx.pages_generated,
+            "pages_skipped": ctx.pages_skipped,
+        },
+    )
+
+
+def _log_generation_summary(generator: WikiGenerator, ctx: Any) -> None:
+    """Log completion stats, warnings, cache stats, and finalize the progress tracker."""
+    logger.info(
+        "Wiki generation complete: %d pages generated, %d pages unchanged, %d total pages",
+        ctx.pages_generated,
+        ctx.pages_skipped,
+        len(ctx.pages),
+    )
+    if ctx.warnings:
+        logger.warning(
+            "Wiki generation completed with %s warning(s)", len(ctx.warnings)
+        )
+        for warning in ctx.warnings:
+            logger.warning("  - %s", warning)
+            generator._progress._log(f"WARNING: {warning}")
+    generator._log_cache_stats()
+    summary = generator._progress.finalize(success=True, warnings=ctx.warnings)
+    logger.info(summary)
+
+
+async def _init_pipeline_context(
+    generator: WikiGenerator,
+    index_status: IndexStatus,
+    full_rebuild: bool,
+    progress_callback: ProgressCallback | None,
+) -> _GenerationContext:
+    """Emit WIKI_START event and initialise the generation context."""
+    emitter = get_event_emitter()
+    await emitter.emit(
+        EventType.WIKI_START,
+        {
+            "repo_path": index_status.repo_path,
+            "full_rebuild": full_rebuild,
+            "total_files": index_status.total_files,
+        },
+    )
+    ctx = await init_generation_context(generator, index_status, full_rebuild)
+    ctx.progress_callback = progress_callback
+    return ctx
+
+
 async def run_generation_pipeline(
     generator: WikiGenerator,
     index_status: IndexStatus,
@@ -398,28 +456,17 @@ async def run_generation_pipeline(
         "Full rebuild: %s, Total files: %s", full_rebuild, index_status.total_files
     )
 
-    # Emit WIKI_START event
-    emitter = get_event_emitter()
-    await emitter.emit(
-        EventType.WIKI_START,
-        {
-            "repo_path": index_status.repo_path,
-            "full_rebuild": full_rebuild,
-            "total_files": index_status.total_files,
-        },
+    ctx = await _init_pipeline_context(
+        generator, index_status, full_rebuild, progress_callback
     )
 
-    # Initialize generation context
-    ctx = await init_generation_context(generator, index_status, full_rebuild)
-    ctx.progress_callback = progress_callback
-
-    # Phase 1: Generate summary pages (overview, architecture)
+    # Phase 1: summary pages (overview, architecture)
     await generate_summary_pages(ctx, generator)
 
-    # Phase 2: Analyze imports for relationship tracking
+    # Phase 2: import analysis for relationship tracking
     await analyze_imports_for_relationships(generator)
 
-    # Phase 3+4: Generate module and file documentation concurrently
+    # Phase 3+4: module and file documentation (concurrent)
     shared_semaphore = asyncio.Semaphore(generator.config.effective_llm_concurrency)
     await asyncio.gather(
         generate_module_pages(
@@ -435,67 +482,32 @@ async def run_generation_pipeline(
         ),
     )
 
-    # Phase 5: Generate dependencies page
+    # Phase 5: dependencies page
     await generate_dependencies_page_phase(ctx, generator)
 
-    # Phase 6: Generate changelog
+    # Phase 6: changelog
     await generate_changelog_phase(ctx, generator)
 
-    # Phase 7: Generate auxiliary pages (inheritance, glossary, coverage)
+    # Phase 7: auxiliary pages (inheritance, glossary, coverage) + plugins + codemap
     await _phases_generate_auxiliary_pages(ctx, generator)
-
-    # Phase 7b: Run wiki generator plugins
     await run_wiki_plugin_generators(generator, ctx, index_status, progress_callback)
-
-    # Phase 7c: Generate codemap pages
     await generate_codemap_pages(generator, ctx, index_status, progress_callback)
 
-    # Phase 8: Apply cross-links and see-also sections
+    # Phase 8: cross-links and see-also sections
     ctx.pages = await apply_cross_linking_phase(generator, ctx.pages, progress_callback)
 
-    # Phase 9: Generate search index and TOC
+    # Phase 9: search index and TOC
     await generate_search_and_toc_phase(
         generator, ctx.pages, index_status, progress_callback
     )
 
-    # Phase 10: Generate freshness report and finalize
+    # Phase 10: freshness report and finalize
     wiki_status = build_wiki_status_from_context(generator, ctx, index_status)
     await generate_freshness_and_finalize_phase(
         generator, ctx, wiki_status, index_status, progress_callback
     )
 
-    logger.info(
-        "Wiki generation complete: %d pages generated, %d pages unchanged, %d total pages",
-        ctx.pages_generated,
-        ctx.pages_skipped,
-        len(ctx.pages),
-    )
-
-    # Log any generation warnings
-    if ctx.warnings:
-        logger.warning(
-            "Wiki generation completed with %s warning(s)", len(ctx.warnings)
-        )
-        for warning in ctx.warnings:
-            logger.warning("  - %s", warning)
-            generator._progress._log(f"WARNING: {warning}")
-
-    # Log LLM cache statistics if available
-    generator._log_cache_stats()
-
-    # Finalize progress tracker and log summary
-    summary = generator._progress.finalize(success=True, warnings=ctx.warnings)
-    logger.info(summary)
-
-    # Emit WIKI_COMPLETE event
-    await emitter.emit(
-        EventType.WIKI_COMPLETE,
-        {
-            "repo_path": index_status.repo_path,
-            "total_pages": len(ctx.pages),
-            "pages_generated": ctx.pages_generated,
-            "pages_skipped": ctx.pages_skipped,
-        },
-    )
+    _log_generation_summary(generator, ctx)
+    await _emit_wiki_complete_event(index_status, ctx)
 
     return WikiStructure(root=str(generator.wiki_path), pages=ctx.pages)

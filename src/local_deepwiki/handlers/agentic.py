@@ -117,6 +117,53 @@ def _prioritize_by_context(
     )
 
 
+def _get_starting_suggestions(repo_path_str: str | None) -> list[dict[str, str]]:
+    """Return starting suggestions when no tools have been used yet."""
+    from local_deepwiki.handlers.session_state import is_repo_indexed
+
+    has_wiki = False
+    if repo_path_str:
+        if is_repo_indexed(str(Path(repo_path_str).resolve())):
+            has_wiki = True
+        else:
+            from local_deepwiki.config import get_config
+
+            config = get_config()
+            wiki_path = config.get_wiki_path(Path(repo_path_str).resolve())
+            has_wiki = wiki_path.exists()
+
+    if has_wiki:
+        return [
+            {
+                "tool": "read_wiki_structure",
+                "reason": "Browse existing wiki documentation",
+                "priority": "high",
+            },
+            {
+                "tool": "ask_question",
+                "reason": "Ask questions about the codebase",
+                "priority": "high",
+            },
+            {
+                "tool": "get_wiki_stats",
+                "reason": "Check wiki health dashboard",
+                "priority": "medium",
+            },
+        ]
+    return [
+        {
+            "tool": "index_repository",
+            "reason": "Index the repository first to generate wiki",
+            "priority": "high",
+        },
+        {
+            "tool": "get_project_manifest",
+            "reason": "Check project metadata",
+            "priority": "medium",
+        },
+    ]
+
+
 @handle_tool_errors
 async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]:
     """Suggest next tools to use based on what has already been used.
@@ -129,56 +176,11 @@ async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]
         raise ValueError(str(e)) from e
 
     tools_used = validated.tools_used
-    repo_path_str = validated.repo_path
 
     # If no tools used, suggest starting points
     if not tools_used:
-        from local_deepwiki.handlers.session_state import is_repo_indexed
-
-        has_wiki = False
-        if repo_path_str:
-            if is_repo_indexed(str(Path(repo_path_str).resolve())):
-                has_wiki = True
-            else:
-                from local_deepwiki.config import get_config
-
-                config = get_config()
-                wiki_path = config.get_wiki_path(Path(repo_path_str).resolve())
-                has_wiki = wiki_path.exists()
-
-        if has_wiki:
-            suggestions: list[dict[str, str]] = [
-                {
-                    "tool": "read_wiki_structure",
-                    "reason": "Browse existing wiki documentation",
-                    "priority": "high",
-                },
-                {
-                    "tool": "ask_question",
-                    "reason": "Ask questions about the codebase",
-                    "priority": "high",
-                },
-                {
-                    "tool": "get_wiki_stats",
-                    "reason": "Check wiki health dashboard",
-                    "priority": "medium",
-                },
-            ]
-        else:
-            suggestions = [
-                {
-                    "tool": "index_repository",
-                    "reason": "Index the repository first to generate wiki",
-                    "priority": "high",
-                },
-                {
-                    "tool": "get_project_manifest",
-                    "reason": "Check project metadata",
-                    "priority": "medium",
-                },
-            ]
-
-        data = {"suggestions": suggestions, "based_on": "no_tools_used"}
+        suggestions = _get_starting_suggestions(validated.repo_path)
+        data: dict[str, Any] = {"suggestions": suggestions, "based_on": "no_tools_used"}
         return [
             TextContent(
                 type="text", text=wrap_tool_response("suggest_next_actions", data)
@@ -186,14 +188,13 @@ async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]
         ]
 
     suggestions = _compute_suggestions(tools_used)
-    context = validated.context
-    suggestions = _prioritize_by_context(suggestions, context)
+    suggestions = _prioritize_by_context(suggestions, validated.context)
 
     from local_deepwiki.handlers.session_state import get_session_state
 
     session = get_session_state()
 
-    data: dict[str, Any] = {
+    data = {
         "suggestions": suggestions[:8],
         "based_on": tools_used[-3:],
         "session": {
@@ -201,7 +202,7 @@ async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]
             "indexed_repos": list(session["indexed_repos"].keys()),
         },
     }
-    if context:
+    if validated.context:
         data["context_applied"] = True  # type: ignore[assignment]
     return [
         TextContent(type="text", text=wrap_tool_response("suggest_next_actions", data))

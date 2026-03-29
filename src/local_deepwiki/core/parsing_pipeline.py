@@ -132,18 +132,47 @@ class FileParsingPipeline:
         )
         parse_start_time = time.time()
 
-        # Process files in windows to limit memory from queued futures.
-        # Each window submits at most ``window_size`` futures at a time so
-        # that completed results can be flushed before the next window.
-        window_size = max(self.batch_size, self.parallel_workers * 4)
-        files_completed = 0
+        error_count, total_chunks_processed = await self._run_window_loop(
+            files_to_process=files_to_process,
+            file_count=file_count,
+            _parse=_parse,
+            chunk_batch=chunk_batch,
+            processed_files=processed_files,
+            total_chunks_processed=total_chunks_processed,
+            is_first_batch=is_first_batch,
+            full_rebuild=full_rebuild,
+            progress_callback=progress_callback,
+            error_count=error_count,
+        )
 
+        self._log_parse_metrics(
+            parse_start_time, len(processed_files), total_chunks_processed, error_count
+        )
+
+        return processed_files, total_chunks_processed
+
+    async def _run_window_loop(
+        self,
+        *,
+        files_to_process: list[Path],
+        file_count: int,
+        _parse: Callable[[Path], ParseResult],
+        chunk_batch: list[CodeChunk],
+        processed_files: list[FileInfo],
+        total_chunks_processed: int,
+        is_first_batch: bool,
+        full_rebuild: bool,
+        progress_callback: ProgressCallback | None,
+        error_count: int,
+    ) -> tuple[int, int]:
+        """Process all files in windows and flush chunk batches. Returns (error_count, total_chunks)."""
+        files_completed = 0
+        window_size = max(self.batch_size, self.parallel_workers * 4)
         with ThreadPoolExecutor(max_workers=self.parallel_workers) as executor:
             for window_start in range(0, file_count, window_size):
                 window_end = min(window_start + window_size, file_count)
                 window_files = files_to_process[window_start:window_end]
                 futures = {executor.submit(_parse, fp): fp for fp in window_files}
-
                 (
                     files_completed,
                     error_count,
@@ -161,8 +190,6 @@ class FileParsingPipeline:
                     full_rebuild,
                     progress_callback,
                 )
-
-        # Process any remaining chunks in the final batch
         if chunk_batch:
             chunks_stored = await self._process_chunk_batch(
                 chunk_batch,
@@ -174,12 +201,7 @@ class FileParsingPipeline:
                 is_final=True,
             )
             total_chunks_processed += chunks_stored
-
-        self._log_parse_metrics(
-            parse_start_time, len(processed_files), total_chunks_processed, error_count
-        )
-
-        return processed_files, total_chunks_processed
+        return error_count, total_chunks_processed
 
     async def _process_window(
         self,

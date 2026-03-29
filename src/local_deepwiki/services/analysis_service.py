@@ -54,6 +54,102 @@ def _set_section_error(
     result[field] = {"error": sanitize_error_message(str(exc))}
 
 
+def _normalize_impact_request(
+    *,
+    request: "ImpactAnalysisRequest | None",
+    file_path: str | None,
+    full_file: "Path | None",
+    repo_path: "Path | None",
+    index_status: Any,
+    wiki_path: "Path | None",
+    vector_store: "VectorStore | None",
+    entity_name: str | None,
+    include_reverse_calls: bool,
+    include_inheritance: bool,
+    include_dependents: bool,
+    include_wiki_pages: bool,
+) -> "ImpactAnalysisRequest":
+    """Normalize loose kwargs into an :class:`ImpactAnalysisRequest`.
+
+    When ``request`` is already provided it is returned unchanged.  Otherwise
+    validates that the required positional arguments are present and builds a
+    new request object.
+    """
+    if request is not None:
+        return request
+    if file_path is None or full_file is None or repo_path is None or wiki_path is None:
+        raise ValueError(
+            "Either 'request' or all of 'file_path', 'full_file', "
+            "'repo_path', and 'wiki_path' must be provided."
+        )
+    return ImpactAnalysisRequest(
+        file_path=file_path,
+        full_file=full_file,
+        repo_path=repo_path,
+        index_status=index_status,
+        wiki_path=wiki_path,
+        vector_store=vector_store,
+        entity_name=entity_name,
+        include_reverse_calls=include_reverse_calls,
+        include_inheritance=include_inheritance,
+        include_dependents=include_dependents,
+        include_wiki_pages=include_wiki_pages,
+    )
+
+
+async def _run_impact_collection(request: ImpactAnalysisRequest) -> dict[str, Any]:
+    """Run all enabled impact collection phases and return the result dict."""
+    result: dict[str, Any] = {
+        "status": "success",
+        "file_path": request.file_path,
+        "entity_name": request.entity_name,
+    }
+    affected_files: set[str] = set()
+    affected_entities: set[str] = set()
+
+    if request.include_reverse_calls:
+        _collect_reverse_calls(
+            result,
+            request.full_file,
+            request.repo_path,
+            request.file_path,
+            request.entity_name,
+            affected_files,
+            affected_entities,
+        )
+
+    if request.include_inheritance:
+        await _collect_inheritance_dependents(
+            result,
+            request.file_path,
+            request.entity_name,
+            request.index_status,
+            request.vector_store,
+            affected_files,
+            affected_entities,
+        )
+
+    if request.include_dependents:
+        await _collect_file_dependents(
+            result,
+            request.file_path,
+            request.repo_path,
+            request.vector_store,
+            affected_files,
+        )
+
+    if request.include_wiki_pages:
+        await _collect_affected_wiki_pages(result, request.wiki_path, request.file_path)
+
+    risk_level = _compute_risk_level(len(affected_files))
+    result["impact_summary"] = {
+        "total_affected_files": len(affected_files),
+        "total_affected_entities": len(affected_entities),
+        "risk_level": risk_level,
+    }
+    return result
+
+
 class AnalysisService:
     """Encapsulates entity explanation and impact analysis business logic.
 
@@ -182,84 +278,22 @@ class AnalysisService:
         Returns:
             Dict with impact analysis results and risk level.
         """
-        if request is None:
-            if (
-                file_path is None
-                or full_file is None
-                or repo_path is None
-                or wiki_path is None
-            ):
-                raise ValueError(
-                    "Either 'request' or all of 'file_path', 'full_file', "
-                    "'repo_path', and 'wiki_path' must be provided."
-                )
-            request = ImpactAnalysisRequest(
-                file_path=file_path,
-                full_file=full_file,
-                repo_path=repo_path,
-                index_status=index_status,
-                wiki_path=wiki_path,
-                vector_store=vector_store,
-                entity_name=entity_name,
-                include_reverse_calls=include_reverse_calls,
-                include_inheritance=include_inheritance,
-                include_dependents=include_dependents,
-                include_wiki_pages=include_wiki_pages,
-            )
+        request = _normalize_impact_request(
+            request=request,
+            file_path=file_path,
+            full_file=full_file,
+            repo_path=repo_path,
+            index_status=index_status,
+            wiki_path=wiki_path,
+            vector_store=vector_store,
+            entity_name=entity_name,
+            include_reverse_calls=include_reverse_calls,
+            include_inheritance=include_inheritance,
+            include_dependents=include_dependents,
+            include_wiki_pages=include_wiki_pages,
+        )
 
-        result: dict[str, Any] = {
-            "status": "success",
-            "file_path": request.file_path,
-            "entity_name": request.entity_name,
-        }
-
-        affected_files: set[str] = set()
-        affected_entities: set[str] = set()
-
-        if request.include_reverse_calls:
-            _collect_reverse_calls(
-                result,
-                request.full_file,
-                request.repo_path,
-                request.file_path,
-                request.entity_name,
-                affected_files,
-                affected_entities,
-            )
-
-        if request.include_inheritance:
-            await _collect_inheritance_dependents(
-                result,
-                request.file_path,
-                request.entity_name,
-                request.index_status,
-                request.vector_store,
-                affected_files,
-                affected_entities,
-            )
-
-        if request.include_dependents:
-            await _collect_file_dependents(
-                result,
-                request.file_path,
-                request.repo_path,
-                request.vector_store,
-                affected_files,
-            )
-
-        if request.include_wiki_pages:
-            await _collect_affected_wiki_pages(
-                result, request.wiki_path, request.file_path
-            )
-
-        risk_level = _compute_risk_level(len(affected_files))
-        result["impact_summary"] = {
-            "total_affected_files": len(affected_files),
-            "total_affected_entities": len(affected_entities),
-            "risk_level": risk_level,
-        }
-
-        return result
+        return await _run_impact_collection(request)
 
 
 # ---------------------------------------------------------------------------

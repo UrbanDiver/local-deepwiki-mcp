@@ -224,6 +224,53 @@ def _compute_smell_diff(
     return {"new_smells": new_smells, "resolved_smells": resolved_smells}
 
 
+def _analyze_ref_health(
+    repo_path: Path,
+    project_name: str,
+    git_ref: str,
+    tmp_prefix: str,
+    error_msg_prefix: str,
+) -> dict[str, Any] | str:
+    """Analyze architecture health for a git ref via a temporary worktree.
+
+    Returns the health dict on success, or an error message string on failure.
+    Uses the working tree directly when ``git_ref == "HEAD"``.
+    """
+    if git_ref == "HEAD":
+        return analyze_architecture_health(repo_path, project_name)
+    tmp = Path(tempfile.mkdtemp(prefix=tmp_prefix))
+    try:
+        if not _create_worktree(repo_path, git_ref, tmp):
+            return f"{error_msg_prefix}{git_ref}"
+        return analyze_architecture_health(tmp, project_name)
+    finally:
+        _remove_worktree(repo_path, tmp)
+
+
+def _build_full_detail_addons(
+    repo_path: Path,
+    base_ref: str,
+    base_health: dict[str, Any],
+    head_health: dict[str, Any],
+) -> dict[str, Any]:
+    """Compute coupling diff and smell diff for ``detail_level='full'``."""
+    from local_deepwiki.generators.analysis.coupling import analyze_coupling_metrics
+
+    head_coupling = analyze_coupling_metrics(repo_path).get("metrics", [])
+    tmp_base = Path(tempfile.mkdtemp(prefix="deepwiki_coupling_"))
+    try:
+        if _create_worktree(repo_path, base_ref, tmp_base):
+            base_coupling = analyze_coupling_metrics(tmp_base).get("metrics", [])
+        else:
+            base_coupling = []
+    finally:
+        _remove_worktree(repo_path, tmp_base)
+    return {
+        "coupling_changes": _compute_coupling_diff(base_coupling, head_coupling),
+        "smell_diff": _compute_smell_diff(base_health, head_health),
+    }
+
+
 def compare_architecture(
     repo_path: Path,
     project_name: str,
@@ -247,44 +294,31 @@ def compare_architecture(
     head_sha = _resolve_ref(repo_path, head_ref)
 
     if not base_sha:
-        return {
-            "status": "error",
-            "message": f"Could not resolve git ref: {base_ref}",
-        }
+        return {"status": "error", "message": f"Could not resolve git ref: {base_ref}"}
     if not head_sha:
-        return {
-            "status": "error",
-            "message": f"Could not resolve git ref: {head_ref}",
-        }
+        return {"status": "error", "message": f"Could not resolve git ref: {head_ref}"}
 
-    # Analyze HEAD (current working tree or specified ref)
-    if head_ref == "HEAD":
-        head_health = analyze_architecture_health(repo_path, project_name)
-    else:
-        tmp_head = Path(tempfile.mkdtemp(prefix="deepwiki_head_"))
-        try:
-            if not _create_worktree(repo_path, head_ref, tmp_head):
-                return {
-                    "status": "error",
-                    "message": f"Cannot create worktree for {head_ref}",
-                }
-            head_health = analyze_architecture_health(tmp_head, project_name)
-        finally:
-            _remove_worktree(repo_path, tmp_head)
+    head_result = _analyze_ref_health(
+        repo_path,
+        project_name,
+        head_ref,
+        "deepwiki_head_",
+        "Cannot create worktree for ",
+    )
+    if isinstance(head_result, str):
+        return {"status": "error", "message": head_result}
+    head_health = head_result
 
-    # Analyze base ref via worktree
-    tmp_base = Path(tempfile.mkdtemp(prefix="deepwiki_base_"))
-    try:
-        if not _create_worktree(repo_path, base_ref, tmp_base):
-            return {
-                "status": "error",
-                "message": (
-                    f"Cannot create worktree for {base_ref}. Is this a shallow clone?"
-                ),
-            }
-        base_health = analyze_architecture_health(tmp_base, project_name)
-    finally:
-        _remove_worktree(repo_path, tmp_base)
+    base_result = _analyze_ref_health(
+        repo_path,
+        project_name,
+        base_ref,
+        "deepwiki_base_",
+        f"Cannot create worktree for {base_ref}. Is this a shallow clone? ref=",
+    )
+    if isinstance(base_result, str):
+        return {"status": "error", "message": base_result}
+    base_health = base_result
 
     deltas = _compute_deltas(base_health, head_health)
     verdict = _compute_verdict(deltas)
@@ -310,26 +344,9 @@ def compare_architecture(
     }
 
     if detail_level == "full":
-        from local_deepwiki.generators.analysis.coupling import (
-            analyze_coupling_metrics,
-        )
-
-        head_coupling = analyze_coupling_metrics(repo_path).get("metrics", [])
-        tmp_base_coupling = Path(tempfile.mkdtemp(prefix="deepwiki_coupling_"))
-        try:
-            if _create_worktree(repo_path, base_ref, tmp_base_coupling):
-                base_coupling = analyze_coupling_metrics(tmp_base_coupling).get(
-                    "metrics", []
-                )
-            else:
-                base_coupling = []
-        finally:
-            _remove_worktree(repo_path, tmp_base_coupling)
-
         result = {
             **result,
-            "coupling_changes": _compute_coupling_diff(base_coupling, head_coupling),
-            "smell_diff": _compute_smell_diff(base_health, head_health),
+            **_build_full_detail_addons(repo_path, base_ref, base_health, head_health),
         }
 
     return result

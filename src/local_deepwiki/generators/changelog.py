@@ -145,6 +145,37 @@ def build_commit_url(repo_info: GitRepoInfo, commit_hash: str) -> str | None:
         return f"https://{repo_info.host}/{repo_info.owner}/{repo_info.repo}/commit/{commit_hash}"
 
 
+def _build_commits_section(
+    commits_by_date: dict[str, list[CommitInfo]],
+    repo_info: GitRepoInfo | None,
+) -> list[str]:
+    """Build the dated commit listing section of the changelog."""
+    lines: list[str] = []
+    for date_key in sorted(commits_by_date.keys(), reverse=True):
+        date_obj = datetime.strptime(date_key, "%Y-%m-%d")
+        lines.append(f"### {date_obj.strftime('%B %d, %Y')}")
+        lines.append("")
+        for commit in commits_by_date[date_key]:
+            commit_url = build_commit_url(repo_info, commit.hash)
+            commit_ref = (
+                f"[`{commit.hash}`]({commit_url})" if commit_url else f"`{commit.hash}`"
+            )
+            message = commit.message
+            if len(message) > COMMIT_MESSAGE_MAX_LENGTH:
+                message = message[:COMMIT_MESSAGE_TRUNCATED_LENGTH] + "..."
+            lines.append(f"- {commit_ref} {message}")
+            if commit.files:
+                files_to_show = commit.files[:MAX_CHANGED_FILES_PER_COMMIT]
+                files_str = ", ".join(f"`{f}`" for f in files_to_show)
+                if len(commit.files) > MAX_CHANGED_FILES_PER_COMMIT:
+                    files_str += (
+                        f" (+{len(commit.files) - MAX_CHANGED_FILES_PER_COMMIT} more)"
+                    )
+                lines.append(f"  - Files: {files_str}")
+            lines.append("")
+    return lines
+
+
 def generate_changelog_content(
     repo_path: Path,
     max_commits: int = 30,
@@ -159,23 +190,18 @@ def generate_changelog_content(
         Markdown string or None if not a git repo.
     """
     commits = get_commit_history(repo_path, limit=max_commits)
-
     if not commits:
         return None
 
     repo_info = get_repo_info(repo_path)
 
-    # Group commits by date
     commits_by_date: dict[str, list[CommitInfo]] = defaultdict(list)
     for commit in commits:
-        date_key = commit.date.strftime("%Y-%m-%d")
-        commits_by_date[date_key].append(commit)
+        commits_by_date[commit.date.strftime("%Y-%m-%d")].append(commit)
 
-    # Collect unique authors
-    authors = set(commit.author for commit in commits)
+    authors = {commit.author for commit in commits}
 
-    # Build markdown
-    lines = [
+    lines: list[str] = [
         "# Changelog",
         "",
         "Recent changes to this repository.",
@@ -183,50 +209,18 @@ def generate_changelog_content(
         "## Recent Commits",
         "",
     ]
+    lines.extend(_build_commits_section(commits_by_date, repo_info))
 
-    # Sort dates in descending order
-    for date_key in sorted(commits_by_date.keys(), reverse=True):
-        # Format date header
-        date_obj = datetime.strptime(date_key, "%Y-%m-%d")
-        date_display = date_obj.strftime("%B %d, %Y")
-        lines.append(f"### {date_display}")
-        lines.append("")
-
-        for commit in commits_by_date[date_key]:
-            # Build commit line with optional link
-            commit_url = build_commit_url(repo_info, commit.hash)
-            if commit_url:
-                commit_ref = f"[`{commit.hash}`]({commit_url})"
-            else:
-                commit_ref = f"`{commit.hash}`"
-
-            # Truncate long messages
-            message = commit.message
-            if len(message) > COMMIT_MESSAGE_MAX_LENGTH:
-                message = message[:COMMIT_MESSAGE_TRUNCATED_LENGTH] + "..."
-
-            lines.append(f"- {commit_ref} {message}")
-
-            # Show changed files (limit to 5)
-            if commit.files:
-                files_to_show = commit.files[:MAX_CHANGED_FILES_PER_COMMIT]
-                files_str = ", ".join(f"`{f}`" for f in files_to_show)
-                if len(commit.files) > MAX_CHANGED_FILES_PER_COMMIT:
-                    files_str += (
-                        f" (+{len(commit.files) - MAX_CHANGED_FILES_PER_COMMIT} more)"
-                    )
-                lines.append(f"  - Files: {files_str}")
-
-            lines.append("")
-
-    # Add statistics
-    lines.append("## Statistics")
-    lines.append("")
-    lines.append(f"- **Commits shown**: {len(commits)}")
-    lines.append(f"- **Contributors**: {len(authors)}")
+    lines.extend(
+        [
+            "## Statistics",
+            "",
+            f"- **Commits shown**: {len(commits)}",
+            f"- **Contributors**: {len(authors)}",
+        ]
+    )
     if commits:
-        latest_date = commits[0].date.strftime("%Y-%m-%d")
-        lines.append(f"- **Latest commit**: {latest_date}")
+        lines.append(f"- **Latest commit**: {commits[0].date.strftime('%Y-%m-%d')}")
     lines.append("")
 
     return "\n".join(lines)
