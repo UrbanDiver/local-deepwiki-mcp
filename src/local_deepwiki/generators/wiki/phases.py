@@ -21,7 +21,6 @@ from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
     IndexStatus,
-    ProgressCallback,
     WikiPage,
 )
 
@@ -151,23 +150,21 @@ async def _generate_or_load_summary_page(
 async def generate_summary_pages(
     ctx: _GenerationContext,
     generator: WikiGenerator,
-    index_status: IndexStatus,
-    progress_callback: ProgressCallback | None,
 ) -> None:
     """Generate overview and architecture pages (Phase 1).
 
     Parameters
     ----------
     ctx:
-        Mutable generation context.
+        Mutable generation context (carries ``index_status`` and
+        ``progress_callback``).
     generator:
         ``WikiGenerator`` instance providing ``_generate_overview``,
         ``_generate_architecture``, ``status_manager``, and ``_write_page``.
-    index_status:
-        Current repository index status.
-    progress_callback:
-        Optional progress callback.
     """
+    index_status = ctx.index_status
+    progress_callback = ctx.progress_callback
+
     if progress_callback:
         progress_callback("Generating overview and architecture", 0, 14)
 
@@ -207,22 +204,20 @@ async def generate_summary_pages(
 async def generate_dependencies_page_phase(
     ctx: _GenerationContext,
     generator: WikiGenerator,
-    index_status: IndexStatus,
-    progress_callback: ProgressCallback | None,
 ) -> None:
     """Generate the dependencies documentation page (Phase 5).
 
     Parameters
     ----------
     ctx:
-        Mutable generation context.
+        Mutable generation context (carries ``index_status`` and
+        ``progress_callback``).
     generator:
         ``WikiGenerator`` instance.
-    index_status:
-        Current repository index status.
-    progress_callback:
-        Optional progress callback.
     """
+    index_status = ctx.index_status
+    progress_callback = ctx.progress_callback
+
     if progress_callback:
         progress_callback("Generating dependencies", 4, 14)
 
@@ -268,22 +263,20 @@ async def generate_dependencies_page_phase(
 async def generate_changelog_phase(
     ctx: _GenerationContext,
     generator: WikiGenerator,
-    index_status: IndexStatus,
-    progress_callback: ProgressCallback | None,
 ) -> None:
     """Generate changelog page from git history (Phase 6).
 
     Parameters
     ----------
     ctx:
-        Mutable generation context.
+        Mutable generation context (carries ``index_status`` and
+        ``progress_callback``).
     generator:
         ``WikiGenerator`` instance.
-    index_status:
-        Current repository index status.
-    progress_callback:
-        Optional progress callback.
     """
+    index_status = ctx.index_status
+    progress_callback = ctx.progress_callback
+
     if progress_callback:
         progress_callback("Generating changelog", 5, 14)
 
@@ -532,22 +525,20 @@ async def _gather_auxiliary_contents(
 async def generate_auxiliary_pages(
     ctx: _GenerationContext,
     generator: WikiGenerator,
-    index_status: IndexStatus,
-    progress_callback: ProgressCallback | None,
 ) -> None:
     """Generate auxiliary pages concurrently with structural fingerprinting.
 
     Parameters
     ----------
     ctx:
-        Mutable generation context.
+        Mutable generation context (carries ``index_status`` and
+        ``progress_callback``).
     generator:
         ``WikiGenerator`` instance.
-    index_status:
-        Current repository index status.
-    progress_callback:
-        Optional progress callback.
     """
+    index_status = ctx.index_status
+    progress_callback = ctx.progress_callback
+
     if progress_callback:
         progress_callback("Generating auxiliary pages", 6, 14)
 

@@ -93,6 +93,8 @@ class _GenerationContext:
         "all_source_files",
         "full_rebuild",
         "warnings",
+        "index_status",
+        "progress_callback",
     )
 
     def __init__(
@@ -102,6 +104,8 @@ class _GenerationContext:
         pages_skipped: int,
         all_source_files: list[str],
         full_rebuild: bool,
+        index_status: "IndexStatus | None" = None,
+        progress_callback: "ProgressCallback | None" = None,
     ):
         self.pages = pages
         self.pages_generated = pages_generated
@@ -109,6 +113,8 @@ class _GenerationContext:
         self.all_source_files = all_source_files
         self.full_rebuild = full_rebuild
         self.warnings: list[str] = []
+        self.index_status = index_status
+        self.progress_callback = progress_callback
 
 
 class WikiGenerator:
@@ -256,7 +262,9 @@ class WikiGenerator:
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Generate overview and architecture pages (delegates to wiki_phases)."""
-        await generate_summary_pages(ctx, self, index_status, progress_callback)
+        ctx.index_status = index_status
+        ctx.progress_callback = progress_callback
+        await generate_summary_pages(ctx, self)
 
     async def _generate_or_load_page(
         self,
@@ -299,9 +307,9 @@ class WikiGenerator:
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Generate dependencies page (delegates to wiki_phases)."""
-        await generate_dependencies_page_phase(
-            ctx, self, index_status, progress_callback
-        )
+        ctx.index_status = index_status
+        ctx.progress_callback = progress_callback
+        await generate_dependencies_page_phase(ctx, self)
 
     async def _generate_changelog_page(
         self,
@@ -310,7 +318,9 @@ class WikiGenerator:
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Generate changelog page (delegates to wiki_phases)."""
-        await generate_changelog_phase(ctx, self, index_status, progress_callback)
+        ctx.index_status = index_status
+        ctx.progress_callback = progress_callback
+        await generate_changelog_phase(ctx, self)
 
     async def _add_auxiliary_page(
         self,
@@ -360,9 +370,9 @@ class WikiGenerator:
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Generate auxiliary pages (delegates to wiki_phases)."""
-        await _phases_generate_auxiliary_pages(
-            ctx, self, index_status, progress_callback
-        )
+        ctx.index_status = index_status
+        ctx.progress_callback = progress_callback
+        await _phases_generate_auxiliary_pages(ctx, self)
 
     # ------------------------------------------------------------------
     # Methods that remain on WikiGenerator (not extracted)

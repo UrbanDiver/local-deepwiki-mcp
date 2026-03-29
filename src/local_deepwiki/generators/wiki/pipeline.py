@@ -117,6 +117,7 @@ async def init_generation_context(
         pages_skipped=0,
         all_source_files=all_source_files,
         full_rebuild=full_rebuild,
+        index_status=index_status,
     )
 
 
@@ -410,9 +411,10 @@ async def run_generation_pipeline(
 
     # Initialize generation context
     ctx = await init_generation_context(generator, index_status, full_rebuild)
+    ctx.progress_callback = progress_callback
 
     # Phase 1: Generate summary pages (overview, architecture)
-    await generate_summary_pages(ctx, generator, index_status, progress_callback)
+    await generate_summary_pages(ctx, generator)
 
     # Phase 2: Analyze imports for relationship tracking
     await analyze_imports_for_relationships(generator)
@@ -434,17 +436,13 @@ async def run_generation_pipeline(
     )
 
     # Phase 5: Generate dependencies page
-    await generate_dependencies_page_phase(
-        ctx, generator, index_status, progress_callback
-    )
+    await generate_dependencies_page_phase(ctx, generator)
 
     # Phase 6: Generate changelog
-    await generate_changelog_phase(ctx, generator, index_status, progress_callback)
+    await generate_changelog_phase(ctx, generator)
 
     # Phase 7: Generate auxiliary pages (inheritance, glossary, coverage)
-    await _phases_generate_auxiliary_pages(
-        ctx, generator, index_status, progress_callback
-    )
+    await _phases_generate_auxiliary_pages(ctx, generator)
 
     # Phase 7b: Run wiki generator plugins
     await run_wiki_plugin_generators(generator, ctx, index_status, progress_callback)
