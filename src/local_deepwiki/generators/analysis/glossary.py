@@ -180,6 +180,73 @@ def _format_signature(entity: EntityEntry, max_params: int = 3) -> str:
     return "".join(parts)
 
 
+_TYPE_BADGES: dict[str, str] = {
+    "class": "🔷",
+    "function": "🔹",
+    "method": "▪️",
+}
+
+
+def _entity_type_badge(entity: "EntityEntry") -> str:
+    """Return the type badge string (with async marker if applicable)."""
+    base_badge = _TYPE_BADGES.get(entity.entity_type, "")
+    async_marker = "⚡" if entity.is_async else ""
+    return f"{base_badge}{async_marker}"
+
+
+def _entity_raises_part(entity: "EntityEntry") -> str:
+    """Return a raises indicator string, or empty string if no raises."""
+    if not entity.raises:
+        return ""
+    exc_list = ", ".join(entity.raises[:3])
+    if len(entity.raises) > 3:
+        exc_list += f", +{len(entity.raises) - 3}"
+    return f" ⚠️`{exc_list}`"
+
+
+def _format_entity_line(entity: "EntityEntry") -> str:
+    """Render a single glossary entry as a markdown list item."""
+    if entity.entity_type == "method" and entity.parent_name:
+        display_name = f"{entity.parent_name}.{entity.name}"
+    else:
+        display_name = entity.name
+
+    wiki_link = (
+        _get_wiki_link(entity.file_path) if has_wiki_page(entity.file_path) else ""
+    )
+    file_name = Path(entity.file_path).name
+    type_badge = _entity_type_badge(entity)
+    signature = _format_signature(entity)
+    sig_part = f" `{signature}`" if signature else ""
+    raises_part = _entity_raises_part(entity)
+    desc = _get_brief_description(entity.docstring)
+    desc_part = f" - {desc}" if desc else ""
+
+    if wiki_link:
+        name_part = f"**[`{display_name}`]({wiki_link})**"
+    else:
+        name_part = f"**`{display_name}`**"
+    return (
+        f"- {type_badge} {name_part}{sig_part}{raises_part} (`{file_name}`){desc_part}"
+    )
+
+
+def _render_letter_section(
+    letter: str, letter_entities: list["EntityEntry"]
+) -> list[str]:
+    """Render a collapsible <details> section for one letter group."""
+    count = len(letter_entities)
+    section: list[str] = [
+        f'<details id="{letter.lower()}" markdown="1">',
+        f"<summary><strong>{letter}</strong> — {count} entities</summary>",
+        "",
+    ]
+    for entity in letter_entities:
+        section.append(_format_entity_line(entity))
+    section.extend(["", "</details>", ""])
+    return section
+
+
 async def generate_glossary_page(
     index_status: IndexStatus,
     vector_store: VectorStore,
@@ -198,111 +265,45 @@ async def generate_glossary_page(
     if not entities:
         return None
 
+    grouped = group_entities_by_letter(entities)
+    letters = sorted(grouped.keys())
+
+    class_count = sum(1 for e in entities if e.entity_type == "class")
+    func_count = sum(1 for e in entities if e.entity_type == "function")
+    method_count = sum(1 for e in entities if e.entity_type == "method")
+
+    nav_links = " | ".join(f"[{letter}](#{letter.lower()})" for letter in letters)
+
     lines = [
         "# Glossary",
         "",
         "Alphabetical index of all classes, functions, and methods in the codebase.",
         "",
-    ]
-
-    # Add quick navigation
-    grouped = group_entities_by_letter(entities)
-    letters = sorted(grouped.keys())
-
-    # Letter navigation bar
-    nav_links = " | ".join(f"[{letter}](#{letter.lower()})" for letter in letters)
-    lines.append(f"**Quick Navigation:** {nav_links}")
-    lines.append("")
-
-    # Summary stats
-    class_count = sum(1 for e in entities if e.entity_type == "class")
-    func_count = sum(1 for e in entities if e.entity_type == "function")
-    method_count = sum(1 for e in entities if e.entity_type == "method")
-
-    lines.append(
+        f"**Quick Navigation:** {nav_links}",
+        "",
         f"**Total:** {len(entities)} entities "
-        f"({class_count} classes, {func_count} functions, {method_count} methods)"
-    )
-    lines.append("")
-    lines.append("---")
-    lines.append("")
-
-    # Expand/Collapse all controls
-    lines.append(
+        f"({class_count} classes, {func_count} functions, {method_count} methods)",
+        "",
+        "---",
+        "",
         "<p>"
         '<a href="#" onclick="document.querySelectorAll(\'details\').forEach(d=>d.open=true);return false">Expand All</a>'
         " | "
         '<a href="#" onclick="document.querySelectorAll(\'details\').forEach(d=>d.open=false);return false">Collapse All</a>'
-        "</p>"
-    )
-    lines.append("")
+        "</p>",
+        "",
+    ]
 
-    # Generate collapsible sections for each letter
     for letter in letters:
-        count = len(grouped[letter])
-        lines.append(f'<details id="{letter.lower()}" markdown="1">')
-        lines.append(f"<summary><strong>{letter}</strong> — {count} entities</summary>")
-        lines.append("")
+        lines.extend(_render_letter_section(letter, grouped[letter]))
 
-        for entity in grouped[letter]:
-            # Build the display name
-            if entity.entity_type == "method" and entity.parent_name:
-                display_name = f"{entity.parent_name}.{entity.name}"
-            else:
-                display_name = entity.name
-
-            # Get wiki link (only if the file has a wiki page)
-            wiki_link = (
-                _get_wiki_link(entity.file_path)
-                if has_wiki_page(entity.file_path)
-                else ""
-            )
-            file_name = Path(entity.file_path).name
-
-            # Type badge (with async indicator)
-            base_badge = {
-                "class": "🔷",
-                "function": "🔹",
-                "method": "▪️",
-            }.get(entity.entity_type, "")
-            async_marker = "⚡" if entity.is_async else ""
-            type_badge = f"{base_badge}{async_marker}"
-
-            # Type signature for functions/methods
-            signature = _format_signature(entity)
-            sig_part = f" `{signature}`" if signature else ""
-
-            # Raises indicator
-            raises_part = ""
-            if entity.raises:
-                exc_list = ", ".join(entity.raises[:3])
-                if len(entity.raises) > 3:
-                    exc_list += f", +{len(entity.raises) - 3}"
-                raises_part = f" ⚠️`{exc_list}`"
-
-            # Brief description
-            desc = _get_brief_description(entity.docstring)
-            desc_part = f" - {desc}" if desc else ""
-
-            if wiki_link:
-                name_part = f"**[`{display_name}`]({wiki_link})**"
-            else:
-                name_part = f"**`{display_name}`**"
-            lines.append(
-                f"- {type_badge} {name_part}{sig_part}{raises_part} "
-                f"(`{file_name}`){desc_part}"
-            )
-
-        lines.append("")
-        lines.append("</details>")
-        lines.append("")
-
-    # Add legend
-    lines.append("---")
-    lines.append("")
-    lines.append(
-        "**Legend:** 🔷 Class | 🔹 Function | ▪️ Method | ⚡ Async | ⚠️ Raises exceptions"
+    lines.extend(
+        [
+            "---",
+            "",
+            "**Legend:** 🔷 Class | 🔹 Function | ▪️ Method | ⚡ Async | ⚠️ Raises exceptions",
+            "",
+        ]
     )
-    lines.append("")
 
     return "\n".join(lines)

@@ -342,17 +342,15 @@ def format_onboarding_guide(
 # ---------------------------------------------------------------------------
 
 
-async def _select_flows_with_llm(
-    llm: Any,
+def _build_flow_selection_prompt(
     manifest: ProjectManifest,
     entry_points: list[Path],
     directory_tree: str,
-) -> list[dict[str, str]]:
-    """Ask the LLM to pick the 3 most important flows for newcomers."""
+) -> str:
+    """Construct the LLM prompt for selecting important newcomer flows."""
     entry_list = "\n".join(f"- {ep}" for ep in entry_points) or "- (none detected)"
     tech_stack = manifest.get_tech_stack_summary() or "Unknown"
-
-    prompt = (
+    return (
         "You are helping a developer who is new to this codebase. "
         "Given the project structure below, pick the 3 most important "
         "execution flows a newcomer should understand first.\n\n"
@@ -368,16 +366,22 @@ async def _select_flows_with_llm(
         "Return ONLY the JSON array, no other text."
     )
 
+
+def _strip_code_fence(text: str) -> str:
+    """Remove optional markdown code fence from LLM JSON output."""
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        cleaned = cleaned.strip()
+    return cleaned
+
+
+def _parse_flow_json(raw: str) -> list[dict[str, str]] | None:
+    """Parse LLM JSON response into a list of flow dicts, or return None on failure."""
     try:
-        raw = await llm.generate(
-            prompt, system_prompt="You are a code architecture expert."
-        )
-        cleaned = raw.strip()
-        if cleaned.startswith("```"):
-            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3]
-            cleaned = cleaned.strip()
+        cleaned = _strip_code_fence(raw)
         flows = json.loads(cleaned)
         if isinstance(flows, list) and len(flows) > 0:
             return [
@@ -389,10 +393,12 @@ async def _select_flows_with_llm(
                 for f in flows[:3]
             ]
     except Exception:
-        logger.warning(
-            "LLM flow selection failed, falling back to entry point heuristics"
-        )
+        pass
+    return None
 
+
+def _fallback_flows(entry_points: list[Path]) -> list[dict[str, str]]:
+    """Build heuristic flow list from entry points when LLM call fails."""
     fallback: list[dict[str, str]] = []
     for ep in entry_points[:3]:
         name = ep.stem
@@ -404,6 +410,27 @@ async def _select_flows_with_llm(
             }
         )
     return fallback
+
+
+async def _select_flows_with_llm(
+    llm: Any,
+    manifest: ProjectManifest,
+    entry_points: list[Path],
+    directory_tree: str,
+) -> list[dict[str, str]]:
+    """Ask the LLM to pick the 3 most important flows for newcomers."""
+    prompt = _build_flow_selection_prompt(manifest, entry_points, directory_tree)
+    try:
+        raw = await llm.generate(
+            prompt, system_prompt="You are a code architecture expert."
+        )
+        parsed = _parse_flow_json(raw)
+        if parsed is not None:
+            return parsed
+    except Exception:
+        pass
+    logger.warning("LLM flow selection failed, falling back to entry point heuristics")
+    return _fallback_flows(entry_points)
 
 
 async def _generate_codemaps_for_flows(
@@ -442,8 +469,27 @@ async def _generate_codemaps_for_flows(
     return results
 
 
-async def _synthesize_onboarding_guide(
-    llm: Any,
+def _format_codemap_text(codemaps: list[dict[str, Any]]) -> str:
+    """Render codemap results into a text block for the onboarding prompt."""
+    sections: list[str] = []
+    for cm in codemaps:
+        sections.append(
+            f"### Flow: {cm['title']}\n"
+            f"Question: {cm['query']}\n"
+            f"Files: {', '.join(cm['files_involved'][:10])}\n\n"
+            f"Mermaid diagram:\n{cm['mermaid_diagram']}\n\n"
+            f"Narrative:\n{cm['narrative']}\n"
+        )
+    return "\n---\n".join(sections) if sections else "(no codemaps generated)"
+
+
+def _join_paths_as_bullets(paths: list, default: str = "- (none detected)") -> str:
+    """Join a list of paths as backtick bullet items, returning default when empty."""
+    joined = "\n".join(f"- `{p}`" for p in paths)
+    return joined if joined else default
+
+
+def _build_onboarding_prompt_context(
     manifest: ProjectManifest,
     directory_tree: str,
     entry_points: list[Path],
@@ -451,55 +497,48 @@ async def _synthesize_onboarding_guide(
     wiki_pages: list[str],
     test_layout: list[Path],
     config_files: list[Path],
-) -> str:
-    """Ask the LLM to synthesize the full onboarding guide."""
-    codemap_sections: list[str] = []
-    for cm in codemaps:
-        codemap_sections.append(
-            f"### Flow: {cm['title']}\n"
-            f"Question: {cm['query']}\n"
-            f"Files: {', '.join(cm['files_involved'][:10])}\n\n"
-            f"Mermaid diagram:\n{cm['mermaid_diagram']}\n\n"
-            f"Narrative:\n{cm['narrative']}\n"
-        )
-    codemap_text = (
-        "\n---\n".join(codemap_sections)
-        if codemap_sections
-        else "(no codemaps generated)"
-    )
+) -> dict[str, str]:
+    """Assemble all text substitutions needed for the onboarding synthesis prompt."""
+    return {
+        "codemap_text": _format_codemap_text(codemaps),
+        "entry_list": _join_paths_as_bullets(entry_points),
+        "test_list": _join_paths_as_bullets(test_layout),
+        "config_list": _join_paths_as_bullets(config_files),
+        "wiki_links": _join_paths_as_bullets(
+            wiki_pages[:30], default="- (none available)"
+        ),
+        "tech_stack": manifest.get_tech_stack_summary() or "Unknown",
+        "project_name": manifest.name or "Unknown",
+        "project_description": manifest.description or "No description",
+    }
 
-    entry_list = "\n".join(f"- `{ep}`" for ep in entry_points) or "- (none detected)"
-    test_list = "\n".join(f"- `{td}`" for td in test_layout) or "- (none detected)"
-    config_list = "\n".join(f"- `{cf}`" for cf in config_files) or "- (none detected)"
-    wiki_links = (
-        "\n".join(f"- `{wp}`" for wp in wiki_pages[:30]) or "- (none available)"
-    )
-    tech_stack = manifest.get_tech_stack_summary() or "Unknown"
 
-    prompt = f"""Generate a comprehensive Developer Onboarding Guide for the project below.
+def _build_onboarding_synthesis_prompt(ctx: dict[str, str], directory_tree: str) -> str:
+    """Format the full LLM prompt for onboarding guide synthesis."""
+    return f"""Generate a comprehensive Developer Onboarding Guide for the project below.
 
 PROJECT METADATA:
-- Name: {manifest.name or "Unknown"}
-- Description: {manifest.description or "No description"}
-- Tech stack: {tech_stack}
+- Name: {ctx["project_name"]}
+- Description: {ctx["project_description"]}
+- Tech stack: {ctx["tech_stack"]}
 
 ENTRY POINTS:
-{entry_list}
+{ctx["entry_list"]}
 
 DIRECTORY STRUCTURE:
 {directory_tree[:3000]}
 
 EXECUTION FLOW DIAGRAMS (include these verbatim):
-{codemap_text}
+{ctx["codemap_text"]}
 
 AVAILABLE WIKI PAGES (use for linking):
-{wiki_links}
+{ctx["wiki_links"]}
 
 TEST LAYOUT:
-{test_list}
+{ctx["test_list"]}
 
 CONFIGURATION FILES:
-{config_list}
+{ctx["config_list"]}
 
 INSTRUCTIONS:
 Produce a single markdown document with these sections:
@@ -539,11 +578,32 @@ CRITICAL RULES:
 - Start the document with `# Developer Onboarding Guide`
 """
 
-    guide = await llm.generate(
+
+async def _synthesize_onboarding_guide(
+    llm: Any,
+    manifest: ProjectManifest,
+    directory_tree: str,
+    entry_points: list[Path],
+    codemaps: list[dict[str, Any]],
+    wiki_pages: list[str],
+    test_layout: list[Path],
+    config_files: list[Path],
+) -> str:
+    """Ask the LLM to synthesize the full onboarding guide."""
+    ctx = _build_onboarding_prompt_context(
+        manifest,
+        directory_tree,
+        entry_points,
+        codemaps,
+        wiki_pages,
+        test_layout,
+        config_files,
+    )
+    prompt = _build_onboarding_synthesis_prompt(ctx, directory_tree)
+    return await llm.generate(
         prompt,
         system_prompt="You are a technical writer creating developer documentation.",
     )
-    return guide
 
 
 async def generate_rich_onboarding(

@@ -508,24 +508,38 @@ class DependencyGraphGenerator:
         """
         self._project_name = Path(index_status.repo_path).name.lower().replace("-", "_")
 
-        # Get files in the specified module
-        module_files = [
-            f
-            for f in index_status.files
-            if module_path in f.path and f.path.endswith(".py")
-        ]
-
-        if exclude_tests:
-            module_files = [f for f in module_files if not _is_test_path(f.path)]
-
+        module_files = self._collect_module_files(
+            index_status, module_path, exclude_tests
+        )
         if not module_files:
             return _generate_empty_graph_message(
                 f"No files found in module: {module_path}"
             )
 
-        # Build nodes for all files in this module
-        graph = DependencyGraph()
+        graph = self._build_file_nodes(module_files)
+        await self._add_file_import_edges(graph, module_files, module_path)
+        self._mark_circular_file_edges(graph)
+        return _render_file_graph(graph, module_path)
 
+    def _collect_module_files(
+        self,
+        index_status: IndexStatus,
+        module_path: str,
+        exclude_tests: bool,
+    ) -> list:
+        """Filter index files to those belonging to the specified module."""
+        module_files = [
+            f
+            for f in index_status.files
+            if module_path in f.path and f.path.endswith(".py")
+        ]
+        if exclude_tests:
+            module_files = [f for f in module_files if not _is_test_path(f.path)]
+        return module_files
+
+    def _build_file_nodes(self, module_files: list) -> "DependencyGraph":
+        """Create a DependencyGraph populated with nodes for each module file."""
+        graph = DependencyGraph()
         for file_info in module_files:
             file_name = Path(file_info.path).stem
             graph.add_node(
@@ -535,24 +549,28 @@ class DependencyGraphGenerator:
                     is_test=_is_test_path(file_info.path),
                 )
             )
+        return graph
 
-        # Search for imports mentioning the module
+    async def _add_file_import_edges(
+        self,
+        graph: "DependencyGraph",
+        module_files: list,
+        module_path: str,
+    ) -> None:
+        """Search for intra-module imports and add edges to the graph."""
         search_results = await self._store.search(
             f"import {module_path}",
             limit=100,
             chunk_type="import",
         )
-
         file_stems = [Path(f.path).stem for f in module_files]
         for result in search_results:
             chunk = result.chunk
             if chunk.chunk_type != ChunkType.IMPORT:
                 continue
-
             source_file = Path(chunk.file_path).stem
             if module_path not in chunk.file_path:
                 continue
-
             imports = _parse_imports(chunk.content, chunk.language.value)
             for imp in imports:
                 if module_path in imp or imp in file_stems:
@@ -560,7 +578,8 @@ class DependencyGraphGenerator:
                     if target_file in file_stems:
                         graph.add_edge(source_file, target_file)
 
-        # Detect and mark circular edges
+    def _mark_circular_file_edges(self, graph: "DependencyGraph") -> None:
+        """Detect cycles and mark the corresponding edges as circular."""
         graph.cycles = self.detect_circular_dependencies(graph.get_adjacency_list())
         circular_edges = _get_circular_edges(graph.cycles)
         for edge_key in circular_edges:
@@ -568,8 +587,6 @@ class DependencyGraphGenerator:
                 graph.edges[edge_key] = dataclasses.replace(
                     graph.edges[edge_key], is_circular=True
                 )
-
-        return _render_file_graph(graph, module_path)
 
     def detect_circular_dependencies(
         self, graph: dict[str, set[str]]
@@ -603,18 +620,40 @@ class DependencyGraphGenerator:
             Populated DependencyGraph.
         """
         graph = DependencyGraph()
+        internal_modules, file_to_module = self._index_source_modules(
+            graph, index_status, exclude_tests
+        )
+        import_results = await self._store.search(
+            "import require include from use",
+            limit=500,
+            chunk_type="import",
+        )
+        self._add_import_edges(
+            graph,
+            import_results,
+            file_to_module,
+            internal_modules,
+            index_status.repo_path,
+            show_external,
+            exclude_tests,
+        )
+        return graph
 
+    def _index_source_modules(
+        self,
+        graph: "DependencyGraph",
+        index_status: IndexStatus,
+        exclude_tests: bool,
+    ) -> tuple[set[str], dict[str, str]]:
+        """Register all source files as nodes and return module tracking structures."""
         internal_modules: set[str] = set()
         file_to_module: dict[str, str] = {}
-
         for file_info in index_status.files:
             if exclude_tests and _is_test_path(file_info.path):
                 continue
-
             module_name = _extract_module_name(file_info.path, index_status.repo_path)
             internal_modules.add(module_name)
             file_to_module[file_info.path] = module_name
-
             graph.add_node(
                 DependencyNode(
                     name=module_name,
@@ -622,55 +661,59 @@ class DependencyGraphGenerator:
                     is_test=_is_test_path(file_info.path),
                 )
             )
+        return internal_modules, file_to_module
 
-        import_results = await self._store.search(
-            "import require include from use",
-            limit=500,
-            chunk_type="import",
-        )
-
+    def _add_import_edges(
+        self,
+        graph: "DependencyGraph",
+        import_results: list,
+        file_to_module: dict[str, str],
+        internal_modules: set[str],
+        repo_path: str,
+        show_external: bool,
+        exclude_tests: bool,
+    ) -> None:
+        """Parse import chunks and add edges to the dependency graph."""
         for result in import_results:
             chunk = result.chunk
             if chunk.chunk_type != ChunkType.IMPORT:
                 continue
-
             if exclude_tests and _is_test_path(chunk.file_path):
                 continue
-
             source_module = file_to_module.get(chunk.file_path)
             if not source_module:
-                source_module = _extract_module_name(
-                    chunk.file_path, index_status.repo_path
-                )
+                source_module = _extract_module_name(chunk.file_path, repo_path)
                 graph.add_node(
-                    DependencyNode(
-                        name=source_module,
-                        file_path=chunk.file_path,
-                    )
+                    DependencyNode(name=source_module, file_path=chunk.file_path)
                 )
                 internal_modules.add(source_module)
-
             imports = _parse_imports(chunk.content, chunk.language.value)
-
             for imp in imports:
-                if self._is_internal_import(imp, internal_modules):
-                    target_module = self._resolve_internal_import(imp, internal_modules)
-                    if target_module and target_module != source_module:
-                        graph.add_edge(source_module, target_module)
-                elif show_external:
-                    ext_name = imp.split(".")[0]
-                    if ext_name and not ext_name.startswith("_"):
-                        if ext_name not in graph.nodes:
-                            graph.add_node(
-                                DependencyNode(
-                                    name=ext_name,
-                                    file_path="",
-                                    is_external=True,
-                                )
-                            )
-                        graph.add_edge(source_module, ext_name)
+                self._process_single_import(
+                    graph, imp, source_module, internal_modules, show_external
+                )
 
-        return graph
+    def _process_single_import(
+        self,
+        graph: "DependencyGraph",
+        imp: str,
+        source_module: str,
+        internal_modules: set[str],
+        show_external: bool,
+    ) -> None:
+        """Add a single import as an internal or external edge."""
+        if self._is_internal_import(imp, internal_modules):
+            target_module = self._resolve_internal_import(imp, internal_modules)
+            if target_module and target_module != source_module:
+                graph.add_edge(source_module, target_module)
+        elif show_external:
+            ext_name = imp.split(".")[0]
+            if ext_name and not ext_name.startswith("_"):
+                if ext_name not in graph.nodes:
+                    graph.add_node(
+                        DependencyNode(name=ext_name, file_path="", is_external=True)
+                    )
+                graph.add_edge(source_module, ext_name)
 
     def _is_internal_import(self, import_name: str, internal_modules: set[str]) -> bool:
         """Check if an import refers to an internal module.

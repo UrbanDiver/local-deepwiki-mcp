@@ -450,6 +450,100 @@ def _detect_dispatch_table_candidate(
 # ---------------------------------------------------------------------------
 
 
+def _check_large_file(
+    total_lines: int,
+    rel_path: Path,
+    threshold_level: int,
+    smells: list[dict[str, Any]],
+) -> None:
+    """Append a large_file smell if the file exceeds the line threshold."""
+    if _SEVERITY_ORDER[SEVERITY_MEDIUM] >= threshold_level:
+        if total_lines > _LARGE_FILE_LINE_THRESHOLD:
+            smells.append(
+                {
+                    "type": "large_file",
+                    "severity": SEVERITY_MEDIUM,
+                    "file": str(rel_path),
+                    "line": 1,
+                    "entity": rel_path.name,
+                    "description": (
+                        f"File has {total_lines} lines "
+                        f"(threshold: {_LARGE_FILE_LINE_THRESHOLD})"
+                    ),
+                    "suggestion": "Split into smaller, focused modules.",
+                }
+            )
+
+
+def _walk_class_node(
+    node: Any,
+    rel_path: Path,
+    threshold_level: int,
+    smells: list[dict[str, Any]],
+) -> None:
+    """Detect god-class smells for a class AST node."""
+    class_name = ""
+    for child in node.children:
+        if child.type in ("identifier", "name", "type_identifier"):
+            class_name = _node_text(child)
+            break
+    smells.extend(
+        _detect_god_class(node, class_name or "<unnamed>", rel_path, threshold_level)
+    )
+
+
+def _walk_function_node(
+    node: Any,
+    rel_path: Path,
+    threshold_level: int,
+    smells: list[dict[str, Any]],
+    function_params: dict[str, list[str]],
+) -> None:
+    """Detect all function-level smells for a function AST node."""
+    func_name = ""
+    for child in node.children:
+        if child.type in ("identifier", "name", "property_identifier"):
+            func_name = _node_text(child)
+            break
+    func_name = func_name or "<anonymous>"
+    params = _get_params(node)
+    function_params[func_name] = params
+
+    smell = _detect_long_method(node, func_name, rel_path, threshold_level)
+    if smell:
+        smells.append(smell)
+
+    smell = _detect_long_params(node, func_name, params, rel_path, threshold_level)
+    if smell:
+        smells.append(smell)
+
+    smell = _detect_deep_nesting(node, func_name, rel_path, threshold_level)
+    if smell:
+        smells.append(smell)
+
+    smells.extend(_detect_feature_envy(node, func_name, rel_path, threshold_level))
+
+    smell = _detect_dispatch_table_candidate(node, func_name, rel_path, threshold_level)
+    if smell:
+        smells.append(smell)
+
+
+def _walk_ast(
+    node: Any,
+    rel_path: Path,
+    threshold_level: int,
+    smells: list[dict[str, Any]],
+    function_params: dict[str, list[str]],
+) -> None:
+    """Recursively walk the AST, dispatching to class/function handlers."""
+    if node.type in _CLASS_TYPES:
+        _walk_class_node(node, rel_path, threshold_level, smells)
+    elif node.type in _FUNCTION_TYPES:
+        _walk_function_node(node, rel_path, threshold_level, smells, function_params)
+    for child in node.children:
+        _walk_ast(child, rel_path, threshold_level, smells, function_params)
+
+
 def _analyze_file(
     full_path: Path,
     rel_path: Path,
@@ -471,76 +565,10 @@ def _analyze_file(
     source = src_bytes.decode("utf-8", errors="replace")
     total_lines = len(source.splitlines())
 
-    # --- Large File ---
-    if _SEVERITY_ORDER[SEVERITY_MEDIUM] >= threshold_level:
-        if total_lines > _LARGE_FILE_LINE_THRESHOLD:
-            smells.append(
-                {
-                    "type": "large_file",
-                    "severity": SEVERITY_MEDIUM,
-                    "file": str(rel_path),
-                    "line": 1,
-                    "entity": rel_path.name,
-                    "description": (
-                        f"File has {total_lines} lines "
-                        f"(threshold: {_LARGE_FILE_LINE_THRESHOLD})"
-                    ),
-                    "suggestion": "Split into smaller, focused modules.",
-                }
-            )
+    _check_large_file(total_lines, rel_path, threshold_level, smells)
 
     function_params: dict[str, list[str]] = {}
-
-    def _walk_root(node: Any) -> None:
-        if node.type in _CLASS_TYPES:
-            class_name = ""
-            for child in node.children:
-                if child.type in ("identifier", "name", "type_identifier"):
-                    class_name = _node_text(child)
-                    break
-            smells.extend(
-                _detect_god_class(
-                    node, class_name or "<unnamed>", rel_path, threshold_level
-                )
-            )
-        elif node.type in _FUNCTION_TYPES:
-            func_name = ""
-            for child in node.children:
-                if child.type in ("identifier", "name", "property_identifier"):
-                    func_name = _node_text(child)
-                    break
-            func_name = func_name or "<anonymous>"
-            params = _get_params(node)
-            function_params[func_name] = params
-
-            smell = _detect_long_method(node, func_name, rel_path, threshold_level)
-            if smell:
-                smells.append(smell)
-
-            smell = _detect_long_params(
-                node, func_name, params, rel_path, threshold_level
-            )
-            if smell:
-                smells.append(smell)
-
-            smell = _detect_deep_nesting(node, func_name, rel_path, threshold_level)
-            if smell:
-                smells.append(smell)
-
-            smells.extend(
-                _detect_feature_envy(node, func_name, rel_path, threshold_level)
-            )
-
-            smell = _detect_dispatch_table_candidate(
-                node, func_name, rel_path, threshold_level
-            )
-            if smell:
-                smells.append(smell)
-
-        for child in node.children:
-            _walk_root(child)
-
-    _walk_root(root_node)
+    _walk_ast(root_node, rel_path, threshold_level, smells, function_params)
 
     # --- Data Clump (file-level check after all functions walked) ---
     if (
