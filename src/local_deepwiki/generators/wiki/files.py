@@ -574,6 +574,88 @@ def _create_files_index_page(
     return files_index
 
 
+async def _process_file_doc_tasks(
+    tasks: list,
+    *,
+    progress_callback: ProgressCallback | None,
+    write_callback: WriteCallback | None,
+    generation_progress: "GenerationProgress | None",
+) -> tuple[list[WikiPage], int, int, int]:
+    """Collect results from file-doc generation tasks as they complete.
+
+    Handles optional callbacks for progress reporting and immediate page
+    writing. Failures are isolated so one bad file cannot abort the whole run.
+
+    Args:
+        tasks: asyncio tasks returning (FileInfo, WikiPage | None, was_skipped).
+        progress_callback: Optional progress reporter callback.
+        write_callback: Optional async callback to write pages immediately.
+        generation_progress: Optional live progress tracker.
+
+    Returns:
+        Tuple of (pages, pages_generated, pages_skipped, pages_failed).
+    """
+    pages: list[WikiPage] = []
+    pages_generated = 0
+    pages_skipped = 0
+    pages_failed = 0
+
+    for coro in asyncio.as_completed(tasks):
+        try:
+            file_info, page, was_skipped = await coro
+
+            if page is not None:
+                pages.append(page)
+                if was_skipped:
+                    pages_skipped += 1
+                else:
+                    pages_generated += 1
+
+                if write_callback:
+                    await write_callback(page)
+
+                if progress_callback:
+                    progress_callback(
+                        f"Generated {file_info.path}", len(pages), len(tasks)
+                    )
+
+            if generation_progress:
+                generation_progress.complete_file(file_info.path)
+
+        except Exception as e:  # noqa: BLE001 — file generation isolation: one file failure must not abort entire wiki build
+            logger.error("Error generating file doc: %s", e)
+            pages_failed += 1
+            if generation_progress:
+                generation_progress.complete_file()
+
+    return pages, pages_generated, pages_skipped, pages_failed
+
+
+def _log_file_docs_summary(
+    pages_generated: int, pages_skipped: int, pages_failed: int, total: int
+) -> None:
+    """Log a summary of file-doc generation results.
+
+    Args:
+        pages_generated: Number of pages newly generated.
+        pages_skipped: Number of pages loaded from cache.
+        pages_failed: Number of pages that failed.
+        total: Total number of tasks attempted.
+    """
+    log_msg = (
+        f"File docs complete: {pages_generated} generated, {pages_skipped} skipped"
+    )
+    if pages_failed:
+        log_msg += f", {pages_failed} failed"
+    logger.info(log_msg)
+    if pages_failed:
+        logger.warning(
+            "%d file docs failed to generate out of %d total",
+            pages_failed,
+            total,
+        )
+
+
 async def generate_file_docs(
     ctx: FileDocContext,
     *,
@@ -632,40 +714,13 @@ async def generate_file_docs(
             )
             return file_info, page, was_skipped
 
-    # Create and process tasks
     tasks = [asyncio.create_task(generate_with_semaphore(f)) for f in significant_files]
-    pages: list[WikiPage] = []
-    pages_generated = 0
-    pages_skipped = 0
-    pages_failed = 0
-
-    for coro in asyncio.as_completed(tasks):
-        try:
-            file_info, page, was_skipped = await coro
-
-            if page is not None:
-                pages.append(page)
-                if was_skipped:
-                    pages_skipped += 1
-                else:
-                    pages_generated += 1
-
-                if write_callback:
-                    await write_callback(page)
-
-                if progress_callback:
-                    progress_callback(
-                        f"Generated {file_info.path}", len(pages), len(tasks)
-                    )
-
-            if generation_progress:
-                generation_progress.complete_file(file_info.path)
-
-        except Exception as e:  # noqa: BLE001 — file generation isolation: one file failure must not abort entire wiki build
-            logger.error("Error generating file doc: %s", e)
-            pages_failed += 1
-            if generation_progress:
-                generation_progress.complete_file()
+    pages, pages_generated, pages_skipped, pages_failed = await _process_file_doc_tasks(
+        tasks,
+        progress_callback=progress_callback,
+        write_callback=write_callback,
+        generation_progress=generation_progress,
+    )
 
     # Create files index
     if pages:
@@ -677,18 +732,7 @@ async def generate_file_docs(
     if generation_progress:
         generation_progress.complete_phase()
 
-    log_msg = (
-        f"File docs complete: {pages_generated} generated, {pages_skipped} skipped"
-    )
-    if pages_failed:
-        log_msg += f", {pages_failed} failed"
-    logger.info(log_msg)
-    if pages_failed:
-        logger.warning(
-            "%d file docs failed to generate out of %d total",
-            pages_failed,
-            len(tasks),
-        )
+    _log_file_docs_summary(pages_generated, pages_skipped, pages_failed, len(tasks))
     return pages, pages_generated, pages_skipped
 
 

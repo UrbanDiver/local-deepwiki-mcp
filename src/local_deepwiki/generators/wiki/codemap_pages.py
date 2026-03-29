@@ -156,6 +156,111 @@ def _format_codemap_index(topics: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
+async def _process_codemap_topic(
+    topic: dict,
+    *,
+    vector_store,
+    llm,
+    repo_path,
+    wiki_path: Path | None,
+    status_manager,
+    config,
+    full_rebuild: bool,
+) -> tuple[WikiPage | None, bool, bool]:
+    """Process a single codemap topic: check cache or generate fresh.
+
+    Args:
+        topic: Topic dict with entry_point, file_path, suggested_query.
+        vector_store: Vector store for codemap generation.
+        llm: LLM provider for narrative generation.
+        repo_path: Repository root path.
+        wiki_path: Wiki output directory.
+        status_manager: Status manager for cache checks and recording.
+        config: Wiki config with codemap parameters.
+        full_rebuild: Whether to skip cache checks.
+
+    Returns:
+        Tuple of (page_or_None, was_skipped, was_generated). Both False when
+        the topic was skipped due to error or trivial result.
+    """
+    entry_point = topic.get("entry_point", "")
+    slug = _topic_slug(entry_point)
+    page_path = f"codemaps/{slug}.md"
+    source_files = [topic.get("file_path", "")]
+
+    # Check if page needs regeneration
+    if not full_rebuild and not status_manager.needs_regeneration(
+        page_path, source_files
+    ):
+        existing_page = await status_manager.load_existing_page(page_path)
+        if existing_page is not None:
+            status_manager.record_page_status(existing_page, source_files)
+            return existing_page, True, False
+
+    # Generate codemap
+    try:
+        result = await generate_codemap(
+            query=topic.get("suggested_query", f"How does {entry_point} work?"),
+            vector_store=vector_store,
+            repo_path=repo_path,
+            llm=llm,
+            entry_point=entry_point,
+            focus=CodemapFocus.EXECUTION_FLOW,
+            max_depth=config.codemap_max_depth,
+            max_nodes=config.codemap_max_nodes,
+        )
+    except (ValueError, RuntimeError, OSError, TypeError):
+        # ValueError/RuntimeError: vector store or LLM provider failures
+        # OSError: file I/O or network errors
+        # TypeError: unexpected data shapes from LLM or vector store
+        logger.exception("Failed to generate codemap for %s", entry_point)
+        return None, False, False
+
+    # Skip trivial graphs
+    if result.total_nodes < _MIN_NODES:
+        logger.debug(
+            "Skipping trivial codemap for %s (%d nodes)",
+            entry_point,
+            result.total_nodes,
+        )
+        return None, False, False
+
+    content = _format_codemap_page(topic, result, wiki_path)
+    page = WikiPage(
+        path=page_path,
+        title=f"Codemap: {entry_point}",
+        content=content,
+        generated_at=time.time(),
+    )
+    status_manager.record_page_status(page, source_files)
+    return page, False, True
+
+
+def _cleanup_orphaned_codemap_pages(
+    wiki_path: Path | None, generated_topics: list[dict]
+) -> None:
+    """Remove codemap pages on disk that are no longer in the generated set.
+
+    Args:
+        wiki_path: Wiki output directory.
+        generated_topics: Topics that were successfully generated or loaded.
+    """
+    if wiki_path is None:
+        return
+    codemaps_dir = wiki_path / "codemaps"
+    if not codemaps_dir.is_dir():
+        return
+    current_slugs = {_topic_slug(t.get("entry_point", "")) for t in generated_topics}
+    current_slugs.add("index")
+    for md_file in codemaps_dir.glob("*.md"):
+        if md_file.stem not in current_slugs:
+            try:
+                md_file.unlink()
+                logger.debug("Removed orphaned codemap page: %s", md_file.name)
+            except OSError:
+                logger.debug("Failed to remove orphaned codemap: %s", md_file.name)
+
+
 async def generate_codemap_pages(
     ctx: "WikiPipelineContext",
 ) -> tuple[list[WikiPage], int, int]:
@@ -167,22 +272,15 @@ async def generate_codemap_pages(
     Returns:
         Tuple of (pages list, generated count, skipped count).
     """
-    vector_store = ctx.vector_store
-    llm = ctx.llm
-    repo_path = ctx.repo_path
-    wiki_path = ctx.wiki_path
-    status_manager = ctx.status_manager
     config = ctx.wiki_config
-    full_rebuild = ctx.full_rebuild
-
     if not config.codemap_enabled or config.codemap_max_topics <= 0:
         return [], 0, 0
 
     # Discover high-value entry points
     try:
         topics = await suggest_topics(
-            vector_store=vector_store,
-            repo_path=repo_path,
+            vector_store=ctx.vector_store,
+            repo_path=ctx.repo_path,
             max_suggestions=config.codemap_max_topics,
         )
     except (ValueError, RuntimeError, OSError):
@@ -203,62 +301,23 @@ async def generate_codemap_pages(
     generated_topics: list[dict] = []
 
     for topic in topics:
-        entry_point = topic.get("entry_point", "")
-        slug = _topic_slug(entry_point)
-        page_path = f"codemaps/{slug}.md"
-        source_files = [topic.get("file_path", "")]
-
-        # Check if page needs regeneration
-        if not full_rebuild and not status_manager.needs_regeneration(
-            page_path, source_files
-        ):
-            existing_page = await status_manager.load_existing_page(page_path)
-            if existing_page is not None:
-                pages.append(existing_page)
-                status_manager.record_page_status(existing_page, source_files)
-                generated_topics.append(topic)
-                skipped += 1
-                continue
-
-        # Generate codemap
-        try:
-            result = await generate_codemap(
-                query=topic.get("suggested_query", f"How does {entry_point} work?"),
-                vector_store=vector_store,
-                repo_path=repo_path,
-                llm=llm,
-                entry_point=entry_point,
-                focus=CodemapFocus.EXECUTION_FLOW,
-                max_depth=config.codemap_max_depth,
-                max_nodes=config.codemap_max_nodes,
-            )
-        except (ValueError, RuntimeError, OSError, TypeError):
-            # ValueError/RuntimeError: vector store or LLM provider failures
-            # OSError: file I/O or network errors
-            # TypeError: unexpected data shapes from LLM or vector store
-            logger.exception("Failed to generate codemap for %s", entry_point)
-            continue
-
-        # Skip trivial graphs
-        if result.total_nodes < _MIN_NODES:
-            logger.debug(
-                "Skipping trivial codemap for %s (%d nodes)",
-                entry_point,
-                result.total_nodes,
-            )
-            continue
-
-        content = _format_codemap_page(topic, result, wiki_path)
-        page = WikiPage(
-            path=page_path,
-            title=f"Codemap: {entry_point}",
-            content=content,
-            generated_at=time.time(),
+        page, was_skipped, was_generated = await _process_codemap_topic(
+            topic,
+            vector_store=ctx.vector_store,
+            llm=ctx.llm,
+            repo_path=ctx.repo_path,
+            wiki_path=ctx.wiki_path,
+            status_manager=ctx.status_manager,
+            config=config,
+            full_rebuild=ctx.full_rebuild,
         )
-        pages.append(page)
-        status_manager.record_page_status(page, source_files)
-        generated_topics.append(topic)
-        generated += 1
+        if page is not None:
+            pages.append(page)
+            generated_topics.append(topic)
+            if was_skipped:
+                skipped += 1
+            elif was_generated:
+                generated += 1
 
     # Generate index page
     index_content = _format_codemap_index(generated_topics)
@@ -270,23 +329,11 @@ async def generate_codemap_pages(
     )
     pages.append(index_page)
     all_source_files = [t.get("file_path", "") for t in generated_topics]
-    status_manager.record_page_status(index_page, all_source_files or [""])
+    ctx.status_manager.record_page_status(index_page, all_source_files or [""])
     generated += 1
 
     # Clean up orphaned codemap pages
-    codemaps_dir = wiki_path / "codemaps"
-    if codemaps_dir.is_dir():
-        current_slugs = {
-            _topic_slug(t.get("entry_point", "")) for t in generated_topics
-        }
-        current_slugs.add("index")
-        for md_file in codemaps_dir.glob("*.md"):
-            if md_file.stem not in current_slugs:
-                try:
-                    md_file.unlink()
-                    logger.debug("Removed orphaned codemap page: %s", md_file.name)
-                except OSError:
-                    logger.debug("Failed to remove orphaned codemap: %s", md_file.name)
+    _cleanup_orphaned_codemap_pages(ctx.wiki_path, generated_topics)
 
     logger.info(
         "Codemap generation complete: %d generated, %d unchanged", generated, skipped

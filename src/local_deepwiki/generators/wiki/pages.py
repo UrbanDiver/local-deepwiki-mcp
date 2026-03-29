@@ -120,6 +120,97 @@ def _build_quick_start_section(manifest: ProjectManifest) -> str:
     return "\n".join(lines)
 
 
+def _build_overview_static_sections(
+    repo_name: str,
+    manifest: ProjectManifest | None,
+    repo_path: Path | None,
+    max_deps: int = 12,
+) -> list[str]:
+    """Build the static (non-LLM) sections for the overview page.
+
+    These sections are built from manifest data and directory structure,
+    not from LLM output. They are reused for both the prompt context and
+    the final page content.
+
+    Args:
+        repo_name: Repository name for the heading.
+        manifest: Project manifest, may be None.
+        repo_path: Path to repo root, may be None.
+        max_deps: Maximum dependencies to include in tech stack.
+
+    Returns:
+        List of markdown section strings.
+    """
+    parts: list[str] = [f"# {repo_name}\n"]
+    if manifest and manifest.description:
+        parts.append(f"\n{manifest.description}\n")
+    if manifest:
+        tech_section = _build_tech_stack_section(manifest, max_deps=max_deps)
+        if tech_section:
+            parts.append(tech_section)
+    if repo_path:
+        parts.append(_build_directory_section(repo_path))
+    if manifest:
+        qs_section = _build_quick_start_section(manifest)
+        if qs_section:
+            parts.append(qs_section)
+    return parts
+
+
+def _build_manifest_dep_facts(manifest: ProjectManifest | None) -> list[str]:
+    """Build grounded dependency fact sections from manifest.
+
+    Args:
+        manifest: Project manifest with dependency info.
+
+    Returns:
+        List of formatted fact strings for the LLM prompt.
+    """
+    facts: list[str] = []
+    if manifest and manifest.dependencies:
+        deps_list = [
+            f"- {name}" + (f" ({version})" if version and version != "*" else "")
+            for name, version in sorted(manifest.dependencies.items())
+        ]
+        facts.append(
+            "EXTERNAL DEPENDENCIES (from package manifest):\n"
+            + "\n".join(deps_list[:30])
+        )
+    if manifest and manifest.dev_dependencies:
+        dev_deps_list = [
+            f"- {name}" + (f" ({version})" if version and version != "*" else "")
+            for name, version in sorted(manifest.dev_dependencies.items())
+        ]
+        facts.append(
+            "DEV DEPENDENCIES (from package manifest):\n"
+            + "\n".join(dev_deps_list[:20])
+        )
+    return facts
+
+
+def _categorize_import_files(import_chunks: list) -> tuple[list[str], list[str]]:
+    """Split import chunks into source and test file paths (deduplicated).
+
+    Args:
+        import_chunks: Search result chunks with chunk_type == "import".
+
+    Returns:
+        Tuple of (source_files, test_files) lists.
+    """
+    seen_files: set[str] = set()
+    source_files: list[str] = []
+    test_files: list[str] = []
+    for r in import_chunks:
+        file_path = r.chunk.file_path
+        if file_path not in seen_files:
+            seen_files.add(file_path)
+            if "/test" in file_path or file_path.startswith("test"):
+                test_files.append(file_path)
+            else:
+                source_files.append(file_path)
+    return source_files, test_files
+
+
 async def _gather_code_context(
     vector_store: VectorStore,
     max_chunk_content_chars: int = 15000,
@@ -205,6 +296,37 @@ RULES:
 Return ONLY the Description and Key Features sections as markdown."""
 
 
+def _build_overview_prompt_context(
+    repo_name: str,
+    manifest: ProjectManifest | None,
+    repo_path: Path | None,
+) -> str:
+    """Build the pre-generated context string passed to the overview LLM prompt.
+
+    Includes a key-features instruction line between the header and the static
+    sections so the LLM knows what to fill in.
+
+    Args:
+        repo_name: Repository name.
+        manifest: Project manifest, may be None.
+        repo_path: Path to repo root, may be None.
+
+    Returns:
+        Formatted pre-generated context string.
+    """
+    prompt_parts = _build_overview_static_sections(
+        repo_name, manifest, repo_path, max_deps=10
+    )
+    # Insert the instruction after the header (and optional description)
+    insert_idx = 2 if (manifest and manifest.description) else 1
+    prompt_parts.insert(
+        insert_idx,
+        '\nBased on the code samples below, write a "## Key Features" section '
+        "listing 3-5 features you can VERIFY from the actual code.\n",
+    )
+    return "\n".join(prompt_parts)
+
+
 async def generate_overview_page(ctx: WikiPipelineContext) -> WikiPage:
     """Generate the main overview/index page with grounded facts.
 
@@ -218,19 +340,11 @@ async def generate_overview_page(ctx: WikiPipelineContext) -> WikiPage:
     Returns:
         WikiPage with overview content.
     """
-    index_status = ctx.index_status
-    vector_store = ctx.vector_store
-    llm = ctx.llm
-    system_prompt = ctx.system_prompt
-    manifest = ctx.manifest
-    repo_path = ctx.repo_path
-    max_chunk_content_chars = ctx.max_chunk_content_chars
-
-    repo_name = Path(index_status.repo_path).name
+    repo_name = Path(ctx.index_status.repo_path).name
 
     # Gather code context for LLM
     code_context_parts = await _gather_code_context(
-        vector_store, max_chunk_content_chars
+        ctx.vector_store, ctx.max_chunk_content_chars
     )
     code_samples = (
         "\n\n".join(code_context_parts)
@@ -239,46 +353,22 @@ async def generate_overview_page(ctx: WikiPipelineContext) -> WikiPage:
     )
 
     # Read authoritative project docs (CLAUDE.md, README.md, etc.)
-    authoritative_docs = _read_authoritative_docs(repo_path)
+    authoritative_docs = _read_authoritative_docs(ctx.repo_path)
 
-    # Build pre-generated sections for LLM context
-    prompt_parts = [f"# {repo_name}\n"]
-    if manifest and manifest.description:
-        prompt_parts.append(f"\n{manifest.description}\n")
-    prompt_parts.append(
-        '\nBased on the code samples below, write a "## Key Features" section '
-        "listing 3-5 features you can VERIFY from the actual code.\n"
+    # Build prompt context and generate LLM content
+    pre_generated = _build_overview_prompt_context(
+        repo_name, ctx.manifest, ctx.repo_path
     )
-    if manifest:
-        tech_section = _build_tech_stack_section(manifest, max_deps=10)
-        if tech_section:
-            prompt_parts.append(tech_section)
-    if repo_path:
-        prompt_parts.append(_build_directory_section(repo_path) + "\n")
-    if manifest:
-        qs_section = _build_quick_start_section(manifest)
-        if qs_section:
-            prompt_parts.append(qs_section)
-
-    pre_generated = "\n".join(prompt_parts)
     prompt = _build_overview_prompt(pre_generated, code_samples, authoritative_docs)
-    llm_content = await llm.generate(prompt, system_prompt=system_prompt)
+    llm_content = await ctx.llm.generate(prompt, system_prompt=ctx.system_prompt)
 
-    # Build final content
-    final_parts = [f"# {repo_name}\n"]
-    if manifest and manifest.description:
-        final_parts.append(f"\n{manifest.description}\n")
-    final_parts.append(llm_content)
-    if manifest:
-        tech_section = _build_tech_stack_section(manifest)
-        if tech_section:
-            final_parts.append(tech_section)
-    if repo_path:
-        final_parts.append(_build_directory_section(repo_path))
-    if manifest:
-        qs_section = _build_quick_start_section(manifest)
-        if qs_section:
-            final_parts.append(qs_section)
+    # Build final content: static sections with LLM content inserted after header
+    final_parts = _build_overview_static_sections(
+        repo_name, ctx.manifest, ctx.repo_path
+    )
+    # LLM content goes after the header (and optional description)
+    insert_idx = 2 if (ctx.manifest and ctx.manifest.description) else 1
+    final_parts.insert(insert_idx, llm_content)
 
     return WikiPage(
         path="index.md",
@@ -433,90 +523,16 @@ Format as markdown with clear sections."""
     )
 
 
-async def generate_dependencies_page(
-    ctx: WikiPipelineContext,
-    *,
-    import_search_limit: int = 100,
-) -> tuple[WikiPage, list[str]]:
-    """Generate dependencies documentation with grounded facts from manifest.
+def _build_dependencies_prompt(grounded_context: str) -> str:
+    """Build the LLM prompt for dependency page generation.
 
     Args:
-        ctx: Immutable pipeline context bundling shared parameters.
-        import_search_limit: Max import chunks to search.
+        grounded_context: Concatenated fact sections (manifest + imports).
 
     Returns:
-        Tuple of (WikiPage, list of source files that contributed).
+        Formatted prompt string.
     """
-    index_status = ctx.index_status
-    vector_store = ctx.vector_store
-    llm = ctx.llm
-    system_prompt = ctx.system_prompt
-    manifest = ctx.manifest
-
-    from local_deepwiki.generators.diagrams import generate_dependency_graph
-
-    # Build grounded dependency context
-    facts_sections = []
-
-    # 1. External dependencies from manifest (GROUNDED FACTS)
-    if manifest and manifest.dependencies:
-        deps_list = []
-        for name, version in sorted(manifest.dependencies.items()):
-            version_str = f" ({version})" if version and version != "*" else ""
-            deps_list.append(f"- {name}{version_str}")
-        facts_sections.append(
-            "EXTERNAL DEPENDENCIES (from package manifest):\n"
-            + "\n".join(deps_list[:30])
-        )
-
-    # 2. Dev dependencies from manifest (GROUNDED FACTS)
-    if manifest and manifest.dev_dependencies:
-        dev_deps_list = []
-        for name, version in sorted(manifest.dev_dependencies.items()):
-            version_str = f" ({version})" if version and version != "*" else ""
-            dev_deps_list.append(f"- {name}{version_str}")
-        facts_sections.append(
-            "DEV DEPENDENCIES (from package manifest):\n"
-            + "\n".join(dev_deps_list[:20])
-        )
-
-    # 3. Get import chunks for internal dependency analysis
-    # Use higher limit to capture more modules for a complete dependency graph
-    search_results = await vector_store.search(
-        "import require include from",
-        limit=500,
-    )
-
-    import_chunks = [r for r in search_results if r.chunk.chunk_type.value == "import"]
-
-    # Collect source files from import chunks, prioritizing non-test files
-    seen_files: set[str] = set()
-    source_files: list[str] = []
-    test_files: list[str] = []
-
-    for r in import_chunks:
-        file_path = r.chunk.file_path
-        if file_path not in seen_files:
-            seen_files.add(file_path)
-            if "/test" in file_path or file_path.startswith("test"):
-                test_files.append(file_path)
-            else:
-                source_files.append(file_path)
-
-    # Combine: source files first, then test files
-    all_relevant_files = source_files + test_files
-
-    # Build import context
-    import_context = "\n\n".join(
-        [f"File: {r.chunk.file_path}\n{r.chunk.content}" for r in import_chunks[:25]]
-    )
-
-    if import_context:
-        facts_sections.append(f"IMPORT STATEMENTS FROM CODE:\n{import_context}")
-
-    grounded_context = "\n\n".join(facts_sections)
-
-    prompt = f"""Generate a dependencies overview based ONLY on the facts provided below.
+    return f"""Generate a dependencies overview based ONLY on the facts provided below.
 
 {grounded_context}
 
@@ -534,9 +550,19 @@ CRITICAL CONSTRAINTS:
 
 Format as markdown."""
 
-    content = await llm.generate(prompt, system_prompt=system_prompt)
 
-    # Generate auto-generated module dependency graph with enhanced features
+def _append_dependency_graph(content: str, import_chunks: list) -> str:
+    """Append the auto-generated module dependency graph to page content.
+
+    Args:
+        content: Existing LLM-generated markdown content.
+        import_chunks: Import chunks used to build the graph.
+
+    Returns:
+        Content with the dependency graph appended (unchanged if no graph).
+    """
+    from local_deepwiki.generators.diagrams import generate_dependency_graph
+
     dep_graph = generate_dependency_graph(
         import_chunks,
         "local_deepwiki",
@@ -545,12 +571,57 @@ Format as markdown."""
         max_external=10,
         wiki_base_path="files/",
     )
-    if dep_graph:
-        content += "\n\n## Module Dependency Graph\n\n"
-        content += "The following diagram shows module dependencies. "
-        content += "Click on a module to view its documentation. "
-        content += "External dependencies are shown with dashed borders.\n\n"
-        content += dep_graph
+    if not dep_graph:
+        return content
+    return (
+        content
+        + "\n\n## Module Dependency Graph\n\n"
+        + "The following diagram shows module dependencies. "
+        + "Click on a module to view its documentation. "
+        + "External dependencies are shown with dashed borders.\n\n"
+        + dep_graph
+    )
+
+
+async def generate_dependencies_page(
+    ctx: WikiPipelineContext,
+    *,
+    import_search_limit: int = 100,
+) -> tuple[WikiPage, list[str]]:
+    """Generate dependencies documentation with grounded facts from manifest.
+
+    Args:
+        ctx: Immutable pipeline context bundling shared parameters.
+        import_search_limit: Max import chunks to search.
+
+    Returns:
+        Tuple of (WikiPage, list of source files that contributed).
+    """
+    # Build grounded fact sections from manifest
+    facts_sections = _build_manifest_dep_facts(ctx.manifest)
+
+    # Get import chunks for internal dependency analysis
+    # Use higher limit to capture more modules for a complete dependency graph
+    search_results = await ctx.vector_store.search(
+        "import require include from",
+        limit=500,
+    )
+    import_chunks = [r for r in search_results if r.chunk.chunk_type.value == "import"]
+
+    # Categorize files and build import context section
+    source_files, test_files = _categorize_import_files(import_chunks)
+    all_relevant_files = source_files + test_files
+
+    import_context = "\n\n".join(
+        f"File: {r.chunk.file_path}\n{r.chunk.content}" for r in import_chunks[:25]
+    )
+    if import_context:
+        facts_sections.append(f"IMPORT STATEMENTS FROM CODE:\n{import_context}")
+
+    grounded_context = "\n\n".join(facts_sections)
+    prompt = _build_dependencies_prompt(grounded_context)
+    content = await ctx.llm.generate(prompt, system_prompt=ctx.system_prompt)
+    content = _append_dependency_graph(content, import_chunks)
 
     page = WikiPage(
         path="dependencies.md",
