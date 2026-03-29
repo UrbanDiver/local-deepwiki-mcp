@@ -125,24 +125,20 @@ class AnalysisService:
             },
         }
 
-        if include_call_graph and entity_file:
-            _collect_call_graph(result, repo_path, entity_name, entity_file)
-
-        if include_inheritance and entity_type == "class" and vector_store is not None:
-            await _collect_inheritance(result, entity_name, index_status, vector_store)
-
-        if include_test_examples and vector_store is not None:
-            await _collect_test_examples(
-                result,
-                entity_name,
-                entity_type,
-                max_test_examples,
-                repo_path,
-                vector_store,
-            )
-
-        if include_api_docs and entity_file:
-            _collect_api_docs(result, repo_path, entity_name, entity_type, entity_file)
+        await _populate_entity_sections(
+            result,
+            entity_name=entity_name,
+            entity_type=entity_type,
+            entity_file=entity_file,
+            repo_path=repo_path,
+            index_status=index_status,
+            vector_store=vector_store,
+            include_call_graph=include_call_graph,
+            include_inheritance=include_inheritance,
+            include_test_examples=include_test_examples,
+            include_api_docs=include_api_docs,
+            max_test_examples=max_test_examples,
+        )
 
         return result
 
@@ -269,6 +265,49 @@ class AnalysisService:
 # ---------------------------------------------------------------------------
 # explain_entity helpers
 # ---------------------------------------------------------------------------
+
+
+async def _populate_entity_sections(
+    result: dict[str, Any],
+    *,
+    entity_name: str,
+    entity_type: str,
+    entity_file: str,
+    repo_path: Path,
+    index_status: Any,
+    vector_store: Any,
+    include_call_graph: bool,
+    include_inheritance: bool,
+    include_test_examples: bool,
+    include_api_docs: bool,
+    max_test_examples: int,
+) -> None:
+    """Populate optional analysis sections in an explain_entity result dict."""
+    if include_call_graph:
+        if entity_file:
+            _collect_call_graph(result, repo_path, entity_name, entity_file)
+
+    if include_inheritance:
+        if entity_type == "class":
+            if vector_store is not None:
+                await _collect_inheritance(
+                    result, entity_name, index_status, vector_store
+                )
+
+    if include_test_examples:
+        if vector_store is not None:
+            await _collect_test_examples(
+                result,
+                entity_name,
+                entity_type,
+                max_test_examples,
+                repo_path,
+                vector_store,
+            )
+
+    if include_api_docs:
+        if entity_file:
+            _collect_api_docs(result, repo_path, entity_name, entity_type, entity_file)
 
 
 async def _lookup_entity_in_search_index(
@@ -526,6 +565,40 @@ def _has_import_of_module(content: str, module_stem: str) -> bool:
     return re.search(pattern, content) is not None
 
 
+def _is_source_candidate(
+    candidate: Path,
+    repo_path: Path,
+    resolved_target: Path,
+    supported_suffixes: set[str],
+) -> bool:
+    """Return True if *candidate* should be scanned for callers."""
+    if not candidate.is_file():
+        return False
+    if candidate.suffix.lower() not in supported_suffixes:
+        return False
+    if candidate.resolve() == resolved_target:
+        return False
+    rel_parts = candidate.relative_to(repo_path).parts
+    return not any(part.startswith(".") or part == "node_modules" for part in rel_parts)
+
+
+def _collect_callers_from_graph(
+    cand_call_graph: dict[str, Any],
+    rel_path: str,
+    target_entities: set[str],
+    cross_callers: dict[str, list[str]],
+) -> None:
+    """Merge callers from *cand_call_graph* into *cross_callers* in place."""
+    for caller_func, callees in cand_call_graph.items():
+        for callee in callees:
+            if callee in target_entities:
+                qualified = f"{rel_path}:{caller_func}"
+                if callee not in cross_callers:
+                    cross_callers[callee] = []
+                if qualified not in cross_callers[callee]:
+                    cross_callers[callee].append(qualified)
+
+
 def _find_cross_file_callers(
     extractor: Any,
     repo_path: Path,
@@ -541,14 +614,9 @@ def _find_cross_file_callers(
     supported_suffixes = set(EXTENSION_MAP.keys())
 
     for candidate in repo_path.rglob("*"):
-        if not candidate.is_file():
-            continue
-        if candidate.suffix.lower() not in supported_suffixes:
-            continue
-        if candidate.resolve() == resolved_target:
-            continue
-        rel_parts = candidate.relative_to(repo_path).parts
-        if any(part.startswith(".") or part == "node_modules" for part in rel_parts):
+        if not _is_source_candidate(
+            candidate, repo_path, resolved_target, supported_suffixes
+        ):
             continue
 
         try:
@@ -567,15 +635,9 @@ def _find_cross_file_callers(
             continue
 
         rel_path = str(candidate.relative_to(repo_path))
-
-        for caller_func, callees in cand_call_graph.items():
-            for callee in callees:
-                if callee in target_entities:
-                    qualified = f"{rel_path}:{caller_func}"
-                    if callee not in cross_callers:
-                        cross_callers[callee] = []
-                    if qualified not in cross_callers[callee]:
-                        cross_callers[callee].append(qualified)
+        _collect_callers_from_graph(
+            cand_call_graph, rel_path, target_entities, cross_callers
+        )
 
     return cross_callers
 

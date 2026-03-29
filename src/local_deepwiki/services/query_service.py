@@ -43,6 +43,64 @@ class QueryService:
         self._llm_provider = llm_provider
         self._config = config
 
+    async def _retrieve_agentic(
+        self,
+        question: str,
+        fetch_limit: int,
+        trace: Any,
+        t0: float,
+    ) -> tuple[list[Any], dict[str, Any] | None]:
+        """Run agentic RAG retrieval; return (search_results, agentic_metadata)."""
+        from local_deepwiki.core.agentic_rag import agentic_retrieve
+
+        rag_result = await agentic_retrieve(
+            question,
+            self._vector_store,
+            self._llm_provider,
+            max_context=fetch_limit,
+        )
+        if trace:
+            trace.agentic_rag_enabled = True
+            trace.agentic_time_ms = (time.monotonic() - t0) * 1000
+            if rag_result.metadata and rag_result.metadata.get("rewritten"):
+                trace.agentic_rewritten_query = rag_result.metadata.get(
+                    "rewritten_query"
+                )
+        return rag_result.results, rag_result.metadata
+
+    async def _retrieve_standard(self, question: str, fetch_limit: int) -> list[Any]:
+        """Run standard (query-preprocessed) vector search retrieval."""
+        from local_deepwiki.core.query_utils import condense_query, expand_project_terms
+
+        search_query = condense_query(question)
+        search_query = expand_project_terms(search_query)
+        return await self._vector_store.search(
+            search_query,
+            limit=fetch_limit,
+            use_fuzzy=True,
+            fuzzy_weight=0.3,
+        )
+
+    async def _rerank_results(
+        self,
+        reranker: Any,
+        question: str,
+        search_results: list[Any],
+        max_context: int,
+        trace: Any,
+    ) -> list[Any]:
+        """Apply reranking if a reranker is available; otherwise truncate."""
+        if reranker and search_results:
+            t1 = time.monotonic()
+            reranked = await reranker.rerank(
+                question, search_results, top_k=max_context
+            )
+            if trace:
+                rerank_ms = (time.monotonic() - t1) * 1000
+                trace.record_reranking(reranked, rerank_ms, reranker.model_name)
+            return reranked
+        return search_results[:max_context]
+
     async def answer_question(
         self,
         repo_path: Path,
@@ -79,39 +137,11 @@ class QueryService:
 
         t0 = time.monotonic()
         if agentic_rag:
-            from local_deepwiki.core.agentic_rag import agentic_retrieve
-
-            rag_result = await agentic_retrieve(
-                question,
-                self._vector_store,
-                self._llm_provider,
-                max_context=fetch_limit,
+            search_results, agentic_metadata = await self._retrieve_agentic(
+                question, fetch_limit, trace, t0
             )
-            search_results = rag_result.results
-            agentic_metadata = rag_result.metadata
-            if trace:
-                trace.agentic_rag_enabled = True
-                trace.agentic_time_ms = (time.monotonic() - t0) * 1000
-                if rag_result.metadata and rag_result.metadata.get("rewritten"):
-                    trace.agentic_rewritten_query = rag_result.metadata.get(
-                        "rewritten_query"
-                    )
         else:
-            # --- Query preprocessing ---
-            from local_deepwiki.core.query_utils import (
-                condense_query,
-                expand_project_terms,
-            )
-
-            search_query = condense_query(question)
-            search_query = expand_project_terms(search_query)
-
-            search_results = await self._vector_store.search(
-                search_query,
-                limit=fetch_limit,
-                use_fuzzy=True,
-                fuzzy_weight=0.3,
-            )
+            search_results = await self._retrieve_standard(question, fetch_limit)
 
         # --- Graph expansion (optional) ---
         from local_deepwiki.services.graph_expansion import expand_with_graph
@@ -121,8 +151,7 @@ class QueryService:
         )
 
         if trace:
-            retrieval_ms = (time.monotonic() - t0) * 1000
-            trace.record_retrieval(search_results, retrieval_ms)
+            trace.record_retrieval(search_results, (time.monotonic() - t0) * 1000)
 
         if not search_results:
             return QueryResult(
@@ -132,16 +161,9 @@ class QueryService:
             )
 
         # --- Reranking (optional) ---
-        if reranker and search_results:
-            t1 = time.monotonic()
-            search_results = await reranker.rerank(
-                question, search_results, top_k=max_context
-            )
-            if trace:
-                rerank_ms = (time.monotonic() - t1) * 1000
-                trace.record_reranking(search_results, rerank_ms, reranker.model_name)
-        else:
-            search_results = search_results[:max_context]
+        search_results = await self._rerank_results(
+            reranker, question, search_results, max_context, trace
+        )
 
         # --- Context construction ---
         context = _build_context(search_results)
