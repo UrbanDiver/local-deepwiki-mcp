@@ -526,3 +526,54 @@ async def test_handler_enrich_no_llm_fallback(mock_access_control, tmp_path):
     )
     data = json.loads(result[0].text)
     assert data["status"] == "success"
+
+
+def test_recommendations_from_data_clump():
+    """Data clump findings should produce parameter object recommendations."""
+    from local_deepwiki.generators.analysis.recommendations import (
+        generate_recommendations,
+    )
+
+    health_data = _make_health_data()
+    health_data["top_findings"]["high_severity_smells"].append(
+        {
+            "type": "data_clump",
+            "severity": "low",
+            "file": "src/generators/wiki/generator.py",
+            "line": 1,
+            "entity": "func_a, func_b, func_c",
+            "description": "3 functions share parameters: x, y, z",
+        }
+    )
+    result = generate_recommendations(Path("/fake"), health_data=health_data)
+    titles = [r["title"] for r in result["recommendations"]]
+    assert any("parameter object" in t.lower() for t in titles), (
+        f"Expected a parameter object recommendation, got: {titles}"
+    )
+
+
+def test_recommendations_groups_same_file_same_category():
+    """Multiple same-file same-category findings should merge into one compound entry."""
+    from local_deepwiki.generators.analysis.recommendations import (
+        generate_recommendations,
+    )
+
+    health_data = _make_health_data()
+    for i, name in enumerate(["func_a", "func_b", "func_c"]):
+        health_data["top_findings"]["high_severity_smells"].append(
+            {
+                "type": "long_method",
+                "severity": "high",
+                "file": "src/big_module.py",
+                "line": 10 + i * 50,
+                "entity": name,
+                "description": f"Function has 100 lines",
+            }
+        )
+    result = generate_recommendations(Path("/fake"), health_data=health_data)
+    big_module_recs = [
+        r for r in result["recommendations"] if r["file"] == "src/big_module.py"
+    ]
+    assert len(big_module_recs) < 3, (
+        f"Expected grouped recommendations, got {len(big_module_recs)} separate entries"
+    )

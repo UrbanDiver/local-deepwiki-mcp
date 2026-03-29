@@ -68,10 +68,26 @@ _TEMPLATES: list[dict[str, str]] = [
         "effort": "low",
         "impact": "medium",
     },
+    {
+        "finding_type": "data_clump",
+        "category": "smells",
+        "title_template": "Extract shared parameters into a parameter object for {entity}",
+        "effort": "low",
+        "impact": "medium",
+    },
+    {
+        "finding_type": "dispatch_table_candidate",
+        "category": "complexity",
+        "title_template": "Replace conditionals in {entity} with dispatch table",
+        "effort": "medium",
+        "impact": "high",
+    },
 ]
 
 # Build a lookup for quick access by finding type.
-_TEMPLATE_BY_TYPE: dict[str, dict[str, str]] = {t["finding_type"]: t for t in _TEMPLATES}
+_TEMPLATE_BY_TYPE: dict[str, dict[str, str]] = {
+    t["finding_type"]: t for t in _TEMPLATES
+}
 
 
 # ---------------------------------------------------------------------------
@@ -191,7 +207,9 @@ def _recommendations_from_coupling(
             {
                 "title": f"Reduce coupling in module {module_name}",
                 "category": "coupling",
-                "description": (f"Distance from main sequence is {distance:.2f} (threshold: 0.7)."),
+                "description": (
+                    f"Distance from main sequence is {distance:.2f} (threshold: 0.7)."
+                ),
                 "file": "",
                 "line": 0,
                 "effort": "high",
@@ -205,7 +223,12 @@ def _recommendations_from_coupling(
 def _deduplicate(
     recs: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Remove duplicate recommendations by (file, line, category)."""
+    """Remove duplicates and group related recommendations.
+
+    1. Exact dedup by (file, line, category).
+    2. When 3+ recommendations target the same (file, category), merge into
+       a single compound entry listing all entities.
+    """
     seen: set[tuple[str, int, str]] = set()
     unique: list[dict[str, Any]] = []
     for rec in recs:
@@ -213,7 +236,35 @@ def _deduplicate(
         if key not in seen:
             seen.add(key)
             unique.append(rec)
-    return unique
+
+    from collections import defaultdict
+
+    groups: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+    ungroupable: list[dict[str, Any]] = []
+
+    for rec in unique:
+        file_path = rec.get("file", "")
+        if file_path:
+            groups[(file_path, rec["category"])].append(rec)
+        else:
+            ungroupable.append(rec)
+
+    result: list[dict[str, Any]] = list(ungroupable)
+    for (_file, _cat), group in groups.items():
+        if len(group) >= 3:
+            entities = [r.get("title", "") for r in group]
+            best = max(group, key=lambda r: r["priority"])
+            result.append(
+                {
+                    **best,
+                    "title": f"Refactor {_file} ({len(group)} issues)",
+                    "description": "; ".join(entities),
+                }
+            )
+        else:
+            result.extend(group)
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -262,7 +313,9 @@ def generate_recommendations(
     all_recs.extend(_recommendations_from_smells(combined_smells))
 
     all_recs.extend(_recommendations_from_hotspots(findings.get("hotspots", [])))
-    all_recs.extend(_recommendations_from_layer_violations(findings.get("layer_violations", [])))
+    all_recs.extend(
+        _recommendations_from_layer_violations(findings.get("layer_violations", []))
+    )
 
     # Coupling metrics are optional -- passed via a private key.
     coupling_metrics = health_data.get("_coupling_metrics", [])

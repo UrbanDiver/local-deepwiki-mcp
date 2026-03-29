@@ -375,3 +375,56 @@ def func_c(config, logger, timeout):
     data = json.loads(result[0].text)
     types = [s["type"] for s in data["smells"]]
     assert "data_clump" in types
+
+
+def test_detects_dispatch_table_candidate(tmp_path):
+    """Function with high CC but low line count should be flagged as dispatch candidate."""
+    from local_deepwiki.generators.analysis.design_smells import analyze_design_smells
+
+    code = """
+def handle_status(code: int) -> str:
+    if code == 200:
+        return "ok"
+    elif code == 201:
+        return "created"
+    elif code == 204:
+        return "no content"
+    elif code == 301:
+        return "moved"
+    elif code == 302:
+        return "found"
+    elif code == 400:
+        return "bad request"
+    elif code == 401:
+        return "unauthorized"
+    elif code == 403:
+        return "forbidden"
+    elif code == 404:
+        return "not found"
+    elif code == 405:
+        return "method not allowed"
+    elif code == 408:
+        return "timeout"
+    elif code == 409:
+        return "conflict"
+    elif code == 422:
+        return "unprocessable"
+    elif code == 429:
+        return "rate limited"
+    elif code == 500:
+        return "server error"
+    elif code == 502:
+        return "bad gateway"
+    elif code == 503:
+        return "unavailable"
+    else:
+        return "unknown"
+"""
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "handler.py").write_text(code)
+    result = analyze_design_smells(tmp_path, severity_threshold="medium")
+    smell_types = [s["type"] for s in result["smells"]]
+    assert "dispatch_table_candidate" in smell_types, (
+        f"Expected dispatch_table_candidate smell, got types: {smell_types}"
+    )

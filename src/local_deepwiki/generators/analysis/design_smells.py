@@ -89,6 +89,8 @@ _LARGE_FILE_LINE_THRESHOLD = 800
 _DEEP_NESTING_THRESHOLD = 4
 _DATA_CLUMP_SHARED_PARAMS = 3
 _DATA_CLUMP_MIN_FUNCTIONS = 3
+_DISPATCH_TABLE_CC_THRESHOLD = 15
+_DISPATCH_TABLE_MAX_LINES = 60
 
 # ---------------------------------------------------------------------------
 # Node-type sets (shared with complexity.py patterns)
@@ -410,6 +412,39 @@ def _detect_feature_envy(
     return smells
 
 
+def _detect_dispatch_table_candidate(
+    func_node: Any,
+    func_name: str,
+    rel_path: Path,
+    threshold_level: int,
+) -> dict[str, Any] | None:
+    """Flag functions with high CC but low line count as dispatch table candidates."""
+    if _SEVERITY_ORDER[SEVERITY_MEDIUM] < threshold_level:
+        return None
+    func_lines = func_node.end_point[0] - func_node.start_point[0] + 1
+    cyclomatic = _estimate_cyclomatic(func_node)
+    if (
+        cyclomatic > _DISPATCH_TABLE_CC_THRESHOLD
+        and func_lines < _DISPATCH_TABLE_MAX_LINES
+    ):
+        return {
+            "type": "dispatch_table_candidate",
+            "severity": SEVERITY_MEDIUM,
+            "file": str(rel_path),
+            "line": func_node.start_point[0] + 1,
+            "entity": func_name,
+            "description": (
+                f"Function has cyclomatic complexity {cyclomatic} in only "
+                f"{func_lines} lines (high branching density suggests "
+                f"an if/elif chain)"
+            ),
+            "suggestion": (
+                "Replace conditional chain with a dictionary dispatch table or mapping."
+            ),
+        }
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Per-file analysis
 # ---------------------------------------------------------------------------
@@ -495,6 +530,12 @@ def _analyze_file(
             smells.extend(
                 _detect_feature_envy(node, func_name, rel_path, threshold_level)
             )
+
+            smell = _detect_dispatch_table_candidate(
+                node, func_name, rel_path, threshold_level
+            )
+            if smell:
+                smells.append(smell)
 
         for child in node.children:
             _walk_root(child)
