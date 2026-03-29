@@ -50,7 +50,7 @@ def analyze_module_health(
     # Run analyses filtered/scoped to this module
     hotspot_result = analyze_hotspots(repo_path, metric="complexity", top_n=100)
     smell_result = analyze_design_smells(repo_path, severity_threshold="low")
-    coupling_result = analyze_coupling_metrics(repo_path, module_filter=module_name)
+    coupling_result = analyze_coupling_metrics(repo_path)
     deps_result = analyze_cross_module_dependencies(
         repo_path, module_filter=module_name
     )
@@ -70,12 +70,30 @@ def analyze_module_health(
         if module_path_prefix in s.get("file", "")
     ]
 
-    # Find this module's coupling metrics
+    # Find this module's coupling metrics.
+    # Exact match first; if not found, aggregate all sub-modules by prefix
+    # (e.g. module_name="core" aggregates "core.indexer", "core.vectorstore", …).
     module_coupling: dict[str, Any] | None = None
+    prefix = module_name + "."
+    aggregate_ca = 0
+    aggregate_ce = 0
+    matched_any = False
     for m in coupling_result.get("metrics", []):
-        if m.get("module") == module_name:
-            module_coupling = m
-            break
+        mname = m.get("module", "")
+        if mname == module_name or mname.startswith(prefix):
+            aggregate_ca += m.get("afferent_coupling", 0)
+            aggregate_ce += m.get("efferent_coupling", 0)
+            matched_any = True
+    if matched_any:
+        total = aggregate_ca + aggregate_ce
+        instability = round(aggregate_ce / total, 4) if total > 0 else 0.0
+        module_coupling = {
+            "afferent_coupling": aggregate_ca,
+            "efferent_coupling": aggregate_ce,
+            "instability": instability,
+            "abstractness": 0.0,
+            "distance": 0.0,
+        }
 
     # Compute module-level scores
     total_functions = len(module_hotspots)

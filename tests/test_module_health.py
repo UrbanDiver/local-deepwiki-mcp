@@ -20,18 +20,29 @@ def _write(path: Path, content: str) -> None:
 
 @pytest.fixture()
 def module_repo(tmp_path: Path) -> Path:
-    """Repo with a core/ and web/ package so module filtering has real data."""
+    """Repo with a single top-level package containing core/ and web/.
+
+    The structure mirrors real projects (e.g. src/myapp/core/, src/myapp/web/)
+    where ``myapp`` is the only entry in ``_discover_project_tops``.  This
+    ensures ``_resolve_import_target`` strips only the project wrapper and
+    produces target labels like ``core.indexer`` that are consistent with
+    ``_module_label`` output — avoiding the label asymmetry that occurs
+    when ``core`` and ``web`` are themselves top-level packages.
+    """
+    _write(tmp_path / "src" / "myapp" / "__init__.py", "")
+    _write(tmp_path / "src" / "myapp" / "core" / "__init__.py", "")
+    _write(tmp_path / "src" / "myapp" / "web" / "__init__.py", "")
     _write(
-        tmp_path / "src" / "core" / "indexer.py",
+        tmp_path / "src" / "myapp" / "core" / "indexer.py",
         "def index_repo(path):\n    return {}\n",
     )
     _write(
-        tmp_path / "src" / "core" / "parser.py",
+        tmp_path / "src" / "myapp" / "core" / "parser.py",
         "def parse(text):\n    return []\n",
     )
     _write(
-        tmp_path / "src" / "web" / "app.py",
-        "from core.indexer import index_repo\n\ndef run():\n    return index_repo('.')\n",
+        tmp_path / "src" / "myapp" / "web" / "app.py",
+        "from myapp.core.indexer import index_repo\n\ndef run():\n    return index_repo('.')\n",
     )
     return tmp_path
 
@@ -185,6 +196,34 @@ def test_analyze_module_health_empty_repo(tmp_path: Path) -> None:
 
     assert result["status"] == "success"
     assert result["stats"]["functions"] == 0
+
+
+def test_analyze_module_health_coupling_reflects_inbound_imports(module_repo):
+    """Cross-module imports should produce non-zero Ca and Ce.
+
+    web/app.py imports from myapp.core.indexer, so:
+    - analyzing 'myapp.web' must show Ce > 0 (outbound dependency)
+    - analyzing 'core' must show Ca > 0 (inbound dependency — the original bug)
+
+    The fixture uses a single wrapper package (myapp) so that
+    ``_resolve_import_target`` produces target labels like ``core.indexer``
+    that are consistent with ``_module_label`` source labels.
+    """
+    from local_deepwiki.generators.analysis.module_health import analyze_module_health
+
+    # Ce: web imports from core — use source label "myapp.web"
+    web_result = analyze_module_health(module_repo, "myapp.web")
+    assert web_result["coupling"]["efferent_coupling"] > 0, (
+        "web should show Ce > 0 since web/app.py imports from core, "
+        f"got Ce={web_result['coupling']['efferent_coupling']}"
+    )
+    # Ca: core is imported by web (this was the original bug — Ca was always 0)
+    # Uses target-style prefix "core" which matches "core.indexer" (Ca=1)
+    core_result = analyze_module_health(module_repo, "core")
+    assert core_result["coupling"]["afferent_coupling"] > 0, (
+        "core should show Ca > 0 since web/app.py imports from core, "
+        f"got Ca={core_result['coupling']['afferent_coupling']}"
+    )
 
 
 # ---------------------------------------------------------------------------
