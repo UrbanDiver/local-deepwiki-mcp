@@ -44,6 +44,43 @@ def _calc_delay(
     return delay * (0.5 + random.random()) if jitter else delay
 
 
+def _classify_generic_error(e: Exception) -> tuple[bool, bool]:
+    """Classify a generic exception as rate-limit and/or server-overload.
+
+    Returns:
+        (is_rate_limit, is_overloaded) boolean tuple.
+    """
+    error_str = str(e).lower()
+    is_rate_limit = "rate" in error_str and "limit" in error_str
+    is_overloaded = (
+        "overloaded" in error_str or "503" in error_str or "502" in error_str
+    )
+    return is_rate_limit, is_overloaded
+
+
+async def _retry_known_error(
+    func: Callable[..., Any],
+    e: Exception,
+    attempt: int,
+    max_attempts: int,
+    base_delay: float,
+    max_delay: float,
+    exponential_base: float,
+    jitter: bool,
+    label: str,
+) -> None:
+    """Log and sleep before the next retry attempt for a known retryable error."""
+    delay = _calc_delay(base_delay, exponential_base, attempt, max_delay, jitter)
+    logger.warning(
+        "%s attempt %d failed: %s. Retrying in %.2fs...",
+        func.__name__,
+        attempt,
+        e,
+        delay,
+    )
+    await asyncio.sleep(delay)
+
+
 async def _execute_with_backoff(
     func: Callable[..., Any],
     args: tuple[Any, ...],
@@ -91,25 +128,20 @@ async def _execute_with_backoff(
                     "%s failed after %d attempts: %s", func.__name__, max_attempts, e
                 )
                 raise
-            delay = _calc_delay(
-                base_delay, exponential_base, attempt, max_delay, jitter
-            )
-            logger.warning(
-                "%s attempt %d failed: %s. Retrying in %.2fs...",
-                func.__name__,
-                attempt,
+            await _retry_known_error(
+                func,
                 e,
-                delay,
+                attempt,
+                max_attempts,
+                base_delay,
+                max_delay,
+                exponential_base,
+                jitter,
+                "failed",
             )
-            await asyncio.sleep(delay)
 
         except Exception as e:  # noqa: BLE001 - Intentional broad catch for API resilience: different providers (Anthropic, OpenAI, Ollama) raise different exception types for rate limits and server errors. We inspect error messages to detect retryable conditions and re-raise immediately if not recognized.
-            error_str = str(e).lower()
-            is_rate_limit = "rate" in error_str and "limit" in error_str
-            is_overloaded = (
-                "overloaded" in error_str or "503" in error_str or "502" in error_str
-            )
-
+            is_rate_limit, is_overloaded = _classify_generic_error(e)
             if not (is_rate_limit or is_overloaded):
                 raise
 
@@ -121,10 +153,10 @@ async def _execute_with_backoff(
                     )
                 raise
 
+            label = "rate limited" if is_rate_limit else "server overloaded"
             delay = _calc_delay(
                 base_delay, exponential_base, attempt, max_delay, jitter
             )
-            label = "rate limited" if is_rate_limit else "server overloaded"
             logger.warning("%s %s. Retrying in %.2fs...", func.__name__, label, delay)
             await asyncio.sleep(delay)
 

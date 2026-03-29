@@ -124,6 +124,20 @@ class OpenAILLMProvider(LLMProvider):
                 original_error=e,
             ) from e
 
+    def _raise_if_model_error(self, model_name: str, e: Exception) -> None:
+        """Raise ProviderModelNotFoundError if *e* looks like a model-not-found error."""
+        error_str = str(e).lower()
+        if (
+            "not found" in error_str
+            or "does not exist" in error_str
+            or "invalid" in error_str
+        ):
+            raise ProviderModelNotFoundError(
+                model_name,
+                provider_name=self.name,
+                available_models=list(OPENAI_MODELS.keys()),
+            ) from e
+
     async def validate_model(self, model_name: str) -> bool:
         """Test that a specific model is available.
 
@@ -155,51 +169,26 @@ class OpenAILLMProvider(LLMProvider):
             TimeoutError,
         ) as e:
             # API-specific exceptions - delegate to error handler or check error message
-            error_str = str(e).lower()
-            if (
-                "not found" in error_str
-                or "does not exist" in error_str
-                or "invalid" in error_str
-            ):
-                raise ProviderModelNotFoundError(
-                    model_name,
-                    provider_name=self.name,
-                    available_models=list(OPENAI_MODELS.keys()),
-                ) from e
+            self._raise_if_model_error(model_name, e)
             self._handle_api_error(e)
             raise
         except (ValueError, KeyError) as e:
             # Data validation errors - check if model-related
-            error_str = str(e).lower()
-            if (
-                "not found" in error_str
-                or "does not exist" in error_str
-                or "invalid" in error_str
-            ):
-                raise ProviderModelNotFoundError(
-                    model_name,
-                    provider_name=self.name,
-                    available_models=list(OPENAI_MODELS.keys()),
-                ) from e
+            self._raise_if_model_error(model_name, e)
             raise
         except OpenAIError as e:
             # Catch remaining OpenAI library exceptions not matched above
             # Only handle model-related errors, re-raise everything else
-            error_str = str(e).lower()
             if (
-                "not found" in error_str
-                or "does not exist" in error_str
-                or "invalid" in error_str
+                "not found" in str(e).lower()
+                or "does not exist" in str(e).lower()
+                or "invalid" in str(e).lower()
             ):
                 logger.warning(
                     "Caught OpenAIError in validate_model, treating as model error: %s",
                     e,
                 )
-                raise ProviderModelNotFoundError(
-                    model_name,
-                    provider_name=self.name,
-                    available_models=list(OPENAI_MODELS.keys()),
-                ) from e
+            self._raise_if_model_error(model_name, e)
             # For unknown errors, try the error handler first
             self._handle_api_error(e)
             raise

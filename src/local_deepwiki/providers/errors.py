@@ -199,6 +199,42 @@ class ApiErrorConfig:
     connection_error_type: type | None = None
 
 
+def _extract_retry_after(e: Exception) -> float | None:
+    """Extract Retry-After header value from an API error response."""
+    response = getattr(e, "response", None)
+    if not response:
+        return None
+    retry_after_str = response.headers.get("retry-after")
+    if not retry_after_str:
+        return None
+    try:
+        return float(retry_after_str)
+    except ValueError:
+        return None
+
+
+def _handle_status_error(e: Exception, config: ApiErrorConfig) -> None:
+    """Raise the appropriate provider error for an API status error."""
+    error_str = str(e).lower()
+    status_code = getattr(e, "status_code", None)
+
+    if status_code == 429 or "rate" in error_str:
+        raise ProviderRateLimitError(
+            f"{config.api_label} rate limit exceeded: {e}",
+            provider_name=config.provider_name,
+            retry_after=_extract_retry_after(e),
+        ) from e
+
+    if config.model is not None:
+        not_found_patterns = ("not found", *config.not_found_extra_patterns)
+        if status_code == 404 or any(p in error_str for p in not_found_patterns):
+            raise ProviderModelNotFoundError(
+                config.model,
+                provider_name=config.provider_name,
+                available_models=config.available_models or [],
+            ) from e
+
+
 def handle_api_status_error(e: Exception, config: ApiErrorConfig) -> None:
     """Convert SDK-specific API errors to standardized provider errors.
 
@@ -216,33 +252,7 @@ def handle_api_status_error(e: Exception, config: ApiErrorConfig) -> None:
         ) from e
 
     if config.status_error_type and isinstance(e, config.status_error_type):
-        error_str = str(e).lower()
-        status_code = getattr(e, "status_code", None)
-
-        if status_code == 429 or "rate" in error_str:
-            retry_after = None
-            response = getattr(e, "response", None)
-            if response:
-                retry_after_str = response.headers.get("retry-after")
-                if retry_after_str:
-                    try:
-                        retry_after = float(retry_after_str)
-                    except ValueError:
-                        pass
-            raise ProviderRateLimitError(
-                f"{config.api_label} rate limit exceeded: {e}",
-                provider_name=config.provider_name,
-                retry_after=retry_after,
-            ) from e
-
-        if config.model is not None:
-            not_found_patterns = ("not found", *config.not_found_extra_patterns)
-            if status_code == 404 or any(p in error_str for p in not_found_patterns):
-                raise ProviderModelNotFoundError(
-                    config.model,
-                    provider_name=config.provider_name,
-                    available_models=config.available_models or [],
-                ) from e
+        _handle_status_error(e, config)
 
     if config.connection_error_type and isinstance(e, config.connection_error_type):
         raise ProviderConnectionError(
