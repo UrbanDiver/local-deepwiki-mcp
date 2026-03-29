@@ -159,6 +159,23 @@ def api_codemap_topics() -> Response | tuple[Response, int]:
 _VALID_FOCUS = frozenset({"execution_flow", "data_flow", "dependency_chain"})
 
 
+def _validate_entry_point(
+    entry_point: object,
+) -> tuple[Response, int] | None:
+    """Validate the entry_point parameter; return an error response or None."""
+    if entry_point is None:
+        return None
+    if not isinstance(entry_point, str):
+        return jsonify({"error": "entry_point must be a string"}), 400
+    if len(entry_point) > 500:
+        return jsonify(
+            {"error": "entry_point exceeds maximum length (500 characters)"}
+        ), 400
+    if not re.match(r"^[\w.:/ -]+$", entry_point):
+        return jsonify({"error": "entry_point contains invalid characters"}), 400
+    return None
+
+
 def _validate_codemap_request(
     data: dict,
 ) -> tuple[str, str, int, int, str | None] | tuple[Response, int]:
@@ -196,15 +213,9 @@ def _validate_codemap_request(
         return jsonify({"error": "max_nodes must be an integer between 5 and 60"}), 400
 
     entry_point = data.get("entry_point")
-    if entry_point is not None:
-        if not isinstance(entry_point, str):
-            return jsonify({"error": "entry_point must be a string"}), 400
-        if len(entry_point) > 500:
-            return jsonify(
-                {"error": "entry_point exceeds maximum length (500 characters)"}
-            ), 400
-        if not re.match(r"^[\w.:/ -]+$", entry_point):
-            return jsonify({"error": "entry_point contains invalid characters"}), 400
+    entry_error = _validate_entry_point(entry_point)
+    if entry_error is not None:
+        return entry_error
 
     return query, focus, max_depth, max_nodes, entry_point
 

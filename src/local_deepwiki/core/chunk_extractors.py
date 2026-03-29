@@ -306,6 +306,41 @@ def _extract_splat_parameter(
     return None
 
 
+_SELF_CLS: frozenset[str] = frozenset({"self", "cls"})
+
+
+def _handle_identifier_param(
+    child: Node, source: bytes, param_types: dict[str, str | None]
+) -> None:
+    """Process a bare identifier parameter node."""
+    name = get_node_text(child, source)
+    if name not in _SELF_CLS:
+        param_types[name] = None
+
+
+def _handle_default_param(
+    child: Node, source: bytes, param_types: dict[str, str | None]
+) -> None:
+    """Process a default_parameter node (no type annotation)."""
+    name_node = child.child_by_field_name("name")
+    if name_node:
+        name = get_node_text(name_node, source)
+        if name not in _SELF_CLS:
+            param_types[name] = None
+
+
+def _handle_typed_default_param(
+    child: Node, source: bytes, param_types: dict[str, str | None]
+) -> None:
+    """Process a typed_default_parameter node."""
+    name_node = child.child_by_field_name("name")
+    type_node = child.child_by_field_name("type")
+    if name_node:
+        name = get_node_text(name_node, source)
+        if name not in _SELF_CLS:
+            param_types[name] = get_node_text(type_node, source) if type_node else None
+
+
 def extract_python_parameter_types(
     func_node: Node, source: bytes
 ) -> dict[str, str | None]:
@@ -325,9 +360,7 @@ def extract_python_parameter_types(
 
     for child in params_node.children:
         if child.type == "identifier":
-            name = get_node_text(child, source)
-            if name not in ("self", "cls"):
-                param_types[name] = None
+            _handle_identifier_param(child, source, param_types)
 
         elif child.type == "typed_parameter":
             result = _extract_typed_parameter(child, source)
@@ -335,21 +368,10 @@ def extract_python_parameter_types(
                 param_types[result[0]] = result[1]
 
         elif child.type == "default_parameter":
-            name_node = child.child_by_field_name("name")
-            if name_node:
-                name = get_node_text(name_node, source)
-                if name not in ("self", "cls"):
-                    param_types[name] = None
+            _handle_default_param(child, source, param_types)
 
         elif child.type == "typed_default_parameter":
-            name_node = child.child_by_field_name("name")
-            type_node = child.child_by_field_name("type")
-            if name_node:
-                name = get_node_text(name_node, source)
-                if name not in ("self", "cls"):
-                    param_types[name] = (
-                        get_node_text(type_node, source) if type_node else None
-                    )
+            _handle_typed_default_param(child, source, param_types)
 
         elif child.type in ("list_splat_pattern", "dictionary_splat_pattern"):
             result = _extract_splat_parameter(child, source)

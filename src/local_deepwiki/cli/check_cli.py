@@ -144,6 +144,56 @@ def _format_json_output(
     console.print(json.dumps(output, indent=2))
 
 
+def _pass_fail(passed: bool) -> str:
+    """Return a Rich-coloured PASS or FAIL status string."""
+    return "[green]PASS[/green]" if passed else "[red]FAIL[/red]"
+
+
+def _threshold_str(value: Any) -> str:
+    """Return the threshold value as a string, or '-' when unset."""
+    return str(value) if value is not None else "-"
+
+
+def _add_grade_row(
+    table: Table, grade: str, min_grade: str | None, thresholds: dict[str, Any]
+) -> None:
+    """Add the grade row to the health table."""
+    passes = min_grade is None or _grade_passes(grade, min_grade)
+    table.add_row("Grade", grade, _threshold_str(min_grade), _pass_fail(passes))
+
+
+def _add_score_row(table: Table, score: float, min_score: float | None) -> None:
+    """Add the overall score row to the health table."""
+    passes = min_score is None or score >= min_score
+    table.add_row("Score", str(score), _threshold_str(min_score), _pass_fail(passes))
+
+
+def _add_dimension_rows(
+    table: Table, overall: dict[str, Any], thresholds: dict[str, Any]
+) -> None:
+    """Add one row per architecture dimension to the health table."""
+    for dim in ("complexity", "coupling", "smells", "layers"):
+        dim_score = overall.get("dimensions", {}).get(dim, {}).get("score", 0)
+        min_dim = thresholds.get(f"min_{dim}")
+        passes = min_dim is None or dim_score >= min_dim
+        table.add_row(
+            dim.capitalize(),
+            str(dim_score),
+            _threshold_str(min_dim),
+            _pass_fail(passes),
+        )
+
+
+def _print_violations(violations: list[dict[str, Any]], console: Console) -> None:
+    """Print violation messages or an all-passed confirmation."""
+    if violations:
+        console.print(f"\n[red]{len(violations)} violation(s) found.[/red]")
+        for v in violations:
+            console.print(f"  [red]- {v['message']}[/red]")
+    else:
+        console.print("\n[green]All checks passed.[/green]")
+
+
 def _format_rich_table(
     overall: dict[str, Any],
     thresholds: dict[str, Any],
@@ -162,61 +212,31 @@ def _format_rich_table(
     table.add_column("Threshold", justify="right")
     table.add_column("Status", justify="center")
 
-    grade = overall.get("grade", "F")
-    score = overall.get("score", 0)
-
-    # Overall row
-    min_grade = thresholds.get("min_grade")
-    grade_status = (
-        "[green]PASS[/green]"
-        if min_grade is None or _grade_passes(grade, min_grade)
-        else "[red]FAIL[/red]"
+    _add_grade_row(
+        table, overall.get("grade", "F"), thresholds.get("min_grade"), thresholds
     )
-    table.add_row(
-        "Grade",
-        grade,
-        str(min_grade) if min_grade else "-",
-        grade_status,
-    )
-
-    min_score = thresholds.get("min_score")
-    score_status = (
-        "[green]PASS[/green]"
-        if min_score is None or score >= min_score
-        else "[red]FAIL[/red]"
-    )
-    table.add_row(
-        "Score",
-        str(score),
-        str(min_score) if min_score else "-",
-        score_status,
-    )
-
-    # Dimension rows
-    for dim in ("complexity", "coupling", "smells", "layers"):
-        dim_score = overall.get("dimensions", {}).get(dim, {}).get("score", 0)
-        threshold_key = f"min_{dim}"
-        min_dim = thresholds.get(threshold_key)
-        dim_status = (
-            "[green]PASS[/green]"
-            if min_dim is None or dim_score >= min_dim
-            else "[red]FAIL[/red]"
-        )
-        table.add_row(
-            dim.capitalize(),
-            str(dim_score),
-            str(min_dim) if min_dim else "-",
-            dim_status,
-        )
+    _add_score_row(table, overall.get("score", 0), thresholds.get("min_score"))
+    _add_dimension_rows(table, overall, thresholds)
 
     console.print(table)
+    _print_violations(violations, console)
 
-    if violations:
-        console.print(f"\n[red]{len(violations)} violation(s) found.[/red]")
-        for v in violations:
-            console.print(f"  [red]- {v['message']}[/red]")
-    else:
-        console.print("\n[green]All checks passed.[/green]")
+
+def _resolve_project_name(repo_path: Path) -> str:
+    """Return the project name from the manifest, falling back to repo dir name."""
+    try:
+        manifest = get_cached_manifest(repo_path)
+        return manifest.name or repo_path.name
+    except Exception:
+        return repo_path.name
+
+
+def _save_health_snapshot(repo_path: Path, health_data: dict[str, Any]) -> None:
+    """Persist the health snapshot; silently ignore errors."""
+    try:
+        save_snapshot(repo_path / ".deepwiki", health_data)
+    except Exception:
+        pass
 
 
 def run_check(
@@ -235,36 +255,21 @@ def run_check(
     if console is None:
         console = Console()
 
-    # Validate repo exists
     if not repo_path.exists() or not repo_path.is_dir():
         console.print(f"[red]Repository not found: {repo_path}[/red]")
         return 2
 
-    # Load thresholds
     thresholds = _load_thresholds(repo_path)
+    project_name = _resolve_project_name(repo_path)
 
-    # Resolve project name
-    try:
-        manifest = get_cached_manifest(repo_path)
-        project_name = manifest.name or repo_path.name
-    except Exception:
-        project_name = repo_path.name
-
-    # Run analysis
     try:
         health_data = analyze_architecture_health(repo_path, project_name)
     except Exception as exc:
         console.print(f"[red]Analysis failed: {exc}[/red]")
         return 2
 
-    # Save snapshot (non-critical)
-    wiki_path = repo_path / ".deepwiki"
-    try:
-        save_snapshot(wiki_path, health_data)
-    except Exception:
-        pass
+    _save_health_snapshot(repo_path, health_data)
 
-    # Check thresholds
     violations = _check_thresholds(health_data, thresholds)
     overall = health_data.get("overall", {})
 

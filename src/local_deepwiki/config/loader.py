@@ -482,6 +482,50 @@ def _validate_performance_config(config: Config) -> list[str]:
     return warnings
 
 
+def _check_cloud_github_provider(config: Config) -> list[str]:
+    """Return warnings for cloud-for-github provider key configuration."""
+    warnings: list[str] = []
+    if not config.wiki.use_cloud_for_github:
+        return warnings
+    provider = config.wiki.github_llm_provider
+    if provider == "anthropic":
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            warnings.append(
+                "use_cloud_for_github enabled with anthropic but "
+                "ANTHROPIC_API_KEY not set"
+            )
+    elif provider == "openai":
+        if not os.environ.get("OPENAI_API_KEY"):
+            warnings.append(
+                "use_cloud_for_github enabled with openai but OPENAI_API_KEY not set"
+            )
+    return warnings
+
+
+def _check_plugin_dir(config: Config) -> list[str]:
+    """Return warnings for missing custom plugin directory."""
+    if not config.plugins.enabled:
+        return []
+    if not config.plugins.custom_dir:
+        return []
+    custom_path = Path(config.plugins.custom_dir)
+    if not custom_path.exists():
+        return [f"Custom plugins directory does not exist: {custom_path}"]
+    return []
+
+
+def _check_hooks_dir(config: Config) -> list[str]:
+    """Return warnings for missing hook scripts directory."""
+    if not config.hooks.enabled:
+        return []
+    if not config.hooks.scripts_dir:
+        return []
+    scripts_path = Path(config.hooks.scripts_dir)
+    if not scripts_path.exists():
+        return [f"Hook scripts directory does not exist: {scripts_path}"]
+    return []
+
+
 def _validate_wiki_config(config: Config) -> list[str]:
     """Return warnings for wiki and plugin/hook configuration.
 
@@ -491,27 +535,11 @@ def _validate_wiki_config(config: Config) -> list[str]:
     Returns:
         List of warning messages (may be empty).
     """
-    warnings: list[str] = []
-    if config.wiki.use_cloud_for_github:
-        provider = config.wiki.github_llm_provider
-        if provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
-            warnings.append(
-                "use_cloud_for_github enabled with anthropic but "
-                "ANTHROPIC_API_KEY not set"
-            )
-        elif provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
-            warnings.append(
-                "use_cloud_for_github enabled with openai but OPENAI_API_KEY not set"
-            )
-    if config.plugins.enabled and config.plugins.custom_dir:
-        custom_path = Path(config.plugins.custom_dir)
-        if not custom_path.exists():
-            warnings.append(f"Custom plugins directory does not exist: {custom_path}")
-    if config.hooks.enabled and config.hooks.scripts_dir:
-        scripts_path = Path(config.hooks.scripts_dir)
-        if not scripts_path.exists():
-            warnings.append(f"Hook scripts directory does not exist: {scripts_path}")
-    return warnings
+    return [
+        *_check_cloud_github_provider(config),
+        *_check_plugin_dir(config),
+        *_check_hooks_dir(config),
+    ]
 
 
 def validate_config(config: Config) -> list[str]:

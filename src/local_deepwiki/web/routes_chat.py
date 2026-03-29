@@ -157,6 +157,64 @@ def chat_page() -> Response | str:
     return render_template("chat.html", wiki_path=str(wiki_path))
 
 
+def _validate_chat_history(
+    history: Any,
+) -> tuple[Response, int] | None:
+    """Validate the chat history field; return an error response or None."""
+    if not isinstance(history, list):
+        return jsonify({"error": "history must be a list"}), 400
+    if len(history) > 50:
+        return jsonify({"error": "history exceeds maximum length (50 exchanges)"}), 400
+    for exchange in history:
+        err = _validate_history_exchange(exchange)
+        if err is not None:
+            return err
+    return None
+
+
+def _validate_history_exchange(
+    exchange: Any,
+) -> tuple[Response, int] | None:
+    """Validate a single history exchange dict; return an error response or None."""
+    if not isinstance(exchange, dict):
+        return jsonify({"error": "Each history entry must be an object"}), 400
+    q_val = exchange.get("question", "")
+    a_val = exchange.get("answer", "")
+    if not isinstance(q_val, str) or not isinstance(a_val, str):
+        return jsonify(
+            {"error": "History entries must have string question and answer fields"}
+        ), 400
+    if len(q_val) > 5000 or len(a_val) > 50000:
+        return jsonify({"error": "History entry exceeds maximum field length"}), 400
+    return None
+
+
+async def _chat_stream_generator(
+    repo_path: Any,
+    question: str,
+    history: list[dict[str, str]],
+) -> AsyncIterator[str]:
+    """Async generator that streams the chat response via QueryService."""
+    from local_deepwiki.config import get_config
+
+    config = get_config()
+    vector_db_path = config.get_vector_db_path(repo_path)
+
+    if not vector_db_path.exists():
+        yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
+        return
+
+    from local_deepwiki.web.utils import create_query_service
+
+    service = create_query_service(repo_path)
+    async for chunk in service.answer_question_stream(
+        repo_path=repo_path,
+        question=question,
+        history=history,
+    ):
+        yield f"data: {json.dumps(chunk)}\n\n"
+
+
 @chat_bp.route("/api/chat", methods=["POST"])
 def api_chat() -> Response | tuple[Response, int]:
     """Handle chat Q&A with streaming response.
@@ -176,25 +234,9 @@ def api_chat() -> Response | tuple[Response, int]:
     question = data.get("question", "").strip()
     history = data.get("history", [])
 
-    # Validate history field (prevent abuse)
-    if not isinstance(history, list):
-        return jsonify({"error": "history must be a list"}), 400
-    if len(history) > 50:
-        return jsonify({"error": "history exceeds maximum length (50 exchanges)"}), 400
-    for exchange in history:
-        if not isinstance(exchange, dict):
-            return jsonify({"error": "Each history entry must be an object"}), 400
-        if not isinstance(exchange.get("question", ""), str) or not isinstance(
-            exchange.get("answer", ""), str
-        ):
-            return jsonify(
-                {"error": "History entries must have string question and answer fields"}
-            ), 400
-        if (
-            len(exchange.get("question", "")) > 5000
-            or len(exchange.get("answer", "")) > 50000
-        ):
-            return jsonify({"error": "History entry exceeds maximum field length"}), 400
+    history_error = _validate_chat_history(history)
+    if history_error is not None:
+        return history_error
 
     if not question:
         return jsonify({"error": "Question is required"}), 400
@@ -204,31 +246,10 @@ def api_chat() -> Response | tuple[Response, int]:
             {"error": "Question exceeds maximum length (5000 characters)"}
         ), 400
 
-    # Determine the repository path from wiki path
     repo_path = wiki_path.parent
-    if wiki_path.name == ".deepwiki":
-        repo_path = wiki_path.parent
 
-    async def generate_response() -> AsyncIterator[str]:
-        """Async generator that streams the chat response via QueryService."""
-        from local_deepwiki.config import get_config
-
-        config = get_config()
-        vector_db_path = config.get_vector_db_path(repo_path)
-
-        if not vector_db_path.exists():
-            yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
-            return
-
-        from local_deepwiki.web.utils import create_query_service
-
-        service = create_query_service(repo_path)
-        async for chunk in service.answer_question_stream(
-            repo_path=repo_path,
-            question=question,
-            history=history,
-        ):
-            yield f"data: {json.dumps(chunk)}\n\n"
+    def generate_response() -> AsyncIterator[str]:
+        return _chat_stream_generator(repo_path, question, history)
 
     return Response(
         stream_async_generator(generate_response),
