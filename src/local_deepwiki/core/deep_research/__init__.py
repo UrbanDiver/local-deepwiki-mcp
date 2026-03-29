@@ -22,6 +22,7 @@ from local_deepwiki.models.foundation import (
     ProgressReporter as ProgressCallback,
 )
 
+from .config import ResearchConfig
 from .pipeline import (
     DeepResearchPipeline,
     ResearchCancelledError,
@@ -45,6 +46,7 @@ __all__ = [
     "cancel_research",
     "CheckpointManager",
     "DeepResearchPipeline",
+    "ResearchConfig",
     "DECOMPOSITION_SYSTEM_PROMPT",
     "DECOMPOSITION_USER_PROMPT",
     "delete_research_checkpoint",

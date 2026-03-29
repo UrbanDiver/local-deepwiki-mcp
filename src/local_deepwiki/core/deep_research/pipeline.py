@@ -32,6 +32,7 @@ from local_deepwiki.models import (
 from local_deepwiki.providers.base import LLMProvider
 
 from .checkpoints import CheckpointManager
+from .config import ResearchConfig
 from .reasoning import (
     DECOMPOSITION_SYSTEM_PROMPT,
     GAP_ANALYSIS_SYSTEM_PROMPT,
@@ -72,6 +73,8 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
         vector_store: VectorStore,
         llm_provider: LLMProvider,
         *,
+        config: ResearchConfig | None = None,
+        # Individual kwargs kept for backward compatibility
         max_sub_questions: int = 4,
         chunks_per_subquestion: int = 5,
         max_total_chunks: int = 30,
@@ -88,6 +91,8 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
         Args:
             vector_store: Vector store for semantic search.
             llm_provider: LLM provider for reasoning.
+            config: Optional :class:`ResearchConfig` consolidating all keyword
+                arguments.  When provided, individual kwargs are ignored.
             max_sub_questions: Maximum sub-questions to generate.
             chunks_per_subquestion: Chunks to retrieve per sub-question.
             max_total_chunks: Maximum total chunks to use in synthesis.
@@ -99,25 +104,43 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
             synthesis_prompt: Custom system prompt for synthesis (optional).
             repo_path: Path to the repository (required for checkpointing).
         """
+        if config is None:
+            config = ResearchConfig(
+                max_sub_questions=max_sub_questions,
+                chunks_per_subquestion=chunks_per_subquestion,
+                max_total_chunks=max_total_chunks,
+                max_follow_up_queries=max_follow_up_queries,
+                synthesis_temperature=synthesis_temperature,
+                synthesis_max_tokens=synthesis_max_tokens,
+                decomposition_prompt=decomposition_prompt,
+                gap_analysis_prompt=gap_analysis_prompt,
+                synthesis_prompt=synthesis_prompt,
+                repo_path=repo_path,
+            )
+
         self.vector_store = vector_store
         self.llm = llm_provider
-        self.max_sub_questions = max_sub_questions
-        self.chunks_per_subquestion = chunks_per_subquestion
-        self.max_total_chunks = max_total_chunks
-        self.max_follow_up_queries = max_follow_up_queries
-        self.synthesis_temperature = synthesis_temperature
-        self.synthesis_max_tokens = synthesis_max_tokens
+        self.max_sub_questions = config.max_sub_questions
+        self.chunks_per_subquestion = config.chunks_per_subquestion
+        self.max_total_chunks = config.max_total_chunks
+        self.max_follow_up_queries = config.max_follow_up_queries
+        self.synthesis_temperature = config.synthesis_temperature
+        self.synthesis_max_tokens = config.synthesis_max_tokens
 
         # Use custom prompts if provided, otherwise use defaults
-        self.decomposition_prompt = decomposition_prompt or DECOMPOSITION_SYSTEM_PROMPT
-        self.gap_analysis_prompt = gap_analysis_prompt or GAP_ANALYSIS_SYSTEM_PROMPT
-        self.synthesis_prompt = synthesis_prompt or SYNTHESIS_SYSTEM_PROMPT
+        self.decomposition_prompt = (
+            config.decomposition_prompt or DECOMPOSITION_SYSTEM_PROMPT
+        )
+        self.gap_analysis_prompt = (
+            config.gap_analysis_prompt or GAP_ANALYSIS_SYSTEM_PROMPT
+        )
+        self.synthesis_prompt = config.synthesis_prompt or SYNTHESIS_SYSTEM_PROMPT
 
         # Repository path for checkpointing
-        self.repo_path = repo_path
+        self.repo_path = config.repo_path
         self._checkpoint_manager: CheckpointManager | None = None
-        if repo_path:
-            self._checkpoint_manager = CheckpointManager(repo_path)
+        if config.repo_path:
+            self._checkpoint_manager = CheckpointManager(config.repo_path)
 
         # Runtime state (set during research())
         self._progress_callback: ProgressReporter | None = None

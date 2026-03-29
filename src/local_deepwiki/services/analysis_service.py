@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,27 @@ from local_deepwiki.errors import sanitize_error_message
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class ImpactAnalysisRequest:
+    """Immutable parameters for impact analysis.
+
+    Consolidates the positional and keyword arguments of
+    :meth:`AnalysisService.impact_analysis` into a single object.
+    """
+
+    file_path: str
+    full_file: Path
+    repo_path: Path
+    index_status: Any
+    wiki_path: Path
+    vector_store: VectorStore | None
+    entity_name: str | None = None
+    include_reverse_calls: bool = True
+    include_inheritance: bool = True
+    include_dependents: bool = True
+    include_wiki_pages: bool = True
 
 
 def _set_section_error(
@@ -126,13 +148,14 @@ class AnalysisService:
 
     async def impact_analysis(
         self,
-        file_path: str,
-        full_file: Path,
-        repo_path: Path,
-        index_status: Any,
-        wiki_path: Path,
-        vector_store: VectorStore | None,
+        file_path: str | None = None,
+        full_file: Path | None = None,
+        repo_path: Path | None = None,
+        index_status: Any = None,
+        wiki_path: Path | None = None,
+        vector_store: VectorStore | None = None,
         *,
+        request: ImpactAnalysisRequest | None = None,
         entity_name: str | None = None,
         include_reverse_calls: bool = True,
         include_inheritance: bool = True,
@@ -151,6 +174,9 @@ class AnalysisService:
             index_status: Loaded IndexStatus for the repository.
             wiki_path: Path to the wiki directory.
             vector_store: Optional vector store (needed for inheritance/dependents).
+            request: Optional :class:`ImpactAnalysisRequest` consolidating all
+                parameters.  When provided, individual positional/keyword
+                arguments are ignored.
             entity_name: Optional entity to scope the analysis to.
             include_reverse_calls: Whether to include reverse call graph.
             include_inheritance: Whether to include inheritance dependents.
@@ -160,48 +186,75 @@ class AnalysisService:
         Returns:
             Dict with impact analysis results and risk level.
         """
+        if request is None:
+            if (
+                file_path is None
+                or full_file is None
+                or repo_path is None
+                or wiki_path is None
+            ):
+                raise ValueError(
+                    "Either 'request' or all of 'file_path', 'full_file', "
+                    "'repo_path', and 'wiki_path' must be provided."
+                )
+            request = ImpactAnalysisRequest(
+                file_path=file_path,
+                full_file=full_file,
+                repo_path=repo_path,
+                index_status=index_status,
+                wiki_path=wiki_path,
+                vector_store=vector_store,
+                entity_name=entity_name,
+                include_reverse_calls=include_reverse_calls,
+                include_inheritance=include_inheritance,
+                include_dependents=include_dependents,
+                include_wiki_pages=include_wiki_pages,
+            )
+
         result: dict[str, Any] = {
             "status": "success",
-            "file_path": file_path,
-            "entity_name": entity_name,
+            "file_path": request.file_path,
+            "entity_name": request.entity_name,
         }
 
         affected_files: set[str] = set()
         affected_entities: set[str] = set()
 
-        if include_reverse_calls:
+        if request.include_reverse_calls:
             _collect_reverse_calls(
                 result,
-                full_file,
-                repo_path,
-                file_path,
-                entity_name,
+                request.full_file,
+                request.repo_path,
+                request.file_path,
+                request.entity_name,
                 affected_files,
                 affected_entities,
             )
 
-        if include_inheritance:
+        if request.include_inheritance:
             await _collect_inheritance_dependents(
                 result,
-                file_path,
-                entity_name,
-                index_status,
-                vector_store,
+                request.file_path,
+                request.entity_name,
+                request.index_status,
+                request.vector_store,
                 affected_files,
                 affected_entities,
             )
 
-        if include_dependents:
+        if request.include_dependents:
             await _collect_file_dependents(
                 result,
-                file_path,
-                repo_path,
-                vector_store,
+                request.file_path,
+                request.repo_path,
+                request.vector_store,
                 affected_files,
             )
 
-        if include_wiki_pages:
-            await _collect_affected_wiki_pages(result, wiki_path, file_path)
+        if request.include_wiki_pages:
+            await _collect_affected_wiki_pages(
+                result, request.wiki_path, request.file_path
+            )
 
         risk_level = _compute_risk_level(len(affected_files))
         result["impact_summary"] = {
