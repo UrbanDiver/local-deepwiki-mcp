@@ -186,6 +186,7 @@ class PaginationEngine:
         limit: int = 10,
         offset: int = 0,
         *,
+        request: SearchRequest | None = None,
         language: str | None = None,
         chunk_type: str | None = None,
         path_pattern: str | None = None,
@@ -195,25 +196,31 @@ class PaginationEngine:
         profile: SearchProfile | str | None = None,
         min_similarity: float | None = None,
     ) -> SearchResultPage:
-        """Search for similar code chunks with pagination support."""
+        """Search for similar code chunks with pagination support.
+
+        Accepts either a ``SearchRequest`` object (via ``request``) or
+        individual keyword arguments.  When ``request`` is provided it takes
+        precedence and the individual keyword arguments are ignored.
+        """
         # Build a SearchRequest value object to centralise parameter resolution,
         # eliminating the duplicated profile / filter / fuzzy logic that was
         # previously inlined here.  Pagination-specific execution (cursor
         # parsing, total count estimation, offset slicing, SearchResultPage
         # construction) is intentionally NOT delegated to search_from_request().
-        request = SearchRequest(
-            query=query,
-            limit=limit,
-            search_mode=None,  # paginated search always uses vector mode
-            language=language,
-            chunk_type=chunk_type,
-            path_pattern=path_pattern,
-            use_fuzzy=use_fuzzy,
-            fuzzy_weight=fuzzy_weight,
-            profile=profile,
-            min_similarity=min_similarity,
-            auto_suggest=False,  # suggestions not supported in paginated mode
-        )
+        if request is None:
+            request = SearchRequest(
+                query=query,
+                limit=limit,
+                search_mode=None,  # paginated search always uses vector mode
+                language=language,
+                chunk_type=chunk_type,
+                path_pattern=path_pattern,
+                use_fuzzy=use_fuzzy,
+                fuzzy_weight=fuzzy_weight,
+                profile=profile,
+                min_similarity=min_similarity,
+                auto_suggest=False,  # suggestions not supported in paginated mode
+            )
 
         table = self._engine._get_table()
         if table is None:
@@ -222,7 +229,7 @@ class PaginationEngine:
                 results=[],
                 total=0,
                 offset=offset,
-                limit=limit,
+                limit=request.limit,
                 has_more=False,
             )
 
@@ -633,6 +640,7 @@ class SearchEngine:
         query: str,
         limit: int = 10,
         *,
+        request: SearchRequest | None = None,
         search_mode: str | None = None,
         language: str | None = None,
         chunk_type: str | None = None,
@@ -646,14 +654,15 @@ class SearchEngine:
     ) -> list[SearchResult]:
         """Search for similar code chunks.
 
-        Constructs a ``SearchRequest`` from the provided arguments and
-        delegates to ``search_from_request``.  All search logic lives in
-        ``search_from_request``; this method exists for backward compatibility
-        with callers that pass raw keyword arguments.
+        Accepts either a ``SearchRequest`` object (via ``request``) or
+        individual keyword arguments.  When ``request`` is provided it takes
+        precedence and the individual keyword arguments are ignored.
 
         Args:
-            query: Search query text.
-            limit: Maximum number of results.
+            query: Search query text (ignored when ``request`` is given).
+            limit: Maximum number of results (ignored when ``request`` is given).
+            request: Optional pre-built ``SearchRequest``. When provided,
+                all other search parameters are ignored.
             search_mode: Search mode override.
             language: Optional language filter.
             chunk_type: Optional chunk type filter.
@@ -668,19 +677,20 @@ class SearchEngine:
         Returns:
             List of search results with scores.
         """
-        request = SearchRequest(
-            query=query,
-            limit=limit,
-            search_mode=search_mode,
-            language=language,
-            chunk_type=chunk_type,
-            path_pattern=path_pattern,
-            use_fuzzy=use_fuzzy,
-            fuzzy_weight=fuzzy_weight,
-            profile=profile,
-            min_similarity=min_similarity,
-            auto_suggest=auto_suggest,
-        )
+        if request is None:
+            request = SearchRequest(
+                query=query,
+                limit=limit,
+                search_mode=search_mode,
+                language=language,
+                chunk_type=chunk_type,
+                path_pattern=path_pattern,
+                use_fuzzy=use_fuzzy,
+                fuzzy_weight=fuzzy_weight,
+                profile=profile,
+                min_similarity=min_similarity,
+                auto_suggest=auto_suggest,
+            )
         return await self.search_from_request(request, store=store)
 
     # -----------------------------------------------------------------
@@ -693,6 +703,7 @@ class SearchEngine:
         limit: int = 10,
         offset: int = 0,
         *,
+        request: SearchRequest | None = None,
         language: str | None = None,
         chunk_type: str | None = None,
         path_pattern: str | None = None,
@@ -704,12 +715,17 @@ class SearchEngine:
     ) -> SearchResultPage:
         """Search for similar code chunks with pagination support.
 
+        Accepts either a ``SearchRequest`` object (via ``request``) or
+        individual keyword arguments.  When ``request`` is provided it takes
+        precedence and the individual keyword arguments are ignored.
+
         Delegates to ``PaginationEngine.search_paginated``.
         """
         return await self._pagination.search_paginated(
             query,
             limit,
             offset,
+            request=request,
             language=language,
             chunk_type=chunk_type,
             path_pattern=path_pattern,

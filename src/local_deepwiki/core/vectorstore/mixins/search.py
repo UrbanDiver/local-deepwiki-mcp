@@ -320,21 +320,11 @@ class SearchMixin:
         Returns:
             List of search results with scores.
         """
-        # Unpack SearchRequest if provided, otherwise use kwargs directly
-        if request is not None:
-            query = request.query
-            limit = request.limit
-            search_mode = request.search_mode
-            language = request.language
-            chunk_type = request.chunk_type
-            path_pattern = request.path_pattern
-            use_fuzzy = request.use_fuzzy
-            fuzzy_weight = request.fuzzy_weight
-            profile = request.profile
-            min_similarity = request.min_similarity
-            auto_suggest = request.auto_suggest
-
         engine = self._get_search_engine()
+        if request is not None:
+            # Pass the SearchRequest directly — engine will use it as-is.
+            return await engine.search(query, limit, request=request, store=self)
+
         return await engine.search(
             query,
             limit,
@@ -360,6 +350,7 @@ class SearchMixin:
         limit: int = 10,
         offset: int = 0,
         *,
+        request: "SearchRequest | None" = None,
         language: str | None = None,
         chunk_type: str | None = None,
         path_pattern: str | None = None,
@@ -375,10 +366,16 @@ class SearchMixin:
         - Offset-based: Use `offset` parameter (simpler, but may have stability issues)
         - Cursor-based: Use `cursor` parameter (more stable for concurrent updates)
 
+        Accepts either a ``SearchRequest`` object (via ``request``) or
+        individual keyword arguments.  When ``request`` is provided it takes
+        precedence and the individual keyword arguments are ignored.
+
         Args:
-            query: Search query text.
-            limit: Maximum number of results per page.
+            query: Search query text (ignored when ``request`` is given).
+            limit: Maximum number of results per page (ignored when ``request`` is given).
             offset: Starting offset for pagination (0-based).
+            request: Optional pre-built ``SearchRequest``. When provided,
+                all other search parameters are ignored.
             language: Optional language filter (e.g., "python", "typescript").
             chunk_type: Optional chunk type filter (e.g., "function", "class", "method").
             path_pattern: Optional file path pattern filter (e.g., "src/**/*.py").
@@ -400,6 +397,7 @@ class SearchMixin:
             query,
             limit,
             offset,
+            request=request,
             language=language,
             chunk_type=chunk_type,
             path_pattern=path_pattern,
