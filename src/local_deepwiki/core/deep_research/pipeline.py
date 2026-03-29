@@ -347,6 +347,75 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
                 )
             )
 
+    def _init_checkpoint(self, question: str, resume_id: str | None) -> None:
+        """Initialize or restore the checkpoint for this research run.
+
+        Sets ``self._current_checkpoint`` based on whether we are resuming an
+        existing checkpoint or starting fresh.
+
+        Args:
+            question: The research question (used when creating a new checkpoint).
+            resume_id: Optional checkpoint ID to resume from.
+        """
+        if resume_id and self._checkpoint_manager:
+            checkpoint = self._checkpoint_manager.load_checkpoint(resume_id)
+            if checkpoint:
+                self._current_checkpoint = checkpoint
+                logger.info(
+                    "Resuming research %s from step %s",
+                    resume_id,
+                    checkpoint.current_step,
+                )
+                return
+            logger.warning("Checkpoint %s not found, starting fresh", resume_id)
+
+        if self._checkpoint_manager:
+            self._current_checkpoint = self._create_checkpoint(question)
+        else:
+            self._current_checkpoint = None
+
+    async def _run_pipeline_with_checkpoint(self, question: str) -> DeepResearchResult:
+        """Run the pipeline and manage checkpoint lifecycle on success or error.
+
+        Deletes the checkpoint on success; saves an error/cancelled checkpoint
+        on failure before re-raising.
+
+        Args:
+            question: The research question.
+
+        Returns:
+            DeepResearchResult from the pipeline.
+
+        Raises:
+            ResearchCancelledError: Propagated from the pipeline.
+            Exception: Any other pipeline error is re-raised after saving state.
+        """
+        try:
+            result = await self._execute_pipeline(question)
+
+            if self._current_checkpoint and self._checkpoint_manager:
+                self._checkpoint_manager.delete_checkpoint(
+                    self._current_checkpoint.research_id
+                )
+
+            return result
+
+        except ResearchCancelledError:
+            if self._current_checkpoint:
+                self._save_checkpoint(
+                    step=ResearchCheckpointStep.CANCELLED,
+                    error="Research was cancelled by user",
+                )
+            raise
+
+        except Exception as e:  # noqa: BLE001 — checkpoint boundary
+            if self._current_checkpoint:
+                self._save_checkpoint(
+                    step=ResearchCheckpointStep.ERROR,
+                    error=str(e),
+                )
+            raise
+
     async def research(
         self,
         question: str,
@@ -370,59 +439,15 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
         Raises:
             ResearchCancelledError: If the operation is cancelled.
         """
-        # Store callbacks for use by helper methods
         self._progress_callback = progress_callback
         self._cancellation_check = cancellation_check
         self._cancellation_event = cancellation_event
 
-        # Handle resume or create new checkpoint
-        if resume_id and self._checkpoint_manager:
-            checkpoint = self._checkpoint_manager.load_checkpoint(resume_id)
-            if checkpoint:
-                self._current_checkpoint = checkpoint
-                logger.info(
-                    "Resuming research %s from step %s",
-                    resume_id,
-                    checkpoint.current_step,
-                )
-            else:
-                logger.warning("Checkpoint %s not found, starting fresh", resume_id)
-                self._current_checkpoint = self._create_checkpoint(question)
-        elif self._checkpoint_manager:
-            self._current_checkpoint = self._create_checkpoint(question)
-        else:
-            self._current_checkpoint = None
+        self._init_checkpoint(question, resume_id)
 
         try:
-            result = await self._execute_pipeline(question)
-
-            # Clean up checkpoint on successful completion
-            if self._current_checkpoint and self._checkpoint_manager:
-                self._checkpoint_manager.delete_checkpoint(
-                    self._current_checkpoint.research_id
-                )
-
-            return result
-
-        except ResearchCancelledError:
-            # Save checkpoint on cancellation
-            if self._current_checkpoint:
-                self._save_checkpoint(
-                    step=ResearchCheckpointStep.CANCELLED,
-                    error="Research was cancelled by user",
-                )
-            raise
-
-        except Exception as e:  # noqa: BLE001 — checkpoint boundary: save research state before re-raising any pipeline error
-            if self._current_checkpoint:
-                self._save_checkpoint(
-                    step=ResearchCheckpointStep.ERROR,
-                    error=str(e),
-                )
-            raise
-
+            return await self._run_pipeline_with_checkpoint(question)
         finally:
-            # Clear callbacks after execution
             self._progress_callback = None
             self._cancellation_check = None
             self._cancellation_event = None

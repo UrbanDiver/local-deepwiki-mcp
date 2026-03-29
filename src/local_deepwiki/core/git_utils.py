@@ -304,8 +304,74 @@ def is_github_repo(repo_path: Path) -> bool:
     return False
 
 
+def _build_line_anchor_gitlab(
+    start_line: int | None,
+    end_line: int | None,
+) -> str:
+    """Return a GitLab-style line anchor fragment, e.g. ``#L5-10``.
+
+    Returns an empty string when no line is specified.
+    """
+    if start_line is None:
+        return ""
+    if end_line is not None and end_line != start_line:
+        return f"#L{start_line}-{end_line}"
+    return f"#L{start_line}"
+
+
+def _build_line_anchor_github(
+    start_line: int | None,
+    end_line: int | None,
+) -> str:
+    """Return a GitHub-style line anchor fragment, e.g. ``#L5-L10``.
+
+    Returns an empty string when no line is specified.
+    """
+    if start_line is None:
+        return ""
+    if end_line is not None and end_line != start_line:
+        return f"#L{start_line}-L{end_line}"
+    return f"#L{start_line}"
+
+
+def _build_gitlab_url(
+    repo_info: "GitRepoInfo",
+    file_path: str,
+    start_line: int | None,
+    end_line: int | None,
+) -> str:
+    """Build a GitLab source URL (uses ``/-/blob/`` path prefix)."""
+    base_url = (
+        f"https://{repo_info.host}/{repo_info.owner}/{repo_info.repo}"
+        f"/-/blob/{repo_info.default_branch}/{file_path}"
+    )
+    return base_url + _build_line_anchor_gitlab(start_line, end_line)
+
+
+def _build_github_url(
+    repo_info: "GitRepoInfo",
+    file_path: str,
+    start_line: int | None,
+    end_line: int | None,
+) -> str:
+    """Build a GitHub-style source URL (also used as the default fallback)."""
+    base_url = (
+        f"https://{repo_info.host}/{repo_info.owner}/{repo_info.repo}"
+        f"/blob/{repo_info.default_branch}/{file_path}"
+    )
+    return base_url + _build_line_anchor_github(start_line, end_line)
+
+
+# Dispatch table: host keyword -> URL builder function.
+# Checked in order; the first match wins. The sentinel None key is the fallback.
+_URL_BUILDERS: list[tuple[str | None, object]] = [
+    ("gitlab", _build_gitlab_url),
+    (None, _build_github_url),  # GitHub and all other hosts
+]
+
+
 def build_source_url(
-    repo_info: GitRepoInfo,
+    repo_info: "GitRepoInfo",
     file_path: str,
     start_line: int | None = None,
     end_line: int | None = None,
@@ -325,27 +391,11 @@ def build_source_url(
     if not repo_info.host or not repo_info.owner or not repo_info.repo:
         return None
 
-    # Determine URL format based on host
     host = repo_info.host.lower()
-
-    if "gitlab" in host:
-        # GitLab uses /-/blob/ format
-        base_url = f"https://{repo_info.host}/{repo_info.owner}/{repo_info.repo}/-/blob/{repo_info.default_branch}/{file_path}"
-        if start_line is not None:
-            if end_line is not None and end_line != start_line:
-                return f"{base_url}#L{start_line}-{end_line}"
-            else:
-                return f"{base_url}#L{start_line}"
-        return base_url
-    else:
-        # GitHub and others use /blob/ format
-        base_url = f"https://{repo_info.host}/{repo_info.owner}/{repo_info.repo}/blob/{repo_info.default_branch}/{file_path}"
-        if start_line is not None:
-            if end_line is not None and end_line != start_line:
-                return f"{base_url}#L{start_line}-L{end_line}"
-            else:
-                return f"{base_url}#L{start_line}"
-        return base_url
+    for keyword, builder in _URL_BUILDERS:
+        if keyword is None or keyword in host:
+            return builder(repo_info, file_path, start_line, end_line)  # type: ignore[operator]
+    return None  # unreachable, but satisfies type checker
 
 
 def get_file_last_modified(repo_path: Path, file_path: str) -> datetime | None:

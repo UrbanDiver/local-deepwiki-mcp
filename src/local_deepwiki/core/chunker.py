@@ -492,6 +492,95 @@ class CodeChunker:
             metadata=metadata,
         )
 
+    def _extract_module_docstring(
+        self,
+        root: Node,
+        source: bytes,
+        language: Language,
+    ) -> str | None:
+        """Extract the module-level docstring from a Python AST root.
+
+        Returns:
+            The stripped docstring text, or None if not present or not Python.
+        """
+        if language != Language.PYTHON:
+            return None
+        if not root.children or root.children[0].type != "expression_statement":
+            return None
+        expr = root.children[0]
+        if not expr.children or expr.children[0].type != "string":
+            return None
+        docstring = get_node_text(expr.children[0], source)
+        if docstring.startswith('"""') or docstring.startswith("'''"):
+            return docstring[3:-3].strip()
+        return docstring
+
+    def _build_import_summary(
+        self,
+        root: Node,
+        source: bytes,
+        language: Language,
+    ) -> str | None:
+        """Build a compact import summary string (at most 10 shown).
+
+        Returns:
+            An "Imports: ..." string, or None if no imports found.
+        """
+        import_types = IMPORT_NODE_TYPES.get(language, set())
+        imports = find_nodes_by_type(root, import_types)
+        if not imports:
+            return None
+        import_lines = [get_node_text(n, source) for n in imports[:10]]
+        import_text = ", ".join(import_lines)
+        if len(imports) > 10:
+            import_text += f" ... and {len(imports) - 10} more imports"
+        return f"Imports: {import_text}"
+
+    def _build_class_summary(
+        self,
+        root: Node,
+        source: bytes,
+        language: Language,
+    ) -> str | None:
+        """Build a comma-separated list of class names defined in the file.
+
+        Returns:
+            A "Classes: ..." string, or None if no classes found.
+        """
+        class_types = CLASS_NODE_TYPES.get(language, set())
+        classes = find_nodes_by_type(root, class_types)
+        if not classes:
+            return None
+        class_names = [
+            get_node_name(c, source, language) or "anonymous" for c in classes
+        ]
+        return f"Classes: {', '.join(class_names)}"
+
+    def _build_function_summary(
+        self,
+        root: Node,
+        source: bytes,
+        language: Language,
+    ) -> str | None:
+        """Build a comma-separated list of top-level function names.
+
+        Returns:
+            A "Functions: ..." string, or None if no top-level functions found.
+        """
+        class_types = CLASS_NODE_TYPES.get(language, set())
+        function_types = FUNCTION_NODE_TYPES.get(language, set())
+        functions = [
+            f
+            for f in find_nodes_by_type(root, function_types)
+            if not self._is_inside_class(f, class_types)
+        ]
+        if not functions:
+            return None
+        func_names = [
+            get_node_name(f, source, language) or "anonymous" for f in functions
+        ]
+        return f"Functions: {', '.join(func_names)}"
+
     def _create_file_summary_chunk(
         self,
         root: Node,
@@ -515,47 +604,17 @@ class CodeChunker:
         """
         parts: list[str] = [f"File: {file_path}"]
 
-        # Extract module docstring if present (Python only)
-        if language == Language.PYTHON:
-            if root.children and root.children[0].type == "expression_statement":
-                expr = root.children[0]
-                if expr.children and expr.children[0].type == "string":
-                    docstring = get_node_text(expr.children[0], source)
-                    if docstring.startswith('"""') or docstring.startswith("'''"):
-                        docstring = docstring[3:-3].strip()
-                    parts.append(f"Description: {docstring}")
+        docstring = self._extract_module_docstring(root, source, language)
+        if docstring:
+            parts.append(f"Description: {docstring}")
 
-        # List imports (first 10)
-        import_types = IMPORT_NODE_TYPES.get(language, set())
-        imports = find_nodes_by_type(root, import_types)
-        if imports:
-            import_lines = [get_node_text(n, source) for n in imports[:10]]
-            import_text = ", ".join(import_lines)
-            if len(imports) > 10:
-                import_text += f" ... and {len(imports) - 10} more imports"
-            parts.append(f"Imports: {import_text}")
-
-        # List all classes
-        class_types = CLASS_NODE_TYPES.get(language, set())
-        classes = find_nodes_by_type(root, class_types)
-        if classes:
-            class_names = [
-                get_node_name(c, source, language) or "anonymous" for c in classes
-            ]
-            parts.append(f"Classes: {', '.join(class_names)}")
-
-        # List all top-level functions
-        function_types = FUNCTION_NODE_TYPES.get(language, set())
-        functions = [
-            f
-            for f in find_nodes_by_type(root, function_types)
-            if not self._is_inside_class(f, class_types)
-        ]
-        if functions:
-            func_names = [
-                get_node_name(f, source, language) or "anonymous" for f in functions
-            ]
-            parts.append(f"Functions: {', '.join(func_names)}")
+        for section in (
+            self._build_import_summary(root, source, language),
+            self._build_class_summary(root, source, language),
+            self._build_function_summary(root, source, language),
+        ):
+            if section:
+                parts.append(section)
 
         content = "\n".join(parts)
         chunk_id = self._generate_id(file_path, "file_summary", 0)

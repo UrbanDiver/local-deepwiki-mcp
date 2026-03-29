@@ -342,6 +342,69 @@ class FuzzySearchHelper:
         """Check if the name index has been built."""
         return self._is_built
 
+    def _parse_row_entry(
+        self,
+        row: Any,
+        name_types: set[ChunkType],
+    ) -> NameEntry | None:
+        """Parse a single table row into a NameEntry, or return None to skip.
+
+        Args:
+            row: A pandas Series representing one table row.
+            name_types: Set of ChunkTypes whose names should be indexed.
+
+        Returns:
+            A NameEntry if the row should be indexed, or None to skip.
+        """
+        name = row.get("name")
+        if not name or not isinstance(name, str) or not name.strip():
+            return None
+
+        chunk_type_str = row.get("chunk_type", "")
+        try:
+            chunk_type = ChunkType(chunk_type_str)
+        except ValueError:
+            return None
+
+        if chunk_type not in name_types:
+            return None
+
+        file_path = row.get("file_path", "")
+        parent_name = row.get("parent_name")
+        full_qualified_name = (
+            f"{parent_name}.{name}"
+            if chunk_type == ChunkType.METHOD and parent_name
+            else None
+        )
+        return NameEntry(
+            name=name,
+            chunk_type=chunk_type,
+            file_path=file_path,
+            full_qualified_name=full_qualified_name,
+        )
+
+    def _index_entry(self, entry: NameEntry) -> None:
+        """Add a NameEntry to all internal index structures.
+
+        Args:
+            entry: The entry to register in _name_cache, _name_to_entries,
+                and _all_names.
+        """
+        type_key = entry.chunk_type.value
+        if type_key not in self._name_cache:
+            self._name_cache[type_key] = []
+        self._name_cache[type_key].append(entry)
+
+        if entry.name not in self._name_to_entries:
+            self._name_to_entries[entry.name] = []
+            self._all_names.append(entry.name)
+        self._name_to_entries[entry.name].append(entry)
+
+        fqn = entry.full_qualified_name
+        if fqn and fqn not in self._name_to_entries:
+            self._name_to_entries[fqn] = [entry]
+            self._all_names.append(fqn)
+
     def _extract_names_from_table(
         self,
         all_rows: Any,
@@ -354,46 +417,9 @@ class FuzzySearchHelper:
             name_types: Set of ChunkTypes whose names should be indexed.
         """
         for _, row in all_rows.iterrows():
-            name = row.get("name")
-            if not name or not isinstance(name, str) or not name.strip():
-                continue
-
-            chunk_type_str = row.get("chunk_type", "")
-            try:
-                chunk_type = ChunkType(chunk_type_str)
-            except ValueError:
-                continue
-
-            if chunk_type not in name_types:
-                continue
-
-            file_path = row.get("file_path", "")
-            parent_name = row.get("parent_name")
-
-            full_qualified_name = None
-            if chunk_type == ChunkType.METHOD and parent_name:
-                full_qualified_name = f"{parent_name}.{name}"
-
-            entry = NameEntry(
-                name=name,
-                chunk_type=chunk_type,
-                file_path=file_path,
-                full_qualified_name=full_qualified_name,
-            )
-
-            type_key = chunk_type.value
-            if type_key not in self._name_cache:
-                self._name_cache[type_key] = []
-            self._name_cache[type_key].append(entry)
-
-            if name not in self._name_to_entries:
-                self._name_to_entries[name] = []
-                self._all_names.append(name)
-            self._name_to_entries[name].append(entry)
-
-            if full_qualified_name and full_qualified_name not in self._name_to_entries:
-                self._name_to_entries[full_qualified_name] = [entry]
-                self._all_names.append(full_qualified_name)
+            entry = self._parse_row_entry(row, name_types)
+            if entry is not None:
+                self._index_entry(entry)
 
     async def build_name_index(self) -> None:
         """Build an index of all function/class/method names for fuzzy matching.
