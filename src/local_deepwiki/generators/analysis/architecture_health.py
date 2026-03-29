@@ -31,6 +31,89 @@ logger = get_logger(__name__)
 # How many top findings to include per category in the summary.
 _TOP_FINDINGS = 5
 
+# Maximum number of next_steps suggestions to return.
+_MAX_NEXT_STEPS = 5
+
+# Score threshold below which a dimension is flagged for follow-up.
+_SCORE_WARN_THRESHOLD = 75
+
+# Smell count thresholds for triggering recommendation steps.
+_SMELL_THRESHOLD_MEDIUM = 10
+_SMELL_THRESHOLD_HIGH = 50
+
+
+def _generate_next_steps(
+    overall: dict[str, Any],
+    top_findings: dict[str, Any],
+    stats: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Generate suggested drill-down tool calls based on findings.
+
+    Args:
+        overall: Overall score dict with ``dimensions`` sub-dict.
+        top_findings: Top findings dict (hotspots, smells, etc.).
+        stats: Aggregate stats dict including ``total_smells``.
+
+    Returns:
+        List of up to 5 step dicts, each with ``tool``, ``args``, and ``reason``.
+    """
+    steps: list[dict[str, Any]] = []
+
+    dimensions = overall.get("dimensions", {})
+    if dimensions:
+        worst_dim = min(dimensions, key=lambda d: dimensions[d].get("score", 100))
+        worst_score = dimensions[worst_dim].get("score", 100)
+        if worst_score < _SCORE_WARN_THRESHOLD:
+            if worst_dim == "smells":
+                steps.append(
+                    {
+                        "tool": "get_design_smells",
+                        "args": {"severity_threshold": "high"},
+                        "reason": f"Smells dimension scored {worst_score:.0f}/100",
+                    }
+                )
+            elif worst_dim == "coupling":
+                steps.append(
+                    {
+                        "tool": "get_coupling_metrics",
+                        "args": {},
+                        "reason": f"Coupling dimension scored {worst_score:.0f}/100",
+                    }
+                )
+
+    hotspot_count = len(top_findings.get("hotspots", []))
+    if hotspot_count > 0:
+        steps.append(
+            {
+                "tool": "get_hotspots",
+                "args": {"metric": "complexity", "top_n": 20},
+                "reason": f"{hotspot_count} complexity hotspots detected",
+            }
+        )
+
+    total_smells = stats.get("total_smells", 0)
+    if total_smells > _SMELL_THRESHOLD_MEDIUM:
+        steps.append(
+            {
+                "tool": "get_recommendations",
+                "args": {"enrich": True},
+                "reason": (
+                    f"{total_smells} design smells found — get prioritized action items"
+                ),
+            }
+        )
+
+    if total_smells > _SMELL_THRESHOLD_HIGH:
+        steps.append(
+            {
+                "tool": "get_hotspots",
+                "args": {"metric": "params", "top_n": 10},
+                "reason": "High smell count — check for parameter bloat",
+            }
+        )
+
+    return steps[:_MAX_NEXT_STEPS]
+
 
 def analyze_architecture_health(
     repo_path: Path,
@@ -102,23 +185,26 @@ def analyze_architecture_health(
         repo_path,
     )
 
+    top_findings_dict = {
+        "hotspots": top_hotspots,
+        "high_severity_smells": top_smells_high,
+        "god_classes": god_classes,
+        "layer_violations": layer_result.get("violations", [])[:top_findings],
+    }
+    stats_dict = {
+        "total_lines": total_lines,
+        "total_functions": hotspot_result.get("stats", {}).get("total_functions", 0),
+        "files_scanned": hotspot_result.get("stats", {}).get("files_scanned", 0),
+        "total_modules": coupling_result.get("stats", {}).get("total_modules", 0),
+        "total_smells": len(src_smells),
+    }
+    next_steps = _generate_next_steps(overall, top_findings_dict, stats_dict)
+
     return {
         "status": "success",
         "project_name": project_name,
         "overall": overall,
-        "top_findings": {
-            "hotspots": top_hotspots,
-            "high_severity_smells": top_smells_high,
-            "god_classes": god_classes,
-            "layer_violations": layer_result.get("violations", [])[:top_findings],
-        },
-        "stats": {
-            "total_lines": total_lines,
-            "total_functions": hotspot_result.get("stats", {}).get(
-                "total_functions", 0
-            ),
-            "files_scanned": hotspot_result.get("stats", {}).get("files_scanned", 0),
-            "total_modules": coupling_result.get("stats", {}).get("total_modules", 0),
-            "total_smells": len(src_smells),
-        },
+        "top_findings": top_findings_dict,
+        "stats": stats_dict,
+        "next_steps": next_steps,
     }

@@ -243,6 +243,22 @@ async def test_architecture_health_summary_detail(tmp_path):
     assert len(result[0].text) < 1500
 
 
+def test_analyze_architecture_health_includes_next_steps(simple_repo):
+    """Health output should include dynamically generated next_steps."""
+    from local_deepwiki.generators.analysis.architecture_health import (
+        analyze_architecture_health,
+    )
+
+    result = analyze_architecture_health(simple_repo, "test-project")
+    assert "next_steps" in result, "Expected next_steps field in health output"
+    steps = result["next_steps"]
+    assert isinstance(steps, list)
+    for step in steps:
+        assert "tool" in step
+        assert "args" in step
+        assert "reason" in step
+
+
 async def test_architecture_health_full_detail(tmp_path):
     """detail_level=full returns everything including file metrics."""
     (tmp_path / "mod.py").write_text("def f():\n    return 1\n")
