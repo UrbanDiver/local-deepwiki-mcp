@@ -248,55 +248,36 @@ class PaginationEngine:
 
     async def search_paginated(
         self,
-        query: str,
-        limit: int = 10,
-        offset: int = 0,
+        request: SearchRequest,
         *,
-        request: SearchRequest | None = None,
-        language: str | None = None,
-        chunk_type: str | None = None,
-        path_pattern: str | None = None,
-        use_fuzzy: bool = False,
-        fuzzy_weight: float = 0.3,
-        cursor: str | None = None,
-        profile: SearchProfile | str | None = None,
-        min_similarity: float | None = None,
+        store: Any = None,
     ) -> SearchResultPage:
         """Search for similar code chunks with pagination support.
 
-        Accepts either a ``SearchRequest`` object (via ``request``) or
-        individual keyword arguments.  When ``request`` is provided it takes
-        precedence and the individual keyword arguments are ignored.
-        """
-        # Build a SearchRequest value object to centralise parameter resolution.
-        # Pagination-specific execution (cursor parsing, total count estimation,
-        # offset slicing, SearchResultPage construction) is NOT delegated to
-        # search_from_request().
-        if request is None:
-            request = SearchRequest(
-                query=query,
-                limit=limit,
-                search_mode=None,  # paginated search always uses vector mode
-                language=language,
-                chunk_type=chunk_type,
-                path_pattern=path_pattern,
-                use_fuzzy=use_fuzzy,
-                fuzzy_weight=fuzzy_weight,
-                profile=profile,
-                min_similarity=min_similarity,
-                auto_suggest=False,  # suggestions not supported in paginated mode
-            )
+        Args:
+            request: Immutable ``SearchRequest`` bundle. The ``offset``
+                and ``cursor`` fields control pagination.
+            store: The VectorStore instance (needed for fuzzy helper init).
 
+        Returns:
+            A ``SearchResultPage`` with results, total count, and pagination info.
+        """
         table = self._engine._get_table()
         if table is None:
             logger.debug("No table found for search")
             return SearchResultPage(
-                results=[], total=0, offset=offset, limit=request.limit, has_more=False
+                results=[],
+                total=0,
+                offset=request.offset,
+                limit=request.limit,
+                has_more=False,
             )
 
         _, resolved_profile, profile_config, effective_min_similarity = (
             self._engine._config_resolver.resolve_search_config(request)
         )
+
+        offset = self._parse_cursor_offset(request.cursor, request.offset)
 
         logger.debug(
             "Paginated search for: '%s...' limit=%d offset=%d profile=%s",
@@ -306,7 +287,6 @@ class PaginationEngine:
             resolved_profile.value,
         )
 
-        offset = self._parse_cursor_offset(cursor, offset)
         query_embedding = (
             await self._engine._embedding_provider.embed([request.query])
         )[0]
@@ -674,60 +654,20 @@ class SearchEngine:
 
     async def search(
         self,
-        query: str,
-        limit: int = 10,
+        request: SearchRequest,
         *,
-        request: SearchRequest | None = None,
-        search_mode: str | None = None,
-        language: str | None = None,
-        chunk_type: str | None = None,
-        path_pattern: str | None = None,
-        use_fuzzy: bool = False,
-        fuzzy_weight: float = 0.3,
-        profile: SearchProfile | str | None = None,
-        min_similarity: float | None = None,
-        auto_suggest: bool = True,
         store: Any = None,
     ) -> list[SearchResult]:
         """Search for similar code chunks.
 
-        Accepts either a ``SearchRequest`` object (via ``request``) or
-        individual keyword arguments.  When ``request`` is provided it takes
-        precedence and the individual keyword arguments are ignored.
-
         Args:
-            query: Search query text (ignored when ``request`` is given).
-            limit: Maximum number of results (ignored when ``request`` is given).
-            request: Optional pre-built ``SearchRequest``. When provided,
-                all other search parameters are ignored.
-            search_mode: Search mode override.
-            language: Optional language filter.
-            chunk_type: Optional chunk type filter.
-            path_pattern: Optional file path pattern filter.
-            use_fuzzy: Whether to use fuzzy matching to re-rank results.
-            fuzzy_weight: Weight for fuzzy score when use_fuzzy is True.
-            profile: Search profile for precision/recall trade-off.
-            min_similarity: Minimum similarity threshold override.
-            auto_suggest: Whether to generate "Did you mean?" suggestions.
+            request: Immutable ``SearchRequest`` bundle with all search
+                parameters (query, limit, filters, profile, etc.).
             store: The VectorStore instance (needed for fuzzy helper init).
 
         Returns:
             List of search results with scores.
         """
-        if request is None:
-            request = SearchRequest(
-                query=query,
-                limit=limit,
-                search_mode=search_mode,
-                language=language,
-                chunk_type=chunk_type,
-                path_pattern=path_pattern,
-                use_fuzzy=use_fuzzy,
-                fuzzy_weight=fuzzy_weight,
-                profile=profile,
-                min_similarity=min_similarity,
-                auto_suggest=auto_suggest,
-            )
         return await self.search_from_request(request, store=store)
 
     # -----------------------------------------------------------------
@@ -736,42 +676,21 @@ class SearchEngine:
 
     async def search_paginated(
         self,
-        query: str,
-        limit: int = 10,
-        offset: int = 0,
+        request: SearchRequest,
         *,
-        request: SearchRequest | None = None,
-        language: str | None = None,
-        chunk_type: str | None = None,
-        path_pattern: str | None = None,
-        use_fuzzy: bool = False,
-        fuzzy_weight: float = 0.3,
-        cursor: str | None = None,
-        profile: SearchProfile | str | None = None,
-        min_similarity: float | None = None,
+        store: Any = None,
     ) -> SearchResultPage:
         """Search for similar code chunks with pagination support.
 
-        Accepts either a ``SearchRequest`` object (via ``request``) or
-        individual keyword arguments.  When ``request`` is provided it takes
-        precedence and the individual keyword arguments are ignored.
+        Args:
+            request: Immutable ``SearchRequest`` bundle. The ``offset``
+                and ``cursor`` fields control pagination.
+            store: The VectorStore instance (needed for fuzzy helper init).
 
-        Delegates to ``PaginationEngine.search_paginated``.
+        Returns:
+            A ``SearchResultPage`` with results, total count, and pagination info.
         """
-        return await self._pagination.search_paginated(
-            query,
-            limit,
-            offset,
-            request=request,
-            language=language,
-            chunk_type=chunk_type,
-            path_pattern=path_pattern,
-            use_fuzzy=use_fuzzy,
-            fuzzy_weight=fuzzy_weight,
-            cursor=cursor,
-            profile=profile,
-            min_similarity=min_similarity,
-        )
+        return await self._pagination.search_paginated(request=request, store=store)
 
     # -----------------------------------------------------------------
     # Feedback and stats

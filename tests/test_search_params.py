@@ -692,3 +692,126 @@ async def test_search_engine_config_only_construction():
     assert engine._adaptive_search_enabled is False
     assert engine._default_search_mode == "hybrid"
     assert engine._bm25_weight == 0.5
+
+
+# ---------------------------------------------------------------------------
+# SearchEngine.search() and search_paginated() accept only SearchRequest
+# ---------------------------------------------------------------------------
+
+
+async def test_search_engine_search_accepts_request_only():
+    """SearchEngine.search() accepts SearchRequest as the sole parameter."""
+    from local_deepwiki.core.vectorstore.search_engine import SearchEngine
+    from local_deepwiki.core.vectorstore.mixins.search_types import SearchRequest
+
+    engine = MagicMock(spec=SearchEngine)
+    engine.search_from_request = AsyncMock(return_value=[])
+
+    request = SearchRequest(query="test query", limit=5)
+    result = await SearchEngine.search(engine, request=request)
+    engine.search_from_request.assert_called_once_with(request, store=None)
+
+
+async def test_search_engine_search_passes_store():
+    """SearchEngine.search() forwards the store kwarg to search_from_request."""
+    from local_deepwiki.core.vectorstore.search_engine import SearchEngine
+    from local_deepwiki.core.vectorstore.mixins.search_types import SearchRequest
+
+    engine = MagicMock(spec=SearchEngine)
+    engine.search_from_request = AsyncMock(return_value=[])
+
+    store_mock = MagicMock()
+    request = SearchRequest(query="hello", limit=3)
+    await SearchEngine.search(engine, request=request, store=store_mock)
+    engine.search_from_request.assert_called_once_with(request, store=store_mock)
+
+
+async def test_search_engine_search_paginated_accepts_request_only():
+    """SearchEngine.search_paginated() accepts SearchRequest as the sole parameter."""
+    from local_deepwiki.core.vectorstore.search_engine import SearchEngine
+    from local_deepwiki.core.vectorstore.mixins.search_types import SearchRequest
+    from local_deepwiki.core.vectorstore.schema import SearchResultPage
+
+    page = SearchResultPage(results=[], total=0, offset=0, limit=10, has_more=False)
+    engine = MagicMock(spec=SearchEngine)
+    engine._pagination = MagicMock()
+    engine._pagination.search_paginated = AsyncMock(return_value=page)
+
+    request = SearchRequest(query="test", limit=10, offset=5, cursor="offset:5")
+    result = await SearchEngine.search_paginated(engine, request=request)
+    engine._pagination.search_paginated.assert_called_once_with(
+        request=request, store=None
+    )
+    assert result is page
+
+
+async def test_search_engine_search_paginated_passes_store():
+    """SearchEngine.search_paginated() forwards the store kwarg."""
+    from local_deepwiki.core.vectorstore.search_engine import SearchEngine
+    from local_deepwiki.core.vectorstore.mixins.search_types import SearchRequest
+    from local_deepwiki.core.vectorstore.schema import SearchResultPage
+
+    page = SearchResultPage(results=[], total=0, offset=0, limit=10, has_more=False)
+    engine = MagicMock(spec=SearchEngine)
+    engine._pagination = MagicMock()
+    engine._pagination.search_paginated = AsyncMock(return_value=page)
+
+    store_mock = MagicMock()
+    request = SearchRequest(query="test", limit=10)
+    await SearchEngine.search_paginated(engine, request=request, store=store_mock)
+    engine._pagination.search_paginated.assert_called_once_with(
+        request=request, store=store_mock
+    )
+
+
+async def test_pagination_engine_search_paginated_accepts_request_only():
+    """PaginationEngine.search_paginated() accepts SearchRequest as the sole parameter."""
+    from local_deepwiki.core.vectorstore.mixins.search_types import SearchRequest
+    from local_deepwiki.core.vectorstore.search_engine import PaginationEngine
+
+    mock_engine = MagicMock()
+    mock_engine._get_table.return_value = None  # triggers empty-table early return
+
+    pagination = PaginationEngine(mock_engine)
+    request = SearchRequest(query="test", limit=5, offset=3)
+    result = await pagination.search_paginated(request)
+
+    # Should return an empty page with offset/limit from request
+    assert result.results == []
+    assert result.total == 0
+    assert result.offset == 3
+    assert result.limit == 5
+    assert result.has_more is False
+
+
+async def test_pagination_engine_uses_cursor_over_offset():
+    """PaginationEngine.search_paginated() parses cursor to override offset."""
+    from local_deepwiki.core.vectorstore.mixins.search_types import SearchRequest
+    from local_deepwiki.core.vectorstore.schema import SearchProfile
+    from local_deepwiki.core.vectorstore.search_engine import PaginationEngine
+
+    mock_engine = MagicMock()
+    table = MagicMock()
+    mock_engine._get_table.return_value = table
+    mock_engine._config_resolver.resolve_search_config.return_value = (
+        "vector",
+        SearchProfile.BALANCED,
+        MagicMock(fetch_multiplier=1.0),
+        0.3,
+    )
+    mock_engine._embedding_provider.embed = AsyncMock(return_value=[[0.1] * 384])
+
+    # Simulate table returning no results
+    search_chain = MagicMock()
+    table.search.return_value = search_chain
+    search_chain.limit.return_value = search_chain
+    search_chain.where.return_value = search_chain
+    search_chain.to_list.return_value = []
+
+    pagination = PaginationEngine(mock_engine)
+    request = SearchRequest(query="test", limit=5, offset=0, cursor="offset:20")
+    result = await pagination.search_paginated(request)
+
+    # cursor "offset:20" should override offset=0 -> effective offset=20
+    assert result.offset == 20
+    assert result.has_more is False
