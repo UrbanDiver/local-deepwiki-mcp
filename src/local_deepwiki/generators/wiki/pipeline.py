@@ -38,6 +38,7 @@ from local_deepwiki.models import (
 )
 
 if TYPE_CHECKING:
+    from local_deepwiki.generators.wiki.context import WikiPipelineContext
     from local_deepwiki.generators.wiki.generator import (
         WikiGenerator,
         _GenerationContext,
@@ -49,6 +50,30 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 # Initialisation
 # ---------------------------------------------------------------------------
+
+
+def _build_initial_pipeline_ctx(
+    generator: WikiGenerator,
+    index_status: IndexStatus,
+    full_rebuild: bool,
+) -> "WikiPipelineContext":
+    """Build the immutable pipeline context for a generation run."""
+    from local_deepwiki.generators.wiki.context import WikiPipelineContext
+
+    return WikiPipelineContext(
+        index_status=index_status,
+        vector_store=generator.vector_store,
+        llm=generator.llm,
+        system_prompt=generator._system_prompt,
+        repo_path=generator._repo_path,
+        wiki_path=generator.wiki_path,
+        config=generator.config,
+        wiki_config=generator.config.wiki,
+        manifest=generator._manifest,
+        status_manager=generator.status_manager,
+        full_rebuild=full_rebuild,
+        max_chunk_content_chars=generator.config.wiki.max_chunk_content_chars,
+    )
 
 
 async def init_generation_context(
@@ -113,22 +138,7 @@ async def init_generation_context(
     # Pre-compute line info for source files (for source refs with line numbers)
     generator.status_manager.file_line_info = generator._get_main_definition_lines()
 
-    from local_deepwiki.generators.wiki.context import WikiPipelineContext
-
-    pipeline_ctx = WikiPipelineContext(
-        index_status=index_status,
-        vector_store=generator.vector_store,
-        llm=generator.llm,
-        system_prompt=generator._system_prompt,
-        repo_path=generator._repo_path,
-        wiki_path=generator.wiki_path,
-        config=generator.config,
-        wiki_config=generator.config.wiki,
-        manifest=generator._manifest,
-        status_manager=generator.status_manager,
-        full_rebuild=full_rebuild,
-        max_chunk_content_chars=generator.config.wiki.max_chunk_content_chars,
-    )
+    pipeline_ctx = _build_initial_pipeline_ctx(generator, index_status, full_rebuild)
 
     return _GenerationContext(
         pages=[],
