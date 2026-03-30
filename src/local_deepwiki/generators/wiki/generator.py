@@ -282,21 +282,27 @@ class WikiGenerator:
             return
         from local_deepwiki.generators.wiki.context import WikiPipelineContext
 
-        # Fallback for tests that skip init_generation_context
-        repo_path = self._repo_path or Path(index_status.repo_path)
+        # Fallback for tests that skip init_generation_context.
+        # Use getattr throughout because __new__-created instances may
+        # lack attributes that __init__ normally sets.
+        repo_path = getattr(self, "_repo_path", None) or Path(index_status.repo_path)
+        config = getattr(self, "config", None)
+        wiki_config = getattr(config, "wiki", None)
         ctx.pipeline_ctx = WikiPipelineContext(
             index_status=index_status,
             vector_store=self.vector_store,
-            llm=self.llm,
-            system_prompt=self._system_prompt,
+            llm=getattr(self, "llm", None),  # type: ignore[arg-type]
+            system_prompt=getattr(self, "_system_prompt", ""),
             repo_path=repo_path,
             wiki_path=self.wiki_path,
-            config=self.config,
-            wiki_config=self.config.wiki,
+            config=config,  # type: ignore[arg-type]
+            wiki_config=wiki_config,  # type: ignore[arg-type]
             manifest=getattr(self, "_manifest", None),
             status_manager=self.status_manager,
             full_rebuild=ctx.full_rebuild,
-            max_chunk_content_chars=self.config.wiki.max_chunk_content_chars,
+            max_chunk_content_chars=(
+                wiki_config.max_chunk_content_chars if wiki_config else 15000
+            ),
         )
 
     # ------------------------------------------------------------------
@@ -426,6 +432,7 @@ class WikiGenerator:
         """Generate auxiliary pages (delegates to wiki_phases)."""
         ctx.index_status = index_status
         ctx.progress_callback = progress_callback
+        self._ensure_pipeline_ctx(ctx, index_status)
         await _phases_generate_auxiliary_pages(ctx, self)
 
     # ------------------------------------------------------------------
