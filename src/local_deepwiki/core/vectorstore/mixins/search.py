@@ -328,24 +328,21 @@ class SearchMixin:
             List of search results with scores.
         """
         engine = self._get_search_engine()
-        if request is not None:
-            # Pass the SearchRequest directly — engine will use it as-is.
-            return await engine.search(query, limit, request=request, store=self)
-
-        return await engine.search(
-            query,
-            limit,
-            search_mode=search_mode,
-            language=language,
-            chunk_type=chunk_type,
-            path_pattern=path_pattern,
-            use_fuzzy=use_fuzzy,
-            fuzzy_weight=fuzzy_weight,
-            profile=profile,
-            min_similarity=min_similarity,
-            auto_suggest=auto_suggest,
-            store=self,
-        )
+        if request is None:
+            request = SearchRequest(
+                query=query,
+                limit=limit,
+                search_mode=search_mode,
+                language=language,
+                chunk_type=chunk_type,
+                path_pattern=path_pattern,
+                use_fuzzy=use_fuzzy,
+                fuzzy_weight=fuzzy_weight,
+                profile=profile,
+                min_similarity=min_similarity,
+                auto_suggest=auto_suggest,
+            )
+        return await engine.search(request, store=self)
 
     # -----------------------------------------------------------------
     # search_paginated()
@@ -400,20 +397,22 @@ class SearchMixin:
             SearchResultPage with results, total count, and pagination metadata.
         """
         engine = self._get_search_engine()
-        return await engine.search_paginated(
-            query,
-            limit,
-            offset,
-            request=request,
-            language=language,
-            chunk_type=chunk_type,
-            path_pattern=path_pattern,
-            use_fuzzy=use_fuzzy,
-            fuzzy_weight=fuzzy_weight,
-            cursor=cursor,
-            profile=profile,
-            min_similarity=min_similarity,
-        )
+        if request is None:
+            request = SearchRequest(
+                query=query,
+                limit=limit,
+                offset=offset,
+                cursor=cursor,
+                language=language,
+                chunk_type=chunk_type,
+                path_pattern=path_pattern,
+                use_fuzzy=use_fuzzy,
+                fuzzy_weight=fuzzy_weight,
+                profile=profile,
+                min_similarity=min_similarity,
+                auto_suggest=False,
+            )
+        return await engine.search_paginated(request, store=self)
 
     def record_feedback(self, feedback: SearchFeedback) -> None:
         """Record user feedback on a search result.

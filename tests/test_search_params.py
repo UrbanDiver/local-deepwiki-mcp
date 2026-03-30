@@ -815,3 +815,119 @@ async def test_pagination_engine_uses_cursor_over_offset():
     # cursor "offset:20" should override offset=0 -> effective offset=20
     assert result.offset == 20
     assert result.has_more is False
+
+
+# ---------------------------------------------------------------------------
+# SearchMixin builds SearchRequest before delegating to engine
+# ---------------------------------------------------------------------------
+
+
+async def test_search_mixin_builds_request_from_kwargs():
+    """SearchMixin.search() builds SearchRequest from individual kwargs."""
+    from local_deepwiki.core.vectorstore.mixins.search_types import SearchRequest
+
+    mock_engine = MagicMock()
+    mock_engine.search = AsyncMock(return_value=[])
+
+    mixin = MagicMock()
+    mixin._get_search_engine = MagicMock(return_value=mock_engine)
+
+    from local_deepwiki.core.vectorstore.mixins.search import SearchMixin
+
+    result = await SearchMixin.search(
+        mixin, "test query", 5, language="python", use_fuzzy=True
+    )
+
+    # Verify engine received a SearchRequest, not individual kwargs
+    call_args = mock_engine.search.call_args
+    request_arg = call_args[0][0]  # First positional arg
+    assert isinstance(request_arg, SearchRequest)
+    assert request_arg.query == "test query"
+    assert request_arg.limit == 5
+    assert request_arg.language == "python"
+    assert request_arg.use_fuzzy is True
+
+
+async def test_search_mixin_passes_request_directly():
+    """SearchMixin.search() passes a pre-built SearchRequest without wrapping."""
+    from local_deepwiki.core.vectorstore.mixins.search_types import SearchRequest
+
+    mock_engine = MagicMock()
+    mock_engine.search = AsyncMock(return_value=[])
+
+    mixin = MagicMock()
+    mixin._get_search_engine = MagicMock(return_value=mock_engine)
+
+    from local_deepwiki.core.vectorstore.mixins.search import SearchMixin
+
+    original_request = SearchRequest(
+        query="pre-built", limit=3, language="go", use_fuzzy=True
+    )
+    await SearchMixin.search(mixin, "ignored", 99, request=original_request)
+
+    call_args = mock_engine.search.call_args
+    request_arg = call_args[0][0]
+    assert request_arg is original_request
+    assert request_arg.query == "pre-built"
+    assert request_arg.limit == 3
+
+
+async def test_search_mixin_paginated_builds_request_from_kwargs():
+    """SearchMixin.search_paginated() builds SearchRequest from kwargs."""
+    from local_deepwiki.core.vectorstore.mixins.search_types import SearchRequest
+    from local_deepwiki.core.vectorstore.schema import SearchResultPage
+
+    page = SearchResultPage(results=[], total=0, offset=0, limit=10, has_more=False)
+    mock_engine = MagicMock()
+    mock_engine.search_paginated = AsyncMock(return_value=page)
+
+    mixin = MagicMock()
+    mixin._get_search_engine = MagicMock(return_value=mock_engine)
+
+    from local_deepwiki.core.vectorstore.mixins.search import SearchMixin
+
+    result = await SearchMixin.search_paginated(
+        mixin,
+        "paginated query",
+        10,
+        5,
+        language="rust",
+        cursor="offset:5",
+    )
+
+    call_args = mock_engine.search_paginated.call_args
+    request_arg = call_args[0][0]
+    assert isinstance(request_arg, SearchRequest)
+    assert request_arg.query == "paginated query"
+    assert request_arg.limit == 10
+    assert request_arg.offset == 5
+    assert request_arg.cursor == "offset:5"
+    assert request_arg.language == "rust"
+    assert request_arg.auto_suggest is False
+
+
+async def test_search_mixin_paginated_passes_request_directly():
+    """SearchMixin.search_paginated() passes a pre-built SearchRequest."""
+    from local_deepwiki.core.vectorstore.mixins.search_types import SearchRequest
+    from local_deepwiki.core.vectorstore.schema import SearchResultPage
+
+    page = SearchResultPage(results=[], total=0, offset=0, limit=10, has_more=False)
+    mock_engine = MagicMock()
+    mock_engine.search_paginated = AsyncMock(return_value=page)
+
+    mixin = MagicMock()
+    mixin._get_search_engine = MagicMock(return_value=mock_engine)
+
+    from local_deepwiki.core.vectorstore.mixins.search import SearchMixin
+
+    original_request = SearchRequest(query="pre-built paginated", limit=20, offset=10)
+    await SearchMixin.search_paginated(
+        mixin, "ignored", 99, 0, request=original_request
+    )
+
+    call_args = mock_engine.search_paginated.call_args
+    request_arg = call_args[0][0]
+    assert request_arg is original_request
+    assert request_arg.query == "pre-built paginated"
+    assert request_arg.limit == 20
+    assert request_arg.offset == 10
