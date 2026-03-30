@@ -60,6 +60,9 @@ def _build_initial_pipeline_ctx(
     """Build the immutable pipeline context for a generation run."""
     from local_deepwiki.generators.wiki.context import WikiPipelineContext
 
+    assert generator._repo_path is not None, (
+        "repo_path must be set before building context"
+    )
     return WikiPipelineContext(
         index_status=index_status,
         vector_store=generator.vector_store,
@@ -152,6 +155,29 @@ async def init_generation_context(
 
 
 # ---------------------------------------------------------------------------
+# Narrowing helpers -- ctx.index_status and generator._progress are set by
+# _init_pipeline_context before any phase runs, but are typed as Optional
+# on the dataclass.  These helpers narrow the types for Pyright.
+# ---------------------------------------------------------------------------
+
+
+def _require_index_status(ctx: _GenerationContext) -> IndexStatus:
+    """Return ctx.index_status, asserting it is not None."""
+    assert ctx.index_status is not None, (
+        "index_status must be set before pipeline phases"
+    )
+    return ctx.index_status
+
+
+def _require_progress(generator: WikiGenerator) -> GenerationProgress:
+    """Return generator._progress, asserting it is not None."""
+    assert generator._progress is not None, (
+        "_progress must be set before pipeline phases"
+    )
+    return generator._progress
+
+
+# ---------------------------------------------------------------------------
 # Phase helpers
 # ---------------------------------------------------------------------------
 
@@ -192,16 +218,19 @@ async def generate_module_pages(
     semaphore: asyncio.Semaphore | None = None,
 ) -> None:
     """Generate module documentation pages."""
+    progress = _require_progress(generator)
+    index_status = _require_index_status(ctx)
+
     if ctx.progress_callback:
         ctx.progress_callback("Generating module documentation", 2, 14)
 
-    generator._progress.start_phase("modules", total=0)
+    progress.start_phase("modules", total=0)
 
     # Late import so test patches at generators.wiki.generator work
     from local_deepwiki.generators.wiki import generator as _wiki_gen
 
     pipeline_ctx = generator._build_pipeline_context(
-        ctx.index_status,
+        index_status,
         system_prompt=generator._page_prompts.get("module", generator._system_prompt),
         full_rebuild=ctx.full_rebuild,
     )
@@ -214,8 +243,8 @@ async def generate_module_pages(
     ctx.pages_skipped += skip_count
 
     # Update module stats and write pages
-    generator._progress._phase_stats["modules"].items_completed = len(module_pages)
-    generator._progress.complete_phase()
+    progress._phase_stats["modules"].items_completed = len(module_pages)
+    progress.complete_phase()
 
     for page in module_pages:
         ctx.pages.append(page)
@@ -229,6 +258,9 @@ async def generate_file_pages(
     semaphore: asyncio.Semaphore | None = None,
 ) -> None:
     """Generate file-level documentation pages."""
+    progress = _require_progress(generator)
+    index_status = _require_index_status(ctx)
+
     if ctx.progress_callback:
         ctx.progress_callback("Generating file documentation", 3, 14)
 
@@ -237,7 +269,7 @@ async def generate_file_pages(
     from local_deepwiki.generators.wiki.files import FileDocContext
 
     file_ctx = FileDocContext(
-        index_status=ctx.index_status,
+        index_status=index_status,
         vector_store=generator.vector_store,
         llm=generator.llm,
         system_prompt=generator._page_prompts.get("file", generator._system_prompt),
@@ -250,7 +282,7 @@ async def generate_file_pages(
         file_ctx,
         progress_callback=ctx.progress_callback,
         write_callback=generator._write_page,
-        generation_progress=generator._progress,
+        generation_progress=progress,
         max_files=max_files,
         semaphore=semaphore,
     )
@@ -278,6 +310,8 @@ async def generate_codemap_pages(
     ctx: _GenerationContext,
 ) -> None:
     """Generate codemap pages for auto-discovered entry points."""
+    progress = _require_progress(generator)
+
     assert generator._repo_path is not None, (
         "Repository path must be set before generating codemaps"
     )
@@ -293,7 +327,7 @@ async def generate_codemap_pages(
         pages=ctx.pages,
         pages_generated=ctx.pages_generated,
         pages_skipped=ctx.pages_skipped,
-        progress=generator._progress,
+        progress=progress,
         params=params,
     )
     ctx.pages.extend(codemap_pages)
@@ -318,9 +352,11 @@ async def generate_search_and_toc_phase(
     ctx: _GenerationContext,
 ) -> None:
     """Generate search index and table of contents."""
+    index_status = _require_index_status(ctx)
+
     await generate_search_and_toc(
         pages=ctx.pages,
-        index_status=ctx.index_status,
+        index_status=index_status,
         vector_store=generator.vector_store,
         wiki_path=generator.wiki_path,
         progress_callback=ctx.progress_callback,
@@ -332,9 +368,11 @@ def build_wiki_status_from_context(
     ctx: _GenerationContext,
 ) -> WikiGenerationStatus:
     """Build the wiki generation status object."""
+    index_status = _require_index_status(ctx)
+
     return build_wiki_status(
         pages=ctx.pages,
-        index_status=ctx.index_status,
+        index_status=index_status,
         page_statuses=generator.status_manager.page_statuses,
     )
 
@@ -408,6 +446,8 @@ async def _emit_wiki_complete_event(
 
 def _log_generation_summary(generator: WikiGenerator, ctx: Any) -> None:
     """Log completion stats, warnings, cache stats, and finalize."""
+    progress = _require_progress(generator)
+
     logger.info(
         "Wiki generation complete: %d pages generated, "
         "%d pages unchanged, %d total pages",
@@ -422,9 +462,9 @@ def _log_generation_summary(generator: WikiGenerator, ctx: Any) -> None:
         )
         for warning in ctx.warnings:
             logger.warning("  - %s", warning)
-            generator._progress._log(f"WARNING: {warning}")
+            progress._log(f"WARNING: {warning}")
     generator._log_cache_stats()
-    summary = generator._progress.finalize(success=True, warnings=ctx.warnings)
+    summary = progress.finalize(success=True, warnings=ctx.warnings)
     logger.info(summary)
 
 
@@ -483,7 +523,7 @@ async def _finalize_pipeline(
     await generate_freshness_and_finalize_phase(generator, ctx, wiki_status)
 
     _log_generation_summary(generator, ctx)
-    await _emit_wiki_complete_event(ctx.index_status, ctx)
+    await _emit_wiki_complete_event(_require_index_status(ctx), ctx)
 
 
 async def run_generation_pipeline(

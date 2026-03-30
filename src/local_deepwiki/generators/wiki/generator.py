@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 if TYPE_CHECKING:
     from local_deepwiki.generators.wiki.context import WikiPipelineContext
 
+from local_deepwiki.generators.progress_tracker import GenerationProgress
+
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.analysis.coverage import generate_coverage_page  # noqa: F401 — namespace target for phases.py
@@ -188,6 +190,9 @@ class WikiGenerator:
 
         # Repository path (set during generation)
         self._repo_path: Path | None = None
+
+        # Progress tracker (set during generation by init_generation_context)
+        self._progress: GenerationProgress | None = None
 
     def _build_page_prompts(self) -> dict[str, str]:
         """Build page-type-specific system prompts.
