@@ -26,9 +26,7 @@ from ..utils import _log_task_exception
 from .search_types import SearchRequest
 
 if TYPE_CHECKING:
-    from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
     from local_deepwiki.core.vectorstore.search_engine import SearchEngine
-    from local_deepwiki.core.vectorstore.store import VectorStore
 
 logger = get_logger(__name__)
 
