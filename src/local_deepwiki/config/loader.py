@@ -255,6 +255,18 @@ def _set_nested_value(d: dict[str, Any], path: list[str], value: Any) -> None:
     d[path[-1]] = value
 
 
+def _resolve_nested_value(
+    current_model: BaseModel, nested_key: str, nested_value: Any
+) -> Any:
+    """Resolve a single nested update against an existing BaseModel field."""
+    if not isinstance(nested_value, dict):
+        return nested_value
+    nested_current = getattr(current_model, nested_key, None)
+    if nested_current is not None and isinstance(nested_current, BaseModel):
+        return nested_current.model_copy(update=nested_value)
+    return nested_value
+
+
 def _apply_nested_updates(config: "Config", updates: dict[str, Any]) -> "Config":
     """Apply nested updates to a config.
 
@@ -268,30 +280,20 @@ def _apply_nested_updates(config: "Config", updates: dict[str, Any]) -> "Config"
     model_updates: dict[str, Any] = {}
 
     for key, value in updates.items():
-        if isinstance(value, dict):
-            # Nested update
-            current = getattr(config, key, None)
-            if current is not None and isinstance(current, BaseModel):
-                # Recursively apply to nested model
-                nested_updates = {}
-                for nested_key, nested_value in value.items():
-                    if isinstance(nested_value, dict):
-                        nested_current = getattr(current, nested_key, None)
-                        if nested_current is not None and isinstance(
-                            nested_current, BaseModel
-                        ):
-                            nested_updates[nested_key] = nested_current.model_copy(
-                                update=nested_value
-                            )
-                        else:
-                            nested_updates[nested_key] = nested_value
-                    else:
-                        nested_updates[nested_key] = nested_value
-                model_updates[key] = current.model_copy(update=nested_updates)
-            else:
-                model_updates[key] = value
-        else:
+        if not isinstance(value, dict):
             model_updates[key] = value
+            continue
+
+        current = getattr(config, key, None)
+        if current is None or not isinstance(current, BaseModel):
+            model_updates[key] = value
+            continue
+
+        # Recursively apply to nested model
+        nested_updates = {
+            nk: _resolve_nested_value(current, nk, nv) for nk, nv in value.items()
+        }
+        model_updates[key] = current.model_copy(update=nested_updates)
 
     return config.model_copy(update=model_updates)
 

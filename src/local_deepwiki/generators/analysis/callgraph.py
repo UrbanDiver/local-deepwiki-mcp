@@ -110,15 +110,18 @@ def _extract_c_cpp_call(call_node: Node, source: bytes) -> str | None:
 def _extract_swift_call(call_node: Node, source: bytes) -> str | None:
     """Extract call name from a Swift call expression node."""
     func = call_node.child_by_field_name("function")
-    if func:
-        if func.type == "identifier":
-            return get_node_text(func, source)
-        elif func.type in ("navigation_expression", "member_access"):
-            for child in func.children:
-                if child.type == "navigation_suffix":
-                    for c in child.children:
-                        if c.type == "simple_identifier":
-                            return get_node_text(c, source)
+    if not func:
+        return None
+    if func.type == "identifier":
+        return get_node_text(func, source)
+    if func.type not in ("navigation_expression", "member_access"):
+        return None
+    for child in func.children:
+        if child.type != "navigation_suffix":
+            continue
+        for c in child.children:
+            if c.type == "simple_identifier":
+                return get_node_text(c, source)
     return None
 
 

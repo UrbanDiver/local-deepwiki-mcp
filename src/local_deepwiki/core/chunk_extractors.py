@@ -101,16 +101,41 @@ def _get_python_parents(class_node: Node, source: bytes) -> list[str]:
     return parents
 
 
+def _collect_parent_identifiers(
+    heritage_node: Node,
+    clause_types: set[str],
+    id_types: set[str],
+    source: bytes,
+) -> list[str]:
+    """Collect parent identifiers from a heritage/delegation AST node.
+
+    Walks clause children of *heritage_node*, collecting text of nodes whose
+    type is in *id_types* from clauses whose type is in *clause_types*.
+    """
+    parents: list[str] = []
+    for clause in heritage_node.children:
+        if clause.type not in clause_types:
+            continue
+        for item in clause.children:
+            if item.type in id_types:
+                parents.append(get_node_text(item, source))
+    return parents
+
+
 def _get_ts_js_parents(class_node: Node, source: bytes) -> list[str]:
     """Extract parent class names from a TypeScript/JavaScript class definition."""
-    parents = []
+    parents: list[str] = []
     for child in class_node.children:
-        if child.type == "class_heritage":
-            for clause in child.children:
-                if clause.type in ("extends_clause", "implements_clause"):
-                    for item in clause.children:
-                        if item.type in ("identifier", "type_identifier"):
-                            parents.append(get_node_text(item, source))
+        if child.type != "class_heritage":
+            continue
+        parents.extend(
+            _collect_parent_identifiers(
+                child,
+                {"extends_clause", "implements_clause"},
+                {"identifier", "type_identifier"},
+                source,
+            )
+        )
     return parents
 
 
@@ -174,18 +199,18 @@ def _get_php_parents(class_node: Node, source: bytes) -> list[str]:
 
 def _get_kotlin_parents(class_node: Node, source: bytes) -> list[str]:
     """Extract parent class names from a Kotlin class definition."""
-    parents = []
+    parents: list[str] = []
     for child in class_node.children:
-        if child.type == "delegation_specifiers":
-            for spec in child.children:
-                if spec.type == "delegation_specifier":
-                    for item in find_nodes_by_type(
-                        spec, {"user_type", "simple_identifier"}
-                    ):
-                        text = get_node_text(item, source)
-                        if text and text not in (":", ","):
-                            parents.append(text)
-                            break
+        if child.type != "delegation_specifiers":
+            continue
+        for spec in child.children:
+            if spec.type != "delegation_specifier":
+                continue
+            for item in find_nodes_by_type(spec, {"user_type", "simple_identifier"}):
+                text = get_node_text(item, source)
+                if text and text not in (":", ","):
+                    parents.append(text)
+                    break
     return parents
 
 
