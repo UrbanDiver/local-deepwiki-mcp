@@ -26,3 +26,5 @@ class SearchRequest:
     profile: SearchProfile | str | None = None
     min_similarity: float | None = None
     auto_suggest: bool = True
+    offset: int = 0
+    cursor: str | None = None

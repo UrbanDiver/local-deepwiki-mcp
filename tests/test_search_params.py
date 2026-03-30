@@ -652,6 +652,20 @@ class TestReexports:
 # ---------------------------------------------------------------------------
 
 
+def test_search_request_pagination_fields():
+    """SearchRequest includes offset and cursor for paginated search."""
+    from local_deepwiki.core.vectorstore.mixins.search_types import SearchRequest
+
+    req = SearchRequest(query="test", limit=20, offset=10, cursor="abc123")
+    assert req.offset == 10
+    assert req.cursor == "abc123"
+
+    # Defaults
+    req_default = SearchRequest(query="test")
+    assert req_default.offset == 0
+    assert req_default.cursor is None
+
+
 async def test_search_engine_config_only_construction():
     """SearchEngine.__init__ accepts only SearchEngineConfig, no legacy kwargs."""
     from local_deepwiki.core.vectorstore.schema import SearchProfile
