@@ -199,6 +199,8 @@ class VectorStore(StatsMixin, LazyIndexMixin, SearchMixin):
         bm25_weight: float,
     ) -> SearchEngine:
         """Build and return the composition-based SearchEngine with explicit deps."""
+        from .search_params import SearchEngineConfig
+
         return SearchEngine(
             get_table=self._get_table,
             row_to_chunk=self._row_to_chunk,
@@ -207,10 +209,12 @@ class VectorStore(StatsMixin, LazyIndexMixin, SearchMixin):
             fuzzy_search_config=self._fuzzy_search_config,
             adaptive_searcher=self._adaptive_searcher,
             lazy_index_manager=self._lazy_index_manager,
-            default_search_profile=default_search_profile,
-            adaptive_search_enabled=adaptive_search_enabled,
-            default_search_mode=default_search_mode,
-            bm25_weight=bm25_weight,
+            config=SearchEngineConfig(
+                default_search_profile=default_search_profile,
+                adaptive_search_enabled=adaptive_search_enabled,
+                default_search_mode=default_search_mode,
+                bm25_weight=bm25_weight,
+            ),
         )
 
     def stabilize(self) -> None:

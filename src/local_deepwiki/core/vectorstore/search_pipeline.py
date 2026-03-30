@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import CodeChunk, SearchResult
 
+from .search_params import SearchPipelineParams
 from .utils import _log_task_exception
 
 if TYPE_CHECKING:
@@ -191,79 +192,62 @@ def run_keyword_pipeline(
 
 
 def run_hybrid_pipeline(
-    table: Any,
-    query: str,
-    query_embedding: list[float],
-    filters: list[str],
-    fetch_limit: int,
-    min_similarity: float,
-    bm25_weight: float,
-    row_to_chunk: RowToChunk,
-    lazy_index_manager: "LazyIndexManager",
+    params: SearchPipelineParams,
 ) -> list[SearchResult]:
     """Execute the hybrid (vector + BM25 with RRF) search pipeline.
 
     Args:
-        table: LanceDB table to search.
-        query: Text query (used for the FTS branch).
-        query_embedding: Query embedding vector (used for the vector branch).
-        filters: List of LanceDB filter expressions to AND together.
-        fetch_limit: Maximum number of rows to retrieve from LanceDB.
-        min_similarity: Minimum cosine-similarity score for vector results.
-        bm25_weight: Weight applied to FTS scores in RRF merging.
-        row_to_chunk: Callable that converts a raw row dict to a ``CodeChunk``.
-        lazy_index_manager: Manager for recording latency.
+        params: Immutable bundle of all pipeline parameters.
 
     Returns:
         List of ``SearchResult`` objects merged by RRF.
     """
     vector_rows = execute_vector_search(
-        table, query_embedding, filters, fetch_limit, lazy_index_manager
+        params.table,
+        params.query_embedding,
+        params.filters,
+        params.fetch_limit,
+        params.lazy_index_manager,
     )
-    fts_rows = execute_fts_search(table, query, filters, fetch_limit)
+    fts_rows = execute_fts_search(
+        params.table, params.query, params.filters, params.fetch_limit
+    )
 
     if not fts_rows:
-        return _convert_vector_results(vector_rows, min_similarity, row_to_chunk)
+        return _convert_vector_results(
+            vector_rows, params.min_similarity, params.row_to_chunk
+        )
 
     merged = reciprocal_rank_fusion(
         vector_rows,
         fts_rows,
-        fts_weight=bm25_weight,
+        fts_weight=params.bm25_weight,
     )
     return [
-        SearchResult(chunk=row_to_chunk(row), score=score, highlights=[])
+        SearchResult(chunk=params.row_to_chunk(row), score=score, highlights=[])
         for row, score in merged
     ]
 
 
 def run_vector_pipeline(
-    table: Any,
-    query_embedding: list[float],
-    filters: list[str],
-    fetch_limit: int,
-    min_similarity: float,
-    row_to_chunk: RowToChunk,
-    lazy_index_manager: "LazyIndexManager",
+    params: SearchPipelineParams,
 ) -> list[SearchResult]:
     """Execute the vector-only (semantic) search pipeline.
 
     Args:
-        table: LanceDB table to search.
-        query_embedding: Query embedding vector.
-        filters: List of LanceDB filter expressions to AND together.
-        fetch_limit: Maximum number of rows to retrieve from LanceDB.
-        min_similarity: Minimum cosine-similarity score; lower-scoring results
-            are filtered out.
-        row_to_chunk: Callable that converts a raw row dict to a ``CodeChunk``.
-        lazy_index_manager: Manager for recording latency.
+        params: Immutable bundle of all pipeline parameters.
 
     Returns:
         List of ``SearchResult`` objects.
     """
     raw_rows = execute_vector_search(
-        table, query_embedding, filters, fetch_limit, lazy_index_manager
+        params.table,
+        params.query_embedding,
+        params.filters,
+        params.fetch_limit,
+        params.lazy_index_manager,
     )
-    return _convert_vector_results(raw_rows, min_similarity, row_to_chunk)
+    return _convert_vector_results(raw_rows, params.min_similarity, params.row_to_chunk)
 
 
 def _convert_vector_results(
@@ -296,53 +280,25 @@ def _convert_vector_results(
 
 def dispatch_search(
     mode: str,
-    table: Any,
-    query: str,
-    query_embedding: list[float],
-    filters: list[str],
-    fetch_limit: int,
-    min_similarity: float,
-    bm25_weight: float,
-    row_to_chunk: RowToChunk,
-    lazy_index_manager: "LazyIndexManager",
+    params: SearchPipelineParams,
 ) -> list[SearchResult]:
     """Dispatch to the appropriate search pipeline based on mode.
 
     Args:
         mode: One of ``"vector"``, ``"keyword"``, or ``"hybrid"``.
-        table: LanceDB table to search.
-        query: Text query string.
-        query_embedding: Query embedding vector (empty list for keyword mode).
-        filters: List of LanceDB filter expressions to AND together.
-        fetch_limit: Maximum number of rows to retrieve from LanceDB.
-        min_similarity: Minimum similarity threshold for vector results.
-        bm25_weight: Weight applied to FTS scores in hybrid RRF merging.
-        row_to_chunk: Callable that converts a raw row dict to a ``CodeChunk``.
-        lazy_index_manager: Manager for recording search latency.
+        params: Immutable bundle of all pipeline parameters.
 
     Returns:
         List of ``SearchResult`` objects from the chosen pipeline.
     """
     if mode == "keyword":
-        return run_keyword_pipeline(table, query, filters, fetch_limit, row_to_chunk)
-    if mode == "hybrid":
-        return run_hybrid_pipeline(
-            table,
-            query,
-            query_embedding,
-            filters,
-            fetch_limit,
-            min_similarity,
-            bm25_weight,
-            row_to_chunk,
-            lazy_index_manager,
+        return run_keyword_pipeline(
+            params.table,
+            params.query,
+            params.filters,
+            params.fetch_limit,
+            params.row_to_chunk,
         )
-    return run_vector_pipeline(
-        table,
-        query_embedding,
-        filters,
-        fetch_limit,
-        min_similarity,
-        row_to_chunk,
-        lazy_index_manager,
-    )
+    if mode == "hybrid":
+        return run_hybrid_pipeline(params)
+    return run_vector_pipeline(params)

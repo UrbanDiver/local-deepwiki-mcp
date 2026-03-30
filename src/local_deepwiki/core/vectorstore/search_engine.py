@@ -27,6 +27,11 @@ from .schema import (
     SearchProfileConfig,
     SearchResultPage,
 )
+from .search_params import (
+    SearchEngineConfig,
+    SearchExecutionContext,
+    SearchPipelineParams,
+)
 import local_deepwiki.core.vectorstore.search_pipeline as search_pipeline
 import local_deepwiki.core.vectorstore.search_postprocess as search_postprocess
 
@@ -354,10 +359,13 @@ class SearchEngine:
         fuzzy_search_config: "FuzzySearchConfig",
         adaptive_searcher: "AdaptiveSearcher",
         lazy_index_manager: "LazyIndexManager",
-        default_search_profile: SearchProfile = SearchProfile.BALANCED,
-        adaptive_search_enabled: bool = True,
-        default_search_mode: str = "vector",
-        bm25_weight: float = 0.3,
+        config: SearchEngineConfig | None = None,
+        # Legacy kwargs — used when ``config`` is not provided.
+        # Prefer passing a ``SearchEngineConfig`` via ``config`` instead.
+        default_search_profile: SearchProfile | None = None,
+        adaptive_search_enabled: bool | None = None,
+        default_search_mode: str | None = None,
+        bm25_weight: float | None = None,
     ) -> None:
         self._get_table = get_table
         self._row_to_chunk = row_to_chunk
@@ -366,10 +374,28 @@ class SearchEngine:
         self._fuzzy_search_config = fuzzy_search_config
         self._adaptive_searcher = adaptive_searcher
         self._lazy_index_manager = lazy_index_manager
-        self._default_search_profile = default_search_profile
-        self._adaptive_search_enabled = adaptive_search_enabled
-        self._default_search_mode = default_search_mode
-        self._bm25_weight = bm25_weight
+
+        _cfg = config or SearchEngineConfig()
+        self._default_search_profile = (
+            default_search_profile
+            if default_search_profile is not None
+            else (
+                _cfg.default_search_profile
+                if _cfg.default_search_profile is not None
+                else SearchProfile.BALANCED
+            )
+        )
+        self._adaptive_search_enabled = (
+            adaptive_search_enabled
+            if adaptive_search_enabled is not None
+            else _cfg.adaptive_search_enabled
+        )
+        self._default_search_mode = (
+            default_search_mode
+            if default_search_mode is not None
+            else _cfg.default_search_mode
+        )
+        self._bm25_weight = bm25_weight if bm25_weight is not None else _cfg.bm25_weight
 
         # Lazily initialized fuzzy search helper
         self._fuzzy_search_helper: "FuzzySearchHelper | None" = None
@@ -612,9 +638,7 @@ class SearchEngine:
         if cached_results is not None:
             return cached_results
 
-        return await self._execute_and_record(
-            request=request,
-            table=table,
+        ctx = SearchExecutionContext(
             query_embedding=query_embedding,
             filters=filters,
             profile_config=profile_config,
@@ -622,6 +646,12 @@ class SearchEngine:
             effective_min_similarity=effective_min_similarity,
             effective_mode=effective_mode,
             use_cache=use_cache,
+        )
+
+        return await self._execute_and_record(
+            request=request,
+            table=table,
+            ctx=ctx,
             store=store,
         )
 
@@ -630,42 +660,34 @@ class SearchEngine:
         *,
         request: SearchRequest,
         table: Any,
-        query_embedding: list[float],
-        filters: Any,
-        profile_config: Any,
-        resolved_profile: Any,
-        effective_min_similarity: float | None,
-        effective_mode: str,
-        use_cache: bool,
+        ctx: SearchExecutionContext,
         store: Any,
     ) -> list[SearchResult]:
         """Dispatch search, post-process, and record results in the cache."""
-        fetch_limit = self._compute_fetch_limit(request, profile_config)
+        fetch_limit = self._compute_fetch_limit(request, ctx.profile_config)
+        pipeline_params = SearchPipelineParams(
+            table=table,
+            query=request.query,
+            query_embedding=ctx.query_embedding,
+            filters=ctx.filters,
+            fetch_limit=fetch_limit,
+            min_similarity=ctx.effective_min_similarity,
+            bm25_weight=self._bm25_weight,
+            row_to_chunk=self._row_to_chunk,
+            lazy_index_manager=self._lazy_index_manager,
+        )
         search_results = search_pipeline.dispatch_search(
-            effective_mode,
-            table,
-            request.query,
-            query_embedding,
-            filters,
-            fetch_limit,
-            effective_min_similarity,
-            self._bm25_weight,
-            self._row_to_chunk,
-            self._lazy_index_manager,
+            ctx.effective_mode, pipeline_params
         )
         search_results, auto_fuzzy_enabled = await self._postprocess_results(
             search_results, request, store
         )
         self._record_and_store_results(
             request=request,
-            query_embedding=query_embedding,
+            ctx=ctx,
             search_results=search_results,
             fetch_limit=fetch_limit,
-            use_cache=use_cache,
             auto_fuzzy_enabled=auto_fuzzy_enabled,
-            resolved_profile=resolved_profile,
-            effective_min_similarity=effective_min_similarity,
-            effective_mode=effective_mode,
         )
         return search_results
 
@@ -673,14 +695,10 @@ class SearchEngine:
         self,
         *,
         request: SearchRequest,
-        query_embedding: list[float],
+        ctx: SearchExecutionContext,
         search_results: list[SearchResult],
         fetch_limit: int,
-        use_cache: bool,
         auto_fuzzy_enabled: bool,
-        resolved_profile: Any,
-        effective_min_similarity: float | None,
-        effective_mode: str,
     ) -> None:
         """Record adaptive search quality and store results in cache if eligible."""
         if self._adaptive_search_enabled and search_results:
@@ -688,17 +706,17 @@ class SearchEngine:
             self._adaptive_searcher.record_search_quality(
                 request.query, avg_score, len(search_results), fetch_limit
             )
-        if use_cache and not auto_fuzzy_enabled:
+        if ctx.use_cache and not auto_fuzzy_enabled:
             store_filters = build_cache_filters(
                 request.limit,
-                resolved_profile,
-                effective_min_similarity,
-                effective_mode,
+                ctx.resolved_profile,
+                ctx.effective_min_similarity,
+                ctx.effective_mode,
                 request.language,
                 request.chunk_type,
             )
             self._get_search_cache().set(
-                request.query, query_embedding, search_results, store_filters
+                request.query, ctx.query_embedding, search_results, store_filters
             )
 
     async def _postprocess_results(

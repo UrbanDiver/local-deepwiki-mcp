@@ -11,6 +11,7 @@ from local_deepwiki.logging import get_logger
 from local_deepwiki.providers.base import EmbeddingProvider
 
 from .schema import BatchEmbeddingResult, EmbeddingProgress
+from .search_params import EmbeddingBatchParams
 from .utils import RateLimiter
 
 logger = get_logger(__name__)
@@ -115,36 +116,30 @@ def _handle_batch_error(
 async def embed_single_batch_with_retry(
     batch_index: int,
     texts: list[str],
-    embedding_provider: EmbeddingProvider,
-    config: EmbeddingBatchConfig,
-    *,
-    rate_limiter: RateLimiter | None,
+    batch_params: EmbeddingBatchParams,
     progress: EmbeddingProgress,
-    semaphore: asyncio.Semaphore,
 ) -> BatchEmbeddingResult:
     """Embed a single batch with retry logic and rate limiting.
 
     Args:
         batch_index: Index of this batch for ordering results.
         texts: Texts to embed in this batch.
-        embedding_provider: Provider for generating embeddings.
-        config: Embedding batch configuration.
-        rate_limiter: Optional rate limiter for API calls.
+        batch_params: Immutable bundle of provider, config, rate limiter,
+            and semaphore.
         progress: Progress tracker to update.
-        semaphore: Semaphore for concurrency control.
 
     Returns:
         BatchEmbeddingResult with embeddings or error.
     """
     retry_count = 0
 
-    async with semaphore:
-        while retry_count < config.retry_max_attempts:
+    async with batch_params.semaphore:
+        while retry_count < batch_params.config.retry_max_attempts:
             try:
-                if rate_limiter is not None:
-                    await rate_limiter.acquire()
+                if batch_params.rate_limiter is not None:
+                    await batch_params.rate_limiter.acquire()
 
-                embeddings = await embedding_provider.embed(texts)
+                embeddings = await batch_params.embedding_provider.embed(texts)
                 progress.update(success=True)
 
                 return BatchEmbeddingResult(
@@ -162,7 +157,7 @@ async def embed_single_batch_with_retry(
             ) as e:
                 retry_count += 1
                 should_retry, delay = _handle_batch_error(
-                    e, batch_index, retry_count, config, progress
+                    e, batch_index, retry_count, batch_params.config, progress
                 )
                 if not should_retry:
                     return BatchEmbeddingResult(
@@ -240,15 +235,17 @@ async def _embed_single_batch(
         RuntimeError: If the batch fails after all retry attempts.
     """
     progress = EmbeddingProgress(total_texts=len(batch_texts), total_batches=1)
-    semaphore = asyncio.Semaphore(1)
+    batch_params = EmbeddingBatchParams(
+        embedding_provider=embedding_provider,
+        config=config,
+        rate_limiter=rate_limiter,
+        semaphore=asyncio.Semaphore(1),
+    )
     result = await embed_single_batch_with_retry(
         0,
         batch_texts,
-        embedding_provider,
-        config,
-        rate_limiter=rate_limiter,
-        progress=progress,
-        semaphore=semaphore,
+        batch_params,
+        progress,
     )
     if result.error is not None:
         raise RuntimeError(f"Failed to embed batch: {result.error}")
@@ -329,33 +326,27 @@ async def _run_parallel_batches(
     *,
     batches: list[list[str]],
     unique_texts: list[str],
-    embedding_provider: EmbeddingProvider,
-    config: EmbeddingBatchConfig,
-    rate_limiter: RateLimiter | None,
+    batch_params: EmbeddingBatchParams,
     batch_size: int,
-    optimal_concurrency: int,
-    total_batches: int,
     log_progress: bool,
 ) -> list[list[float]]:
     """Run all batches in parallel and return merged embeddings for unique texts."""
+    total_batches = len(batches)
     progress = EmbeddingProgress(
         total_texts=len(unique_texts), total_batches=total_batches
     )
     if log_progress:
+        # Derive concurrency from semaphore for logging
         _log_parallel_start(
-            unique_texts, total_batches, batch_size, optimal_concurrency
+            unique_texts, total_batches, batch_size, batch_params.semaphore._value
         )
 
-    semaphore = asyncio.Semaphore(optimal_concurrency)
     tasks = [
         embed_single_batch_with_retry(
             i,
             batch_texts,
-            embedding_provider,
-            config,
-            rate_limiter=rate_limiter,
-            progress=progress,
-            semaphore=semaphore,
+            batch_params,
+            progress,
         )
         for i, batch_texts in enumerate(batches)
     ]
@@ -428,15 +419,17 @@ async def batch_embed(
         )
         return _remap_embeddings(unique_embeddings, texts, text_to_index)
 
-    all_embeddings = await _run_parallel_batches(
-        batches=batches,
-        unique_texts=unique_texts,
+    batch_params = EmbeddingBatchParams(
         embedding_provider=embedding_provider,
         config=config,
         rate_limiter=rate_limiter,
+        semaphore=asyncio.Semaphore(optimal_concurrency),
+    )
+    all_embeddings = await _run_parallel_batches(
+        batches=batches,
+        unique_texts=unique_texts,
+        batch_params=batch_params,
         batch_size=batch_size,
-        optimal_concurrency=optimal_concurrency,
-        total_batches=total_batches,
         log_progress=log_progress,
     )
     return _remap_embeddings(all_embeddings, texts, text_to_index)
