@@ -385,48 +385,59 @@ async def _generate_file_enrichments(
     return content + "".join(results)
 
 
+@dataclass(frozen=True, slots=True)
+class _FilePageInput:
+    """Intermediate data for generating a single file page.
+
+    Groups the file-specific values computed by
+    :func:`generate_single_file_doc` so that
+    :func:`_generate_new_file_page` stays under the 6-param threshold.
+    """
+
+    file_path: Path
+    repo_path: Path
+    wiki_path: str
+    source_files: list[str]
+    file_chunks: list[Any]
+    context: str
+    rich_context_text: str
+
+
 async def _generate_new_file_page(
-    *,
     file_info: FileInfo,
-    file_path: Path,
-    repo_path: Path,
-    wiki_path: str,
-    source_files: list[str],
-    file_chunks: list[Any],
-    context: str,
-    rich_context_text: str,
+    inp: _FilePageInput,
     ctx: FileDocContext,
 ) -> WikiPage:
     """Build the prompt, generate content, add enrichments, and return a new WikiPage."""
     prompt = _build_llm_prompt(
         file_info=file_info,
-        context=context,
-        rich_context_text=rich_context_text,
+        context=inp.context,
+        rich_context_text=inp.rich_context_text,
     )
     content = await _generate_and_format_doc(
         prompt=prompt,
         llm=ctx.llm,
         system_prompt=ctx.system_prompt,
     )
-    abs_file_path = repo_path / file_info.path
+    abs_file_path = inp.repo_path / file_info.path
     content = await _generate_file_enrichments(
         content=content,
         abs_file_path=abs_file_path,
-        repo_path=repo_path,
+        repo_path=inp.repo_path,
         file_path=file_info.path,
-        all_file_chunks=file_chunks,
+        all_file_chunks=inp.file_chunks,
     )
     lang_str = file_info.language.value if file_info.language else None
-    repo_info = get_repo_info(repo_path)
-    content = _inject_inline_source_code(content, file_chunks, lang_str, repo_info)
-    ctx.entity_registry.register_from_chunks(file_chunks, wiki_path)
+    repo_info = get_repo_info(inp.repo_path)
+    content = _inject_inline_source_code(content, inp.file_chunks, lang_str, repo_info)
+    ctx.entity_registry.register_from_chunks(inp.file_chunks, inp.wiki_path)
     page = WikiPage(
-        path=wiki_path,
-        title=f"{file_path.name}",
+        path=inp.wiki_path,
+        title=f"{inp.file_path.name}",
         content=content,
         generated_at=time.time(),
     )
-    ctx.status_manager.record_page_status(page, source_files)
+    ctx.status_manager.record_page_status(page, inp.source_files)
     return page
 
 
@@ -505,8 +516,7 @@ async def generate_single_file_doc(
 
     file_chunks, context, rich_context_text = context_result
 
-    page = await _generate_new_file_page(
-        file_info=file_info,
+    inp = _FilePageInput(
         file_path=file_path,
         repo_path=repo_path,
         wiki_path=wiki_path,
@@ -514,7 +524,11 @@ async def generate_single_file_doc(
         file_chunks=file_chunks,
         context=context,
         rich_context_text=rich_context_text,
-        ctx=ctx,
+    )
+    page = await _generate_new_file_page(
+        file_info,
+        inp,
+        ctx,
     )
     return page, False  # Generated new
 

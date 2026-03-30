@@ -9,11 +9,13 @@ from local_deepwiki.generators.wiki.generator import (
     WikiGeneratorProtocol,
     generate_wiki,
 )
+from local_deepwiki.generators.wiki.pipeline_params import WikiPipelineParams
 
 __all__ = [
     "WikiGenerationOptions",
     "WikiGenerator",
     "WikiGeneratorProtocol",
     "WikiPipelineContext",
+    "WikiPipelineParams",
     "generate_wiki",
 ]

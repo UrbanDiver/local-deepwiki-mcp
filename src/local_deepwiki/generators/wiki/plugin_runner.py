@@ -9,19 +9,13 @@ from __future__ import annotations
 from operator import attrgetter
 from typing import TYPE_CHECKING
 
+from local_deepwiki.generators.wiki.pipeline_params import WikiPipelineParams
 from local_deepwiki.logging import get_logger
 from local_deepwiki.plugins.registry import get_plugin_registry
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
-    from pathlib import Path
-
-    from local_deepwiki.config import Config
-    from local_deepwiki.core.vectorstore import VectorStore
-    from local_deepwiki.generators.wiki.status import WikiStatusManager
-    from local_deepwiki.models import IndexStatus, ProgressCallback, WikiPage
+    from local_deepwiki.models import WikiPage
     from local_deepwiki.plugins.base import WikiGeneratorPlugin
-    from local_deepwiki.providers.base import LLMProvider
 
 logger = get_logger(__name__)
 
@@ -122,30 +116,14 @@ def sort_generators_by_dependencies(
 
 async def run_plugin_generators(
     *,
+    params: WikiPipelineParams,
     pages: list[WikiPage],
-    all_source_files: list[str],
-    index_status: IndexStatus,
-    vector_store: VectorStore,
-    llm: LLMProvider,
-    config: Config,
-    wiki_path: Path,
-    status_manager: WikiStatusManager,
-    write_callback: Callable[[WikiPage], Awaitable[None]],
-    progress_callback: ProgressCallback | None,
 ) -> tuple[list[WikiPage], int]:
     """Run registered wiki generator plugins.
 
     Args:
+        params: Pipeline parameter bundle with context, callbacks, and source files.
         pages: Current list of wiki pages (will not be mutated).
-        all_source_files: List of all source file paths.
-        index_status: Index status.
-        vector_store: Vector store for code search.
-        llm: LLM provider instance.
-        config: Configuration object.
-        wiki_path: Path to wiki output directory.
-        status_manager: Wiki status manager for tracking.
-        write_callback: Async callback to write pages to disk.
-        progress_callback: Optional progress callback.
 
     Returns:
         Tuple of (new_pages, pages_generated_count).
@@ -163,21 +141,17 @@ async def run_plugin_generators(
 
     # Build context dict for plugins
     plugin_context: dict[str, object] = {
-        "vector_store": vector_store,
-        "llm": llm,
-        "config": config,
+        "vector_store": params.ctx.vector_store,
+        "llm": params.ctx.llm,
+        "config": params.ctx.config,
         "existing_pages": list(pages),
     }
 
     new_pages, pages_generated = await _execute_plugin_generators(
         generators=generators,
         pages=pages,
-        index_status=index_status,
-        wiki_path=wiki_path,
+        params=params,
         plugin_context=plugin_context,
-        all_source_files=all_source_files,
-        status_manager=status_manager,
-        write_callback=write_callback,
     )
     return new_pages, pages_generated
 
@@ -186,29 +160,26 @@ async def _execute_plugin_generators(
     *,
     generators: list[WikiGeneratorPlugin],
     pages: list[WikiPage],
-    index_status: IndexStatus,
-    wiki_path: Path,
+    params: WikiPipelineParams,
     plugin_context: dict[str, object],
-    all_source_files: list[str],
-    status_manager: WikiStatusManager,
-    write_callback: Callable[[WikiPage], Awaitable[None]],
 ) -> tuple[list[WikiPage], int]:
     """Execute each plugin generator in order, collecting generated pages."""
     new_pages: list[WikiPage] = []
     pages_generated = 0
+    all_source_files = params.all_source_files or []
 
     for generator in generators:
         try:
             logger.debug("Running wiki generator plugin: %s", generator.generator_name)
             result = await generator.generate(
-                index_status=index_status,
-                wiki_path=wiki_path,
+                index_status=params.ctx.index_status,
+                wiki_path=params.ctx.wiki_path,
                 context=plugin_context,
             )
             for page in result.pages:
                 new_pages.append(page)
-                status_manager.record_page_status(page, all_source_files)
-                await write_callback(page)
+                params.ctx.status_manager.record_page_status(page, all_source_files)
+                await params.write_callback(page)
                 pages_generated += 1
             # Update existing_pages in context for subsequent plugins
             plugin_context["existing_pages"] = list(pages) + list(new_pages)

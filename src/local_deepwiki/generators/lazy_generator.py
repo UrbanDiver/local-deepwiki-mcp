@@ -297,11 +297,25 @@ class LazyPageGenerator:
         if not files:
             raise FileNotFoundError(f"No files for module: {dir_name}")
 
+        from local_deepwiki.generators.wiki.context import WikiPipelineContext
+
         llm = self._resources.get_llm()
         prompt = self._resources.get_system_prompt()
-        page = await generate_single_module_doc(
-            dir_name, files, vs, llm, prompt, repo_path=self._resources.get_repo_path()
+        repo_path = self._resources.get_repo_path()
+        ctx = WikiPipelineContext(
+            index_status=idx,
+            vector_store=vs,
+            llm=llm,
+            system_prompt=prompt,
+            repo_path=repo_path or Path("."),
+            wiki_path=self._wiki_path,
+            config=self._config,
+            wiki_config=self._config.wiki,
+            manifest=None,
+            status_manager=None,  # type: ignore[arg-type]
+            full_rebuild=False,
         )
+        page = await generate_single_module_doc(dir_name, files, ctx)
         if page is None:
             raise FileNotFoundError(f"Module generation failed: {dir_name}")
         return page

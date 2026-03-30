@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.events import EventType, get_event_emitter
+from local_deepwiki.generators.wiki.pipeline_params import WikiPipelineParams
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
     IndexStatus,
@@ -32,6 +33,46 @@ if TYPE_CHECKING:
     from local_deepwiki.generators.wiki.status import WikiStatusManager
 
 logger = get_logger(__name__)
+
+
+def _build_auxiliary_params(
+    generator: WikiGenerator,
+    ctx: _GenerationContext,
+    index_status: IndexStatus,
+    progress_callback: object | None,
+) -> WikiPipelineParams:
+    """Build :class:`WikiPipelineParams` for auxiliary page generation.
+
+    Uses ``getattr`` for attributes that may be absent when tests bypass
+    ``WikiGenerator.__init__``.
+    """
+    from local_deepwiki.generators.wiki.context import WikiPipelineContext
+
+    repo_path = getattr(generator, "_repo_path", None) or Path(index_status.repo_path)
+    config = getattr(generator, "config", None)
+    wiki_config = getattr(config, "wiki", None)
+    pipeline_ctx = WikiPipelineContext(
+        index_status=index_status,
+        vector_store=generator.vector_store,
+        llm=getattr(generator, "llm", None),  # type: ignore[arg-type]
+        system_prompt=getattr(generator, "_system_prompt", ""),
+        repo_path=repo_path,
+        wiki_path=generator.wiki_path,
+        config=config,  # type: ignore[arg-type]
+        wiki_config=wiki_config,  # type: ignore[arg-type]
+        manifest=getattr(generator, "_manifest", None),
+        status_manager=generator.status_manager,
+        full_rebuild=ctx.full_rebuild,
+        max_chunk_content_chars=(
+            wiki_config.max_chunk_content_chars if wiki_config else 15000
+        ),
+    )
+    return WikiPipelineParams(
+        ctx=pipeline_ctx,
+        write_callback=generator._write_page,
+        progress_callback=progress_callback,
+        all_source_files=ctx.all_source_files,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -315,17 +356,17 @@ async def _add_auxiliary_page(
     content: str | None,
     path: str,
     title: str,
-    index_status: IndexStatus,
-    status_manager: WikiStatusManager,
-    write_callback: Callable[[WikiPage], Awaitable[None]],
+    params: WikiPipelineParams,
 ) -> None:
     """Record and write an auxiliary page if content was generated."""
     if not content:
         return
     page = WikiPage(path=path, title=title, content=content, generated_at=time.time())
     ctx.pages.append(page)
-    status_manager.record_summary_page_status(page, ctx.all_source_files, index_status)
-    await write_callback(page)
+    params.ctx.status_manager.record_summary_page_status(
+        page, ctx.all_source_files, params.ctx.index_status
+    )
+    await params.write_callback(page)
     ctx.pages_generated += 1
 
 
@@ -544,6 +585,8 @@ async def generate_auxiliary_pages(
 
     status_manager = generator.status_manager
 
+    params = _build_auxiliary_params(generator, ctx, index_status, progress_callback)
+
     if not await _try_load_cached_auxiliary_pages(
         ctx, _AUX_PAGE_METADATA, index_status, status_manager
     ):
@@ -559,22 +602,15 @@ async def generate_auxiliary_pages(
                 content,
                 page_path,
                 title,
-                index_status,
-                status_manager,
-                generator._write_page,
+                params,
             )
 
     # Generate onboarding guide (requires vector store + LLM)
     llm = getattr(generator, "llm", None)
     if llm is not None:
-        onboarding_page = await generate_onboarding_page(
-            repo_path=Path(index_status.repo_path),
-            wiki_path=generator.wiki_path,
-            vector_store=generator.vector_store,
-            llm=llm,
-            index_status=index_status,
-            status_manager=status_manager,
-            full_rebuild=ctx.full_rebuild,
+        onboarding_page = await _generate_onboarding_with_params(
+            ctx,
+            params,
         )
         if onboarding_page is not None:
             ctx.pages.append(onboarding_page)
@@ -585,20 +621,62 @@ async def generate_auxiliary_pages(
             ctx.pages_generated += 1
 
 
+async def _generate_onboarding_with_params(
+    gen_ctx: _GenerationContext,
+    params: WikiPipelineParams,
+) -> WikiPage | None:
+    """Generate onboarding page using pipeline params.
+
+    Thin wrapper that unpacks :class:`WikiPipelineParams` and delegates
+    to :func:`generate_onboarding_page`.
+    """
+    return await generate_onboarding_page(
+        repo_path=params.ctx.repo_path,
+        vector_store=params.ctx.vector_store,
+        llm=params.ctx.llm,
+        index_status=params.ctx.index_status,
+        status_manager=params.ctx.status_manager,
+        full_rebuild=gen_ctx.full_rebuild,
+    )
+
+
 async def generate_onboarding_page(
     repo_path: Path,
-    wiki_path: Path,
+    vector_store: Any,
+    llm: Any,
+    index_status: IndexStatus | None = None,
+    status_manager: Any | None = None,
+    full_rebuild: bool = False,
+    **_kwargs: Any,
+) -> WikiPage | None:
+    """Generate the rich onboarding page for the wiki.
+
+    Returns a WikiPage if successful, None if generation fails.
+    Skips regeneration if the structural fingerprint is unchanged.
+
+    .. note:: The ``wiki_path`` keyword argument is accepted but ignored
+       for backward compatibility.
+    """
+    return await _generate_onboarding_core(
+        repo_path=repo_path,
+        vector_store=vector_store,
+        llm=llm,
+        index_status=index_status,
+        status_manager=status_manager,
+        full_rebuild=full_rebuild,
+    )
+
+
+async def _generate_onboarding_core(
+    *,
+    repo_path: Path,
     vector_store: Any,
     llm: Any,
     index_status: IndexStatus | None = None,
     status_manager: Any | None = None,
     full_rebuild: bool = False,
 ) -> WikiPage | None:
-    """Generate the rich onboarding page for the wiki.
-
-    Returns a WikiPage if successful, None if generation fails.
-    Skips regeneration if the structural fingerprint is unchanged.
-    """
+    """Core implementation for onboarding page generation."""
     from local_deepwiki.generators.analysis.onboarding import generate_rich_onboarding
 
     page_path = "onboarding.md"
