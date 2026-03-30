@@ -375,11 +375,7 @@ class SearchEngine:
         fuzzy_search_config: Fuzzy search configuration.
         adaptive_searcher: Adaptive search depth estimator.
         lazy_index_manager: Lazy vector index lifecycle manager.
-        default_search_profile: Default search profile enum.
-        adaptive_search_enabled: Whether adaptive depth estimation is on.
-        default_search_mode: Default search mode (``"vector"``,
-            ``"keyword"``, or ``"hybrid"``).
-        bm25_weight: Weight for BM25 scores in hybrid search RRF merge.
+        config: Search engine configuration (profile, mode, weights).
     """
 
     def __init__(
@@ -393,12 +389,6 @@ class SearchEngine:
         adaptive_searcher: "AdaptiveSearcher",
         lazy_index_manager: "LazyIndexManager",
         config: SearchEngineConfig | None = None,
-        # Legacy kwargs — used when ``config`` is not provided.
-        # Prefer passing a ``SearchEngineConfig`` via ``config`` instead.
-        default_search_profile: SearchProfile | None = None,
-        adaptive_search_enabled: bool | None = None,
-        default_search_mode: str | None = None,
-        bm25_weight: float | None = None,
     ) -> None:
         self._get_table = get_table
         self._row_to_chunk = row_to_chunk
@@ -409,32 +399,20 @@ class SearchEngine:
         self._lazy_index_manager = lazy_index_manager
 
         _cfg = config or SearchEngineConfig()
-        resolved_profile = (
-            default_search_profile
-            if default_search_profile is not None
-            else (
-                _cfg.default_search_profile
-                if _cfg.default_search_profile is not None
-                else SearchProfile.BALANCED
-            )
+        self._default_search_profile = (
+            _cfg.default_search_profile
+            if _cfg.default_search_profile is not None
+            else SearchProfile.BALANCED
         )
-        resolved_adaptive = (
-            adaptive_search_enabled
-            if adaptive_search_enabled is not None
-            else _cfg.adaptive_search_enabled
-        )
-        resolved_mode = (
-            default_search_mode
-            if default_search_mode is not None
-            else _cfg.default_search_mode
-        )
-        self._bm25_weight = bm25_weight if bm25_weight is not None else _cfg.bm25_weight
+        self._adaptive_search_enabled = _cfg.adaptive_search_enabled
+        self._default_search_mode = _cfg.default_search_mode
+        self._bm25_weight = _cfg.bm25_weight
 
         # Config resolver owns mutable config state and resolution logic
         self._config_resolver = SearchConfigResolver(
-            default_search_profile=resolved_profile,
-            adaptive_search_enabled=resolved_adaptive,
-            default_search_mode=resolved_mode,
+            default_search_profile=self._default_search_profile,
+            adaptive_search_enabled=self._adaptive_search_enabled,
+            default_search_mode=self._default_search_mode,
             adaptive_searcher=adaptive_searcher,
         )
 

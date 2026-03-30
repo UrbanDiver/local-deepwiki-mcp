@@ -548,65 +548,25 @@ class TestSearchEngineConfigIntegration:
         assert engine._config_resolver.default_search_mode == "hybrid"
         assert engine._bm25_weight == 0.5
 
-    def test_search_engine_legacy_kwargs_still_work(self):
-        """Test SearchEngine.__init__ still works with individual kwargs."""
+    def test_search_engine_rejects_legacy_kwargs(self):
+        """Test SearchEngine.__init__ rejects removed legacy kwargs."""
         from local_deepwiki.core.vectorstore.schema import SearchProfile
         from local_deepwiki.core.vectorstore.search_engine import SearchEngine
 
-        engine = SearchEngine(
-            get_table=MagicMock(return_value=None),
-            row_to_chunk=_make_row_to_chunk(),
-            embedding_provider=_make_embedding_provider(),
-            get_search_cache=MagicMock(),
-            fuzzy_search_config=MagicMock(),
-            adaptive_searcher=MagicMock(),
-            lazy_index_manager=_make_lazy_index_manager(),
-            default_search_profile=SearchProfile.FAST,
-            adaptive_search_enabled=True,
-            default_search_mode="vector",
-            bm25_weight=0.2,
-        )
+        with pytest.raises(TypeError):
+            SearchEngine(
+                get_table=MagicMock(return_value=None),
+                row_to_chunk=_make_row_to_chunk(),
+                embedding_provider=_make_embedding_provider(),
+                get_search_cache=MagicMock(),
+                fuzzy_search_config=MagicMock(),
+                adaptive_searcher=MagicMock(),
+                lazy_index_manager=_make_lazy_index_manager(),
+                default_search_profile=SearchProfile.FAST,
+            )
 
-        assert engine.default_search_profile == SearchProfile.FAST
-        assert engine.adaptive_search_enabled is True
-        assert engine._config_resolver.default_search_mode == "vector"
-        assert engine._bm25_weight == 0.2
-
-    def test_explicit_legacy_kwargs_override_config(self):
-        """Test that explicit legacy kwargs take precedence over config."""
-        from local_deepwiki.core.vectorstore.schema import SearchProfile
-        from local_deepwiki.core.vectorstore.search_engine import SearchEngine
-
-        cfg = SearchEngineConfig(
-            default_search_profile=SearchProfile.THOROUGH,
-            adaptive_search_enabled=False,
-            default_search_mode="hybrid",
-            bm25_weight=0.8,
-        )
-
-        engine = SearchEngine(
-            get_table=MagicMock(return_value=None),
-            row_to_chunk=_make_row_to_chunk(),
-            embedding_provider=_make_embedding_provider(),
-            get_search_cache=MagicMock(),
-            fuzzy_search_config=MagicMock(),
-            adaptive_searcher=MagicMock(),
-            lazy_index_manager=_make_lazy_index_manager(),
-            config=cfg,
-            # Explicit legacy kwargs override config values
-            default_search_profile=SearchProfile.FAST,
-            adaptive_search_enabled=True,
-            default_search_mode="vector",
-            bm25_weight=0.1,
-        )
-
-        assert engine.default_search_profile == SearchProfile.FAST
-        assert engine.adaptive_search_enabled is True
-        assert engine._config_resolver.default_search_mode == "vector"
-        assert engine._bm25_weight == 0.1
-
-    def test_config_used_when_legacy_kwargs_omitted(self):
-        """Test that config values are used when legacy kwargs are not provided."""
+    def test_config_values_applied(self):
+        """Test that config values are applied to the engine."""
         from local_deepwiki.core.vectorstore.schema import SearchProfile
         from local_deepwiki.core.vectorstore.search_engine import SearchEngine
 
@@ -632,6 +592,26 @@ class TestSearchEngineConfigIntegration:
         assert engine.adaptive_search_enabled is False
         assert engine._config_resolver.default_search_mode == "hybrid"
         assert engine._bm25_weight == 0.8
+
+    def test_default_config_when_omitted(self):
+        """Test that default SearchEngineConfig is used when config is None."""
+        from local_deepwiki.core.vectorstore.schema import SearchProfile
+        from local_deepwiki.core.vectorstore.search_engine import SearchEngine
+
+        engine = SearchEngine(
+            get_table=MagicMock(return_value=None),
+            row_to_chunk=_make_row_to_chunk(),
+            embedding_provider=_make_embedding_provider(),
+            get_search_cache=MagicMock(),
+            fuzzy_search_config=MagicMock(),
+            adaptive_searcher=MagicMock(),
+            lazy_index_manager=_make_lazy_index_manager(),
+        )
+
+        assert engine.default_search_profile == SearchProfile.BALANCED
+        assert engine.adaptive_search_enabled is True
+        assert engine._config_resolver.default_search_mode == "vector"
+        assert engine._bm25_weight == 0.3
 
 
 # ---------------------------------------------------------------------------
@@ -665,3 +645,36 @@ class TestReexports:
         from local_deepwiki.core.vectorstore import SearchEngineConfig
 
         assert SearchEngineConfig is not None
+
+
+# ---------------------------------------------------------------------------
+# SearchEngine config-only construction
+# ---------------------------------------------------------------------------
+
+
+async def test_search_engine_config_only_construction():
+    """SearchEngine.__init__ accepts only SearchEngineConfig, no legacy kwargs."""
+    from local_deepwiki.core.vectorstore.schema import SearchProfile
+    from local_deepwiki.core.vectorstore.search_engine import SearchEngine
+    from local_deepwiki.core.vectorstore.search_params import SearchEngineConfig
+
+    cfg = SearchEngineConfig(
+        default_search_profile=SearchProfile.BALANCED,
+        adaptive_search_enabled=False,
+        default_search_mode="hybrid",
+        bm25_weight=0.5,
+    )
+    engine = SearchEngine(
+        get_table=lambda: None,
+        row_to_chunk=lambda row: None,
+        embedding_provider=MagicMock(),
+        get_search_cache=lambda: MagicMock(),
+        fuzzy_search_config=MagicMock(),
+        adaptive_searcher=MagicMock(),
+        lazy_index_manager=MagicMock(),
+        config=cfg,
+    )
+    assert engine._default_search_profile == SearchProfile.BALANCED
+    assert engine._adaptive_search_enabled is False
+    assert engine._default_search_mode == "hybrid"
+    assert engine._bm25_weight == 0.5
