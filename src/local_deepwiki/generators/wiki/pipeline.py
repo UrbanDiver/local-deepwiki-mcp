@@ -448,6 +448,57 @@ async def _init_pipeline_context(
     return ctx
 
 
+async def _generate_content_pages(
+    generator: WikiGenerator,
+    ctx: _GenerationContext,
+    index_status: IndexStatus,
+    progress_callback: ProgressCallback | None,
+    max_file_pages: int | None,
+) -> None:
+    """Run module and file documentation phases concurrently (phases 3+4)."""
+    shared_semaphore = asyncio.Semaphore(generator.config.effective_llm_concurrency)
+    await asyncio.gather(
+        generate_module_pages(
+            generator, ctx, index_status, progress_callback, semaphore=shared_semaphore
+        ),
+        generate_file_pages(
+            generator,
+            ctx,
+            index_status,
+            progress_callback,
+            max_files=max_file_pages,
+            semaphore=shared_semaphore,
+        ),
+    )
+
+
+async def _finalize_pipeline(
+    generator: WikiGenerator,
+    ctx: _GenerationContext,
+    index_status: IndexStatus,
+    progress_callback: ProgressCallback | None,
+) -> None:
+    """Cross-link, build search/TOC, freshness report, and emit completion (phases 8-10)."""
+    # Phase 8: cross-links and see-also sections
+    ctx.pages = await apply_cross_linking_phase(
+        generator, ctx, index_status, progress_callback
+    )
+
+    # Phase 9: search index and TOC
+    await generate_search_and_toc_phase(
+        generator, ctx.pages, index_status, progress_callback
+    )
+
+    # Phase 10: freshness report and finalize
+    wiki_status = build_wiki_status_from_context(generator, ctx, index_status)
+    await generate_freshness_and_finalize_phase(
+        generator, ctx, wiki_status, index_status, progress_callback
+    )
+
+    _log_generation_summary(generator, ctx)
+    await _emit_wiki_complete_event(index_status, ctx)
+
+
 async def run_generation_pipeline(
     generator: WikiGenerator,
     index_status: IndexStatus,
@@ -483,19 +534,8 @@ async def run_generation_pipeline(
     await analyze_imports_for_relationships(generator)
 
     # Phase 3+4: module and file documentation (concurrent)
-    shared_semaphore = asyncio.Semaphore(generator.config.effective_llm_concurrency)
-    await asyncio.gather(
-        generate_module_pages(
-            generator, ctx, index_status, progress_callback, semaphore=shared_semaphore
-        ),
-        generate_file_pages(
-            generator,
-            ctx,
-            index_status,
-            progress_callback,
-            max_files=max_file_pages,
-            semaphore=shared_semaphore,
-        ),
+    await _generate_content_pages(
+        generator, ctx, index_status, progress_callback, max_file_pages
     )
 
     # Phase 5: dependencies page
@@ -509,23 +549,7 @@ async def run_generation_pipeline(
     await run_wiki_plugin_generators(generator, ctx, index_status, progress_callback)
     await generate_codemap_pages(generator, ctx, index_status, progress_callback)
 
-    # Phase 8: cross-links and see-also sections
-    ctx.pages = await apply_cross_linking_phase(
-        generator, ctx, index_status, progress_callback
-    )
-
-    # Phase 9: search index and TOC
-    await generate_search_and_toc_phase(
-        generator, ctx.pages, index_status, progress_callback
-    )
-
-    # Phase 10: freshness report and finalize
-    wiki_status = build_wiki_status_from_context(generator, ctx, index_status)
-    await generate_freshness_and_finalize_phase(
-        generator, ctx, wiki_status, index_status, progress_callback
-    )
-
-    _log_generation_summary(generator, ctx)
-    await _emit_wiki_complete_event(index_status, ctx)
+    # Phases 8-10: cross-links, search/TOC, freshness, and completion
+    await _finalize_pipeline(generator, ctx, index_status, progress_callback)
 
     return WikiStructure(root=str(generator.wiki_path), pages=ctx.pages)

@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from rich.console import Console, Group
@@ -23,16 +24,36 @@ from local_deepwiki.cli.search_models import (
     SearchFilters,
     SearchState,
 )
-from local_deepwiki.config import get_config
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, Language, SearchResult
 from local_deepwiki.providers.embeddings import get_embedding_provider
 
+
+@dataclass(frozen=True)
+class SearchSessionConfig:
+    """Immutable configuration for a search session.
+
+    Bundles the 9 parameters previously passed individually to
+    ``run_search`` into a single frozen dataclass.
+    """
+
+    repo_path: Path
+    query: str | None = None
+    language: str | None = None
+    chunk_type: str | None = None
+    file_pattern: str | None = None
+    min_score: float = 0.0
+    limit: int = 20
+    interactive: bool = True
+    show_preview: bool = False
+
+
 # Re-export for backward compatibility
 __all__ = [
     "LANGUAGE_LEXERS",
     "SearchFilters",
+    "SearchSessionConfig",
     "SearchState",
     "InteractiveSearch",
     "run_search",
@@ -536,8 +557,63 @@ class InteractiveSearch:
             self._state.input_mode = "search"
 
 
+async def _execute_search(cfg: SearchSessionConfig) -> None:
+    """Execute a search session from a resolved configuration.
+
+    Validates the repository, initialises the vector store, applies
+    filters, and dispatches to interactive or one-shot mode.
+    """
+    console = Console()
+
+    # Resolve repo path
+    resolved_repo = cfg.repo_path.resolve()
+    if not resolved_repo.exists():
+        console.print(f"[red]Repository not found: {resolved_repo}[/red]")
+        return
+
+    # Check for vector store
+    vector_db_path = resolved_repo / ".deepwiki" / "vectordb"
+    if not vector_db_path.exists():
+        console.print(
+            f"[red]Repository not indexed. Run: index_repository {resolved_repo}[/red]"
+        )
+        return
+
+    # Initialize vector store
+    console.print("[dim]Loading vector store...[/dim]")
+    embedding_provider = get_embedding_provider()
+    vector_store = VectorStore(
+        db_path=vector_db_path,
+        embedding_provider=embedding_provider,
+    )
+
+    # Create search instance with initial filters
+    search = InteractiveSearch(vector_store, resolved_repo)
+    search._state.filters = SearchFilters(
+        language=cfg.language,
+        chunk_type=cfg.chunk_type,
+        file_pattern=cfg.file_pattern,
+        min_similarity=cfg.min_score,
+    )
+
+    if cfg.interactive and cfg.query:
+        await search.run(initial_query=cfg.query)
+    elif cfg.interactive:
+        await search.run()
+    elif cfg.query:
+        await search.search(cfg.query, limit=cfg.limit)
+        search.display_results()
+        if cfg.show_preview and search._state.filtered_results:
+            console.print()
+            search.display_preview(search._state.filtered_results[0])
+    else:
+        console.print(
+            "[red]Query is required in non-interactive mode. Use --query or -q.[/red]"
+        )
+
+
 async def run_search(
-    repo_path: Path,
+    repo_path_or_config: Path | SearchSessionConfig | None = None,
     query: str | None = None,
     language: str | None = None,
     chunk_type: str | None = None,
@@ -546,74 +622,36 @@ async def run_search(
     limit: int = 20,
     interactive: bool = True,
     show_preview: bool = False,
+    *,
+    repo_path: Path | None = None,
 ) -> None:
     """Run the search command.
 
-    Args:
-        repo_path: Path to the repository.
-        query: Initial search query.
-        language: Filter by language.
-        chunk_type: Filter by chunk type.
-        file_pattern: Filter by file path pattern.
-        min_score: Minimum similarity score.
-        limit: Maximum number of results.
-        interactive: Whether to run in interactive mode.
-        show_preview: Show preview of first result in non-interactive mode.
+    Accepts either a :class:`SearchSessionConfig` (preferred) or the
+    legacy positional/keyword parameters for backward compatibility.
+
+    The ``repo_path`` keyword is accepted for callers that pass it by
+    name (e.g. ``run_search(repo_path=p, query=q)``).
     """
-    console = Console()
-
-    # Resolve repo path
-    repo_path = repo_path.resolve()
-    if not repo_path.exists():
-        console.print(f"[red]Repository not found: {repo_path}[/red]")
-        return
-
-    # Check for vector store
-    vector_db_path = repo_path / ".deepwiki" / "vectordb"
-    if not vector_db_path.exists():
-        console.print(
-            f"[red]Repository not indexed. Run: index_repository {repo_path}[/red]"
-        )
-        return
-
-    # Initialize vector store
-    console.print("[dim]Loading vector store...[/dim]")
-    config = get_config()
-    embedding_provider = get_embedding_provider()
-    vector_store = VectorStore(
-        db_path=vector_db_path,
-        embedding_provider=embedding_provider,
-    )
-
-    # Create search instance
-    search = InteractiveSearch(vector_store, repo_path)
-
-    # Set initial filters
-    search._state.filters = SearchFilters(
-        language=language,
-        chunk_type=chunk_type,
-        file_pattern=file_pattern,
-        min_similarity=min_score,
-    )
-
-    if interactive and query:
-        # Run with initial query in interactive mode
-        await search.run(initial_query=query)
-    elif interactive:
-        # Run fully interactive
-        await search.run()
-    elif query:
-        # Non-interactive mode
-        await search.search(query, limit=limit)
-        search.display_results()
-
-        if show_preview and search._state.filtered_results:
-            console.print()
-            search.display_preview(search._state.filtered_results[0])
+    if isinstance(repo_path_or_config, SearchSessionConfig):
+        cfg = repo_path_or_config
     else:
-        console.print(
-            "[red]Query is required in non-interactive mode. Use --query or -q.[/red]"
+        effective_repo = repo_path_or_config or repo_path
+        if effective_repo is None:
+            raise TypeError("repo_path is required")
+        cfg = SearchSessionConfig(
+            repo_path=effective_repo,
+            query=query,
+            language=language,
+            chunk_type=chunk_type,
+            file_pattern=file_pattern,
+            min_score=min_score,
+            limit=limit,
+            interactive=interactive,
+            show_preview=show_preview,
         )
+
+    await _execute_search(cfg)
 
 
 # ---------------------------------------------------------------------------
@@ -706,20 +744,20 @@ def _run_search_loop(args: argparse.Namespace) -> int:
         print("Error: --query is required when using --no-interactive", file=sys.stderr)
         return 1
 
+    cfg = SearchSessionConfig(
+        repo_path=args.repo_path,
+        query=args.query,
+        language=args.language,
+        chunk_type=args.chunk_type,
+        file_pattern=args.file_pattern,
+        min_score=args.min_score,
+        limit=args.limit,
+        interactive=not args.no_interactive,
+        show_preview=args.preview,
+    )
+
     try:
-        asyncio.run(
-            run_search(
-                repo_path=args.repo_path,
-                query=args.query,
-                language=args.language,
-                chunk_type=args.chunk_type,
-                file_pattern=args.file_pattern,
-                min_score=args.min_score,
-                limit=args.limit,
-                interactive=not args.no_interactive,
-                show_preview=args.preview,
-            )
-        )
+        asyncio.run(run_search(cfg))
         return 0
     except KeyboardInterrupt:
         print("\nSearch cancelled.")
