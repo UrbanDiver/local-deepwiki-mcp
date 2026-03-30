@@ -562,11 +562,15 @@ class TestIncrementalGeneration:
                 generated_at=time.time(),
             )
 
-        page, was_generated = await generator._generate_or_load_page(
+        from local_deepwiki.generators.wiki.phases import _generate_or_load_page
+
+        page, was_generated = await _generate_or_load_page(
             ctx=ctx,
             page_path="test_page.md",
             generator=mock_generator_fn,
             source_files=["src/main.py"],
+            status_manager=generator.status_manager,
+            write_callback=generator._write_page,
         )
 
         # Should load from cache
@@ -618,11 +622,15 @@ class TestIncrementalGeneration:
                 generated_at=99999.0,
             )
 
-        page, was_generated = await generator._generate_or_load_page(
+        from local_deepwiki.generators.wiki.phases import _generate_or_load_page
+
+        page, was_generated = await _generate_or_load_page(
             ctx=ctx,
             page_path="missing_page.md",
             generator=mock_generator_fn,
             source_files=["src/main.py"],
+            status_manager=generator.status_manager,
+            write_callback=generator._write_page,
         )
 
         # Should generate since cache file doesn't exist

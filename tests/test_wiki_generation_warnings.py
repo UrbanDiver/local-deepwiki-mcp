@@ -116,7 +116,12 @@ class TestDependencyGraphFailureWarning:
                 side_effect=RuntimeError("graph computation failed"),
             ),
         ):
-            await generator._generate_auxiliary_pages(ctx, index_status, None)
+            from local_deepwiki.generators.wiki.phases import generate_auxiliary_pages
+
+            ctx.index_status = index_status
+            ctx.progress_callback = None
+            generator._ensure_pipeline_ctx(ctx, index_status)
+            await generate_auxiliary_pages(ctx, generator)
 
         # Dependency graph failure should be recorded
         dep_warnings = [w for w in ctx.warnings if "Dependency graph" in w]
@@ -161,8 +166,13 @@ class TestDependencyGraphFailureWarning:
                 side_effect=RuntimeError("graph computation failed"),
             ),
         ):
+            from local_deepwiki.generators.wiki.phases import generate_auxiliary_pages
+
+            ctx.index_status = index_status
+            ctx.progress_callback = None
+            generator._ensure_pipeline_ctx(ctx, index_status)
             # Should not raise
-            await generator._generate_auxiliary_pages(ctx, index_status, None)
+            await generate_auxiliary_pages(ctx, generator)
 
         # Pages from the successful generators should still be recorded
         assert ctx.pages_generated >= 3

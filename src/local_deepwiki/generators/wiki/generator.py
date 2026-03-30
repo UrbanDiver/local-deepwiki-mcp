@@ -2,25 +2,22 @@
 
 from __future__ import annotations
 
-import asyncio
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from local_deepwiki.generators.wiki.context import WikiPipelineContext
-    from local_deepwiki.plugins.base import WikiGeneratorPlugin
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.analysis.coverage import generate_coverage_page
+from local_deepwiki.generators.analysis.coverage import generate_coverage_page  # noqa: F401 — namespace target for phases.py
 from local_deepwiki.generators.crosslinks import EntityRegistry
-from local_deepwiki.generators.analysis.dependency_graph import (
+from local_deepwiki.generators.analysis.dependency_graph import (  # noqa: F401 — namespace target for phases.py
     generate_dependency_graph_page,
 )
-from local_deepwiki.generators.analysis.glossary import generate_glossary_page
-from local_deepwiki.generators.analysis.inheritance import generate_inheritance_page
+from local_deepwiki.generators.analysis.glossary import generate_glossary_page  # noqa: F401 — namespace target for phases.py
+from local_deepwiki.generators.analysis.inheritance import generate_inheritance_page  # noqa: F401 — namespace target for phases.py
 from local_deepwiki.generators.manifest import ProjectManifest
 from local_deepwiki.generators.manifest import get_cached_manifest  # noqa: F401 — test patch target
 from local_deepwiki.generators.see_also import RelationshipAnalyzer
@@ -32,23 +29,11 @@ from local_deepwiki.generators.wiki.pages import (
     generate_dependencies_page,
     generate_overview_page,
 )
-from local_deepwiki.generators.wiki.phases import (
-    _generate_or_load_page as _phases_generate_or_load_page,
-    _generate_or_load_summary_page as _phases_generate_or_load_summary_page,
-    generate_auxiliary_pages as _phases_generate_auxiliary_pages,
-    generate_changelog_phase,
-    generate_dependencies_page_phase,
-    generate_summary_pages,
-)
-from local_deepwiki.generators.wiki.plugin_runner import (
-    sort_generators_by_dependencies,
-)
 from local_deepwiki.generators.wiki.status import WikiStatusManager
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
     IndexStatus,
     ProgressCallback,
-    WikiGenerationStatus,
     WikiPage,
     WikiStructure,
 )
@@ -304,276 +289,6 @@ class WikiGenerator:
                 wiki_config.max_chunk_content_chars if wiki_config else 15000
             ),
         )
-
-    # ------------------------------------------------------------------
-    # Thin delegation methods -- kept so that tests calling
-    # ``generator._generate_summary_pages(...)`` etc. still work.
-    # ------------------------------------------------------------------
-
-    async def _generate_summary_pages(
-        self,
-        ctx: _GenerationContext,
-        index_status: IndexStatus,
-        progress_callback: ProgressCallback | None,
-    ) -> None:
-        """Generate overview and architecture pages (delegates to wiki_phases)."""
-        ctx.index_status = index_status
-        ctx.progress_callback = progress_callback
-        await generate_summary_pages(ctx, self)
-
-    async def _generate_or_load_page(
-        self,
-        ctx: _GenerationContext,
-        page_path: str,
-        generator: "Callable[[], Awaitable[WikiPage]]",
-        source_files: list[str],
-    ) -> tuple[WikiPage, bool]:
-        """Generate a page or load from cache (delegates to wiki_phases)."""
-        return await _phases_generate_or_load_page(
-            ctx=ctx,
-            page_path=page_path,
-            generator=generator,
-            source_files=source_files,
-            status_manager=self.status_manager,
-            write_callback=self._write_page,
-        )
-
-    async def _generate_or_load_summary_page(
-        self,
-        ctx: _GenerationContext,
-        page_path: str,
-        generator: "Callable[[], Awaitable[WikiPage]]",
-        index_status: IndexStatus,
-    ) -> tuple[WikiPage, bool]:
-        """Generate a summary page or load from cache (delegates to wiki_phases)."""
-        return await _phases_generate_or_load_summary_page(
-            ctx=ctx,
-            page_path=page_path,
-            generator=generator,
-            index_status=index_status,
-            status_manager=self.status_manager,
-            write_callback=self._write_page,
-        )
-
-    async def _generate_dependencies_page(
-        self,
-        ctx: _GenerationContext,
-        index_status: IndexStatus,
-        progress_callback: ProgressCallback | None,
-    ) -> None:
-        """Generate dependencies page (delegates to wiki_phases)."""
-        ctx.index_status = index_status
-        ctx.progress_callback = progress_callback
-        await generate_dependencies_page_phase(ctx, self)
-
-    async def _generate_changelog_page(
-        self,
-        ctx: _GenerationContext,
-        index_status: IndexStatus,
-        progress_callback: ProgressCallback | None,
-    ) -> None:
-        """Generate changelog page (delegates to wiki_phases)."""
-        ctx.index_status = index_status
-        ctx.progress_callback = progress_callback
-        await generate_changelog_phase(ctx, self)
-
-    async def _add_auxiliary_page(
-        self,
-        ctx: _GenerationContext,
-        content: str | None,
-        path: str,
-        title: str,
-        index_status: IndexStatus,
-    ) -> None:
-        """Record and write an auxiliary page (delegates to wiki_phases)."""
-        from local_deepwiki.generators.wiki.phases import (
-            _add_auxiliary_page as _phases_add_aux,
-        )
-        from local_deepwiki.generators.wiki.pipeline_params import WikiPipelineParams
-
-        params = WikiPipelineParams(
-            ctx=self._build_pipeline_context(
-                index_status, full_rebuild=ctx.full_rebuild
-            ),
-            write_callback=self._write_page,
-        )
-        await _phases_add_aux(
-            ctx,
-            content,
-            path,
-            title,
-            params,
-        )
-
-    async def _try_load_cached_auxiliary_pages(
-        self,
-        ctx: _GenerationContext,
-        aux_pages: list[tuple[str, str]],
-        index_status: IndexStatus,
-    ) -> bool:
-        """Try to load all auxiliary pages from cache (delegates to wiki_phases)."""
-        from local_deepwiki.generators.wiki.phases import (
-            _try_load_cached_auxiliary_pages as _phases_try_load,
-        )
-
-        return await _phases_try_load(
-            ctx,
-            aux_pages,
-            index_status,
-            self.status_manager,
-        )
-
-    async def _generate_auxiliary_pages(
-        self,
-        ctx: _GenerationContext,
-        index_status: IndexStatus,
-        progress_callback: ProgressCallback | None,
-    ) -> None:
-        """Generate auxiliary pages (delegates to wiki_phases)."""
-        ctx.index_status = index_status
-        ctx.progress_callback = progress_callback
-        self._ensure_pipeline_ctx(ctx, index_status)
-        await _phases_generate_auxiliary_pages(ctx, self)
-
-    # ------------------------------------------------------------------
-    # Methods that remain on WikiGenerator (not extracted)
-    # ------------------------------------------------------------------
-
-    async def _analyze_imports_for_relationships(self) -> None:
-        """Collect import chunks for relationship analysis (See Also sections)."""
-        from local_deepwiki.generators.wiki.pipeline import (
-            analyze_imports_for_relationships,
-        )
-
-        await analyze_imports_for_relationships(self)
-
-    async def _generate_module_pages(
-        self,
-        ctx: _GenerationContext,
-        index_status: IndexStatus,
-        progress_callback: ProgressCallback | None,
-        semaphore: asyncio.Semaphore | None = None,
-    ) -> None:
-        """Generate module documentation pages."""
-        from local_deepwiki.generators.wiki.pipeline import generate_module_pages
-
-        ctx.index_status = index_status
-        ctx.progress_callback = progress_callback
-        await generate_module_pages(self, ctx, semaphore=semaphore)
-
-    async def _generate_file_pages(
-        self,
-        ctx: _GenerationContext,
-        index_status: IndexStatus,
-        progress_callback: ProgressCallback | None,
-        max_files: int | None = None,
-        semaphore: asyncio.Semaphore | None = None,
-    ) -> None:
-        """Generate file-level documentation pages."""
-        from local_deepwiki.generators.wiki.pipeline import generate_file_pages
-
-        ctx.index_status = index_status
-        ctx.progress_callback = progress_callback
-        await generate_file_pages(
-            self,
-            ctx,
-            max_files=max_files,
-            semaphore=semaphore,
-        )
-
-    @staticmethod
-    def _sort_generators_by_dependencies(
-        generators: list["WikiGeneratorPlugin"],
-    ) -> list["WikiGeneratorPlugin"]:
-        """Sort generators respecting run_after dependencies."""
-        return sort_generators_by_dependencies(generators)
-
-    async def _run_plugin_generators(
-        self,
-        ctx: _GenerationContext,
-        index_status: IndexStatus,
-        progress_callback: ProgressCallback | None,
-    ) -> None:
-        """Run registered wiki generator plugins."""
-        from local_deepwiki.generators.wiki.pipeline import run_wiki_plugin_generators
-
-        ctx.index_status = index_status
-        ctx.progress_callback = progress_callback
-        self._ensure_pipeline_ctx(ctx, index_status)
-        await run_wiki_plugin_generators(self, ctx)
-
-    async def _generate_codemap_pages(
-        self,
-        ctx: _GenerationContext,
-        index_status: IndexStatus,
-        progress_callback: ProgressCallback | None,
-    ) -> None:
-        """Generate codemap pages for auto-discovered entry points."""
-        from local_deepwiki.generators.wiki.pipeline import generate_codemap_pages
-
-        ctx.index_status = index_status
-        ctx.progress_callback = progress_callback
-        self._ensure_pipeline_ctx(ctx, index_status)
-        await generate_codemap_pages(self, ctx)
-
-    async def _apply_cross_linking(
-        self,
-        ctx: _GenerationContext,
-        index_status: IndexStatus,
-        progress_callback: ProgressCallback | None,
-    ) -> list[WikiPage]:
-        """Apply cross-links, source refs, and see-also sections to pages."""
-        from local_deepwiki.generators.wiki.pipeline import apply_cross_linking_phase
-
-        ctx.index_status = index_status
-        ctx.progress_callback = progress_callback
-        self._ensure_pipeline_ctx(ctx, index_status)
-        return await apply_cross_linking_phase(self, ctx)
-
-    async def _generate_search_and_toc(
-        self,
-        ctx: _GenerationContext,
-        index_status: IndexStatus,
-        progress_callback: ProgressCallback | None,
-    ) -> None:
-        """Generate search index and table of contents."""
-        from local_deepwiki.generators.wiki.pipeline import (
-            generate_search_and_toc_phase,
-        )
-
-        ctx.index_status = index_status
-        ctx.progress_callback = progress_callback
-        await generate_search_and_toc_phase(self, ctx)
-
-    def _build_wiki_status(
-        self,
-        ctx: _GenerationContext,
-        index_status: IndexStatus,
-    ) -> WikiGenerationStatus:
-        """Build the wiki generation status object."""
-        from local_deepwiki.generators.wiki.pipeline import (
-            build_wiki_status_from_context,
-        )
-
-        ctx.index_status = index_status
-        return build_wiki_status_from_context(self, ctx)
-
-    async def _generate_freshness_and_finalize(
-        self,
-        ctx: _GenerationContext,
-        wiki_status: WikiGenerationStatus,
-        index_status: IndexStatus,
-        progress_callback: ProgressCallback | None,
-    ) -> None:
-        """Generate freshness report and finalize wiki status."""
-        from local_deepwiki.generators.wiki.pipeline import (
-            generate_freshness_and_finalize_phase,
-        )
-
-        ctx.index_status = index_status
-        ctx.progress_callback = progress_callback
-        self._ensure_pipeline_ctx(ctx, index_status)
-        await generate_freshness_and_finalize_phase(self, ctx, wiki_status)
 
     def _build_pipeline_context(
         self,
