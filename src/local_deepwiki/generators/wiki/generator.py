@@ -116,6 +116,7 @@ class _GenerationContext:
         "warnings",
         "index_status",
         "progress_callback",
+        "pipeline_ctx",
     )
 
     def __init__(
@@ -127,6 +128,7 @@ class _GenerationContext:
         full_rebuild: bool,
         index_status: "IndexStatus | None" = None,
         progress_callback: "ProgressCallback | None" = None,
+        pipeline_ctx: "WikiPipelineContext | None" = None,
     ):
         self.pages = pages
         self.pages_generated = pages_generated
@@ -136,6 +138,7 @@ class _GenerationContext:
         self.warnings: list[str] = []
         self.index_status = index_status
         self.progress_callback = progress_callback
+        self.pipeline_ctx = pipeline_ctx
 
 
 class WikiGenerator:
@@ -271,8 +274,33 @@ class WikiGenerator:
 
         return await init_generation_context(self, index_status, full_rebuild)
 
+    def _ensure_pipeline_ctx(
+        self, ctx: _GenerationContext, index_status: IndexStatus
+    ) -> None:
+        """Lazily build ``pipeline_ctx`` on *ctx* when tests bypass init."""
+        if ctx.pipeline_ctx is not None:
+            return
+        from local_deepwiki.generators.wiki.context import WikiPipelineContext
+
+        # Fallback for tests that skip init_generation_context
+        repo_path = self._repo_path or Path(index_status.repo_path)
+        ctx.pipeline_ctx = WikiPipelineContext(
+            index_status=index_status,
+            vector_store=self.vector_store,
+            llm=self.llm,
+            system_prompt=self._system_prompt,
+            repo_path=repo_path,
+            wiki_path=self.wiki_path,
+            config=self.config,
+            wiki_config=self.config.wiki,
+            manifest=getattr(self, "_manifest", None),
+            status_manager=self.status_manager,
+            full_rebuild=ctx.full_rebuild,
+            max_chunk_content_chars=self.config.wiki.max_chunk_content_chars,
+        )
+
     # ------------------------------------------------------------------
-    # Thin delegation methods – kept so that tests calling
+    # Thin delegation methods -- kept so that tests calling
     # ``generator._generate_summary_pages(...)`` etc. still work.
     # ------------------------------------------------------------------
 
@@ -422,9 +450,9 @@ class WikiGenerator:
         """Generate module documentation pages."""
         from local_deepwiki.generators.wiki.pipeline import generate_module_pages
 
-        await generate_module_pages(
-            self, ctx, index_status, progress_callback, semaphore=semaphore
-        )
+        ctx.index_status = index_status
+        ctx.progress_callback = progress_callback
+        await generate_module_pages(self, ctx, semaphore=semaphore)
 
     async def _generate_file_pages(
         self,
@@ -437,11 +465,11 @@ class WikiGenerator:
         """Generate file-level documentation pages."""
         from local_deepwiki.generators.wiki.pipeline import generate_file_pages
 
+        ctx.index_status = index_status
+        ctx.progress_callback = progress_callback
         await generate_file_pages(
             self,
             ctx,
-            index_status,
-            progress_callback,
             max_files=max_files,
             semaphore=semaphore,
         )
@@ -462,7 +490,10 @@ class WikiGenerator:
         """Run registered wiki generator plugins."""
         from local_deepwiki.generators.wiki.pipeline import run_wiki_plugin_generators
 
-        await run_wiki_plugin_generators(self, ctx, index_status, progress_callback)
+        ctx.index_status = index_status
+        ctx.progress_callback = progress_callback
+        self._ensure_pipeline_ctx(ctx, index_status)
+        await run_wiki_plugin_generators(self, ctx)
 
     async def _generate_codemap_pages(
         self,
@@ -473,7 +504,10 @@ class WikiGenerator:
         """Generate codemap pages for auto-discovered entry points."""
         from local_deepwiki.generators.wiki.pipeline import generate_codemap_pages
 
-        await generate_codemap_pages(self, ctx, index_status, progress_callback)
+        ctx.index_status = index_status
+        ctx.progress_callback = progress_callback
+        self._ensure_pipeline_ctx(ctx, index_status)
+        await generate_codemap_pages(self, ctx)
 
     async def _apply_cross_linking(
         self,
@@ -484,13 +518,14 @@ class WikiGenerator:
         """Apply cross-links, source refs, and see-also sections to pages."""
         from local_deepwiki.generators.wiki.pipeline import apply_cross_linking_phase
 
-        return await apply_cross_linking_phase(
-            self, ctx, index_status, progress_callback
-        )
+        ctx.index_status = index_status
+        ctx.progress_callback = progress_callback
+        self._ensure_pipeline_ctx(ctx, index_status)
+        return await apply_cross_linking_phase(self, ctx)
 
     async def _generate_search_and_toc(
         self,
-        pages: list[WikiPage],
+        ctx: _GenerationContext,
         index_status: IndexStatus,
         progress_callback: ProgressCallback | None,
     ) -> None:
@@ -499,9 +534,9 @@ class WikiGenerator:
             generate_search_and_toc_phase,
         )
 
-        await generate_search_and_toc_phase(
-            self, pages, index_status, progress_callback
-        )
+        ctx.index_status = index_status
+        ctx.progress_callback = progress_callback
+        await generate_search_and_toc_phase(self, ctx)
 
     def _build_wiki_status(
         self,
@@ -513,7 +548,8 @@ class WikiGenerator:
             build_wiki_status_from_context,
         )
 
-        return build_wiki_status_from_context(self, ctx, index_status)
+        ctx.index_status = index_status
+        return build_wiki_status_from_context(self, ctx)
 
     async def _generate_freshness_and_finalize(
         self,
@@ -527,13 +563,10 @@ class WikiGenerator:
             generate_freshness_and_finalize_phase,
         )
 
-        await generate_freshness_and_finalize_phase(
-            self,
-            ctx,
-            wiki_status,
-            index_status,
-            progress_callback,
-        )
+        ctx.index_status = index_status
+        ctx.progress_callback = progress_callback
+        self._ensure_pipeline_ctx(ctx, index_status)
+        await generate_freshness_and_finalize_phase(self, ctx, wiki_status)
 
     def _build_pipeline_context(
         self,

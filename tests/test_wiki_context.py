@@ -218,3 +218,37 @@ class TestContextDrivenGeneration:
 
         assert page.path == "dependencies.md"
         assert isinstance(source_files, list)
+
+
+class TestGenerationContextPipelineCtx:
+    """Tests for _GenerationContext.pipeline_ctx field."""
+
+    def test_generation_context_has_pipeline_ctx(self):
+        """_GenerationContext stores a WikiPipelineContext built once."""
+        from local_deepwiki.generators.wiki.generator import _GenerationContext
+
+        mock_ctx = MagicMock(spec=WikiPipelineContext)
+        gen_ctx = _GenerationContext(
+            pages=[],
+            pages_generated=0,
+            pages_skipped=0,
+            all_source_files=["a.py"],
+            full_rebuild=False,
+            index_status=MagicMock(),
+            progress_callback=None,
+            pipeline_ctx=mock_ctx,
+        )
+        assert gen_ctx.pipeline_ctx is mock_ctx
+
+    def test_generation_context_pipeline_ctx_defaults_to_none(self):
+        """_GenerationContext.pipeline_ctx defaults to None when omitted."""
+        from local_deepwiki.generators.wiki.generator import _GenerationContext
+
+        gen_ctx = _GenerationContext(
+            pages=[],
+            pages_generated=0,
+            pages_skipped=0,
+            all_source_files=[],
+            full_rebuild=False,
+        )
+        assert gen_ctx.pipeline_ctx is None
