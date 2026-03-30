@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +12,7 @@ from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
 from local_deepwiki.config import get_config
-from local_deepwiki.core.audit import get_audit_logger
+from local_deepwiki.core.audit import IndexAuditParams, get_audit_logger
 from local_deepwiki.core.indexer import RepositoryIndexer
 from local_deepwiki.errors import ValidationError, path_not_found_error
 from local_deepwiki.generators.wiki import generate_wiki
@@ -29,6 +30,33 @@ from local_deepwiki.security import (
 from local_deepwiki.validation import validate_index_parameters, validate_languages_list
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class IndexingPipelineContext:
+    """Immutable context shared across indexing pipeline functions.
+
+    Consolidates the parameters threaded through _generate_wiki_hybrid,
+    _generate_wiki_for_mode, _run_index_and_notify, and _run_pipeline_with_audit.
+    """
+
+    repo_path: Path
+    config: Any
+    llm_provider: str | None
+    full_rebuild: bool
+
+
+@dataclass(frozen=True, slots=True)
+class IndexingAuditContext:
+    """Immutable context for audit logging during the indexing pipeline.
+
+    Bundles audit_logger, subject_id, and start_time to reduce parameter
+    counts in _run_pipeline_with_audit.
+    """
+
+    audit_logger: Any
+    subject_id: str
+    start_time: float
 
 
 @handle_tool_errors
@@ -163,32 +191,29 @@ def _generate_wiki_lazy(
 
 
 async def _generate_wiki_hybrid(
-    repo_path: Path,
+    ctx: IndexingPipelineContext,
     indexer: RepositoryIndexer,
     status: Any,
-    config: Any,
-    llm_provider: str | None,
     sync_progress_callback: Any,
-    full_rebuild: bool,
 ) -> WikiStructure:
     """Hybrid mode: generate eager pages, then build full entity registry."""
     from local_deepwiki.generators.crosslinks import build_entity_registry_from_store
     from local_deepwiki.generators.wiki.files import filter_significant_files
 
-    eager_limit = config.wiki.hybrid_eager_pages
+    eager_limit = ctx.config.wiki.hybrid_eager_pages
     wiki_structure = await generate_wiki(
-        repo_path=repo_path,
+        repo_path=ctx.repo_path,
         wiki_path=indexer.wiki_path,
         vector_store=indexer.vector_store,
         index_status=status,
-        config=config,
-        llm_provider=llm_provider,
+        config=ctx.config,
+        llm_provider=ctx.llm_provider,
         progress_callback=sync_progress_callback,
-        full_rebuild=full_rebuild,
+        full_rebuild=ctx.full_rebuild,
         max_file_pages=eager_limit,
     )
 
-    significant = filter_significant_files(status.files, config.wiki.max_file_docs)
+    significant = filter_significant_files(status.files, ctx.config.wiki.max_file_docs)
     sig_paths = {f.path for f in significant}
     entity_reg = build_entity_registry_from_store(
         indexer.vector_store.get_all_chunks(), sig_paths
@@ -202,51 +227,45 @@ async def _generate_wiki_hybrid(
             eager_limit,
             remaining,
         )
-        if config.wiki.prefetch_drain:
+        if ctx.config.wiki.prefetch_drain:
             from local_deepwiki.generators.lazy_generator import get_lazy_generator
 
-            lazy_gen = get_lazy_generator(indexer.wiki_path, config)
+            lazy_gen = get_lazy_generator(indexer.wiki_path, ctx.config)
             lazy_gen.kickstart_drain()
 
     return wiki_structure
 
 
 async def _generate_wiki_for_mode(
-    repo_path: Path,
+    ctx: IndexingPipelineContext,
     indexer: RepositoryIndexer,
     status: Any,
-    config: Any,
-    llm_provider: str | None,
     progress_callback: Any,
-    full_rebuild: bool,
 ) -> WikiStructure:
     """Dispatch wiki generation based on the configured generation mode."""
     from local_deepwiki.config import GenerationMode
 
-    gen_mode = config.wiki.generation_mode
+    gen_mode = ctx.config.wiki.generation_mode
     match gen_mode:
         case GenerationMode.LAZY:
-            return _generate_wiki_lazy(indexer, status, config)
+            return _generate_wiki_lazy(indexer, status, ctx.config)
         case GenerationMode.HYBRID:
             return await _generate_wiki_hybrid(
-                repo_path,
+                ctx,
                 indexer,
                 status,
-                config,
-                llm_provider,
                 progress_callback,
-                full_rebuild,
             )
         case _:
             return await generate_wiki(
-                repo_path=repo_path,
+                repo_path=ctx.repo_path,
                 wiki_path=indexer.wiki_path,
                 vector_store=indexer.vector_store,
                 index_status=status,
-                config=config,
-                llm_provider=llm_provider,
+                config=ctx.config,
+                llm_provider=ctx.llm_provider,
                 progress_callback=progress_callback,
-                full_rebuild=full_rebuild,
+                full_rebuild=ctx.full_rebuild,
             )
 
 
@@ -282,10 +301,7 @@ async def _notify_pipeline_complete(
 async def _run_index_and_notify(
     notifier: Any,
     indexer: RepositoryIndexer,
-    repo_path: Path,
-    config: Any,
-    llm_provider: str | None,
-    full_rebuild: bool,
+    ctx: IndexingPipelineContext,
     sync_progress_callback: Any,
 ) -> tuple[Any, Any]:
     """Run the parse/index and wiki-generation phases with progress notifications.
@@ -296,7 +312,7 @@ async def _run_index_and_notify(
         notifier,
         current=1,
         phase=ProgressPhase.SCANNING,
-        message=f"Starting indexing of {repo_path.name}",
+        message=f"Starting indexing of {ctx.repo_path.name}",
         metadata={
             "files_processed": 0,
             "total_files": 0,
@@ -312,7 +328,7 @@ async def _run_index_and_notify(
     )
 
     status = await indexer.index(
-        full_rebuild=full_rebuild, progress_callback=sync_progress_callback
+        full_rebuild=ctx.full_rebuild, progress_callback=sync_progress_callback
     )
 
     # LanceDB 0.26: compact all dataset versions into a single stable
@@ -339,13 +355,10 @@ async def _run_index_and_notify(
     )
 
     wiki_structure = await _generate_wiki_for_mode(
-        repo_path,
+        ctx,
         indexer,
         status,
-        config,
-        llm_provider,
         sync_progress_callback,
-        full_rebuild,
     )
     return status, wiki_structure
 
@@ -382,14 +395,18 @@ async def _run_indexing_pipeline(
     def sync_progress_callback(msg: str, current: int, total: int) -> None:
         progress_messages.append(f"[{current}/{total}] {msg}")
 
+    ctx = IndexingPipelineContext(
+        repo_path=repo_path,
+        config=config,
+        llm_provider=llm_provider,
+        full_rebuild=full_rebuild,
+    )
+
     try:
         status, wiki_structure = await _run_index_and_notify(
             notifier,
             indexer,
-            repo_path,
-            config,
-            llm_provider,
-            full_rebuild,
+            ctx,
             sync_progress_callback,
         )
         await _notify_pipeline_complete(
@@ -405,15 +422,10 @@ async def _run_indexing_pipeline(
 
 async def _run_pipeline_with_audit(
     *,
-    repo_path: Path,
-    config: Any,
-    llm_provider: Any,
+    ctx: IndexingPipelineContext,
     embedding_provider: Any,
-    full_rebuild: bool,
     server: Any,
-    audit_logger: Any,
-    subject_id: str,
-    start_time: float,
+    audit: IndexingAuditContext,
 ) -> tuple[Any, Any, Any, list[str], str]:
     """Run the indexing pipeline and emit audit log events on failure or success."""
     try:
@@ -424,34 +436,38 @@ async def _run_pipeline_with_audit(
             all_messages,
             operation_id,
         ) = await _run_indexing_pipeline(
-            repo_path=repo_path,
-            config=config,
-            llm_provider=llm_provider,
+            repo_path=ctx.repo_path,
+            config=ctx.config,
+            llm_provider=ctx.llm_provider,
             embedding_provider=embedding_provider,
-            full_rebuild=full_rebuild,
+            full_rebuild=ctx.full_rebuild,
             server=server,
         )
     except Exception as e:  # noqa: BLE001 — handler boundary: audit log failure before re-raising
-        duration_ms = int((time.time() - start_time) * 1000)
-        audit_logger.log_index_operation(
-            subject_id=subject_id,
-            repo_path=str(repo_path),
-            operation="failed",
-            success=False,
-            duration_ms=duration_ms,
-            error_message=str(e),
+        duration_ms = int((time.time() - audit.start_time) * 1000)
+        audit.audit_logger.log_index(
+            IndexAuditParams(
+                subject_id=audit.subject_id,
+                repo_path=str(ctx.repo_path),
+                operation="failed",
+                success=False,
+                duration_ms=duration_ms,
+                error_message=str(e),
+            )
         )
         raise
 
-    duration_ms = int((time.time() - start_time) * 1000)
-    audit_logger.log_index_operation(
-        subject_id=subject_id,
-        repo_path=str(repo_path),
-        operation="completed",
-        success=True,
-        files_processed=status.total_files,
-        chunks_created=status.total_chunks,
-        duration_ms=duration_ms,
+    duration_ms = int((time.time() - audit.start_time) * 1000)
+    audit.audit_logger.log_index(
+        IndexAuditParams(
+            subject_id=audit.subject_id,
+            repo_path=str(ctx.repo_path),
+            operation="completed",
+            success=True,
+            files_processed=status.total_files,
+            chunks_created=status.total_chunks,
+            duration_ms=duration_ms,
+        )
     )
     return indexer, status, wiki_structure, all_messages, operation_id
 
@@ -495,15 +511,29 @@ async def _handle_index_repository_impl(
 
     audit_logger = get_audit_logger()
     start_time = time.time()
-    audit_logger.log_index_operation(
-        subject_id=subject_id,
-        repo_path=validated.repo_path,
-        operation="started",
-        success=True,
+    audit_logger.log_index(
+        IndexAuditParams(
+            subject_id=subject_id,
+            repo_path=validated.repo_path,
+            operation="started",
+            success=True,
+        )
     )
 
     repo_path, config, llm_provider, embedding_provider = await asyncio.to_thread(
         _validate_and_build_config, validated
+    )
+
+    pipeline_ctx = IndexingPipelineContext(
+        repo_path=repo_path,
+        config=config,
+        llm_provider=llm_provider,
+        full_rebuild=validated.full_rebuild,
+    )
+    audit = IndexingAuditContext(
+        audit_logger=audit_logger,
+        subject_id=subject_id,
+        start_time=start_time,
     )
 
     (
@@ -513,15 +543,10 @@ async def _handle_index_repository_impl(
         all_messages,
         operation_id,
     ) = await _run_pipeline_with_audit(
-        repo_path=repo_path,
-        config=config,
-        llm_provider=llm_provider,
+        ctx=pipeline_ctx,
         embedding_provider=embedding_provider,
-        full_rebuild=validated.full_rebuild,
         server=server,
-        audit_logger=audit_logger,
-        subject_id=subject_id,
-        start_time=start_time,
+        audit=audit,
     )
 
     result = _build_index_result(

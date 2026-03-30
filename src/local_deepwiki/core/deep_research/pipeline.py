@@ -8,10 +8,6 @@ answer complex codebase questions.
 from __future__ import annotations
 
 import asyncio
-import time
-import uuid
-from itertools import chain
-from pathlib import Path
 from typing import Any
 
 from local_deepwiki.core.vectorstore import VectorStore
@@ -32,14 +28,13 @@ from local_deepwiki.models import (
 from local_deepwiki.providers.base import LLMProvider
 
 from .checkpoints import CheckpointManager
-from .config import ResearchConfig
+from .config import CheckpointData, ResearchConfig, SynthesisResult
 from .reasoning import (
     DECOMPOSITION_SYSTEM_PROMPT,
     GAP_ANALYSIS_SYSTEM_PROMPT,
     SYNTHESIS_SYSTEM_PROMPT,
     ReasoningMixin,
 )
-from .serialization import dict_to_search_result, search_result_to_dict
 from .steps import StepsMixin
 
 logger = get_logger(__name__)
@@ -72,52 +67,16 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
         self,
         vector_store: VectorStore,
         llm_provider: LLMProvider,
-        *,
-        config: ResearchConfig | None = None,
-        # Individual kwargs kept for backward compatibility
-        max_sub_questions: int = 4,
-        chunks_per_subquestion: int = 5,
-        max_total_chunks: int = 30,
-        max_follow_up_queries: int = 3,
-        synthesis_temperature: float = 0.5,
-        synthesis_max_tokens: int = 4096,
-        decomposition_prompt: str | None = None,
-        gap_analysis_prompt: str | None = None,
-        synthesis_prompt: str | None = None,
-        repo_path: Path | None = None,
+        config: ResearchConfig,
     ):
         """Initialize the deep research pipeline.
 
         Args:
             vector_store: Vector store for semantic search.
             llm_provider: LLM provider for reasoning.
-            config: Optional :class:`ResearchConfig` consolidating all keyword
-                arguments.  When provided, individual kwargs are ignored.
-            max_sub_questions: Maximum sub-questions to generate.
-            chunks_per_subquestion: Chunks to retrieve per sub-question.
-            max_total_chunks: Maximum total chunks to use in synthesis.
-            max_follow_up_queries: Maximum follow-up queries in gap analysis.
-            synthesis_temperature: LLM temperature for synthesis (0.0-2.0).
-            synthesis_max_tokens: Maximum tokens in synthesis response.
-            decomposition_prompt: Custom system prompt for decomposition (optional).
-            gap_analysis_prompt: Custom system prompt for gap analysis (optional).
-            synthesis_prompt: Custom system prompt for synthesis (optional).
-            repo_path: Path to the repository (required for checkpointing).
+            config: Research configuration consolidating all tuneable
+                parameters (max sub-questions, chunk limits, prompts, etc.).
         """
-        if config is None:
-            config = ResearchConfig(
-                max_sub_questions=max_sub_questions,
-                chunks_per_subquestion=chunks_per_subquestion,
-                max_total_chunks=max_total_chunks,
-                max_follow_up_queries=max_follow_up_queries,
-                synthesis_temperature=synthesis_temperature,
-                synthesis_max_tokens=synthesis_max_tokens,
-                decomposition_prompt=decomposition_prompt,
-                gap_analysis_prompt=gap_analysis_prompt,
-                synthesis_prompt=synthesis_prompt,
-                repo_path=repo_path,
-            )
-
         self.vector_store = vector_store
         self.llm = llm_provider
         self.max_sub_questions = config.max_sub_questions
@@ -177,114 +136,17 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
             )
             raise ResearchCancelledError(step_name, checkpoint_id)
 
-    def _save_checkpoint(
-        self,
-        step: ResearchCheckpointStep,
-        sub_questions: list[SubQuestion] | None = None,
-        retrieved_contexts: dict[str, list[dict]] | None = None,
-        follow_up_queries: list[str] | None = None,
-        follow_up_contexts: list[dict] | None = None,
-        partial_synthesis: str | None = None,
-        error: str | None = None,
-        completed_step: str | None = None,
-    ) -> None:
+    def _save_checkpoint(self, data: CheckpointData) -> None:
         """Save the current research state as a checkpoint.
 
+        Delegates to :meth:`CheckpointManager.update_checkpoint`.
+
         Args:
-            step: The current step in the research process.
-            sub_questions: Decomposed sub-questions (if available).
-            retrieved_contexts: Retrieved context data (if available).
-            follow_up_queries: Follow-up queries from gap analysis (if available).
-            follow_up_contexts: Follow-up retrieval contexts (if available).
-            partial_synthesis: Partial synthesis result (if available).
-            error: Error message if failed.
-            completed_step: Name of the step that was just completed.
+            data: Immutable snapshot of checkpoint fields to persist.
         """
         if not self._checkpoint_manager or not self._current_checkpoint:
             return
-
-        checkpoint = self._current_checkpoint
-
-        # Update checkpoint fields
-        checkpoint.current_step = step
-        checkpoint.updated_at = time.time()
-
-        if sub_questions is not None:
-            checkpoint.sub_questions = sub_questions
-        if retrieved_contexts is not None:
-            checkpoint.retrieved_contexts = retrieved_contexts
-        if follow_up_queries is not None:
-            checkpoint.follow_up_queries = follow_up_queries
-        if follow_up_contexts is not None:
-            checkpoint.follow_up_contexts = follow_up_contexts
-        if partial_synthesis is not None:
-            checkpoint.partial_synthesis = partial_synthesis
-        if error is not None:
-            checkpoint.error = error
-        if completed_step and completed_step not in checkpoint.completed_steps:
-            checkpoint.completed_steps.append(completed_step)
-
-        self._checkpoint_manager.save_checkpoint(checkpoint)
-
-    def _create_checkpoint(self, question: str) -> ResearchCheckpoint:
-        """Create a new checkpoint for a research session.
-
-        Args:
-            question: The research question.
-
-        Returns:
-            A new ResearchCheckpoint object.
-        """
-        now = time.time()
-        return ResearchCheckpoint(
-            research_id=str(uuid.uuid4()),
-            question=question,
-            repo_path=str(self.repo_path) if self.repo_path else "",
-            started_at=now,
-            updated_at=now,
-            current_step=ResearchCheckpointStep.DECOMPOSITION,
-            completed_steps=[],
-        )
-
-    @staticmethod
-    def _results_to_checkpoint_format(
-        results: list[SearchResult],
-        key: str = "default",
-    ) -> dict[str, list[dict]]:
-        """Convert search results to checkpoint-serializable format.
-
-        Args:
-            results: List of search results.
-            key: Key to use in the dictionary.
-
-        Returns:
-            Dictionary mapping key to list of serialized results.
-        """
-        return {key: [search_result_to_dict(r) for r in results]}
-
-    @staticmethod
-    def _checkpoint_to_results(
-        contexts: dict[str, list[dict]] | None,
-    ) -> list[SearchResult]:
-        """Convert checkpoint context data back to SearchResults.
-
-        Args:
-            contexts: Dictionary of serialized contexts from checkpoint.
-
-        Returns:
-            List of reconstructed SearchResult objects.
-        """
-        if not contexts:
-            return []
-
-        results = []
-        for data in chain.from_iterable(contexts.values()):
-            try:
-                results.append(dict_to_search_result(data))
-            except (KeyError, ValueError) as e:
-                logger.warning("Failed to restore search result: %s", e)
-                continue
-        return results
+        self._checkpoint_manager.update_checkpoint(self._current_checkpoint, data)
 
     def load_checkpoint(self, research_id: str) -> ResearchCheckpoint | None:
         """Load a checkpoint by ID.
@@ -347,33 +209,6 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
                 )
             )
 
-    def _init_checkpoint(self, question: str, resume_id: str | None) -> None:
-        """Initialize or restore the checkpoint for this research run.
-
-        Sets ``self._current_checkpoint`` based on whether we are resuming an
-        existing checkpoint or starting fresh.
-
-        Args:
-            question: The research question (used when creating a new checkpoint).
-            resume_id: Optional checkpoint ID to resume from.
-        """
-        if resume_id and self._checkpoint_manager:
-            checkpoint = self._checkpoint_manager.load_checkpoint(resume_id)
-            if checkpoint:
-                self._current_checkpoint = checkpoint
-                logger.info(
-                    "Resuming research %s from step %s",
-                    resume_id,
-                    checkpoint.current_step,
-                )
-                return
-            logger.warning("Checkpoint %s not found, starting fresh", resume_id)
-
-        if self._checkpoint_manager:
-            self._current_checkpoint = self._create_checkpoint(question)
-        else:
-            self._current_checkpoint = None
-
     async def _run_pipeline_with_checkpoint(self, question: str) -> DeepResearchResult:
         """Run the pipeline and manage checkpoint lifecycle on success or error.
 
@@ -403,16 +238,20 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
         except ResearchCancelledError:
             if self._current_checkpoint:
                 self._save_checkpoint(
-                    step=ResearchCheckpointStep.CANCELLED,
-                    error="Research was cancelled by user",
+                    CheckpointData(
+                        step=ResearchCheckpointStep.CANCELLED,
+                        error="Research was cancelled by user",
+                    )
                 )
             raise
 
         except Exception as e:  # noqa: BLE001 — checkpoint boundary
             if self._current_checkpoint:
                 self._save_checkpoint(
-                    step=ResearchCheckpointStep.ERROR,
-                    error=str(e),
+                    CheckpointData(
+                        step=ResearchCheckpointStep.ERROR,
+                        error=str(e),
+                    )
                 )
             raise
 
@@ -443,7 +282,13 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
         self._cancellation_check = cancellation_check
         self._cancellation_event = cancellation_event
 
-        self._init_checkpoint(question, resume_id)
+        # Initialize or restore checkpoint
+        if self._checkpoint_manager:
+            self._current_checkpoint = self._checkpoint_manager.init_or_restore(
+                question, resume_id
+            )
+        else:
+            self._current_checkpoint = None
 
         try:
             return await self._run_pipeline_with_checkpoint(question)
@@ -516,12 +361,14 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
 
         # Finalize and build result
         return await self._finalize_research(
-            question,
-            answer,
-            sub_questions,
-            all_results,
-            trace,
-            llm_calls,
+            SynthesisResult(
+                question=question,
+                answer=answer,
+                sub_questions=sub_questions,
+                all_results=all_results,
+                trace=trace,
+                llm_calls=llm_calls,
+            ),
             step.duration_ms,
         )
 
@@ -574,23 +421,14 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
 
     async def _finalize_research(
         self,
-        question: str,
-        answer: str,
-        sub_questions: list[SubQuestion],
-        all_results: list[SearchResult],
-        trace: list[ResearchStep],
-        llm_calls: int,
+        result: SynthesisResult,
         synthesis_duration_ms: int,
     ) -> DeepResearchResult:
         """Finalize the research by saving checkpoint and emitting completion events.
 
         Args:
-            question: The original research question.
-            answer: The synthesized answer.
-            sub_questions: The decomposed sub-questions.
-            all_results: All retrieved search results.
-            trace: The reasoning trace.
-            llm_calls: Total number of LLM calls made.
+            result: Immutable synthesis result with question, answer,
+                sub-questions, search results, trace, and LLM call count.
             synthesis_duration_ms: Duration of the synthesis step.
 
         Returns:
@@ -598,17 +436,20 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
         """
         # Mark checkpoint as complete
         self._save_checkpoint(
-            step=ResearchCheckpointStep.COMPLETE,
-            partial_synthesis=answer,
-            completed_step="synthesis",
+            CheckpointData(
+                step=ResearchCheckpointStep.COMPLETE,
+                partial_synthesis=result.answer,
+                completed_step="synthesis",
+            )
         )
 
         # Report completion
         await self._report_progress(
             5,
             ResearchProgressType.COMPLETE,
-            f"Research complete: {len(all_results)} chunks analyzed, {llm_calls} LLM calls",
-            chunks_retrieved=len(all_results),
+            f"Research complete: {len(result.all_results)} chunks analyzed, "
+            f"{result.llm_calls} LLM calls",
+            chunks_retrieved=len(result.all_results),
             duration_ms=synthesis_duration_ms,
         )
 
@@ -617,19 +458,19 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
         await emitter.emit(
             EventType.RESEARCH_COMPLETE,
             {
-                "question": question,
-                "sub_question_count": len(sub_questions),
-                "chunks_analyzed": len(all_results),
-                "llm_calls": llm_calls,
+                "question": result.question,
+                "sub_question_count": len(result.sub_questions),
+                "chunks_analyzed": len(result.all_results),
+                "llm_calls": result.llm_calls,
             },
         )
 
         return DeepResearchResult(
-            question=question,
-            answer=answer,
-            sub_questions=sub_questions,
-            sources=self._build_sources(all_results),
-            reasoning_trace=trace,
-            total_chunks_analyzed=len(all_results),
-            total_llm_calls=llm_calls,
+            question=result.question,
+            answer=result.answer,
+            sub_questions=result.sub_questions,
+            sources=self._build_sources(result.all_results),
+            reasoning_trace=result.trace,
+            total_chunks_analyzed=len(result.all_results),
+            total_llm_calls=result.llm_calls,
         )

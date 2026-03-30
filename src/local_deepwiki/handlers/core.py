@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -10,7 +11,11 @@ from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
 from local_deepwiki.config import get_config
-from local_deepwiki.core.audit import get_audit_logger
+from local_deepwiki.core.audit import (
+    ExportAuditParams,
+    QueryAuditParams,
+    get_audit_logger,
+)
 from local_deepwiki.errors import path_not_found_error
 from local_deepwiki.handlers._error_handling import handle_tool_errors
 from local_deepwiki.handlers._export_validation import _validate_export_path
@@ -39,6 +44,21 @@ from local_deepwiki.validation import (
 )
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class ExportCompletionContext:
+    """Immutable context for audit-logging an export completion.
+
+    Bundles the parameters of _audit_export_completed to reduce its
+    parameter count.
+    """
+
+    audit_logger: Any
+    subject_id: str
+    wiki_path: Path
+    output_path: Path
+    export_type: str
 
 
 def _build_ask_question_result(question: str, query_result: Any) -> dict[str, Any]:
@@ -112,29 +132,33 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
         llm_config=config.llm,
     )
 
-    from local_deepwiki.services.query_service import QueryService
+    from local_deepwiki.services.query_service import QuestionRequest, QueryService
 
     svc = QueryService(vector_store, llm, config)
     query_result = await svc.answer_question(
-        repo_path=repo_path,
-        question=question,
-        max_context=max_context,
-        agentic_rag=validated.agentic_rag,
-        wiki_path=wiki_path,
-        debug=validated.debug,
+        QuestionRequest(
+            repo_path=repo_path,
+            question=question,
+            max_context=max_context,
+            agentic_rag=validated.agentic_rag,
+            wiki_path=wiki_path,
+            debug=validated.debug,
+        )
     )
 
     result = _build_ask_question_result(question, query_result)
 
     duration_ms = int((time.time() - start_time) * 1000)
-    audit_logger.log_query_execution(
-        subject_id=subject_id,
-        repo_path=str(repo_path),
-        query=question,
-        success=True,
-        query_type="ask_question",
-        chunks_returned=len(query_result.sources),
-        duration_ms=duration_ms,
+    audit_logger.log_query(
+        QueryAuditParams(
+            subject_id=subject_id,
+            repo_path=str(repo_path),
+            query=question,
+            success=True,
+            query_type="ask_question",
+            chunks_returned=len(query_result.sources),
+            duration_ms=duration_ms,
+        )
     )
 
     logger.info("Generated answer with %s sources", len(query_result.sources))
@@ -213,18 +237,20 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     _index_status, _wiki_path, config = await _load_index_status(repo_path)
     vector_store = _create_vector_store(repo_path, config)
 
-    from local_deepwiki.services.query_service import QueryService
+    from local_deepwiki.services.query_service import CodeSearchRequest, QueryService
 
     svc = QueryService(vector_store, None, config)  # type: ignore[arg-type]
     results = await svc.search_code(
-        repo_path=repo_path,
-        query=query,
-        limit=validated.limit,
-        language=language,
-        chunk_type=chunk_type,
-        path_filter=path_pattern,
-        use_fuzzy=validated.fuzzy,
-        fuzzy_weight=validated.fuzzy_weight,
+        CodeSearchRequest(
+            repo_path=repo_path,
+            query=query,
+            limit=validated.limit,
+            language=language,
+            chunk_type=chunk_type,
+            path_filter=path_pattern,
+            use_fuzzy=validated.fuzzy,
+            fuzzy_weight=validated.fuzzy_weight,
+        )
     )
 
     logger.info("Search returned %s results", len(results))
@@ -248,35 +274,35 @@ def _audit_export_started(
     export_type: str,
 ) -> None:
     """Log the start of an export operation."""
-    audit_logger.log_export_operation(
-        subject_id=subject_id,
-        wiki_path=str(wiki_path),
-        output_path=str(output_path),
-        export_type=export_type,
-        operation="started",
-        success=True,
+    audit_logger.log_export(
+        ExportAuditParams(
+            subject_id=subject_id,
+            wiki_path=str(wiki_path),
+            output_path=str(output_path),
+            export_type=export_type,
+            operation="started",
+            success=True,
+        )
     )
 
 
 def _audit_export_completed(
-    audit_logger: Any,
-    subject_id: str,
-    wiki_path: Path,
-    output_path: Path,
-    export_type: str,
+    ctx: ExportCompletionContext,
     page_count: int,
     duration_ms: int,
 ) -> None:
     """Log the completion of an export operation."""
-    audit_logger.log_export_operation(
-        subject_id=subject_id,
-        wiki_path=str(wiki_path),
-        output_path=str(output_path),
-        export_type=export_type,
-        operation="completed",
-        success=True,
-        pages_exported=page_count,
-        duration_ms=duration_ms,
+    ctx.audit_logger.log_export(
+        ExportAuditParams(
+            subject_id=ctx.subject_id,
+            wiki_path=str(ctx.wiki_path),
+            output_path=str(ctx.output_path),
+            export_type=ctx.export_type,
+            operation="completed",
+            success=True,
+            pages_exported=page_count,
+            duration_ms=duration_ms,
+        )
     )
 
 
@@ -314,6 +340,14 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
 
     _audit_export_started(audit_logger, subject_id, wiki_path, resolved_output, "html")
 
+    export_ctx = ExportCompletionContext(
+        audit_logger=audit_logger,
+        subject_id=subject_id,
+        wiki_path=wiki_path,
+        output_path=resolved_output,
+        export_type="html",
+    )
+
     iterator = WikiPageIterator(wiki_path)
     page_count = iterator.get_page_count()
     total_size_mb = iterator.get_total_size_bytes() / (1024 * 1024)
@@ -328,11 +362,7 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     result = export_to_html(wiki_path, resolved_output)
 
     _audit_export_completed(
-        audit_logger,
-        subject_id,
-        wiki_path,
-        resolved_output,
-        "html",
+        export_ctx,
         page_count,
         int((time.time() - start_time) * 1000),
     )
@@ -390,6 +420,14 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
 
     _audit_export_started(audit_logger, subject_id, wiki_path, resolved_output, "pdf")
 
+    export_ctx = ExportCompletionContext(
+        audit_logger=audit_logger,
+        subject_id=subject_id,
+        wiki_path=wiki_path,
+        output_path=resolved_output,
+        export_type="pdf",
+    )
+
     iterator = WikiPageIterator(wiki_path)
     page_count = iterator.get_page_count()
     total_size_mb = iterator.get_total_size_bytes() / (1024 * 1024)
@@ -404,11 +442,7 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     result = export_to_pdf(wiki_path, resolved_output, single_file=single_file)
 
     _audit_export_completed(
-        audit_logger,
-        subject_id,
-        wiki_path,
-        resolved_output,
-        "pdf",
+        export_ctx,
         page_count,
         int((time.time() - start_time) * 1000),
     )

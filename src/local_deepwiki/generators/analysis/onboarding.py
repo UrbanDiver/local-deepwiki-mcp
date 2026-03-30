@@ -7,6 +7,7 @@ project overview, entry points, key modules, test layout, and configuration.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,25 @@ from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manif
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class OnboardingContext:
+    """Immutable context for onboarding guide synthesis.
+
+    Bundles the gathered project data passed through
+    :func:`_build_onboarding_prompt_context` and
+    :func:`_synthesize_onboarding_guide`.
+    """
+
+    manifest: ProjectManifest
+    directory_tree: str
+    entry_points: tuple[Path, ...] = ()
+    codemaps: tuple[dict[str, Any], ...] = ()
+    wiki_pages: tuple[str, ...] = ()
+    test_layout: tuple[Path, ...] = ()
+    config_files: tuple[Path, ...] = ()
+
 
 # Well-known entry point filenames
 ENTRY_POINT_PATTERNS: tuple[str, ...] = (
@@ -490,26 +510,20 @@ def _join_paths_as_bullets(paths: list, default: str = "- (none detected)") -> s
 
 
 def _build_onboarding_prompt_context(
-    manifest: ProjectManifest,
-    directory_tree: str,
-    entry_points: list[Path],
-    codemaps: list[dict[str, Any]],
-    wiki_pages: list[str],
-    test_layout: list[Path],
-    config_files: list[Path],
+    ctx: OnboardingContext,
 ) -> dict[str, str]:
     """Assemble all text substitutions needed for the onboarding synthesis prompt."""
     return {
-        "codemap_text": _format_codemap_text(codemaps),
-        "entry_list": _join_paths_as_bullets(entry_points),
-        "test_list": _join_paths_as_bullets(test_layout),
-        "config_list": _join_paths_as_bullets(config_files),
+        "codemap_text": _format_codemap_text(list(ctx.codemaps)),
+        "entry_list": _join_paths_as_bullets(list(ctx.entry_points)),
+        "test_list": _join_paths_as_bullets(list(ctx.test_layout)),
+        "config_list": _join_paths_as_bullets(list(ctx.config_files)),
         "wiki_links": _join_paths_as_bullets(
-            wiki_pages[:30], default="- (none available)"
+            list(ctx.wiki_pages[:30]), default="- (none available)"
         ),
-        "tech_stack": manifest.get_tech_stack_summary() or "Unknown",
-        "project_name": manifest.name or "Unknown",
-        "project_description": manifest.description or "No description",
+        "tech_stack": ctx.manifest.get_tech_stack_summary() or "Unknown",
+        "project_name": ctx.manifest.name or "Unknown",
+        "project_description": ctx.manifest.description or "No description",
     }
 
 
@@ -581,25 +595,11 @@ CRITICAL RULES:
 
 async def _synthesize_onboarding_guide(
     llm: Any,
-    manifest: ProjectManifest,
-    directory_tree: str,
-    entry_points: list[Path],
-    codemaps: list[dict[str, Any]],
-    wiki_pages: list[str],
-    test_layout: list[Path],
-    config_files: list[Path],
+    ctx: OnboardingContext,
 ) -> str:
     """Ask the LLM to synthesize the full onboarding guide."""
-    ctx = _build_onboarding_prompt_context(
-        manifest,
-        directory_tree,
-        entry_points,
-        codemaps,
-        wiki_pages,
-        test_layout,
-        config_files,
-    )
-    prompt = _build_onboarding_synthesis_prompt(ctx, directory_tree)
+    prompt_ctx = _build_onboarding_prompt_context(ctx)
+    prompt = _build_onboarding_synthesis_prompt(prompt_ctx, ctx.directory_tree)
     return await llm.generate(
         prompt,
         system_prompt="You are a technical writer creating developer documentation.",
@@ -648,16 +648,16 @@ async def generate_rich_onboarding(
             except ValueError:
                 continue
 
-    guide = await _synthesize_onboarding_guide(
-        llm,
-        manifest,
-        directory_tree,
-        entry_points,
-        codemaps,
-        wiki_pages,
-        test_layout,
-        config_files,
+    onboarding_ctx = OnboardingContext(
+        manifest=manifest,
+        directory_tree=directory_tree,
+        entry_points=tuple(entry_points),
+        codemaps=tuple(codemaps),
+        wiki_pages=tuple(wiki_pages),
+        test_layout=tuple(test_layout),
+        config_files=tuple(config_files),
     )
+    guide = await _synthesize_onboarding_guide(llm, onboarding_ctx)
 
     return {
         "status": "success",

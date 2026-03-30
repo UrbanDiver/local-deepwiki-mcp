@@ -27,10 +27,29 @@ from local_deepwiki.generators.codemap.models import (
     CodemapGraph,
     CodemapNode,
 )
+from local_deepwiki.generators.codemap.params import GraphBuildContext
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk
 
 logger = get_logger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# BFS state bundle
+# ---------------------------------------------------------------------------
+
+from dataclasses import dataclass, field
+
+
+@dataclass(slots=True)
+class _BfsState:
+    """Mutable BFS traversal state shared across callee resolution functions."""
+
+    graph: CodemapGraph
+    queue: deque[tuple[CodemapNode, int]]
+    file_call_graphs: dict[str, dict[str, list[str]]] = field(default_factory=dict)
+    extractor: Any | None = None
+
 
 # Regex to extract parameter names from a function signature line.
 # Matches `def foo(a, b, c):` or `function foo(a, b) {` style signatures.
@@ -284,8 +303,7 @@ async def _apply_fallback_search(
     file_call_graphs: dict[str, dict[str, list[str]]],
     max_candidates: int,
     extractor: Any | None,
-    repo_path: Path,
-    vector_store: "VectorStore",
+    ctx: GraphBuildContext,
 ) -> list[tuple[float, CodemapNode]]:
     """Run fallback search and merge results when top candidates are all shallow."""
     top_candidates = scored[:max_candidates]
@@ -298,15 +316,19 @@ async def _apply_fallback_search(
     logger.debug(
         "All top candidates are shallow, running fallback search for functions and methods"
     )
-    fallback_results = await _run_fallback_search(search_query, vector_store)
+    fallback_results = await _run_fallback_search(search_query, ctx.vector_store)
     if not fallback_results:
         return scored
 
     if extractor is not None:
-        extra_graphs = _build_file_call_graphs(fallback_results, repo_path, extractor)
+        extra_graphs = _build_file_call_graphs(
+            fallback_results, ctx.repo_path, extractor
+        )
         file_call_graphs.update(extra_graphs)
 
-    fallback_scored = _score_candidates(fallback_results, file_call_graphs, repo_path)
+    fallback_scored = _score_candidates(
+        fallback_results, file_call_graphs, ctx.repo_path
+    )
     return _deduplicate_candidates(scored, fallback_scored)
 
 
@@ -358,14 +380,17 @@ async def discover_entry_points(
     scored = _score_candidates(callable_results, file_call_graphs, repo_path)
 
     if not entry_point_hint:
+        fallback_ctx = GraphBuildContext(
+            vector_store=vector_store,
+            repo_path=repo_path,
+        )
         scored = await _apply_fallback_search(
             search_query,
             scored,
             file_call_graphs,
             max_candidates,
             extractor,
-            repo_path,
-            vector_store,
+            fallback_ctx,
         )
 
     return [node for _, node in scored[:max_candidates]]
@@ -422,11 +447,8 @@ async def _resolve_cross_file_callee(
     callee_name: str,
     current_node: CodemapNode,
     depth: int,
-    graph: CodemapGraph,
-    queue: deque[tuple[CodemapNode, int]],
-    vector_store: "VectorStore",
-    repo_path: Path,
-    focus: CodemapFocus,
+    bfs: _BfsState,
+    ctx: GraphBuildContext,
 ) -> None:
     """Search the vector store for *callee_name* in another file and add to *graph*.
 
@@ -434,74 +456,65 @@ async def _resolve_cross_file_callee(
         callee_name: The name of the callee to resolve cross-file.
         current_node: The BFS node currently being expanded.
         depth: Current BFS depth.
-        graph: The codemap graph to update.
-        queue: The BFS queue to append new nodes to.
-        vector_store: Vector store for cross-file search.
-        repo_path: Repository root path.
-        focus: Traversal focus mode.
+        bfs: Mutable BFS state (graph, queue, file_call_graphs, extractor).
+        ctx: Immutable graph-building context (vector_store, repo_path, focus, etc.).
     """
     cross_node = await _search_cross_file(
-        callee_name, vector_store, repo_path, current_node.file_path
+        callee_name, ctx.vector_store, ctx.repo_path, current_node.file_path
     )
     if cross_node is not None and not is_test_file(cross_node.file_path):
-        graph.nodes[cross_node.qualified_name] = cross_node
-        graph.edges.append(
+        bfs.graph.nodes[cross_node.qualified_name] = cross_node
+        bfs.graph.edges.append(
             CodemapEdge(
                 source=current_node.qualified_name,
                 target=cross_node.qualified_name,
-                edge_type=_edge_type_for(focus, cross_node),
+                edge_type=_edge_type_for(ctx.focus, cross_node),
                 source_file=current_node.file_path,
                 target_file=cross_node.file_path,
             )
         )
-        queue.append((cross_node, depth + 1))
+        bfs.queue.append((cross_node, depth + 1))
 
 
 async def _resolve_callees_for_node(
     current_node: CodemapNode,
     depth: int,
-    graph: CodemapGraph,
-    queue: deque[tuple[CodemapNode, int]],
-    vector_store: "VectorStore",
-    repo_path: Path,
-    file_call_graphs: dict[str, dict[str, list[str]]],
-    extractor: Any | None,
-    focus: CodemapFocus,
-    max_nodes: int,
+    bfs: _BfsState,
+    ctx: GraphBuildContext,
 ) -> None:
     """Process a single BFS node: find callees and add edges/nodes to *graph*."""
     abs_path = Path(current_node.file_path)
     if not abs_path.is_absolute():
-        abs_path = repo_path / current_node.file_path
+        abs_path = ctx.repo_path / current_node.file_path
 
     file_key = current_node.file_path
     cg = _ensure_file_call_graph(
-        file_key, abs_path, repo_path, extractor, file_call_graphs
+        file_key, abs_path, ctx.repo_path, bfs.extractor, bfs.file_call_graphs
     )
 
     qn = current_node.qualified_name
     sn = current_node.name
     callees = list(cg.get(qn, cg.get(sn, [])))
 
-    if focus == CodemapFocus.DEPENDENCY_CHAIN:
+    if ctx.focus == CodemapFocus.DEPENDENCY_CHAIN:
         callees = await _import_based_callees(
-            current_node, vector_store, repo_path, callees
+            current_node, ctx.vector_store, ctx.repo_path, callees
         )
 
     for callee_name in callees:
         if _is_noise(callee_name):
             continue
-        if len(graph.nodes) >= max_nodes:
+        if len(bfs.graph.nodes) >= ctx.max_nodes:
             break
 
         # Already tracked?
-        if callee_name in graph.nodes:
-            target_node = graph.nodes[callee_name]
-            graph.edges.append(
+        if callee_name in bfs.graph.nodes:
+            target_node = bfs.graph.nodes[callee_name]
+            bfs.graph.edges.append(
                 CodemapEdge(
                     source=current_node.qualified_name,
                     target=callee_name,
-                    edge_type=_edge_type_for(focus, target_node),
+                    edge_type=_edge_type_for(ctx.focus, target_node),
                     source_file=current_node.file_path,
                     target_file=target_node.file_path,
                 )
@@ -510,20 +523,20 @@ async def _resolve_callees_for_node(
 
         # Check same file first
         same_file_node = await _find_in_same_file(
-            callee_name, cg, current_node, repo_path, vector_store
+            callee_name, cg, current_node, ctx.repo_path, ctx.vector_store
         )
         if same_file_node is not None and not is_test_file(same_file_node.file_path):
-            graph.nodes[same_file_node.qualified_name] = same_file_node
-            graph.edges.append(
+            bfs.graph.nodes[same_file_node.qualified_name] = same_file_node
+            bfs.graph.edges.append(
                 CodemapEdge(
                     source=current_node.qualified_name,
                     target=same_file_node.qualified_name,
-                    edge_type=_edge_type_for(focus, same_file_node),
+                    edge_type=_edge_type_for(ctx.focus, same_file_node),
                     source_file=current_node.file_path,
                     target_file=same_file_node.file_path,
                 )
             )
-            queue.append((same_file_node, depth + 1))
+            bfs.queue.append((same_file_node, depth + 1))
             continue
 
         # Search vector store for cross-file definition
@@ -531,11 +544,8 @@ async def _resolve_callees_for_node(
             callee_name,
             current_node,
             depth,
-            graph,
-            queue,
-            vector_store,
-            repo_path,
-            focus,
+            bfs,
+            ctx,
         )
 
 
@@ -553,6 +563,14 @@ async def build_cross_file_graph(
     For ``DEPENDENCY_CHAIN`` focus the traversal follows import edges
     instead of call edges.
     """
+    ctx = GraphBuildContext(
+        vector_store=vector_store,
+        repo_path=repo_path,
+        focus=focus,
+        max_nodes=max_nodes,
+        max_depth=max_depth,
+    )
+
     _CGExtractor: type | None
     try:
         from local_deepwiki.generators.analysis.callgraph import (
@@ -575,32 +593,20 @@ async def build_cross_file_graph(
         graph.nodes[node.qualified_name] = node
         queue.append((node, 0))
 
-    # Cache file-level call graphs so we parse each file at most once
-    file_call_graphs: dict[str, dict[str, list[str]]] = {}
+    bfs = _BfsState(
+        graph=graph,
+        queue=queue,
+        extractor=_CGExtractor() if _CGExtractor is not None else None,
+    )
 
-    extractor = None
-    if _CGExtractor is not None:
-        extractor = _CGExtractor()
-
-    while queue and len(graph.nodes) < max_nodes:
-        current_node, depth = queue.popleft()
-        if depth >= max_depth:
+    while bfs.queue and len(bfs.graph.nodes) < ctx.max_nodes:
+        current_node, depth = bfs.queue.popleft()
+        if depth >= ctx.max_depth:
             continue
         if is_test_file(current_node.file_path):
             continue
 
-        await _resolve_callees_for_node(
-            current_node,
-            depth,
-            graph,
-            queue,
-            vector_store,
-            repo_path,
-            file_call_graphs,
-            extractor,
-            focus,
-            max_nodes,
-        )
+        await _resolve_callees_for_node(current_node, depth, bfs, ctx)
 
     return graph
 

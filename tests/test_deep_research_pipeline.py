@@ -10,6 +10,7 @@ from local_deepwiki.core.deep_research import (
     DeepResearchPipeline,
     ResearchCancelledError,
 )
+from local_deepwiki.core.deep_research.config import ResearchConfig
 from local_deepwiki.models import (
     ChunkType,
     CodeChunk,
@@ -179,6 +180,7 @@ class TestDeepResearchPipelineDecomposition:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("How does auth work?")
@@ -199,6 +201,7 @@ class TestDeepResearchPipelineDecomposition:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("Simple question?")
@@ -222,6 +225,7 @@ class TestDeepResearchPipelineDecomposition:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("Question?")
@@ -245,7 +249,7 @@ class TestDeepResearchPipelineDecomposition:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
-            max_sub_questions=5,
+            config=ResearchConfig(max_sub_questions=5),
         )
 
         result = await pipeline.research("Big question?")
@@ -288,6 +292,7 @@ class TestDeepResearchPipelineRetrieval:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("Question?")
@@ -320,6 +325,7 @@ class TestDeepResearchPipelineRetrieval:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("Question?")
@@ -362,6 +368,7 @@ class TestDeepResearchPipelineGapAnalysis:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("Question?")
@@ -384,6 +391,7 @@ class TestDeepResearchPipelineGapAnalysis:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("Question?")
@@ -420,6 +428,7 @@ class TestDeepResearchPipelineSynthesis:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("How does auth work?")
@@ -442,6 +451,7 @@ class TestDeepResearchPipelineSynthesis:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("Question?")
@@ -478,6 +488,7 @@ class TestDeepResearchPipelineTracing:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("Question?")
@@ -502,6 +513,7 @@ class TestDeepResearchPipelineTracing:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("Question?")
@@ -551,6 +563,7 @@ class TestDeepResearchPipelineIntegration:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("How does auth work?")
@@ -576,9 +589,11 @@ class TestDeepResearchPipelineIntegration:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
-            max_sub_questions=2,
-            chunks_per_subquestion=3,
-            max_total_chunks=10,
+            config=ResearchConfig(
+                max_sub_questions=2,
+                chunks_per_subquestion=3,
+                max_total_chunks=10,
+            ),
         )
 
         result = await pipeline.research("Question?")

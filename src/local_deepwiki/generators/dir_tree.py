@@ -6,7 +6,23 @@ respecting ``.gitignore`` rules when inside a git repository.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from pathlib import Path
+
+
+@dataclass(slots=True)
+class TreeTraversalState:
+    """Mutable state for recursive directory tree traversal.
+
+    Bundles the configuration and accumulators for
+    :func:`_traverse_directory`, keeping the recursive call signature short.
+    """
+
+    max_depth: int
+    max_items: int
+    gitignored: set[str]
+    lines: list[str] = field(default_factory=list)
+    items_shown: int = 0
 
 
 def _load_gitignored_paths(repo_path: Path) -> set[str]:
@@ -98,18 +114,14 @@ def _traverse_directory(
     path: Path,
     prefix: str,
     depth: int,
-    max_depth: int,
-    max_items: int,
-    gitignored: set[str],
-    lines: list[str],
-    items_shown_ref: list[int],
+    state: TreeTraversalState,
 ) -> None:
-    """Recursively traverse *path* and append tree lines to *lines*.
+    """Recursively traverse *path* and append tree lines to *state.lines*.
 
-    Uses a single-element list *items_shown_ref* to pass the mutable
-    counter across recursive calls without a nonlocal closure.
+    Uses :class:`TreeTraversalState` to carry configuration and the mutable
+    counter across recursive calls.
     """
-    if depth > max_depth or items_shown_ref[0] >= max_items:
+    if depth > state.max_depth or state.items_shown >= state.max_items:
         return
 
     try:
@@ -117,11 +129,11 @@ def _traverse_directory(
     except PermissionError:
         return
 
-    items = [i for i in items if not _should_skip_entry(i.name, gitignored)]
+    items = [i for i in items if not _should_skip_entry(i.name, state.gitignored)]
 
     for i, item in enumerate(items):
-        if items_shown_ref[0] >= max_items:
-            lines.append(f"{prefix}...")
+        if state.items_shown >= state.max_items:
+            state.lines.append(f"{prefix}...")
             return
 
         is_last = i == len(items) - 1
@@ -129,22 +141,13 @@ def _traverse_directory(
         new_prefix = prefix + ("    " if is_last else "│   ")
 
         if item.is_dir():
-            lines.append(f"{prefix}{connector}{item.name}/")
+            state.lines.append(f"{prefix}{connector}{item.name}/")
         else:
-            lines.append(f"{prefix}{connector}{item.name}")
-        items_shown_ref[0] += 1
+            state.lines.append(f"{prefix}{connector}{item.name}")
+        state.items_shown += 1
 
         if item.is_dir():
-            _traverse_directory(
-                item,
-                new_prefix,
-                depth + 1,
-                max_depth,
-                max_items,
-                gitignored,
-                lines,
-                items_shown_ref,
-            )
+            _traverse_directory(item, new_prefix, depth + 1, state)
 
 
 def get_directory_tree(repo_path: Path, max_depth: int = 3, max_items: int = 50) -> str:
@@ -163,11 +166,14 @@ def get_directory_tree(repo_path: Path, max_depth: int = 3, max_items: int = 50)
         Formatted directory tree string.
     """
     gitignored = _load_gitignored_paths(repo_path)
-    lines: list[str] = [f"{repo_path.name}/"]
-    items_shown_ref = [1]  # count root entry
-
-    _traverse_directory(
-        repo_path, "", 1, max_depth, max_items, gitignored, lines, items_shown_ref
+    state = TreeTraversalState(
+        max_depth=max_depth,
+        max_items=max_items,
+        gitignored=gitignored,
+        lines=[f"{repo_path.name}/"],
+        items_shown=1,  # count root entry
     )
 
-    return "\n".join(lines)
+    _traverse_directory(repo_path, "", 1, state)
+
+    return "\n".join(state.lines)

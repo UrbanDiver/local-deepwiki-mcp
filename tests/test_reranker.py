@@ -160,8 +160,10 @@ class TestRerankerIntegrationWithQueryService:
         with patch("local_deepwiki.services.query_service.get_rate_limiter") as mock_rl:
             mock_rl.return_value.__aenter__ = AsyncMock()
             mock_rl.return_value.__aexit__ = AsyncMock()
+            from local_deepwiki.services.query_service import QuestionRequest
+
             result = await svc.answer_question(
-                repo_path=tmp_path, question="What?", debug=False
+                QuestionRequest(repo_path=tmp_path, question="What?", debug=False)
             )
 
         assert result.trace is None
@@ -185,8 +187,10 @@ class TestRerankerIntegrationWithQueryService:
         with patch("local_deepwiki.services.query_service.get_rate_limiter") as mock_rl:
             mock_rl.return_value.__aenter__ = AsyncMock()
             mock_rl.return_value.__aexit__ = AsyncMock()
+            from local_deepwiki.services.query_service import QuestionRequest
+
             result = await svc.answer_question(
-                repo_path=tmp_path, question="What?", debug=True
+                QuestionRequest(repo_path=tmp_path, question="What?", debug=True)
             )
 
         assert result.trace is not None
@@ -224,11 +228,15 @@ class TestRerankerIntegrationWithQueryService:
         ):
             mock_rl.return_value.__aenter__ = AsyncMock()
             mock_rl.return_value.__aexit__ = AsyncMock()
+            from local_deepwiki.services.query_service import QuestionRequest
+
             result = await svc.answer_question(
-                repo_path=tmp_path,
-                question="What?",
-                max_context=1,
-                debug=True,
+                QuestionRequest(
+                    repo_path=tmp_path,
+                    question="What?",
+                    max_context=1,
+                    debug=True,
+                )
             )
 
         assert result.trace is not None

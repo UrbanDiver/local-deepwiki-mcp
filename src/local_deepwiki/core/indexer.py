@@ -19,9 +19,13 @@ from local_deepwiki.core.index_manager import (
 )
 from local_deepwiki.core.indexer_files import find_source_files
 from local_deepwiki.core.indexer_graph import GraphExtractor
-from local_deepwiki.core.indexer_status import IndexStatusTracker
+from local_deepwiki.core.indexer_status import IndexStatusTracker, IndexerStatusDeps
 from local_deepwiki.core.parser import ASTCache, CodeParser
-from local_deepwiki.core.parsing_pipeline import FileParsingPipeline, ParseResult
+from local_deepwiki.core.parsing_pipeline import (
+    FileParsingPipeline,
+    ParseResult,
+    PipelineContext,
+)
 from local_deepwiki.core.secret_detector import scan_repository_for_secrets
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
@@ -41,7 +45,188 @@ __all__ = [
     "ParseResult",
     "RepositoryIndexer",
     "RepositoryIndexerProtocol",
+    "compile_exclude_patterns",
+    "emit_index_complete",
+    "emit_index_start",
+    "prepare_incremental_update",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Module-level helpers extracted from RepositoryIndexer
+# ---------------------------------------------------------------------------
+
+
+def compile_exclude_patterns(
+    exclude_patterns: list[str],
+) -> tuple[set[str], list[re.Pattern[str]]]:
+    """Pre-compile exclude patterns into skip_dirs and regexes.
+
+    Args:
+        exclude_patterns: Glob-style patterns from config (e.g. ``"node_modules/**"``).
+
+    Returns:
+        Tuple of (skip_dirs, compiled_regexes).
+    """
+    skip_dirs: set[str] = set()
+    compiled: list[re.Pattern[str]] = []
+    for pattern in exclude_patterns:
+        if pattern.endswith("/**"):
+            skip_dirs.add(pattern[:-3])
+        else:
+            compiled.append(re.compile(fnmatch.translate(pattern)))
+    return skip_dirs, compiled
+
+
+async def emit_index_start(repo_path: Path, *, full_rebuild: bool) -> None:
+    """Emit the INDEX_START lifecycle event.
+
+    Args:
+        repo_path: Resolved repository path.
+        full_rebuild: Whether this is a full rebuild.
+    """
+    emitter = get_event_emitter()
+    await emitter.emit(
+        EventType.INDEX_START,
+        {
+            "repo_path": str(repo_path),
+            "full_rebuild": full_rebuild,
+        },
+    )
+
+
+async def emit_index_complete(repo_path: Path, status: IndexStatus) -> None:
+    """Emit the INDEX_COMPLETE lifecycle event.
+
+    Args:
+        repo_path: Resolved repository path.
+        status: The completed index status.
+    """
+    emitter = get_event_emitter()
+    await emitter.emit(
+        EventType.INDEX_COMPLETE,
+        {
+            "repo_path": str(repo_path),
+            "total_files": status.total_files,
+            "total_chunks": status.total_chunks,
+            "languages": list(status.languages.keys()),
+        },
+    )
+
+
+async def prepare_incremental_update(
+    status_tracker: IndexStatusTracker,
+    vector_store: VectorStore,
+    parser: CodeParser,
+    repo_path: Path,
+    full_rebuild: bool,
+    progress_callback: ProgressCallback | None,
+) -> tuple[bool, list[Path], list[FileInfo], list[str], dict[str, FileInfo]]:
+    """Load previous status, collect files, and delete stale chunks.
+
+    This is a pipeline step that orchestrates incremental update preparation
+    without requiring ``self`` — it operates on the provided collaborators.
+
+    Args:
+        status_tracker: Tracks index status for incremental updates.
+        vector_store: Vector store for deleting old/stale chunks.
+        parser: Code parser for file info lookups.
+        repo_path: Resolved repository path.
+        full_rebuild: Whether to force a full rebuild.
+        progress_callback: Optional callback for progress updates.
+
+    Returns:
+        Tuple of (full_rebuild, files_to_process, files_unchanged,
+        deleted_file_paths, prev_files_by_path).
+    """
+    _previous_status, prev_files_by_path, full_rebuild = await asyncio.to_thread(
+        status_tracker.load_previous_status, full_rebuild
+    )
+    files_to_process, files_unchanged, deleted_file_paths = (
+        status_tracker.collect_files_to_process(prev_files_by_path, progress_callback)
+    )
+    if not full_rebuild and prev_files_by_path:
+        if files_to_process:
+            await _delete_old_chunks_for_modified_files(
+                vector_store,
+                parser,
+                repo_path,
+                files_to_process,
+                prev_files_by_path,
+                progress_callback,
+            )
+        if deleted_file_paths:
+            await _delete_chunks_for_deleted_files(
+                vector_store, deleted_file_paths, progress_callback
+            )
+    return (
+        full_rebuild,
+        files_to_process,
+        files_unchanged,
+        deleted_file_paths,
+        prev_files_by_path,
+    )
+
+
+async def _delete_old_chunks_for_modified_files(
+    vector_store: VectorStore,
+    parser: CodeParser,
+    repo_path: Path,
+    files_to_process: list[Path],
+    prev_files_by_path: dict[str, FileInfo],
+    progress_callback: ProgressCallback | None,
+) -> None:
+    """Batch delete old chunks for files being re-processed.
+
+    Args:
+        vector_store: Vector store to delete chunks from.
+        parser: Code parser for file info lookups.
+        repo_path: Resolved repository path.
+        files_to_process: List of file paths to be processed.
+        prev_files_by_path: Hash map of previous files for O(1) lookup.
+        progress_callback: Optional callback for progress updates.
+    """
+    files_to_delete = []
+    for file_path in files_to_process:
+        file_info = parser.get_file_info(file_path, repo_path)
+        if file_info.path in prev_files_by_path:
+            files_to_delete.append(file_info.path)
+
+    if files_to_delete:
+        if progress_callback:
+            progress_callback(
+                f"Removing old chunks for {len(files_to_delete)} modified files...",
+                0,
+                len(files_to_process),
+            )
+        await vector_store.delete_chunks_by_files(files_to_delete)
+        logger.debug("Batch deleted chunks for %d modified files", len(files_to_delete))
+
+
+async def _delete_chunks_for_deleted_files(
+    vector_store: VectorStore,
+    deleted_file_paths: list[str],
+    progress_callback: ProgressCallback | None,
+) -> None:
+    """Delete chunks from the vector store for files that no longer exist on disk.
+
+    Args:
+        vector_store: Vector store to delete chunks from.
+        deleted_file_paths: Relative paths of deleted files.
+        progress_callback: Optional callback for progress updates.
+    """
+    if progress_callback:
+        progress_callback(
+            f"Removing stale chunks for {len(deleted_file_paths)} deleted file(s)...",
+            0,
+            len(deleted_file_paths),
+        )
+    await vector_store.delete_chunks_by_files(deleted_file_paths)
+    logger.info(
+        "Cleaned up chunks for %d deleted file(s): %s",
+        len(deleted_file_paths),
+        deleted_file_paths,
+    )
 
 
 @runtime_checkable
@@ -143,9 +328,9 @@ class RepositoryIndexer:
         self._status_manager = IndexStatusManager()
 
         # Pre-compile exclude patterns (config is frozen, so these never change)
-        self._exclude_skip_dirs: set[str] = set()
-        self._exclude_compiled: list = []
-        self._compile_exclude_patterns()
+        self._exclude_skip_dirs, self._exclude_compiled = compile_exclude_patterns(
+            self.config.parsing.exclude_patterns
+        )
 
         self._graph_helper, self._status_tracker = self._init_composition_objects()
 
@@ -172,21 +357,15 @@ class RepositoryIndexer:
         status_tracker = IndexStatusTracker(
             wiki_path=self.wiki_path,
             repo_path=self.repo_path,
-            status_manager=self._status_manager,
-            find_source_files_fn=self._find_source_files,
-            parser=self.parser,
-            host_module=_this_module,
-            ast_cache=self.ast_cache,
+            deps=IndexerStatusDeps(
+                status_manager=self._status_manager,
+                find_source_files_fn=self._find_source_files,
+                parser=self.parser,
+                host_module=_this_module,
+                ast_cache=self.ast_cache,
+            ),
         )
         return graph_helper, status_tracker
-
-    def _compile_exclude_patterns(self) -> None:
-        """Pre-compile exclude patterns from config into skip_dirs and regexes."""
-        for pattern in self.config.parsing.exclude_patterns:
-            if pattern.endswith("/**"):
-                self._exclude_skip_dirs.add(pattern[:-3])
-            else:
-                self._exclude_compiled.append(re.compile(fnmatch.translate(pattern)))
 
     async def _scan_for_secrets(
         self,
@@ -252,7 +431,7 @@ class RepositoryIndexer:
 
     def _create_parsing_pipeline(self) -> FileParsingPipeline:
         """Create a FileParsingPipeline from current indexer state."""
-        return FileParsingPipeline(
+        ctx = PipelineContext(
             parser=self.parser,
             chunker=self.chunker,
             repo_path=self.repo_path,
@@ -261,69 +440,11 @@ class RepositoryIndexer:
             parallel_workers=self.config.chunking.parallel_workers,
             pipeline_logger=logger,
         )
+        return FileParsingPipeline(ctx)
 
     def _parse_single_file(self, file_path: Path) -> ParseResult:
         """Parse and chunk a single file. Delegates to FileParsingPipeline."""
         return self._create_parsing_pipeline().parse_single_file(file_path)
-
-    async def _delete_old_chunks_for_modified_files(
-        self,
-        files_to_process: list[Path],
-        prev_files_by_path: dict[str, FileInfo],
-        progress_callback: ProgressCallback | None,
-    ) -> None:
-        """Batch delete old chunks for files being re-processed.
-
-        This avoids N+1 delete problem by doing a single batch delete upfront.
-
-        Args:
-            files_to_process: List of file paths to be processed.
-            prev_files_by_path: Hash map of previous files for O(1) lookup.
-            progress_callback: Optional callback for progress updates.
-        """
-        files_to_delete = []
-        for file_path in files_to_process:
-            file_info = self.parser.get_file_info(file_path, self.repo_path)
-            # Only delete if file existed in previous index (was modified, not new)
-            # Use O(1) dict lookup instead of O(N) linear scan
-            if file_info.path in prev_files_by_path:
-                files_to_delete.append(file_info.path)
-
-        if files_to_delete:
-            if progress_callback:
-                progress_callback(
-                    f"Removing old chunks for {len(files_to_delete)} modified files...",
-                    0,
-                    len(files_to_process),
-                )
-            await self.vector_store.delete_chunks_by_files(files_to_delete)
-            logger.debug(
-                "Batch deleted chunks for %d modified files", len(files_to_delete)
-            )
-
-    async def _delete_chunks_for_deleted_files(
-        self,
-        deleted_file_paths: list[str],
-        progress_callback: ProgressCallback | None,
-    ) -> None:
-        """Delete chunks from the vector store for files that no longer exist on disk.
-
-        Args:
-            deleted_file_paths: Relative paths of deleted files.
-            progress_callback: Optional callback for progress updates.
-        """
-        if progress_callback:
-            progress_callback(
-                f"Removing stale chunks for {len(deleted_file_paths)} deleted file(s)...",
-                0,
-                len(deleted_file_paths),
-            )
-        await self.vector_store.delete_chunks_by_files(deleted_file_paths)
-        logger.info(
-            "Cleaned up chunks for %d deleted file(s): %s",
-            len(deleted_file_paths),
-            deleted_file_paths,
-        )
 
     def _sync_graph_helper(self) -> None:
         """Sync mutable graph state to the composed GraphExtractor.
@@ -426,7 +547,7 @@ class RepositoryIndexer:
         logger.info("Starting indexing for repository: %s", self.repo_path)
         logger.debug("Wiki path: %s, Full rebuild: %s", self.wiki_path, full_rebuild)
 
-        await self._emit_index_start(full_rebuild)
+        await emit_index_start(self.repo_path, full_rebuild=full_rebuild)
 
         # Security: Scan for hardcoded secrets before indexing
         await self._scan_for_secrets(progress_callback)
@@ -437,7 +558,14 @@ class RepositoryIndexer:
             files_unchanged,
             deleted_file_paths,
             prev_files_by_path,
-        ) = await self._prepare_incremental_update(full_rebuild, progress_callback)
+        ) = await prepare_incremental_update(
+            self._status_tracker,
+            self.vector_store,
+            self.parser,
+            self.repo_path,
+            full_rebuild,
+            progress_callback,
+        )
 
         # Phase 4: Parse files in parallel and store chunks
         (
@@ -474,69 +602,9 @@ class RepositoryIndexer:
         if progress_callback:
             progress_callback("Indexing complete", 1, 1)
 
-        await self._emit_index_complete(status)
+        await emit_index_complete(self.repo_path, status)
 
         return status
-
-    async def _prepare_incremental_update(
-        self,
-        full_rebuild: bool,
-        progress_callback: ProgressCallback | None,
-    ) -> tuple[bool, list[Path], list[FileInfo], list[str], dict[str, FileInfo]]:
-        """Load previous status, collect files, and delete stale chunks.
-
-        Returns:
-            Tuple of (full_rebuild, files_to_process, files_unchanged,
-            deleted_file_paths, prev_files_by_path).
-        """
-        _previous_status, prev_files_by_path, full_rebuild = await asyncio.to_thread(
-            self._status_tracker.load_previous_status, full_rebuild
-        )
-        files_to_process, files_unchanged, deleted_file_paths = (
-            self._status_tracker.collect_files_to_process(
-                prev_files_by_path, progress_callback
-            )
-        )
-        if not full_rebuild and prev_files_by_path:
-            if files_to_process:
-                await self._delete_old_chunks_for_modified_files(
-                    files_to_process, prev_files_by_path, progress_callback
-                )
-            if deleted_file_paths:
-                await self._delete_chunks_for_deleted_files(
-                    deleted_file_paths, progress_callback
-                )
-        return (
-            full_rebuild,
-            files_to_process,
-            files_unchanged,
-            deleted_file_paths,
-            prev_files_by_path,
-        )
-
-    async def _emit_index_start(self, full_rebuild: bool) -> None:
-        """Emit the INDEX_START lifecycle event."""
-        emitter = get_event_emitter()
-        await emitter.emit(
-            EventType.INDEX_START,
-            {
-                "repo_path": str(self.repo_path),
-                "full_rebuild": full_rebuild,
-            },
-        )
-
-    async def _emit_index_complete(self, status: "IndexStatus") -> None:
-        """Emit the INDEX_COMPLETE lifecycle event."""
-        emitter = get_event_emitter()
-        await emitter.emit(
-            EventType.INDEX_COMPLETE,
-            {
-                "repo_path": str(self.repo_path),
-                "total_files": status.total_files,
-                "total_chunks": status.total_chunks,
-                "languages": list(status.languages.keys()),
-            },
-        )
 
     def _find_source_files(self) -> list[Path]:
         """Find all source files in the repository.

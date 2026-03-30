@@ -35,6 +35,38 @@ def _is_test_module(module: str, file_path: str) -> bool:
     return is_test_file(file_path) or module.startswith("test_") or ".test_" in module
 
 
+@dataclass(frozen=True, slots=True)
+class DiagramScanContext:
+    """Immutable configuration for dependency-scanning functions.
+
+    Bundles the common immutable parameters shared by ``_scan_import_lines``,
+    ``_scan_chunk_imports``, and ``_scan_fallback_chunks``.
+
+    Attributes:
+        project_name: Project name for filtering internal imports.
+        show_external: Whether to collect external dependencies.
+        exclude_tests: Whether to exclude test module imports.
+    """
+
+    project_name: str
+    show_external: bool = False
+    exclude_tests: bool = True
+
+
+@dataclass(slots=True)
+class _ScanAccumulators:
+    """Mutable accumulators shared by the dependency-scanning functions.
+
+    Holds the four mutable collections that ``_scan_import_lines``,
+    ``_scan_chunk_imports``, and ``_scan_fallback_chunks`` write into.
+    """
+
+    dependencies: dict[str, set[str]]
+    external_deps: Counter[str]
+    module_external_deps: dict[str, set[str]]
+    all_internal_modules: set[str]
+
+
 @dataclass(slots=True)
 class _DependencyData:
     """Internal data structure for dependency graph generation."""
@@ -48,14 +80,8 @@ class _DependencyData:
 def _scan_import_lines(
     content: str,
     module: str,
-    project_name: str,
-    *,
-    show_external: bool,
-    exclude_tests: bool,
-    dependencies: dict[str, set[str]],
-    external_deps: Counter[str],
-    module_external_deps: dict[str, set[str]],
-    all_internal_modules: set[str],
+    scan_ctx: DiagramScanContext,
+    acc: _ScanAccumulators,
 ) -> None:
     """Scan content lines for import statements and update dependency data.
 
@@ -65,13 +91,8 @@ def _scan_import_lines(
     Args:
         content: Raw chunk content to scan.
         module: Module name derived from the chunk's file path.
-        project_name: Project name for filtering internal imports.
-        show_external: Whether to collect external dependencies.
-        exclude_tests: Whether to exclude test module imports.
-        dependencies: Mutable dependency mapping to update.
-        external_deps: Mutable external dependency counter to update.
-        module_external_deps: Mutable per-module external deps to update.
-        all_internal_modules: Mutable set of known internal modules to update.
+        scan_ctx: Immutable scan configuration (project_name, show_external, exclude_tests).
+        acc: Mutable accumulators to update.
     """
     for line in content.split("\n"):
         line = line.strip()
@@ -81,17 +102,17 @@ def _scan_import_lines(
         if not (line.startswith("import ") or line.startswith("from ")):
             continue
 
-        imported = _parse_import_line(line, project_name)
+        imported = _parse_import_line(line, scan_ctx.project_name)
         if imported:
-            if exclude_tests and imported.startswith("test_"):
+            if scan_ctx.exclude_tests and imported.startswith("test_"):
                 continue
-            dependencies[module].add(imported)
-            all_internal_modules.add(imported)
-        elif show_external:
+            acc.dependencies[module].add(imported)
+            acc.all_internal_modules.add(imported)
+        elif scan_ctx.show_external:
             ext_module = _parse_external_import(line)
             if ext_module:
-                external_deps[ext_module] += 1
-                module_external_deps[module].add(ext_module)
+                acc.external_deps[ext_module] += 1
+                acc.module_external_deps[module].add(ext_module)
 
 
 _FALLBACK_CHUNK_TYPES = frozenset(
@@ -101,16 +122,11 @@ _FALLBACK_CHUNK_TYPES = frozenset(
 
 def _scan_chunk_imports(
     chunk: object,
-    project_name: str,
+    scan_ctx: DiagramScanContext,
+    acc: _ScanAccumulators,
     *,
-    show_external: bool,
-    exclude_tests: bool,
     files_with_import_chunks: set[str],
     fallback_chunks: list,
-    dependencies: dict[str, set[str]],
-    external_deps: Counter[str],
-    module_external_deps: dict[str, set[str]],
-    all_internal_modules: set[str],
 ) -> None:
     """Process one chunk in the first dependency-collection pass."""
     if hasattr(chunk, "chunk"):
@@ -121,36 +137,21 @@ def _scan_chunk_imports(
         module = _path_to_module(file_path)
         if not module:
             return
-        if exclude_tests and _is_test_module(module, file_path):
+        if scan_ctx.exclude_tests and _is_test_module(module, file_path):
             return
         files_with_import_chunks.add(file_path)
-        all_internal_modules.add(module)
-        _scan_import_lines(
-            chunk.content,
-            module,
-            project_name,
-            show_external=show_external,
-            exclude_tests=exclude_tests,
-            dependencies=dependencies,
-            external_deps=external_deps,
-            module_external_deps=module_external_deps,
-            all_internal_modules=all_internal_modules,
-        )
+        acc.all_internal_modules.add(module)
+        _scan_import_lines(chunk.content, module, scan_ctx, acc)
     elif chunk.chunk_type in _FALLBACK_CHUNK_TYPES:
         fallback_chunks.append(chunk)
 
 
 def _scan_fallback_chunks(
     fallback_chunks: list,
-    project_name: str,
+    scan_ctx: DiagramScanContext,
+    acc: _ScanAccumulators,
     *,
-    show_external: bool,
-    exclude_tests: bool,
     files_with_import_chunks: set[str],
-    dependencies: dict[str, set[str]],
-    external_deps: Counter[str],
-    module_external_deps: dict[str, set[str]],
-    all_internal_modules: set[str],
 ) -> None:
     """Process fallback (non-IMPORT) chunks for files that have no dedicated IMPORT chunks."""
     for chunk in fallback_chunks:
@@ -164,21 +165,11 @@ def _scan_fallback_chunks(
         module = _path_to_module(file_path)
         if not module:
             continue
-        if exclude_tests and _is_test_module(module, file_path):
+        if scan_ctx.exclude_tests and _is_test_module(module, file_path):
             continue
 
-        all_internal_modules.add(module)
-        _scan_import_lines(
-            chunk.content,
-            module,
-            project_name,
-            show_external=show_external,
-            exclude_tests=exclude_tests,
-            dependencies=dependencies,
-            external_deps=external_deps,
-            module_external_deps=module_external_deps,
-            all_internal_modules=all_internal_modules,
-        )
+        acc.all_internal_modules.add(module)
+        _scan_import_lines(chunk.content, module, scan_ctx, acc)
 
 
 def _collect_dependencies(
@@ -204,44 +195,41 @@ def _collect_dependencies(
     Returns:
         DependencyData with collected dependencies.
     """
-    dependencies: dict[str, set[str]] = defaultdict(set)
-    external_deps: Counter[str] = Counter()
-    module_external_deps: dict[str, set[str]] = defaultdict(set)
-    all_internal_modules: set[str] = set()
+    scan_ctx = DiagramScanContext(
+        project_name=project_name,
+        show_external=show_external,
+        exclude_tests=exclude_tests,
+    )
+    acc = _ScanAccumulators(
+        dependencies=defaultdict(set),
+        external_deps=Counter(),
+        module_external_deps=defaultdict(set),
+        all_internal_modules=set(),
+    )
     files_with_import_chunks: set[str] = set()
     fallback_chunks: list = []
 
     for chunk in chunks:
         _scan_chunk_imports(
             chunk,
-            project_name,
-            show_external=show_external,
-            exclude_tests=exclude_tests,
+            scan_ctx,
+            acc,
             files_with_import_chunks=files_with_import_chunks,
             fallback_chunks=fallback_chunks,
-            dependencies=dependencies,
-            external_deps=external_deps,
-            module_external_deps=module_external_deps,
-            all_internal_modules=all_internal_modules,
         )
 
     _scan_fallback_chunks(
         fallback_chunks,
-        project_name,
-        show_external=show_external,
-        exclude_tests=exclude_tests,
+        scan_ctx,
+        acc,
         files_with_import_chunks=files_with_import_chunks,
-        dependencies=dependencies,
-        external_deps=external_deps,
-        module_external_deps=module_external_deps,
-        all_internal_modules=all_internal_modules,
     )
 
     return _DependencyData(
-        dependencies=dependencies,
-        external_deps=external_deps,
-        module_external_deps=module_external_deps,
-        all_internal_modules=all_internal_modules,
+        dependencies=acc.dependencies,
+        external_deps=acc.external_deps,
+        module_external_deps=acc.module_external_deps,
+        all_internal_modules=acc.all_internal_modules,
     )
 
 
@@ -412,12 +400,7 @@ def _add_circular_styling(
 def generate_dependency_graph(
     chunks: list,
     project_name: str = "project",
-    *,
-    detect_circular: bool = True,
-    show_external: bool = False,
-    max_external: int = 10,
-    wiki_base_path: str = "",
-    exclude_tests: bool = True,
+    **kwargs: object,
 ) -> str | None:
     """Generate an enhanced Mermaid flowchart showing module dependencies.
 
@@ -430,15 +413,23 @@ def generate_dependency_graph(
     Args:
         chunks: List of CodeChunk objects (should include IMPORT chunks).
         project_name: Name of the project for filtering internal imports.
-        detect_circular: Whether to highlight circular dependencies.
-        show_external: Whether to show external (third-party) dependencies.
-        max_external: Maximum number of external dependencies to display.
-        wiki_base_path: Base path for wiki links (e.g., "files/"). Empty disables links.
-        exclude_tests: Whether to exclude test modules from the graph (default: True).
+
+    Keyword Args:
+        detect_circular: Whether to highlight circular dependencies (default True).
+        show_external: Whether to show external dependencies (default False).
+        max_external: Maximum number of external dependencies (default 10).
+        wiki_base_path: Base path for wiki links (default "").
+        exclude_tests: Whether to exclude test modules (default True).
 
     Returns:
         Mermaid flowchart markdown string, or None if no dependencies found.
     """
+    detect_circular: bool = bool(kwargs.get("detect_circular", True))
+    show_external: bool = bool(kwargs.get("show_external", False))
+    max_external: int = int(kwargs.get("max_external", 10))  # type: ignore[arg-type]
+    wiki_base_path: str = str(kwargs.get("wiki_base_path", ""))
+    exclude_tests: bool = bool(kwargs.get("exclude_tests", True))
+
     # Collect all dependency data
     data = _collect_dependencies(
         chunks, project_name, show_external=show_external, exclude_tests=exclude_tests

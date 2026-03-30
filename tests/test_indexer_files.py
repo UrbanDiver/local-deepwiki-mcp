@@ -7,7 +7,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from local_deepwiki.config import ChunkingConfig, Config, ParsingConfig
-from local_deepwiki.core.indexer import CURRENT_SCHEMA_VERSION, RepositoryIndexer
+from local_deepwiki.core.indexer import (
+    CURRENT_SCHEMA_VERSION,
+    RepositoryIndexer,
+    _delete_old_chunks_for_modified_files,
+)
 from local_deepwiki.models import FileInfo, IndexStatus, Language
 
 
@@ -405,8 +409,13 @@ class TestDeleteOldChunks:
                 ),
             }
 
-            await indexer._delete_old_chunks_for_modified_files(
-                files_to_process, prev_files_by_path, progress_callback
+            await _delete_old_chunks_for_modified_files(
+                mock_store,
+                indexer.parser,
+                indexer.repo_path,
+                files_to_process,
+                prev_files_by_path,
+                progress_callback,
             )
 
             assert any("Removing old chunks" in msg for msg in progress_messages)

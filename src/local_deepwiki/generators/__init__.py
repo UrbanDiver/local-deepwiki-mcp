@@ -23,8 +23,15 @@ from local_deepwiki.generators.examples import (
     parse_doctest_examples,
     parse_google_style_examples,
 )
+from local_deepwiki.generators.protocols import (
+    AnalysisGeneratorProtocol,
+    DiagramGeneratorProtocol,
+)
 
 __all__ = [
+    # Protocols
+    "AnalysisGeneratorProtocol",
+    "DiagramGeneratorProtocol",
     # Dependency graph
     "DependencyEdge",
     "DependencyGraph",

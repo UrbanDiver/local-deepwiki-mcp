@@ -36,6 +36,7 @@ from local_deepwiki.core.vectorstore.schema import (
     SearchProfileConfig,
     SearchResultPage,
 )
+from local_deepwiki.core.vectorstore.search_config_resolver import SearchConfigResolver
 from local_deepwiki.core.vectorstore.search_engine import SearchEngine
 from local_deepwiki.core.vectorstore.store import VectorStore, VectorStoreProtocol
 from local_deepwiki.core.vectorstore.utils import (
@@ -49,6 +50,7 @@ __all__ = [
     "VectorStore",
     "VectorStoreProtocol",
     "SearchEngine",
+    "SearchConfigResolver",
     # Search request / parameter objects
     "SearchRequest",
     "SearchPipelineParams",

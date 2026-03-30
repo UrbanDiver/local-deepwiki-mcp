@@ -372,49 +372,52 @@ def parse_google_docstring(docstring: str) -> ParsedDocstring:
     }
 
 
+@dataclass(slots=True)
+class NumpyParserState:
+    """Mutable state for the NumPy docstring line-by-line parser.
+
+    Groups the accumulators that :func:`_parse_numpy_docstring_section`
+    reads and updates on each line.
+    """
+
+    current_section: str
+    current_param: str | None
+    args_dict: dict[str, ArgInfo]
+    returns_str: str | None
+    description_lines: list[str]
+
+
 def _parse_numpy_docstring_section(
     line: str,
     stripped: str,
-    current_section: str,
-    current_param: str | None,
-    args_dict: dict[str, ArgInfo],
-    returns_str: str | None,
-    description_lines: list[str],
-) -> tuple[str | None, str | None]:
+    state: NumpyParserState,
+) -> None:
     """Process one line for the NumPy docstring parser.
 
     Args:
         line: The raw (non-stripped) line.
         stripped: The stripped line content.
-        current_section: Current section name.
-        current_param: Name of the current parameter being parsed, or None.
-        args_dict: Mutable args dict to update in-place.
-        returns_str: Current returns string (may be None).
-        description_lines: Mutable description lines list to update.
-
-    Returns:
-        Tuple of (updated current_param, updated returns_str).
+        state: Mutable parser state accumulating args, returns, and description.
     """
-    if current_section == "description":
-        description_lines.append(stripped)
-    elif current_section == "args":
+    if state.current_section == "description":
+        state.description_lines.append(stripped)
+    elif state.current_section == "args":
         param_match = re.match(r"(\w+)\s*:\s*(.+)?", stripped)
         if param_match and not line.startswith("    "):
             param_name = param_match.group(1)
             param_type = param_match.group(2)
-            args_dict[param_name] = ArgInfo(
+            state.args_dict[param_name] = ArgInfo(
                 type=param_type.strip() if param_type else None,
                 description="",
             )
-            current_param = param_name
-        elif current_param and stripped:
-            args_dict[current_param]["description"] += " " + stripped
-    elif current_section == "returns":
-        if returns_str is None:
-            returns_str = stripped
+            state.current_param = param_name
+        elif state.current_param and stripped:
+            state.args_dict[state.current_param]["description"] += " " + stripped
+    elif state.current_section == "returns":
+        if state.returns_str is None:
+            state.returns_str = stripped
         elif stripped:
-            returns_str += " " + stripped
-    return current_param, returns_str
+            state.returns_str += " " + stripped
 
 
 def parse_numpy_docstring(docstring: str) -> ParsedDocstring:
@@ -439,9 +442,13 @@ def parse_numpy_docstring(docstring: str) -> ParsedDocstring:
         }
 
     lines = docstring.split("\n")
-    current_section = "description"
-    current_param: str | None = None
-    description_lines: list[str] = []
+    state = NumpyParserState(
+        current_section="description",
+        current_param=None,
+        args_dict=args_dict,
+        returns_str=returns_str,
+        description_lines=[],
+    )
 
     i = 0
     while i < len(lines):
@@ -451,29 +458,22 @@ def parse_numpy_docstring(docstring: str) -> ParsedDocstring:
         # Check for section headers (followed by dashes)
         if i + 1 < len(lines) and lines[i + 1].strip().startswith("---"):
             if stripped.lower() in ("parameters", "args", "arguments"):
-                current_section = "args"
+                state.current_section = "args"
             elif stripped.lower() in ("returns", "return"):
-                current_section = "returns"
+                state.current_section = "returns"
             elif stripped.lower() in ("raises", "raise"):
-                current_section = "raises"
+                state.current_section = "raises"
             else:
-                current_section = "other"
+                state.current_section = "other"
             i += 2
             continue
 
-        current_param, returns_str = _parse_numpy_docstring_section(
-            line,
-            stripped,
-            current_section,
-            current_param,
-            args_dict,
-            returns_str,
-            description_lines,
-        )
+        _parse_numpy_docstring_section(line, stripped, state)
 
         i += 1
 
-    description = " ".join(description_lines).strip()
+    returns_str = state.returns_str
+    description = " ".join(state.description_lines).strip()
     if "\n\n" in description:
         description = description.split("\n\n")[0]
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import threading
 from pathlib import Path
 from types import TracebackType
@@ -25,11 +24,14 @@ from local_deepwiki.models import CodeChunk
 from local_deepwiki.providers.base import EmbeddingProvider
 
 from .cache import AdaptiveSearcher, SearchCache
+from .embedding import batch_embed
+from .indexes import create_scalar_indexes, create_vector_index
+from .indexes import ensure_indexes as _ensure_indexes_on_table
 from .maintenance import LazyIndexManager
 from .mixins import LazyIndexMixin, SearchMixin, StatsMixin
 from .schema import SearchProfile
 from .search_engine import SearchEngine
-from .utils import RateLimiter, _sanitize_string_value
+from .utils import RateLimiter, _row_to_chunk_default, _sanitize_string_value
 
 logger = get_logger(__name__)
 
@@ -346,71 +348,8 @@ class VectorStore(StatsMixin, LazyIndexMixin, SearchMixin):
                     if self.TABLE_NAME in db.list_tables().tables:
                         self._table = db.open_table(self.TABLE_NAME)
                         # Ensure indexes exist (may have been created by older code version)
-                        self._ensure_indexes()
+                        _ensure_indexes_on_table(self._table, self._lazy_index_manager)
         return self._table
-
-    def _ensure_indexes(self) -> None:
-        """Ensure all indexes exist, creating them if needed."""
-        if self._table is not None:
-            from .indexes import ensure_indexes
-
-            ensure_indexes(self._table, self._lazy_index_manager)
-
-    def _create_index_safe(self, column: str) -> None:
-        """Safely create a scalar index on a column."""
-        if self._table is not None:
-            from .indexes import create_index_safe
-
-            create_index_safe(self._table, column)
-
-    def _create_vector_index(self, num_rows: int) -> None:
-        """Create a vector index for faster semantic search."""
-        if self._table is not None:
-            from .indexes import create_vector_index
-
-            create_vector_index(self._table, num_rows, self._lazy_index_manager)
-
-    def _is_local_provider(self) -> bool:
-        """Check if the embedding provider is local (sentence-transformers)."""
-        from .embedding import is_local_provider
-
-        return is_local_provider(self.embedding_provider)
-
-    def _get_optimal_batch_config(self) -> tuple[int, int]:
-        """Get optimal batch size and concurrency based on provider type."""
-        from .embedding import get_optimal_batch_config
-
-        return get_optimal_batch_config(
-            self._embedding_batch_config, self.embedding_provider
-        )
-
-    async def _batch_embed(
-        self,
-        texts: list[str],
-        batch_size: int | None = None,
-        log_progress: bool = False,
-    ) -> list[list[float]]:
-        """Generate embeddings in parallel batches."""
-        from .embedding import batch_embed
-
-        return await batch_embed(
-            texts,
-            self.embedding_provider,
-            self._embedding_batch_config,
-            self._rate_limiter,
-            batch_size=batch_size,
-            log_progress=log_progress,
-        )
-
-    async def _batch_embed_sequential(
-        self, texts: list[str], batch_size: int, log_progress: bool = False
-    ) -> list[list[float]]:
-        """Generate embeddings in sequential batches (legacy method)."""
-        from .embedding import batch_embed_sequential
-
-        return await batch_embed_sequential(
-            texts, self.embedding_provider, batch_size, log_progress=log_progress
-        )
 
     async def create_or_update_table(
         self, chunks: list[CodeChunk], embedding_batch_size: int = 100
@@ -433,8 +372,13 @@ class VectorStore(StatsMixin, LazyIndexMixin, SearchMixin):
 
         # Generate embeddings in batches to avoid OOM and API limits
         texts = [_chunk_to_text(chunk) for chunk in chunks]
-        embeddings = await self._batch_embed(
-            texts, embedding_batch_size, log_progress=True
+        embeddings = await batch_embed(
+            texts,
+            self.embedding_provider,
+            self._embedding_batch_config,
+            self._rate_limiter,
+            batch_size=embedding_batch_size,
+            log_progress=True,
         )
 
         # Prepare data for LanceDB
@@ -457,8 +401,6 @@ class VectorStore(StatsMixin, LazyIndexMixin, SearchMixin):
         self._search_cache.invalidate()
 
         # Create scalar indexes for efficient lookups
-        from .indexes import create_scalar_indexes
-
         create_scalar_indexes(self._table)
 
         # Eagerly create the vector index after bulk table creation.
@@ -466,7 +408,8 @@ class VectorStore(StatsMixin, LazyIndexMixin, SearchMixin):
         # is always a bulk operation. If deferred, concurrent searches trigger
         # lazy index creation mid-wiki-generation, causing IO errors.
         num_rows = len(data)
-        self._create_vector_index(num_rows)
+        if self._table is not None:
+            create_vector_index(self._table, num_rows, self._lazy_index_manager)
 
         return len(data)
 
@@ -492,7 +435,13 @@ class VectorStore(StatsMixin, LazyIndexMixin, SearchMixin):
 
         # Generate embeddings in batches to avoid OOM and API limits
         texts = [_chunk_to_text(chunk) for chunk in chunks]
-        embeddings = await self._batch_embed(texts, embedding_batch_size)
+        embeddings = await batch_embed(
+            texts,
+            self.embedding_provider,
+            self._embedding_batch_config,
+            self._rate_limiter,
+            batch_size=embedding_batch_size,
+        )
 
         # Prepare data
         data = [
@@ -579,32 +528,9 @@ class VectorStore(StatsMixin, LazyIndexMixin, SearchMixin):
         logger.debug("Batch deleted chunks for %s files", len(file_paths))
         return len(file_paths)
 
-    @staticmethod
-    def _row_to_chunk(row: dict[str, Any]) -> CodeChunk:
-        """Convert a LanceDB row to a CodeChunk object.
-
-        Args:
-            row: Dictionary from LanceDB query result.
-
-        Returns:
-            CodeChunk object.
-        """
-        return CodeChunk(
-            id=row["id"],
-            file_path=row["file_path"],
-            language=row["language"],
-            chunk_type=row["chunk_type"],
-            name=row["name"] or None,
-            content=row["content"],
-            start_line=row["start_line"],
-            end_line=row["end_line"],
-            docstring=row["docstring"] or None,
-            parent_name=row["parent_name"] or None,
-            metadata=json.loads(row["metadata"]) if row["metadata"] else {},
-        )
-
-    # _chunk_to_text is available as a static method for tests while the
-    # module-level _chunk_to_text function is used internally.
+    # Delegate to module-level functions; kept as class attributes so that
+    # mixins and external callers can use ``self._row_to_chunk(row)``.
+    _row_to_chunk = staticmethod(_row_to_chunk_default)
     _chunk_to_text = staticmethod(_chunk_to_text)
 
     # ------------------------------------------------------------------

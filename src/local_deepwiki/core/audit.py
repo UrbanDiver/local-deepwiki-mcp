@@ -107,6 +107,106 @@ class AuditEvent:
     details: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class AccessDecisionParams:
+    """Parameters for logging an access control decision.
+
+    Attributes:
+        subject_id: Identifier of the subject requesting access.
+        subject_role: Role of the subject.
+        resource_type: Type of resource (operation, file, etc.).
+        resource_path: Path or identifier of the resource.
+        permission_requested: The permission being requested.
+        granted: Whether access was granted.
+        reason: Explanation for the decision (especially for denials).
+    """
+
+    subject_id: str | None
+    subject_role: str | None
+    resource_type: str
+    resource_path: str
+    permission_requested: str
+    granted: bool
+    reason: str | None = None
+
+
+@dataclass(frozen=True)
+class QueryAuditParams:
+    """Parameters for logging a query execution.
+
+    Attributes:
+        subject_id: Identifier of the subject executing the query.
+        repo_path: Path to the repository being queried.
+        query: The query string (truncated for privacy in logs).
+        success: Whether the query succeeded.
+        query_type: Type of query (search, deep_research).
+        error_message: Error message if query failed.
+        chunks_returned: Number of result chunks returned.
+        duration_ms: Query duration in milliseconds.
+    """
+
+    subject_id: str | None
+    repo_path: str
+    query: str
+    success: bool
+    query_type: str = "search"
+    error_message: str | None = None
+    chunks_returned: int | None = None
+    duration_ms: int | None = None
+
+
+@dataclass(frozen=True)
+class IndexAuditParams:
+    """Parameters for logging an indexing operation.
+
+    Attributes:
+        subject_id: Identifier of the subject performing the operation.
+        repo_path: Path to the repository being indexed.
+        operation: Operation type (started, completed, failed).
+        success: Whether the operation succeeded.
+        files_processed: Number of files processed.
+        chunks_created: Number of chunks created.
+        duration_ms: Operation duration in milliseconds.
+        error_message: Error message if operation failed.
+    """
+
+    subject_id: str | None
+    repo_path: str
+    operation: str
+    success: bool
+    files_processed: int | None = None
+    chunks_created: int | None = None
+    duration_ms: int | None = None
+    error_message: str | None = None
+
+
+@dataclass(frozen=True)
+class ExportAuditParams:
+    """Parameters for logging an export operation.
+
+    Attributes:
+        subject_id: Identifier of the subject performing the export.
+        wiki_path: Path to the wiki being exported.
+        output_path: Destination path for the export.
+        export_type: Type of export (html, pdf).
+        operation: Operation type (started, completed).
+        success: Whether the operation succeeded.
+        pages_exported: Number of pages exported.
+        duration_ms: Operation duration in milliseconds.
+        error_message: Error message if operation failed.
+    """
+
+    subject_id: str | None
+    wiki_path: str
+    output_path: str
+    export_type: str
+    operation: str
+    success: bool
+    pages_exported: int | None = None
+    duration_ms: int | None = None
+    error_message: str | None = None
+
+
 class AuditLogger:
     """Manages audit logging for security events.
 
@@ -217,135 +317,82 @@ class AuditLogger:
                 event.result,
             )
 
-    def log_access_decision(
-        self,
-        subject_id: str | None,
-        subject_role: str | None,
-        resource_type: str,
-        resource_path: str,
-        permission_requested: str,
-        granted: bool,
-        reason: str | None = None,
-    ) -> None:
+    def log_access_decision(self, params: AccessDecisionParams) -> None:
         """Log an access control decision.
 
-        Convenience method for logging permission checks from RBAC system.
-
         Args:
-            subject_id: Identifier of the subject requesting access.
-            subject_role: Role of the subject.
-            resource_type: Type of resource (operation, file, etc.).
-            resource_path: Path or identifier of the resource.
-            permission_requested: The permission being requested.
-            granted: Whether access was granted.
-            reason: Explanation for the decision (especially for denials).
+            params: Frozen dataclass containing all access decision fields.
         """
         event = AuditEvent(
             timestamp=datetime.now(timezone.utc).isoformat(),
             event_type=AuditEventType.ACCESS_GRANTED
-            if granted
+            if params.granted
             else AuditEventType.ACCESS_DENIED,
-            severity=AuditSeverity.INFO if granted else AuditSeverity.WARNING,
-            subject_id=subject_id,
-            subject_role=subject_role,
-            resource_type=resource_type,
-            resource_path=resource_path,
-            action=f"Request permission: {permission_requested}",
-            result="granted" if granted else "denied",
-            reason=reason,
+            severity=AuditSeverity.INFO if params.granted else AuditSeverity.WARNING,
+            subject_id=params.subject_id,
+            subject_role=params.subject_role,
+            resource_type=params.resource_type,
+            resource_path=params.resource_path,
+            action=f"Request permission: {params.permission_requested}",
+            result="granted" if params.granted else "denied",
+            reason=params.reason,
             details={
-                "permission": permission_requested,
+                "permission": params.permission_requested,
             },
         )
         self.log_event(event)
 
-    def log_query_execution(
-        self,
-        subject_id: str | None,
-        repo_path: str,
-        query: str,
-        success: bool,
-        query_type: str = "search",
-        error_message: str | None = None,
-        chunks_returned: int | None = None,
-        duration_ms: int | None = None,
-    ) -> None:
+    def log_query(self, params: QueryAuditParams) -> None:
         """Log a query execution.
 
-        Convenience method for logging query operations (search, deep research).
-
         Args:
-            subject_id: Identifier of the subject executing the query.
-            repo_path: Path to the repository being queried.
-            query: The query string (truncated for privacy).
-            success: Whether the query succeeded.
-            query_type: Type of query (search, deep_research).
-            error_message: Error message if query failed.
-            chunks_returned: Number of result chunks returned.
-            duration_ms: Query duration in milliseconds.
+            params: Frozen dataclass containing all query audit fields.
         """
         # Truncate query for logging (privacy)
-        query_preview = query[:100] + "..." if len(query) > 100 else query
+        query_preview = (
+            params.query[:100] + "..." if len(params.query) > 100 else params.query
+        )
 
         details: dict[str, Any] = {
-            "query_length": len(query),
-            "query_type": query_type,
-            "repo_path": repo_path,
+            "query_length": len(params.query),
+            "query_type": params.query_type,
+            "repo_path": params.repo_path,
         }
 
-        if chunks_returned is not None:
-            details["chunks_returned"] = chunks_returned
-        if duration_ms is not None:
-            details["duration_ms"] = duration_ms
+        if params.chunks_returned is not None:
+            details["chunks_returned"] = params.chunks_returned
+        if params.duration_ms is not None:
+            details["duration_ms"] = params.duration_ms
 
         event = AuditEvent(
             timestamp=datetime.now(timezone.utc).isoformat(),
             event_type=AuditEventType.QUERY_EXECUTED
-            if success
+            if params.success
             else AuditEventType.QUERY_FAILED,
-            severity=AuditSeverity.INFO if success else AuditSeverity.WARNING,
-            subject_id=subject_id,
+            severity=AuditSeverity.INFO if params.success else AuditSeverity.WARNING,
+            subject_id=params.subject_id,
             subject_role=None,  # Populated from context if available
             resource_type="query",
-            resource_path=repo_path,
-            action=f"Execute {query_type}: {query_preview}",
-            result="success" if success else "failure",
-            reason=error_message,
+            resource_path=params.repo_path,
+            action=f"Execute {params.query_type}: {query_preview}",
+            result="success" if params.success else "failure",
+            reason=params.error_message,
             details=details,
         )
         self.log_event(event)
 
-    def log_index_operation(
-        self,
-        subject_id: str | None,
-        repo_path: str,
-        operation: str,
-        success: bool,
-        files_processed: int | None = None,
-        chunks_created: int | None = None,
-        duration_ms: int | None = None,
-        error_message: str | None = None,
-    ) -> None:
+    def log_index(self, params: IndexAuditParams) -> None:
         """Log an indexing operation.
 
-        Convenience method for logging repository indexing lifecycle events.
-
         Args:
-            subject_id: Identifier of the subject performing the operation.
-            repo_path: Path to the repository being indexed.
-            operation: Operation type (started, completed, failed).
-            success: Whether the operation succeeded (for completed/failed).
-            files_processed: Number of files processed.
-            chunks_created: Number of chunks created.
-            duration_ms: Operation duration in milliseconds.
-            error_message: Error message if operation failed.
+            params: Frozen dataclass containing all index audit fields.
         """
         # Determine event type based on operation
-        if operation == "started":
+        if params.operation == "started":
             event_type = AuditEventType.INDEX_STARTED
             severity = AuditSeverity.INFO
             result = "in_progress"
-        elif operation == "completed" and success:
+        elif params.operation == "completed" and params.success:
             event_type = AuditEventType.INDEX_COMPLETED
             severity = AuditSeverity.INFO
             result = "success"
@@ -355,93 +402,72 @@ class AuditLogger:
             result = "failure"
 
         details: dict[str, Any] = {
-            "operation": operation,
-            "repo_path": repo_path,
+            "operation": params.operation,
+            "repo_path": params.repo_path,
         }
 
-        if files_processed is not None:
-            details["files_processed"] = files_processed
-        if chunks_created is not None:
-            details["chunks_created"] = chunks_created
-        if duration_ms is not None:
-            details["duration_ms"] = duration_ms
+        if params.files_processed is not None:
+            details["files_processed"] = params.files_processed
+        if params.chunks_created is not None:
+            details["chunks_created"] = params.chunks_created
+        if params.duration_ms is not None:
+            details["duration_ms"] = params.duration_ms
 
         event = AuditEvent(
             timestamp=datetime.now(timezone.utc).isoformat(),
             event_type=event_type,
             severity=severity,
-            subject_id=subject_id,
+            subject_id=params.subject_id,
             subject_role=None,
             resource_type="repository",
-            resource_path=repo_path,
-            action=f"Index repository: {operation}",
+            resource_path=params.repo_path,
+            action=f"Index repository: {params.operation}",
             result=result,
-            reason=error_message,
+            reason=params.error_message,
             details=details,
         )
         self.log_event(event)
 
-    def log_export_operation(
-        self,
-        subject_id: str | None,
-        wiki_path: str,
-        output_path: str,
-        export_type: str,
-        operation: str,
-        success: bool,
-        pages_exported: int | None = None,
-        duration_ms: int | None = None,
-        error_message: str | None = None,
-    ) -> None:
+    def log_export(self, params: ExportAuditParams) -> None:
         """Log an export operation.
 
-        Convenience method for logging wiki export lifecycle events.
-
         Args:
-            subject_id: Identifier of the subject performing the export.
-            wiki_path: Path to the wiki being exported.
-            output_path: Destination path for the export.
-            export_type: Type of export (html, pdf).
-            operation: Operation type (started, completed).
-            success: Whether the operation succeeded.
-            pages_exported: Number of pages exported.
-            duration_ms: Operation duration in milliseconds.
-            error_message: Error message if operation failed.
+            params: Frozen dataclass containing all export audit fields.
         """
         event_type = (
             AuditEventType.EXPORT_STARTED
-            if operation == "started"
+            if params.operation == "started"
             else AuditEventType.EXPORT_COMPLETED
         )
-        severity = AuditSeverity.INFO if success else AuditSeverity.WARNING
+        severity = AuditSeverity.INFO if params.success else AuditSeverity.WARNING
         result = (
             "in_progress"
-            if operation == "started"
-            else ("success" if success else "failure")
+            if params.operation == "started"
+            else ("success" if params.success else "failure")
         )
 
         details: dict[str, Any] = {
-            "export_type": export_type,
-            "wiki_path": wiki_path,
-            "output_path": output_path,
+            "export_type": params.export_type,
+            "wiki_path": params.wiki_path,
+            "output_path": params.output_path,
         }
 
-        if pages_exported is not None:
-            details["pages_exported"] = pages_exported
-        if duration_ms is not None:
-            details["duration_ms"] = duration_ms
+        if params.pages_exported is not None:
+            details["pages_exported"] = params.pages_exported
+        if params.duration_ms is not None:
+            details["duration_ms"] = params.duration_ms
 
         event = AuditEvent(
             timestamp=datetime.now(timezone.utc).isoformat(),
             event_type=event_type,
             severity=severity,
-            subject_id=subject_id,
+            subject_id=params.subject_id,
             subject_role=None,
             resource_type="wiki_export",
-            resource_path=wiki_path,
-            action=f"Export wiki to {export_type}: {operation}",
+            resource_path=params.wiki_path,
+            action=f"Export wiki to {params.export_type}: {params.operation}",
             result=result,
-            reason=error_message,
+            reason=params.error_message,
             details=details,
         )
         self.log_event(event)

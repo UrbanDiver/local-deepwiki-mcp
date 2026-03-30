@@ -14,19 +14,27 @@ from local_deepwiki.services.models import (
     QueryResult,
     SourceEntry,
 )
+from local_deepwiki.services.protocols import (
+    AnalysisServiceProtocol,
+    IndexingServiceProtocol,
+    QueryServiceProtocol,
+)
 from local_deepwiki.services.provider_factory import ProviderFactory
 from local_deepwiki.services.query_service import QueryService
 from local_deepwiki.services.wiki_service import WikiService
 
 __all__ = [
     "AnalysisService",
+    "AnalysisServiceProtocol",
     "ExportResult",
     "GeneratorService",
     "IndexPipelineResult",
     "IndexingService",
+    "IndexingServiceProtocol",
     "ProviderFactory",
     "QueryResult",
     "QueryService",
+    "QueryServiceProtocol",
     "SourceEntry",
     "WikiService",
 ]

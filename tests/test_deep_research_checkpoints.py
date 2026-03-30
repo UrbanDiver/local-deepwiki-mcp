@@ -18,6 +18,7 @@ from local_deepwiki.core.deep_research import (
     get_research_checkpoint,
     list_research_checkpoints,
 )
+from local_deepwiki.core.deep_research.config import ResearchConfig
 from local_deepwiki.models import (
     ChunkType,
     CodeChunk,
@@ -262,7 +263,7 @@ class TestResearchCheckpointing:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
-            repo_path=tmp_path,
+            config=ResearchConfig(repo_path=tmp_path),
         )
 
         result = await pipeline.research("Question")
@@ -289,7 +290,7 @@ class TestResearchCheckpointing:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
-            repo_path=tmp_path,
+            config=ResearchConfig(repo_path=tmp_path),
         )
 
         call_count = 0
@@ -342,7 +343,7 @@ class TestResearchCheckpointing:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
-            repo_path=tmp_path,
+            config=ResearchConfig(repo_path=tmp_path),
         )
 
         result = await pipeline.research(
@@ -392,7 +393,7 @@ class TestResearchCheckpointing:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
-            repo_path=tmp_path,
+            config=ResearchConfig(repo_path=tmp_path),
         )
 
         result = await pipeline.research(
@@ -418,7 +419,7 @@ class TestResearchCheckpointing:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
-            # No repo_path provided
+            config=ResearchConfig(),  # No repo_path provided
         )
 
         result = await pipeline.research("Question")
@@ -461,7 +462,7 @@ class TestResearchCancellationWithCheckpoint:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
-            repo_path=tmp_path,
+            config=ResearchConfig(repo_path=tmp_path),
         )
 
         # Create cancellation event and set it immediately

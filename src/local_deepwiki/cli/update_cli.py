@@ -11,11 +11,34 @@ import argparse
 import asyncio
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 from rich.console import Console
 
 from local_deepwiki.cli.status_cli import _scan_current_files
+
+
+@dataclass(frozen=True)
+class UpdateContext:
+    """Immutable context for the update pipeline.
+
+    Bundles the common parameters shared by ``_setup_indexer``,
+    ``_run_indexing_with_progress``, and ``run_update`` so each
+    function accepts a single context object instead of 5-9 positional
+    and keyword arguments.
+    """
+
+    repo_path: Path
+    wiki_path: Path
+    full_rebuild: bool = False
+    no_progress: bool = False
+    console: Console | None = None
+
+    @property
+    def resolved_console(self) -> Console:
+        """Return the console, creating a default if none was provided."""
+        return self.console or Console()
 
 
 def _run_dry_run(
@@ -99,15 +122,14 @@ def _run_dry_run(
 
 
 async def _setup_indexer(
-    repo_path: Path,
-    wiki_path: Path,
-    *,
-    full_rebuild: bool,
-    no_progress: bool,
-    console: Console,
+    ctx: UpdateContext,
     progress: object,
 ) -> tuple[object, object]:
     """Initialise the indexer and run the indexing phase.
+
+    Args:
+        ctx: Immutable update context with repo/wiki paths and flags.
+        progress: ``MultiPhaseProgress`` instance for live progress bars.
 
     Returns a tuple of ``(index_status, indexer)`` after the indexing phase
     completes.  The indexer's vector store is stabilised before returning.
@@ -116,12 +138,13 @@ async def _setup_indexer(
     from local_deepwiki.config import Config
     from local_deepwiki.core.indexer import RepositoryIndexer
 
+    console = ctx.resolved_console
     config = Config.load()
-    indexer = RepositoryIndexer(repo_path=repo_path, config=config)
+    indexer = RepositoryIndexer(repo_path=ctx.repo_path, config=config)
 
     # Override wiki_path if user specified one
-    if wiki_path != repo_path / ".deepwiki":
-        indexer.wiki_path = wiki_path
+    if ctx.wiki_path != ctx.repo_path / ".deepwiki":
+        indexer.wiki_path = ctx.wiki_path
 
     progress.add_phase("indexing", "Indexing repository", total=0)
     index_callback = progress.get_callback("indexing")
@@ -129,14 +152,14 @@ async def _setup_indexer(
     def indexing_progress(msg: str, current: int, total: int) -> None:
         if index_callback:
             index_callback(msg, current, total)
-        elif not no_progress:
+        elif not ctx.no_progress:
             if total > 0:
                 console.print(f"  [{current}/{total}] {msg}")
             else:
                 console.print(f"  {msg}")
 
     index_status = await indexer.index(
-        full_rebuild=full_rebuild,
+        full_rebuild=ctx.full_rebuild,
         progress_callback=indexing_progress,
     )
 
@@ -155,23 +178,25 @@ async def _setup_indexer(
 
 
 async def _run_indexing_with_progress(
-    repo_path: Path,
-    wiki_path: Path,
+    ctx: UpdateContext,
     indexer: object,
     index_status: object,
-    *,
-    full_rebuild: bool,
-    no_progress: bool,
-    console: Console,
     progress: object,
 ) -> object:
     """Run the wiki generation phase with progress tracking.
+
+    Args:
+        ctx: Immutable update context with repo/wiki paths and flags.
+        indexer: The ``RepositoryIndexer`` instance (already indexed).
+        index_status: The ``IndexStatus`` returned by the indexing phase.
+        progress: ``MultiPhaseProgress`` instance for live progress bars.
 
     Returns the wiki structure produced by ``generate_wiki``.
     """
     from local_deepwiki.config import Config
     from local_deepwiki.generators.wiki import generate_wiki
 
+    console = ctx.resolved_console
     config = Config.load()
 
     progress.add_phase("wiki", "Generating wiki", total=0)
@@ -180,71 +205,47 @@ async def _run_indexing_with_progress(
     def wiki_progress(msg: str, current: int, total: int) -> None:
         if wiki_callback:
             wiki_callback(msg, current, total)
-        elif not no_progress:
+        elif not ctx.no_progress:
             if total > 0:
                 console.print(f"  [{current}/{total}] {msg}")
             else:
                 console.print(f"  {msg}")
 
     wiki_structure = await generate_wiki(
-        repo_path=repo_path,
+        repo_path=ctx.repo_path,
         wiki_path=indexer.wiki_path,
         vector_store=indexer.vector_store,
         index_status=index_status,
         config=config,
         progress_callback=wiki_progress,
-        full_rebuild=full_rebuild,
+        full_rebuild=ctx.full_rebuild,
     )
 
     progress.complete_phase("wiki")
     return wiki_structure
 
 
-async def _run_update_async(
-    repo_path: Path,
-    wiki_path: Path,
-    *,
-    full_rebuild: bool = False,
-    no_progress: bool = False,
-    console: Console,
-) -> int:
+async def _run_update_async(ctx: UpdateContext) -> int:
     """Run the actual indexing and wiki generation.
 
     Args:
-        repo_path: Path to the repository.
-        wiki_path: Wiki output directory override (or None for default).
-        full_rebuild: Force complete re-index.
-        no_progress: Disable Rich progress bars.
-        console: Rich console for output.
+        ctx: Immutable update context with repo/wiki paths and flags.
 
     Returns:
         Exit code (0 = success).
     """
     from local_deepwiki.cli_progress import MultiPhaseProgress
 
+    console = ctx.resolved_console
     start_time = time.time()
 
-    with MultiPhaseProgress(disable=no_progress) as progress:
+    with MultiPhaseProgress(disable=ctx.no_progress) as progress:
         # Phase 1: Indexing
-        index_status, indexer = await _setup_indexer(
-            repo_path,
-            wiki_path,
-            full_rebuild=full_rebuild,
-            no_progress=no_progress,
-            console=console,
-            progress=progress,
-        )
+        index_status, indexer = await _setup_indexer(ctx, progress)
 
         # Phase 2: Wiki generation
         wiki_structure = await _run_indexing_with_progress(
-            repo_path,
-            wiki_path,
-            indexer,
-            index_status,
-            full_rebuild=full_rebuild,
-            no_progress=no_progress,
-            console=console,
-            progress=progress,
+            ctx, indexer, index_status, progress
         )
 
     elapsed = time.time() - start_time
@@ -262,28 +263,34 @@ def run_update(
     wiki_path: Path | None = None,
     console: Console | None = None,
 ) -> int:
-    """Run the update command and return exit code."""
-    console = console or Console()
-    repo_path = repo_path.resolve()
-    effective_wiki_path = wiki_path or (repo_path / ".deepwiki")
+    """Run the update command and return exit code.
 
-    if not repo_path.is_dir():
-        console.print(f"[red]Not a directory: {repo_path}[/red]")
+    The public signature is kept for backward compatibility with
+    existing callers and the CLI entry point.  Internally, the loose
+    parameters are bundled into an :class:`UpdateContext` before being
+    forwarded to the async pipeline.
+    """
+    resolved_console = console or Console()
+    resolved_repo = repo_path.resolve()
+    effective_wiki_path = wiki_path or (resolved_repo / ".deepwiki")
+
+    if not resolved_repo.is_dir():
+        resolved_console.print(f"[red]Not a directory: {resolved_repo}[/red]")
         return 1
 
     if dry_run:
-        return _run_dry_run(repo_path, effective_wiki_path, console)
+        return _run_dry_run(resolved_repo, effective_wiki_path, resolved_console)
+
+    ctx = UpdateContext(
+        repo_path=resolved_repo,
+        wiki_path=effective_wiki_path,
+        full_rebuild=full_rebuild,
+        no_progress=no_progress,
+        console=resolved_console,
+    )
 
     try:
-        exit_code = asyncio.run(
-            _run_update_async(
-                repo_path,
-                effective_wiki_path,
-                full_rebuild=full_rebuild,
-                no_progress=no_progress,
-                console=console,
-            )
-        )
+        exit_code = asyncio.run(_run_update_async(ctx))
         if exit_code == 0:
             # Save health snapshot for trend tracking (non-critical)
             try:
@@ -293,15 +300,15 @@ def run_update(
                 )
                 from local_deepwiki.generators.manifest import get_cached_manifest
 
-                manifest = get_cached_manifest(repo_path)
-                project_name = manifest.name or repo_path.name
-                health = analyze_architecture_health(repo_path, project_name)
+                manifest = get_cached_manifest(resolved_repo)
+                project_name = manifest.name or resolved_repo.name
+                health = analyze_architecture_health(resolved_repo, project_name)
                 save_snapshot(effective_wiki_path, health)
             except Exception:
                 pass
         return exit_code
     except KeyboardInterrupt:
-        console.print(
+        resolved_console.print(
             "\n[yellow]Update interrupted.[/yellow] Partial progress may have been saved."
         )
         return 130

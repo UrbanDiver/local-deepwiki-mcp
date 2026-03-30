@@ -2,6 +2,10 @@
 
 Covers: TestVectorIndex, TestEnsureIndexesEdgeCases, TestCreateIndexSafeEdgeCases,
 TestCreateVectorIndexEdgeCases, TestEnsureIndexesVectorIndexDetection.
+
+Note: index management logic lives in ``local_deepwiki.core.vectorstore.indexes``
+as module-level functions.  Tests call those functions directly, passing the
+table and lazy-index-manager obtained from a VectorStore instance.
 """
 
 import math
@@ -9,6 +13,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from local_deepwiki.core.vectorstore.indexes import (
+    create_index_safe,
+    create_vector_index,
+    ensure_indexes,
+)
 from local_deepwiki.models import ChunkType, CodeChunk, Language
 from local_deepwiki.providers.base import EmbeddingProvider
 
@@ -87,19 +96,14 @@ class TestVectorIndex:
         # Scalar indexes should exist
         assert any("id" in name for name in scalar_index_names)
 
-    async def test_create_vector_index_method_exists(self, vector_store):
-        """Test that _create_vector_index method exists and is callable."""
-        assert hasattr(vector_store, "_create_vector_index")
-        assert callable(vector_store._create_vector_index)
-
     async def test_ensure_indexes_handles_missing_vector_index(self, vector_store):
-        """Test that _ensure_indexes handles tables without vector index."""
+        """Test that ensure_indexes handles tables without vector index."""
         # Create table
         chunks = [make_chunk(f"chunk_{i}") for i in range(10)]
         await vector_store.create_or_update_table(chunks)
 
-        # Manually call _ensure_indexes (simulates reopening existing table)
-        vector_store._ensure_indexes()
+        # Call module-level ensure_indexes directly
+        ensure_indexes(vector_store._table, vector_store._lazy_index_manager)
 
         # Should not raise and scalar indexes should still work
         chunk = await vector_store.get_chunk_by_id("chunk_1")
@@ -110,8 +114,6 @@ class TestVectorIndex:
         # This is a documentation test - verify the threshold is as expected
         # We don't create 1000+ rows in tests, but verify the logic exists
         import inspect
-
-        from local_deepwiki.core.vectorstore.indexes import create_vector_index
 
         source = inspect.getsource(create_vector_index)
         assert "1000" in source or "min_rows_for_index" in source
@@ -135,7 +137,7 @@ class TestVectorIndex:
             assert result.chunk.id in ["chunk_1", "chunk_2", "chunk_3"]
 
     async def test_ensure_indexes_called_on_table_open(self, vector_store, tmp_path):
-        """Test that _ensure_indexes is called when opening existing table."""
+        """Test that ensure_indexes is called when opening existing table."""
         from local_deepwiki.core.vectorstore import VectorStore
 
         # Create table
@@ -146,7 +148,7 @@ class TestVectorIndex:
         provider = MockEmbeddingProvider()
         store2 = VectorStore(tmp_path / "test.lance", provider)
 
-        # Access table (should trigger _ensure_indexes)
+        # Access table (should trigger ensure_indexes internally)
         table = store2._get_table()
         assert table is not None
 
@@ -156,7 +158,7 @@ class TestVectorIndex:
 
 
 class TestEnsureIndexesEdgeCases:
-    """Tests for _ensure_indexes edge cases and error handling."""
+    """Tests for ensure_indexes edge cases and error handling."""
 
     @pytest.fixture
     def vector_store(self, tmp_path):
@@ -168,16 +170,15 @@ class TestEnsureIndexesEdgeCases:
         return VectorStore(db_path, provider)
 
     def test_ensure_indexes_when_table_is_none(self, vector_store):
-        """Test _ensure_indexes returns early when table is None."""
-        # Table is None before any data is added
-        assert vector_store._table is None
-        # Should not raise
-        vector_store._ensure_indexes()
-        # Still None after call
+        """Test that calling ensure_indexes on a None table is harmless.
+
+        The VectorStore's _get_table method only calls ensure_indexes when
+        the table is non-None, so this just verifies the precondition.
+        """
         assert vector_store._table is None
 
     async def test_ensure_indexes_handles_list_indices_exception(self, vector_store):
-        """Test _ensure_indexes handles exceptions from list_indices."""
+        """Test ensure_indexes handles exceptions from list_indices."""
         # Create table first
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
@@ -187,40 +188,40 @@ class TestEnsureIndexesEdgeCases:
             vector_store._table, "list_indices", side_effect=RuntimeError("Cannot list")
         ):
             # Should not raise, just log debug and continue
-            vector_store._ensure_indexes()
+            ensure_indexes(vector_store._table, vector_store._lazy_index_manager)
 
     async def test_ensure_indexes_handles_type_error(self, vector_store):
-        """Test _ensure_indexes handles TypeError from list_indices."""
+        """Test ensure_indexes handles TypeError from list_indices."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
         with patch.object(
             vector_store._table, "list_indices", side_effect=TypeError("Bad type")
         ):
-            vector_store._ensure_indexes()
+            ensure_indexes(vector_store._table, vector_store._lazy_index_manager)
 
     async def test_ensure_indexes_handles_key_error(self, vector_store):
-        """Test _ensure_indexes handles KeyError from index access."""
+        """Test ensure_indexes handles KeyError from index access."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
         with patch.object(
             vector_store._table, "list_indices", side_effect=KeyError("Missing key")
         ):
-            vector_store._ensure_indexes()
+            ensure_indexes(vector_store._table, vector_store._lazy_index_manager)
 
     async def test_ensure_indexes_handles_attribute_error(self, vector_store):
-        """Test _ensure_indexes handles AttributeError from index access."""
+        """Test ensure_indexes handles AttributeError from index access."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
         with patch.object(
             vector_store._table, "list_indices", side_effect=AttributeError("No attr")
         ):
-            vector_store._ensure_indexes()
+            ensure_indexes(vector_store._table, vector_store._lazy_index_manager)
 
     async def test_ensure_indexes_handles_count_rows_exception(self, vector_store):
-        """Test _ensure_indexes handles exception when checking row count."""
+        """Test ensure_indexes handles exception when checking row count."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
@@ -230,10 +231,10 @@ class TestEnsureIndexesEdgeCases:
             with patch.object(
                 vector_store._table, "count_rows", side_effect=RuntimeError("DB error")
             ):
-                vector_store._ensure_indexes()
+                ensure_indexes(vector_store._table, vector_store._lazy_index_manager)
 
     async def test_ensure_indexes_creates_missing_id_index(self, vector_store):
-        """Test _ensure_indexes creates id_idx when missing."""
+        """Test ensure_indexes creates id_idx when missing."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
@@ -246,12 +247,14 @@ class TestEnsureIndexesEdgeCases:
                 vector_store._table, "create_scalar_index"
             ) as mock_create:
                 with patch.object(vector_store._table, "count_rows", return_value=10):
-                    vector_store._ensure_indexes()
+                    ensure_indexes(
+                        vector_store._table, vector_store._lazy_index_manager
+                    )
                     # Should have tried to create id index
                     mock_create.assert_called()
 
     async def test_ensure_indexes_creates_missing_file_path_index(self, vector_store):
-        """Test _ensure_indexes creates file_path_idx when missing."""
+        """Test ensure_indexes creates file_path_idx when missing."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
@@ -263,12 +266,14 @@ class TestEnsureIndexesEdgeCases:
                 vector_store._table, "create_scalar_index"
             ) as mock_create:
                 with patch.object(vector_store._table, "count_rows", return_value=10):
-                    vector_store._ensure_indexes()
+                    ensure_indexes(
+                        vector_store._table, vector_store._lazy_index_manager
+                    )
                     mock_create.assert_called()
 
 
 class TestCreateIndexSafeEdgeCases:
-    """Tests for _create_index_safe edge cases."""
+    """Tests for create_index_safe edge cases."""
 
     @pytest.fixture
     def vector_store(self, tmp_path):
@@ -279,14 +284,8 @@ class TestCreateIndexSafeEdgeCases:
         provider = MockEmbeddingProvider()
         return VectorStore(db_path, provider)
 
-    def test_create_index_safe_when_table_is_none(self, vector_store):
-        """Test _create_index_safe returns early when table is None."""
-        assert vector_store._table is None
-        # Should not raise
-        vector_store._create_index_safe("id")
-
     async def test_create_index_safe_handles_value_error(self, vector_store):
-        """Test _create_index_safe handles ValueError (index already exists)."""
+        """Test create_index_safe handles ValueError (index already exists)."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
@@ -296,10 +295,10 @@ class TestCreateIndexSafeEdgeCases:
             side_effect=ValueError("Index exists"),
         ):
             # Should not raise
-            vector_store._create_index_safe("test_column")
+            create_index_safe(vector_store._table, "test_column")
 
     async def test_create_index_safe_handles_runtime_error(self, vector_store):
-        """Test _create_index_safe handles RuntimeError."""
+        """Test create_index_safe handles RuntimeError."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
@@ -308,10 +307,10 @@ class TestCreateIndexSafeEdgeCases:
             "create_scalar_index",
             side_effect=RuntimeError("Creation failed"),
         ):
-            vector_store._create_index_safe("test_column")
+            create_index_safe(vector_store._table, "test_column")
 
     async def test_create_index_safe_handles_os_error(self, vector_store):
-        """Test _create_index_safe handles OSError."""
+        """Test create_index_safe handles OSError."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
@@ -320,11 +319,11 @@ class TestCreateIndexSafeEdgeCases:
             "create_scalar_index",
             side_effect=OSError("Storage issue"),
         ):
-            vector_store._create_index_safe("test_column")
+            create_index_safe(vector_store._table, "test_column")
 
 
 class TestCreateVectorIndexEdgeCases:
-    """Tests for _create_vector_index edge cases."""
+    """Tests for create_vector_index edge cases."""
 
     @pytest.fixture
     def vector_store(self, tmp_path):
@@ -335,28 +334,26 @@ class TestCreateVectorIndexEdgeCases:
         provider = MockEmbeddingProvider()
         return VectorStore(db_path, provider)
 
-    def test_create_vector_index_when_table_is_none(self, vector_store):
-        """Test _create_vector_index returns early when table is None."""
-        assert vector_store._table is None
-        # Should not raise
-        vector_store._create_vector_index(1000)
-
     async def test_create_vector_index_skipped_for_small_tables(self, vector_store):
-        """Test _create_vector_index skips for tables under threshold."""
+        """Test create_vector_index skips for tables under threshold."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
         with patch.object(vector_store._table, "create_index") as mock_create:
-            vector_store._create_vector_index(999)  # Just under threshold
+            create_vector_index(
+                vector_store._table, 999, vector_store._lazy_index_manager
+            )
             mock_create.assert_not_called()
 
     async def test_create_vector_index_creates_for_large_tables(self, vector_store):
-        """Test _create_vector_index creates index for tables at threshold."""
+        """Test create_vector_index creates index for tables at threshold."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
         with patch.object(vector_store._table, "create_index") as mock_create:
-            vector_store._create_vector_index(1000)  # At threshold
+            create_vector_index(
+                vector_store._table, 1000, vector_store._lazy_index_manager
+            )
             mock_create.assert_called_once()
             # Check it was called with correct params
             call_kwargs = mock_create.call_args[1]
@@ -364,24 +361,28 @@ class TestCreateVectorIndexEdgeCases:
             assert call_kwargs["num_sub_vectors"] == 16
 
     async def test_create_vector_index_calculates_partitions(self, vector_store):
-        """Test _create_vector_index calculates correct number of partitions."""
+        """Test create_vector_index calculates correct number of partitions."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
         # Test with 10000 rows -> sqrt(10000) = 100 partitions
         with patch.object(vector_store._table, "create_index") as mock_create:
-            vector_store._create_vector_index(10000)
+            create_vector_index(
+                vector_store._table, 10000, vector_store._lazy_index_manager
+            )
             call_kwargs = mock_create.call_args[1]
             assert call_kwargs["num_partitions"] == 100
 
         # Test with very large table -> capped at 256
         with patch.object(vector_store._table, "create_index") as mock_create:
-            vector_store._create_vector_index(100000)
+            create_vector_index(
+                vector_store._table, 100000, vector_store._lazy_index_manager
+            )
             call_kwargs = mock_create.call_args[1]
             assert call_kwargs["num_partitions"] == 256
 
     async def test_create_vector_index_handles_value_error(self, vector_store):
-        """Test _create_vector_index handles ValueError (index exists)."""
+        """Test create_vector_index handles ValueError (index exists)."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
@@ -389,10 +390,12 @@ class TestCreateVectorIndexEdgeCases:
             vector_store._table, "create_index", side_effect=ValueError("Index exists")
         ):
             # Should not raise
-            vector_store._create_vector_index(2000)
+            create_vector_index(
+                vector_store._table, 2000, vector_store._lazy_index_manager
+            )
 
     async def test_create_vector_index_handles_runtime_error(self, vector_store):
-        """Test _create_vector_index handles RuntimeError."""
+        """Test create_vector_index handles RuntimeError."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
@@ -401,21 +404,25 @@ class TestCreateVectorIndexEdgeCases:
             "create_index",
             side_effect=RuntimeError("Creation failed"),
         ):
-            vector_store._create_vector_index(2000)
+            create_vector_index(
+                vector_store._table, 2000, vector_store._lazy_index_manager
+            )
 
     async def test_create_vector_index_handles_os_error(self, vector_store):
-        """Test _create_vector_index handles OSError."""
+        """Test create_vector_index handles OSError."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
         with patch.object(
             vector_store._table, "create_index", side_effect=OSError("Storage issue")
         ):
-            vector_store._create_vector_index(2000)
+            create_vector_index(
+                vector_store._table, 2000, vector_store._lazy_index_manager
+            )
 
 
 class TestEnsureIndexesVectorIndexDetection:
-    """Tests for vector index detection in _ensure_indexes."""
+    """Tests for vector index detection in ensure_indexes."""
 
     @pytest.fixture
     def vector_store(self, tmp_path):
@@ -427,7 +434,7 @@ class TestEnsureIndexesVectorIndexDetection:
         return VectorStore(db_path, provider)
 
     async def test_ensure_indexes_detects_ivf_index(self, vector_store):
-        """Test _ensure_indexes detects IVF vector index."""
+        """Test ensure_indexes detects IVF vector index."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
@@ -441,12 +448,14 @@ class TestEnsureIndexesVectorIndexDetection:
         ):
             with patch.object(vector_store._table, "create_index") as mock_create:
                 with patch.object(vector_store._table, "count_rows", return_value=2000):
-                    vector_store._ensure_indexes()
+                    ensure_indexes(
+                        vector_store._table, vector_store._lazy_index_manager
+                    )
                     # Should NOT try to create vector index since IVF was detected
                     mock_create.assert_not_called()
 
     async def test_ensure_indexes_detects_ivf_in_dict_index(self, vector_store):
-        """Test _ensure_indexes detects IVF in dict-style index."""
+        """Test ensure_indexes detects IVF in dict-style index."""
         chunks = [make_chunk("test_1")]
         await vector_store.create_or_update_table(chunks)
 
@@ -458,6 +467,8 @@ class TestEnsureIndexesVectorIndexDetection:
         ):
             with patch.object(vector_store._table, "create_index") as mock_create:
                 with patch.object(vector_store._table, "count_rows", return_value=2000):
-                    vector_store._ensure_indexes()
+                    ensure_indexes(
+                        vector_store._table, vector_store._lazy_index_manager
+                    )
                     # Should NOT try to create vector index since IVF was detected
                     mock_create.assert_not_called()

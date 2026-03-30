@@ -3,6 +3,10 @@
 Covers: TestBatchEmbed, TestParallelEmbedding, TestParallelEmbeddingRetry,
 TestParallelEmbeddingRateLimiting, TestRateLimiter, TestEmbeddingProgress,
 TestBatchEmbeddingResult, TestEmbeddingBatchConfig, TestParallelEmbeddingIntegration.
+
+Note: embedding batch logic lives in ``local_deepwiki.core.vectorstore.embedding``
+as module-level functions.  Tests that exercise raw batch embedding call those
+functions directly, passing the provider and config explicitly.
 """
 
 import asyncio
@@ -11,6 +15,12 @@ import time
 import pytest
 
 from local_deepwiki.config import EmbeddingBatchConfig
+from local_deepwiki.core.vectorstore.embedding import (
+    batch_embed,
+    batch_embed_sequential,
+    get_optimal_batch_config,
+    is_local_provider,
+)
 from local_deepwiki.models import ChunkType, CodeChunk, Language
 from local_deepwiki.providers.base import EmbeddingProvider
 
@@ -173,42 +183,62 @@ def make_chunk(
     )
 
 
+# ---------------------------------------------------------------------------
+# Helpers — thin wrappers that mirror the old self._batch_embed interface
+# ---------------------------------------------------------------------------
+
+_DEFAULT_CONFIG = EmbeddingBatchConfig()
+
+
+async def _do_batch_embed(
+    provider: EmbeddingProvider,
+    texts: list[str],
+    *,
+    config: EmbeddingBatchConfig = _DEFAULT_CONFIG,
+    rate_limiter=None,
+    batch_size: int | None = None,
+    log_progress: bool = False,
+) -> list[list[float]]:
+    """Call the module-level batch_embed with the given provider/config."""
+    return await batch_embed(
+        texts,
+        provider,
+        config,
+        rate_limiter,
+        batch_size=batch_size,
+        log_progress=log_progress,
+    )
+
+
 class TestBatchEmbed:
-    """Tests for _batch_embed functionality."""
+    """Tests for batch_embed functionality."""
 
     @pytest.fixture
-    def vector_store(self, tmp_path):
-        """Create a vector store for testing."""
-        from local_deepwiki.core.vectorstore import VectorStore
+    def provider(self):
+        return MockEmbeddingProvider()
 
-        db_path = tmp_path / "test.lance"
-        provider = MockEmbeddingProvider()
-        return VectorStore(db_path, provider)
-
-    async def test_batch_embed_with_progress_logging(self, vector_store):
-        """Test _batch_embed logs progress for large batches."""
+    async def test_batch_embed_with_progress_logging(self, provider):
+        """Test batch_embed logs progress for large batches."""
         texts = [f"text_{i}" for i in range(10)]
-        # Small batch size to trigger multiple batches
-        embeddings = await vector_store._batch_embed(
-            texts, batch_size=3, log_progress=True
+        embeddings = await _do_batch_embed(
+            provider, texts, batch_size=3, log_progress=True
         )
         assert len(embeddings) == 10
-        # Each embedding should have correct dimension
         assert all(len(e) == 384 for e in embeddings)
 
-    async def test_batch_embed_without_progress_logging(self, vector_store):
-        """Test _batch_embed without progress logging."""
+    async def test_batch_embed_without_progress_logging(self, provider):
+        """Test batch_embed without progress logging."""
         texts = [f"text_{i}" for i in range(10)]
-        embeddings = await vector_store._batch_embed(
-            texts, batch_size=3, log_progress=False
+        embeddings = await _do_batch_embed(
+            provider, texts, batch_size=3, log_progress=False
         )
         assert len(embeddings) == 10
 
-    async def test_batch_embed_single_batch(self, vector_store):
-        """Test _batch_embed with single batch (no progress logging needed)."""
+    async def test_batch_embed_single_batch(self, provider):
+        """Test batch_embed with single batch (no progress logging needed)."""
         texts = ["text_1", "text_2"]
-        embeddings = await vector_store._batch_embed(
-            texts, batch_size=100, log_progress=True
+        embeddings = await _do_batch_embed(
+            provider, texts, batch_size=100, log_progress=True
         )
         assert len(embeddings) == 2
 
@@ -217,117 +247,88 @@ class TestParallelEmbedding:
     """Tests for parallel embedding generation."""
 
     @pytest.fixture
-    def vector_store(self, tmp_path):
-        """Create a vector store for testing."""
-        from local_deepwiki.core.vectorstore import VectorStore
-
-        db_path = tmp_path / "test.lance"
-        provider = MockEmbeddingProvider()
-        return VectorStore(db_path, provider)
+    def provider(self):
+        return MockEmbeddingProvider()
 
     @pytest.fixture
-    def slow_vector_store(self, tmp_path):
-        """Create a vector store with slow embedding provider."""
-        from local_deepwiki.core.vectorstore import VectorStore
+    def slow_provider(self):
+        return SlowMockEmbeddingProvider(delay_seconds=0.05)
 
-        db_path = tmp_path / "test.lance"
-        provider = SlowMockEmbeddingProvider(delay_seconds=0.05)
-        config = EmbeddingBatchConfig(batch_size=2, concurrency=4)
-        return VectorStore(db_path, provider, embedding_batch_config=config)
+    @pytest.fixture
+    def slow_config(self):
+        return EmbeddingBatchConfig(batch_size=2, concurrency=4)
 
-    async def test_parallel_embedding_basic(self, vector_store):
+    async def test_parallel_embedding_basic(self, provider):
         """Test basic parallel embedding generation."""
         texts = [f"text_{i}" for i in range(20)]
-        embeddings = await vector_store._batch_embed(texts, batch_size=5)
-
+        embeddings = await _do_batch_embed(provider, texts, batch_size=5)
         assert len(embeddings) == 20
         assert all(len(e) == 384 for e in embeddings)
 
-    async def test_parallel_embedding_preserves_order(self, vector_store):
+    async def test_parallel_embedding_preserves_order(self, provider):
         """Test that parallel embedding preserves input order."""
-        # Use distinctive texts so we can verify order
         texts = [f"unique_text_{i:04d}" for i in range(50)]
-        embeddings = await vector_store._batch_embed(texts, batch_size=10)
-
-        # All embeddings should be present
+        embeddings = await _do_batch_embed(provider, texts, batch_size=10)
         assert len(embeddings) == 50
-
-        # Embeddings should be in same order as inputs
-        # (with mock provider, all embeddings are identical, but count should match)
-        provider = vector_store.embedding_provider
         total_embedded = sum(len(call) for call in provider.embed_calls)
         assert total_embedded == 50
 
     @pytest.mark.slow
-    async def test_parallel_embedding_faster_than_sequential(self, slow_vector_store):
+    async def test_parallel_embedding_faster_than_sequential(
+        self, slow_provider, slow_config
+    ):
         """Test that parallel embedding is faster than sequential."""
-        texts = [f"text_{i}" for i in range(10)]  # 10 texts, 2 per batch = 5 batches
+        texts = [f"text_{i}" for i in range(10)]
 
-        # Time parallel execution
         start = time.time()
-        await slow_vector_store._batch_embed(texts, batch_size=2)
+        await _do_batch_embed(slow_provider, texts, config=slow_config, batch_size=2)
         parallel_time = time.time() - start
 
-        # Time sequential execution (for comparison)
         start = time.time()
-        await slow_vector_store._batch_embed_sequential(texts, batch_size=2)
+        await batch_embed_sequential(texts, slow_provider, 2)
         sequential_time = time.time() - start
 
-        # Parallel should be faster (at least 2x with 4 concurrent workers)
-        # Allow generous tolerance for test environment variations
         assert parallel_time < sequential_time * 0.95, (
             f"Parallel ({parallel_time:.3f}s) should be faster than "
             f"sequential ({sequential_time:.3f}s)"
         )
 
-    async def test_parallel_embedding_concurrency_limited(self, tmp_path):
+    async def test_parallel_embedding_concurrency_limited(self):
         """Test that concurrency is properly limited by semaphore."""
-        from local_deepwiki.core.vectorstore import VectorStore
-
-        # Use API provider name to avoid automatic concurrency boost for local
         provider = SlowMockEmbeddingProvider(delay_seconds=0.1, name="openai:slow-mock")
+        config = EmbeddingBatchConfig(batch_size=1, concurrency=2)
 
-        config = EmbeddingBatchConfig(batch_size=1, concurrency=2)  # Only 2 concurrent
-        store = VectorStore(
-            tmp_path / "test.lance", provider, embedding_batch_config=config
-        )
-
-        texts = [f"text_{i}" for i in range(4)]  # 4 batches with concurrency 2
-
+        texts = [f"text_{i}" for i in range(4)]
         start = time.time()
-        await store._batch_embed(texts, batch_size=1)
+        await _do_batch_embed(provider, texts, config=config, batch_size=1)
         elapsed = time.time() - start
 
-        # With 4 batches and concurrency 2, should take ~0.2s (2 rounds of 0.1s each)
-        # With concurrency 4, would take ~0.1s
-        # Allow some margin
         assert elapsed >= 0.15, (
             f"Expected >= 0.15s with concurrency 2, got {elapsed:.3f}s"
         )
 
-    async def test_parallel_embedding_empty_list(self, vector_store):
+    async def test_parallel_embedding_empty_list(self, provider):
         """Test parallel embedding with empty list."""
-        embeddings = await vector_store._batch_embed([])
+        embeddings = await _do_batch_embed(provider, [])
         assert embeddings == []
 
-    async def test_parallel_embedding_single_text(self, vector_store):
+    async def test_parallel_embedding_single_text(self, provider):
         """Test parallel embedding with single text."""
-        embeddings = await vector_store._batch_embed(["single text"])
+        embeddings = await _do_batch_embed(provider, ["single text"])
         assert len(embeddings) == 1
         assert len(embeddings[0]) == 384
 
-    async def test_parallel_embedding_single_batch(self, vector_store):
+    async def test_parallel_embedding_single_batch(self, provider):
         """Test parallel embedding when all texts fit in single batch."""
         texts = ["text_1", "text_2", "text_3"]
-        embeddings = await vector_store._batch_embed(texts, batch_size=100)
+        embeddings = await _do_batch_embed(provider, texts, batch_size=100)
         assert len(embeddings) == 3
 
-    async def test_parallel_embedding_with_progress_logging(self, vector_store):
+    async def test_parallel_embedding_with_progress_logging(self, provider):
         """Test parallel embedding with progress logging enabled."""
         texts = [f"text_{i}" for i in range(30)]
-        # This should complete without error with logging enabled
-        embeddings = await vector_store._batch_embed(
-            texts, batch_size=10, log_progress=True
+        embeddings = await _do_batch_embed(
+            provider, texts, batch_size=10, log_progress=True
         )
         assert len(embeddings) == 30
 
@@ -335,11 +336,8 @@ class TestParallelEmbedding:
 class TestParallelEmbeddingRetry:
     """Tests for parallel embedding retry logic."""
 
-    @pytest.fixture
-    def failing_vector_store(self, tmp_path):
-        """Create a vector store with failing provider."""
-        from local_deepwiki.core.vectorstore import VectorStore
-
+    async def test_retry_on_connection_error(self):
+        """Test that connection errors trigger retry."""
         provider = FailingMockEmbeddingProvider(fail_count=2)
         config = EmbeddingBatchConfig(
             batch_size=5,
@@ -347,171 +345,108 @@ class TestParallelEmbeddingRetry:
             retry_max_attempts=3,
             retry_base_delay=0.1,
         )
-        return VectorStore(
-            tmp_path / "test.lance", provider, embedding_batch_config=config
-        )
-
-    async def test_retry_on_connection_error(self, failing_vector_store):
-        """Test that connection errors trigger retry."""
         texts = [f"text_{i}" for i in range(5)]
-
-        # Should succeed after retries
-        embeddings = await failing_vector_store._batch_embed(texts, batch_size=5)
+        embeddings = await _do_batch_embed(provider, texts, config=config, batch_size=5)
         assert len(embeddings) == 5
-
-        # Provider should have been called multiple times due to retries
-        provider = failing_vector_store.embedding_provider
         assert len(provider.embed_calls) >= 2
 
-    async def test_retry_exhausted_raises_error(self, tmp_path):
+    async def test_retry_exhausted_raises_error(self):
         """Test that exhausted retries raise RuntimeError."""
-        from local_deepwiki.core.vectorstore import VectorStore
-
-        # Create provider that always fails
         provider = FailingMockEmbeddingProvider(fail_count=100)
         config = EmbeddingBatchConfig(
             batch_size=5,
             concurrency=1,
             retry_max_attempts=2,
-            retry_base_delay=0.1,  # Must be >= 0.1
+            retry_base_delay=0.1,
         )
-        store = VectorStore(
-            tmp_path / "test.lance", provider, embedding_batch_config=config
-        )
-
         texts = [f"text_{i}" for i in range(5)]
 
         with pytest.raises(RuntimeError, match="Failed to embed"):
-            await store._batch_embed(texts, batch_size=5)
+            await _do_batch_embed(provider, texts, config=config, batch_size=5)
 
-    async def test_partial_failure_reports_errors(self, tmp_path):
+    async def test_partial_failure_reports_errors(self):
         """Test that partial batch failures are properly reported."""
-        from local_deepwiki.core.vectorstore import VectorStore
-
-        # Provider that fails on specific batches
         provider = FailingMockEmbeddingProvider(
-            fail_count=100,  # Never succeeds
-            fail_on_batches={hash("batch_2_text_0")},  # Fail on second batch
+            fail_count=100,
+            fail_on_batches={hash("batch_2_text_0")},
         )
         config = EmbeddingBatchConfig(
             batch_size=2,
             concurrency=2,
             retry_max_attempts=2,
-            retry_base_delay=0.1,  # Must be >= 0.1
+            retry_base_delay=0.1,
         )
-        store = VectorStore(
-            tmp_path / "test.lance", provider, embedding_batch_config=config
-        )
-
         texts = ["batch_1_text_0", "batch_1_text_1", "batch_2_text_0", "batch_2_text_1"]
 
         with pytest.raises(RuntimeError, match="Failed to embed"):
-            await store._batch_embed(texts, batch_size=2)
+            await _do_batch_embed(provider, texts, config=config, batch_size=2)
 
 
 class TestParallelEmbeddingRateLimiting:
     """Tests for rate limiting in parallel embedding."""
 
-    @pytest.fixture
-    def rate_limited_store(self, tmp_path):
-        """Create a vector store with rate limiting configured."""
-        from local_deepwiki.core.vectorstore import VectorStore
+    async def test_rate_limiter_throttles_requests(self):
+        """Test that rate limiter properly throttles requests."""
+        from local_deepwiki.core.vectorstore.utils import RateLimiter
 
         provider = MockEmbeddingProvider(name="openai:test")
         config = EmbeddingBatchConfig(
             batch_size=2,
             concurrency=4,
-            rate_limit_rpm=120,  # 2 requests per second
+            rate_limit_rpm=120,
         )
-        return VectorStore(
-            tmp_path / "test.lance", provider, embedding_batch_config=config
-        )
+        limiter = RateLimiter(120)
 
-    async def test_rate_limiter_throttles_requests(self, rate_limited_store):
-        """Test that rate limiter properly throttles requests."""
-        texts = [f"text_{i}" for i in range(8)]  # 4 batches
-
+        texts = [f"text_{i}" for i in range(8)]
         start = time.time()
-        await rate_limited_store._batch_embed(texts, batch_size=2)
+        await _do_batch_embed(
+            provider, texts, config=config, rate_limiter=limiter, batch_size=2
+        )
         elapsed = time.time() - start
+        assert elapsed >= 0.0
 
-        # With 120 RPM (2/sec), 4 requests should take at least ~1.5 seconds
-        # But since tokens accumulate, first batch may go through quickly
-        # Just verify it took some time
-        assert elapsed >= 0.0  # Basic sanity check
-
-    async def test_rate_limiter_handles_api_errors(self, tmp_path):
+    async def test_rate_limiter_handles_api_errors(self):
         """Test that rate limit API errors trigger retry."""
-        from local_deepwiki.core.vectorstore import VectorStore
-
         provider = RateLimitMockEmbeddingProvider(rate_limit_after=2)
         config = EmbeddingBatchConfig(
             batch_size=2,
-            concurrency=1,  # Sequential to control order
+            concurrency=1,
             retry_max_attempts=3,
             retry_base_delay=0.1,
         )
-        store = VectorStore(
-            tmp_path / "test.lance", provider, embedding_batch_config=config
-        )
-
-        texts = [f"text_{i}" for i in range(6)]  # 3 batches
-
-        # Should succeed because rate limit error is retryable
-        embeddings = await store._batch_embed(texts, batch_size=2)
+        texts = [f"text_{i}" for i in range(6)]
+        embeddings = await _do_batch_embed(provider, texts, config=config, batch_size=2)
         assert len(embeddings) == 6
 
 
 class TestProviderTypeDetection:
     """Tests for provider type detection."""
 
-    def test_local_provider_detection(self, tmp_path):
+    def test_local_provider_detection(self):
         """Test detection of local provider."""
-        from local_deepwiki.core.vectorstore import VectorStore
-
         provider = MockEmbeddingProvider(name="local:all-MiniLM-L6-v2")
-        store = VectorStore(tmp_path / "test.lance", provider)
+        assert is_local_provider(provider) is True
 
-        assert store._is_local_provider() is True
-
-    def test_api_provider_detection(self, tmp_path):
+    def test_api_provider_detection(self):
         """Test detection of API provider."""
-        from local_deepwiki.core.vectorstore import VectorStore
-
         provider = MockEmbeddingProvider(name="openai:text-embedding-3-small")
-        store = VectorStore(tmp_path / "test.lance", provider)
+        assert is_local_provider(provider) is False
 
-        assert store._is_local_provider() is False
-
-    def test_optimal_config_for_local(self, tmp_path):
+    def test_optimal_config_for_local(self):
         """Test optimal config calculation for local provider."""
-        from local_deepwiki.core.vectorstore import VectorStore
-
         provider = MockEmbeddingProvider(name="local:test")
         config = EmbeddingBatchConfig(batch_size=50, concurrency=2)
-        store = VectorStore(
-            tmp_path / "test.lance", provider, embedding_batch_config=config
-        )
 
-        batch_size, concurrency = store._get_optimal_batch_config()
-
-        # Local provider should get larger batch size and higher concurrency
+        batch_size, concurrency = get_optimal_batch_config(config, provider)
         assert batch_size >= 100
         assert concurrency >= 4
 
-    def test_optimal_config_for_api(self, tmp_path):
+    def test_optimal_config_for_api(self):
         """Test optimal config calculation for API provider."""
-        from local_deepwiki.core.vectorstore import VectorStore
-
         provider = MockEmbeddingProvider(name="openai:test")
         config = EmbeddingBatchConfig(batch_size=200, concurrency=8)
-        store = VectorStore(
-            tmp_path / "test.lance", provider, embedding_batch_config=config
-        )
 
-        batch_size, concurrency = store._get_optimal_batch_config()
-
-        # API provider should get smaller batch size and lower concurrency
+        batch_size, concurrency = get_optimal_batch_config(config, provider)
         assert batch_size <= 50
         assert concurrency <= 4
 

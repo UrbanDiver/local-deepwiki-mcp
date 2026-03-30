@@ -172,19 +172,23 @@ def _create_research_pipeline(
     # Get provider-specific prompts
     prompts = ctx.config.get_prompts()
 
+    from local_deepwiki.core.deep_research.config import ResearchConfig
+
     pipeline = DeepResearchPipeline(
         vector_store=vector_store,
         llm_provider=llm,
-        max_sub_questions=dr_config.max_sub_questions,
-        chunks_per_subquestion=dr_config.chunks_per_subquestion,
-        max_total_chunks=effective_max_chunks,
-        max_follow_up_queries=dr_config.max_follow_up_queries,
-        synthesis_temperature=dr_config.synthesis_temperature,
-        synthesis_max_tokens=dr_config.synthesis_max_tokens,
-        decomposition_prompt=prompts.research_decomposition,
-        gap_analysis_prompt=prompts.research_gap_analysis,
-        synthesis_prompt=prompts.research_synthesis,
-        repo_path=ctx.repo_path,  # Enable checkpointing
+        config=ResearchConfig(
+            max_sub_questions=dr_config.max_sub_questions,
+            chunks_per_subquestion=dr_config.chunks_per_subquestion,
+            max_total_chunks=effective_max_chunks,
+            max_follow_up_queries=dr_config.max_follow_up_queries,
+            synthesis_temperature=dr_config.synthesis_temperature,
+            synthesis_max_tokens=dr_config.synthesis_max_tokens,
+            decomposition_prompt=prompts.research_decomposition,
+            gap_analysis_prompt=prompts.research_gap_analysis,
+            synthesis_prompt=prompts.research_synthesis,
+            repo_path=ctx.repo_path,
+        ),
     )
 
     return pipeline, vector_store, llm

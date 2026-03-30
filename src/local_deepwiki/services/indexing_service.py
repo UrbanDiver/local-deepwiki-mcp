@@ -7,6 +7,7 @@ RBAC, audit logging, and MCP progress notifications remain in the handler.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,18 @@ from local_deepwiki.logging import get_logger
 from .models import IndexPipelineResult
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class IndexPipelineRequest:
+    """Immutable parameters for the indexing pipeline."""
+
+    repo_path: Path
+    full_rebuild: bool = False
+    embedding_provider: str | None = None
+    llm_provider: str | None = None
+    generation_mode: str = "eager"
+    progress_callback: Callable[[str, float], None] | None = None
 
 
 class IndexingService:
@@ -33,58 +46,48 @@ class IndexingService:
 
     async def run_pipeline(
         self,
-        repo_path: Path,
-        *,
-        full_rebuild: bool = False,
-        embedding_provider: str | None = None,
-        llm_provider: str | None = None,
-        generation_mode: str = "eager",
-        progress_callback: Callable[[str, float], None] | None = None,
+        request: IndexPipelineRequest,
     ) -> IndexPipelineResult:
         """Execute the full indexing pipeline.
 
         Orchestrates: parse -> chunk -> embed -> store -> generate wiki.
 
         Args:
-            repo_path: Resolved path to the repository.
-            full_rebuild: Force full rebuild instead of incremental update.
-            embedding_provider: Override embedding provider name.
-            llm_provider: Override LLM provider name.
-            generation_mode: Wiki generation strategy (eager/lazy/hybrid).
-            progress_callback: Optional callback(message, fraction) for
-                progress updates where fraction is 0.0-1.0.
+            request: Immutable request containing repo path, rebuild flag,
+                provider overrides, generation mode, and progress callback.
 
         Returns:
             IndexPipelineResult with indexing statistics.
         """
         indexer = RepositoryIndexer(
-            repo_path=repo_path,
+            repo_path=request.repo_path,
             config=self._config,
-            embedding_provider_name=embedding_provider,
+            embedding_provider_name=request.embedding_provider,
         )
 
         progress_messages: list[str] = []
+        cb = request.progress_callback
 
         def sync_progress(msg: str, current: int, total: int) -> None:
             progress_messages.append(f"[{current}/{total}] {msg}")
-            if progress_callback is not None:
+            if cb is not None:
                 fraction = current / total if total > 0 else 0.0
-                progress_callback(msg, fraction)
+                cb(msg, fraction)
 
         status = await indexer.index(
-            full_rebuild=full_rebuild,
+            full_rebuild=request.full_rebuild,
             progress_callback=sync_progress,
         )
 
         indexer.vector_store.stabilize()
 
         wiki_structure = await self._generate_wiki(
-            repo_path=repo_path,
+            repo_path=request.repo_path,
             indexer=indexer,
             status=status,
-            llm_provider=llm_provider,
+            llm_provider=request.llm_provider,
             sync_progress_callback=sync_progress,
-            full_rebuild=full_rebuild,
+            full_rebuild=request.full_rebuild,
         )
 
         return IndexPipelineResult(

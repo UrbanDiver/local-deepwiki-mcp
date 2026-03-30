@@ -7,7 +7,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from local_deepwiki.services.indexing_service import IndexingService
+from local_deepwiki.services.indexing_service import (
+    IndexingService,
+    IndexPipelineRequest,
+)
 from local_deepwiki.services.models import IndexPipelineResult
 
 
@@ -62,7 +65,7 @@ class TestRunPipeline:
                 return_value=wiki_structure,
             ),
         ):
-            result = await svc.run_pipeline(repo_path=tmp_path)
+            result = await svc.run_pipeline(IndexPipelineRequest(repo_path=tmp_path))
 
         assert isinstance(result, IndexPipelineResult)
         assert result.files_indexed == 10
@@ -109,7 +112,9 @@ class TestRunPipeline:
                 return_value=wiki_structure,
             ),
         ):
-            await svc.run_pipeline(repo_path=tmp_path, progress_callback=on_progress)
+            await svc.run_pipeline(
+                IndexPipelineRequest(repo_path=tmp_path, progress_callback=on_progress)
+            )
 
         assert len(progress_calls) >= 3
         for _msg, fraction in progress_calls:
@@ -135,7 +140,9 @@ class TestRunPipeline:
                 return_value=wiki_structure,
             ),
         ):
-            await svc.run_pipeline(repo_path=tmp_path, full_rebuild=True)
+            await svc.run_pipeline(
+                IndexPipelineRequest(repo_path=tmp_path, full_rebuild=True)
+            )
 
         mock_indexer.index.assert_called_once()
         call_kwargs = mock_indexer.index.call_args[1]
@@ -161,7 +168,9 @@ class TestRunPipeline:
                 return_value=wiki_structure,
             ),
         ):
-            await svc.run_pipeline(repo_path=tmp_path, embedding_provider="openai")
+            await svc.run_pipeline(
+                IndexPipelineRequest(repo_path=tmp_path, embedding_provider="openai")
+            )
 
         mock_cls.assert_called_once_with(
             repo_path=tmp_path,
@@ -181,4 +190,4 @@ class TestRunPipeline:
             return_value=mock_indexer,
         ):
             with pytest.raises(RuntimeError, match="Index failed"):
-                await svc.run_pipeline(repo_path=tmp_path)
+                await svc.run_pipeline(IndexPipelineRequest(repo_path=tmp_path))

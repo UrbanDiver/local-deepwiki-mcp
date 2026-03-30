@@ -15,7 +15,11 @@ import pytest
 
 from local_deepwiki.config.models import GraphRAGConfig
 from local_deepwiki.services.graph_expansion import expand_with_graph
-from local_deepwiki.services.query_service import QueryService
+from local_deepwiki.services.query_service import (
+    CodeSearchRequest,
+    QuestionRequest,
+    QueryService,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -273,7 +277,7 @@ class TestQueryServiceGraphExpansion:
             mock_retriever_cls.return_value = mock_retriever
 
             result = await svc.answer_question(
-                repo_path=tmp_path, question="What does hello do?"
+                QuestionRequest(repo_path=tmp_path, question="What does hello do?")
             )
 
         # Both vector and graph results should appear in sources
@@ -301,7 +305,7 @@ class TestQueryServiceGraphExpansion:
             mock_rl.return_value.__aexit__ = AsyncMock()
 
             result = await svc.answer_question(
-                repo_path=tmp_path, question="What does hello do?"
+                QuestionRequest(repo_path=tmp_path, question="What does hello do?")
             )
 
         # Retriever should never be instantiated
@@ -329,7 +333,9 @@ class TestQueryServiceGraphExpansion:
             mock_retriever.expand_results = AsyncMock(return_value=[sr, graph_sr])
             mock_retriever_cls.return_value = mock_retriever
 
-            results = await svc.search_code(repo_path=tmp_path, query="hello")
+            results = await svc.search_code(
+                CodeSearchRequest(repo_path=tmp_path, query="hello")
+            )
 
         assert len(results) == 2
         assert results[0]["file_path"] == "src/main.py"
@@ -349,7 +355,9 @@ class TestQueryServiceGraphExpansion:
         with patch(
             "local_deepwiki.services.graph_expansion.GraphAugmentedRetriever"
         ) as mock_retriever_cls:
-            results = await svc.search_code(repo_path=tmp_path, query="hello")
+            results = await svc.search_code(
+                CodeSearchRequest(repo_path=tmp_path, query="hello")
+            )
 
         mock_retriever_cls.assert_not_called()
         assert len(results) == 1
@@ -381,7 +389,7 @@ class TestQueryServiceGraphExpansion:
             mock_retriever_cls.return_value = mock_retriever
 
             result = await svc.answer_question(
-                repo_path=tmp_path, question="What does hello do?"
+                QuestionRequest(repo_path=tmp_path, question="What does hello do?")
             )
 
         # Should still get an answer from original vector results
@@ -410,7 +418,9 @@ class TestQueryServiceGraphExpansion:
             )
             mock_retriever_cls.return_value = mock_retriever
 
-            results = await svc.search_code(repo_path=tmp_path, query="hello")
+            results = await svc.search_code(
+                CodeSearchRequest(repo_path=tmp_path, query="hello")
+            )
 
         assert len(results) == 1
         assert results[0]["file_path"] == "src/main.py"
@@ -443,7 +453,7 @@ class TestQueryServiceGraphExpansion:
             mock_retriever_cls.return_value = mock_retriever
 
             await svc.answer_question(
-                repo_path=tmp_path, question="What does hello do?"
+                QuestionRequest(repo_path=tmp_path, question="What does hello do?")
             )
 
         # The LLM prompt should include content from both vector and graph results

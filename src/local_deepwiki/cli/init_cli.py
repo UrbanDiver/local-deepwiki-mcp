@@ -13,6 +13,7 @@ import os
 import sys
 import urllib.request
 from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -23,6 +24,24 @@ from rich.prompt import Prompt
 from rich.table import Table
 
 from local_deepwiki.config import Config
+
+
+@dataclass(frozen=True)
+class WizardConfig:
+    """Immutable configuration for the init wizard.
+
+    Bundles the 8 parameters previously passed individually to
+    ``run_wizard`` into a single frozen dataclass.
+    """
+
+    repo_path: Path
+    console: Console
+    non_interactive: bool = False
+    force: bool = False
+    provider_flag: str | None = None
+    embedding_flag: str | None = None
+    config_dest: Path | None = None
+
 
 # ── Directories to skip during language scanning ──────────────────────
 _SKIP_DIRS = frozenset(
@@ -403,8 +422,8 @@ def _prompt_wiki_config(
 
 
 def run_wizard(
-    repo_path: Path,
-    console: Console,
+    repo_path_or_config: Path | WizardConfig,
+    console: Console | None = None,
     *,
     non_interactive: bool = False,
     force: bool = False,
@@ -412,26 +431,45 @@ def run_wizard(
     embedding_flag: str | None = None,
     config_dest: Path | None = None,
 ) -> int:
-    """Run the init wizard and return an exit code (0 = success)."""
+    """Run the init wizard and return an exit code (0 = success).
 
-    console.print("\n[bold]deepwiki init[/bold] - project configuration wizard\n")
+    Accepts either a :class:`WizardConfig` (preferred) or the legacy
+    positional parameters for backward compatibility with existing
+    callers and tests.
+    """
+    if isinstance(repo_path_or_config, WizardConfig):
+        cfg = repo_path_or_config
+    else:
+        cfg = WizardConfig(
+            repo_path=repo_path_or_config,
+            console=console or Console(),
+            non_interactive=non_interactive,
+            force=force,
+            provider_flag=provider_flag,
+            embedding_flag=embedding_flag,
+            config_dest=config_dest,
+        )
+
+    cfg.console.print("\n[bold]deepwiki init[/bold] - project configuration wizard\n")
 
     # ── Step 1: Check for existing config ─────────────────────────
-    dest = config_dest or _DEFAULT_CONFIG_PATH
-    if not _check_existing_config(dest, non_interactive, force, console):
+    dest = cfg.config_dest or _DEFAULT_CONFIG_PATH
+    if not _check_existing_config(dest, cfg.non_interactive, cfg.force, cfg.console):
         return 1
 
     # ── Step 2: Detect languages ──────────────────────────────────
-    console.print(f"[bold]Scanning[/bold] {repo_path.resolve()} for source files...")
-    lang_counts = detect_languages(repo_path)
-    detected_languages = _prompt_wiki_config(console, lang_counts)
+    cfg.console.print(
+        f"[bold]Scanning[/bold] {cfg.repo_path.resolve()} for source files..."
+    )
+    lang_counts = detect_languages(cfg.repo_path)
+    detected_languages = _prompt_wiki_config(cfg.console, lang_counts)
 
     # ── Steps 3–4: Choose providers ───────────────────────────────
     llm_provider, embedding_provider = _select_providers(
-        console,
-        non_interactive=non_interactive,
-        provider_flag=provider_flag,
-        embedding_flag=embedding_flag,
+        cfg.console,
+        non_interactive=cfg.non_interactive,
+        provider_flag=cfg.provider_flag,
+        embedding_flag=cfg.embedding_flag,
     )
 
     # ── Step 5: Build config ──────────────────────────────────────
@@ -445,11 +483,11 @@ def run_wizard(
         minimal = {"llm": {"provider": llm_provider}}
 
     write_config(minimal, dest)
-    console.print(f"\n[green]Config written to:[/green] {dest}")
+    cfg.console.print(f"\n[green]Config written to:[/green] {dest}")
 
     # ── Step 7: Summary & next steps ──────────────────────────────
     _display_summary(
-        console, dest, llm_provider, embedding_provider, detected_languages
+        cfg.console, dest, llm_provider, embedding_provider, detected_languages
     )
 
     return 0

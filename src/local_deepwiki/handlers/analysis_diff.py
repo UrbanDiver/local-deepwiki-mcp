@@ -6,6 +6,7 @@ import asyncio
 import json
 import re
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +41,22 @@ from local_deepwiki.providers.embeddings import get_embedding_provider
 from local_deepwiki.security import Permission, get_access_controller
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class DiffSynthesisContext:
+    """Immutable context for LLM-based diff answer synthesis.
+
+    Bundles the parameters of _synthesize_diff_answer to reduce its
+    parameter count from 8 to a manageable level.
+    """
+
+    question: str
+    diff_text: str
+    base_ref: str
+    head_ref: str
+    additional_context: str
+
 
 # Compiled once; used by both handle_analyze_diff and handle_ask_about_diff.
 _GIT_REF_PATTERN = re.compile(r"^[a-zA-Z0-9_.\/\-~^]+$")
@@ -409,11 +426,7 @@ async def _prepare_diff_context(
 
 
 async def _synthesize_diff_answer(
-    question: str,
-    diff_text: str,
-    base_ref: str,
-    head_ref: str,
-    additional_context: str,
+    diff_ctx: DiffSynthesisContext,
     wiki_path: Any,
     config: Any,
     embedding_provider: Any,
@@ -421,11 +434,7 @@ async def _synthesize_diff_answer(
     """Call the LLM to synthesize an answer about the diff.
 
     Args:
-        question: The user's question.
-        diff_text: The (possibly truncated) git diff text.
-        base_ref: Base git ref.
-        head_ref: Head git ref.
-        additional_context: RAG context string.
+        diff_ctx: Immutable context with question, diff text, refs, and RAG context.
         wiki_path: Path to wiki directory (for LLM cache).
         config: Application config object.
         embedding_provider: Provider for embedding (needed by cached LLM).
@@ -445,10 +454,10 @@ async def _synthesize_diff_answer(
 
     prompt = (
         f"You are analyzing recent code changes. Answer this question about the diff:\n\n"
-        f"Question: {question}\n\n"
-        f"## Git Diff (changes between {base_ref} and {head_ref}):\n"
-        f"```diff\n{diff_text}\n```\n\n"
-        f"## Additional Code Context (from the codebase):\n{additional_context}\n\n"
+        f"Question: {diff_ctx.question}\n\n"
+        f"## Git Diff (changes between {diff_ctx.base_ref} and {diff_ctx.head_ref}):\n"
+        f"```diff\n{diff_ctx.diff_text}\n```\n\n"
+        f"## Additional Code Context (from the codebase):\n{diff_ctx.additional_context}\n\n"
         f"Provide a clear, specific answer based on the diff and context. "
         f"Focus on what changed, why it might matter, and any potential issues."
     )
@@ -485,12 +494,15 @@ async def _rag_answer_about_diff(
         question, validated.max_context, vector_db_path, embedding_provider
     )
 
+    diff_ctx = DiffSynthesisContext(
+        question=question,
+        diff_text=diff_text,
+        base_ref=validated.base_ref,
+        head_ref=validated.head_ref,
+        additional_context=additional_context,
+    )
     answer = await _synthesize_diff_answer(
-        question,
-        diff_text,
-        validated.base_ref,
-        validated.head_ref,
-        additional_context,
+        diff_ctx,
         wiki_path,
         config,
         embedding_provider,

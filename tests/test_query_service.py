@@ -6,7 +6,11 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from local_deepwiki.services.models import QueryResult
-from local_deepwiki.services.query_service import QueryService
+from local_deepwiki.services.query_service import (
+    CodeSearchRequest,
+    QuestionRequest,
+    QueryService,
+)
 
 
 def _make_search_result(
@@ -71,7 +75,7 @@ class TestAnswerQuestion:
             mock_rl.return_value.__aenter__ = AsyncMock()
             mock_rl.return_value.__aexit__ = AsyncMock()
             result = await svc.answer_question(
-                repo_path=tmp_path, question="What does hello do?"
+                QuestionRequest(repo_path=tmp_path, question="What does hello do?")
             )
 
         assert isinstance(result, QueryResult)
@@ -86,7 +90,9 @@ class TestAnswerQuestion:
         vector_store.search = AsyncMock(return_value=[])
 
         svc = QueryService(vector_store, llm_provider, config)
-        result = await svc.answer_question(repo_path=tmp_path, question="Nonexistent?")
+        result = await svc.answer_question(
+            QuestionRequest(repo_path=tmp_path, question="Nonexistent?")
+        )
 
         assert isinstance(result, QueryResult)
         assert "No relevant code found" in result.answer
@@ -113,7 +119,7 @@ class TestAnswerQuestion:
             mock_rl.return_value.__aenter__ = AsyncMock()
             mock_rl.return_value.__aexit__ = AsyncMock()
             result = await svc.answer_question(
-                repo_path=tmp_path, question="How?", agentic_rag=True
+                QuestionRequest(repo_path=tmp_path, question="How?", agentic_rag=True)
             )
 
         assert result.agentic_metadata == {"rounds": 2, "rewritten": True}
@@ -129,7 +135,9 @@ class TestAnswerQuestion:
         with patch("local_deepwiki.services.query_service.get_rate_limiter") as mock_rl:
             mock_rl.return_value.__aenter__ = AsyncMock()
             mock_rl.return_value.__aexit__ = AsyncMock()
-            await svc.answer_question(repo_path=tmp_path, question="What does add do?")
+            await svc.answer_question(
+                QuestionRequest(repo_path=tmp_path, question="What does add do?")
+            )
 
         call_args = llm_provider.generate.call_args
         prompt = call_args[0][0]
@@ -154,7 +162,9 @@ class TestSearchCode:
         vector_store.search = AsyncMock(return_value=[sr])
 
         svc = QueryService(vector_store, llm_provider, config)
-        results = await svc.search_code(repo_path=tmp_path, query="parse")
+        results = await svc.search_code(
+            CodeSearchRequest(repo_path=tmp_path, query="parse")
+        )
 
         assert len(results) == 1
         assert results[0]["file_path"] == "lib/utils.py"
@@ -168,7 +178,9 @@ class TestSearchCode:
         vector_store.search = AsyncMock(return_value=[])
 
         svc = QueryService(vector_store, llm_provider, config)
-        results = await svc.search_code(repo_path=tmp_path, query="nonexistent")
+        results = await svc.search_code(
+            CodeSearchRequest(repo_path=tmp_path, query="nonexistent")
+        )
 
         assert results == []
 
@@ -178,14 +190,16 @@ class TestSearchCode:
 
         svc = QueryService(vector_store, llm_provider, config)
         await svc.search_code(
-            repo_path=tmp_path,
-            query="test",
-            limit=5,
-            language="python",
-            chunk_type="function",
-            path_filter="src/**",
-            use_fuzzy=True,
-            fuzzy_weight=0.5,
+            CodeSearchRequest(
+                repo_path=tmp_path,
+                query="test",
+                limit=5,
+                language="python",
+                chunk_type="function",
+                path_filter="src/**",
+                use_fuzzy=True,
+                fuzzy_weight=0.5,
+            )
         )
 
         vector_store.search.assert_called_once_with(
@@ -204,7 +218,9 @@ class TestSearchCode:
         vector_store.search = AsyncMock(return_value=[sr])
 
         svc = QueryService(vector_store, llm_provider, config)
-        results = await svc.search_code(repo_path=tmp_path, query="parse")
+        results = await svc.search_code(
+            CodeSearchRequest(repo_path=tmp_path, query="parse")
+        )
 
         assert results[0]["highlights"] == ["parse_data"]
 
@@ -215,7 +231,9 @@ class TestSearchCode:
         vector_store.search = AsyncMock(return_value=[sr])
 
         svc = QueryService(vector_store, llm_provider, config)
-        results = await svc.search_code(repo_path=tmp_path, query="x")
+        results = await svc.search_code(
+            CodeSearchRequest(repo_path=tmp_path, query="x")
+        )
 
         assert results[0]["preview"].endswith("...")
         assert len(results[0]["preview"]) == 303  # 300 + "..."
@@ -236,7 +254,7 @@ class TestHybridSearchDefault:
             mock_rl.return_value.__aenter__ = AsyncMock()
             mock_rl.return_value.__aexit__ = AsyncMock()
             await svc.answer_question(
-                repo_path=tmp_path, question="What does hello do?"
+                QuestionRequest(repo_path=tmp_path, question="What does hello do?")
             )
 
         # Verify the vector store search was called with hybrid search params
@@ -261,8 +279,10 @@ class TestQueryPreprocessing:
             mock_rl.return_value.__aenter__ = AsyncMock()
             mock_rl.return_value.__aexit__ = AsyncMock()
             await svc.answer_question(
-                repo_path=tmp_path,
-                question="tell me everything about the parser",
+                QuestionRequest(
+                    repo_path=tmp_path,
+                    question="tell me everything about the parser",
+                )
             )
 
         # The search query should NOT contain filler words
@@ -286,7 +306,9 @@ class TestQueryPreprocessing:
         with patch("local_deepwiki.services.query_service.get_rate_limiter") as mock_rl:
             mock_rl.return_value.__aenter__ = AsyncMock()
             mock_rl.return_value.__aexit__ = AsyncMock()
-            await svc.answer_question(repo_path=tmp_path, question="handler routing")
+            await svc.answer_question(
+                QuestionRequest(repo_path=tmp_path, question="handler routing")
+            )
 
         search_query = vector_store.search.call_args[0][0]
         assert "TOOL_HANDLERS" in search_query or "handle_" in search_query

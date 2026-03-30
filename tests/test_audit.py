@@ -11,10 +11,14 @@ from pathlib import Path
 import pytest
 
 from local_deepwiki.core.audit import (
+    AccessDecisionParams,
     AuditEvent,
     AuditEventType,
     AuditLogger,
     AuditSeverity,
+    ExportAuditParams,
+    IndexAuditParams,
+    QueryAuditParams,
     get_audit_logger,
     reset_audit_logger,
 )
@@ -374,12 +378,14 @@ class TestAuditLoggerAccessDecision:
         logger = AuditLogger(log_dir=log_dir)
 
         logger.log_access_decision(
-            subject_id="user1",
-            subject_role="ADMIN",
-            resource_type="operation",
-            resource_path="index_repository",
-            permission_requested="execute",
-            granted=True,
+            AccessDecisionParams(
+                subject_id="user1",
+                subject_role="ADMIN",
+                resource_type="operation",
+                resource_path="index_repository",
+                permission_requested="execute",
+                granted=True,
+            )
         )
 
         for handler in logger._logger.handlers:
@@ -399,13 +405,15 @@ class TestAuditLoggerAccessDecision:
         logger = AuditLogger(log_dir=log_dir)
 
         logger.log_access_decision(
-            subject_id="guest_user",
-            subject_role="GUEST",
-            resource_type="operation",
-            resource_path="export_wiki",
-            permission_requested="execute",
-            granted=False,
-            reason="Role GUEST lacks permission to export",
+            AccessDecisionParams(
+                subject_id="guest_user",
+                subject_role="GUEST",
+                resource_type="operation",
+                resource_path="export_wiki",
+                permission_requested="execute",
+                granted=False,
+                reason="Role GUEST lacks permission to export",
+            )
         )
 
         for handler in logger._logger.handlers:
@@ -422,21 +430,23 @@ class TestAuditLoggerAccessDecision:
 
 
 class TestAuditLoggerQueryExecution:
-    """Tests for AuditLogger.log_query_execution method."""
+    """Tests for AuditLogger.log_query method."""
 
     def test_log_successful_query(self, tmp_path):
         """Test logging successful query execution."""
         log_dir = tmp_path / "audit"
         logger = AuditLogger(log_dir=log_dir)
 
-        logger.log_query_execution(
-            subject_id="user1",
-            repo_path="/home/user/repo",
-            query="How does authentication work?",
-            success=True,
-            query_type="search",
-            chunks_returned=15,
-            duration_ms=250,
+        logger.log_query(
+            QueryAuditParams(
+                subject_id="user1",
+                repo_path="/home/user/repo",
+                query="How does authentication work?",
+                success=True,
+                query_type="search",
+                chunks_returned=15,
+                duration_ms=250,
+            )
         )
 
         for handler in logger._logger.handlers:
@@ -457,13 +467,15 @@ class TestAuditLoggerQueryExecution:
         log_dir = tmp_path / "audit"
         logger = AuditLogger(log_dir=log_dir)
 
-        logger.log_query_execution(
-            subject_id=None,
-            repo_path="/repo",
-            query="test",
-            success=False,
-            query_type="deep_research",
-            error_message="LLM provider unavailable",
+        logger.log_query(
+            QueryAuditParams(
+                subject_id=None,
+                repo_path="/repo",
+                query="test",
+                success=False,
+                query_type="deep_research",
+                error_message="LLM provider unavailable",
+            )
         )
 
         for handler in logger._logger.handlers:
@@ -484,11 +496,13 @@ class TestAuditLoggerQueryExecution:
 
         long_query = "a" * 200
 
-        logger.log_query_execution(
-            subject_id=None,
-            repo_path="/repo",
-            query=long_query,
-            success=True,
+        logger.log_query(
+            QueryAuditParams(
+                subject_id=None,
+                repo_path="/repo",
+                query=long_query,
+                success=True,
+            )
         )
 
         for handler in logger._logger.handlers:
@@ -505,18 +519,20 @@ class TestAuditLoggerQueryExecution:
 
 
 class TestAuditLoggerIndexOperation:
-    """Tests for AuditLogger.log_index_operation method."""
+    """Tests for AuditLogger.log_index method."""
 
     def test_log_index_started(self, tmp_path):
         """Test logging index started operation."""
         log_dir = tmp_path / "audit"
         logger = AuditLogger(log_dir=log_dir)
 
-        logger.log_index_operation(
-            subject_id="system",
-            repo_path="/path/to/repo",
-            operation="started",
-            success=True,
+        logger.log_index(
+            IndexAuditParams(
+                subject_id="system",
+                repo_path="/path/to/repo",
+                operation="started",
+                success=True,
+            )
         )
 
         for handler in logger._logger.handlers:
@@ -534,14 +550,16 @@ class TestAuditLoggerIndexOperation:
         log_dir = tmp_path / "audit"
         logger = AuditLogger(log_dir=log_dir)
 
-        logger.log_index_operation(
-            subject_id="user",
-            repo_path="/repo",
-            operation="completed",
-            success=True,
-            files_processed=100,
-            chunks_created=500,
-            duration_ms=30000,
+        logger.log_index(
+            IndexAuditParams(
+                subject_id="user",
+                repo_path="/repo",
+                operation="completed",
+                success=True,
+                files_processed=100,
+                chunks_created=500,
+                duration_ms=30000,
+            )
         )
 
         for handler in logger._logger.handlers:
@@ -561,12 +579,14 @@ class TestAuditLoggerIndexOperation:
         log_dir = tmp_path / "audit"
         logger = AuditLogger(log_dir=log_dir)
 
-        logger.log_index_operation(
-            subject_id="user",
-            repo_path="/repo",
-            operation="failed",
-            success=False,
-            error_message="Repository too large",
+        logger.log_index(
+            IndexAuditParams(
+                subject_id="user",
+                repo_path="/repo",
+                operation="failed",
+                success=False,
+                error_message="Repository too large",
+            )
         )
 
         for handler in logger._logger.handlers:
@@ -582,20 +602,22 @@ class TestAuditLoggerIndexOperation:
 
 
 class TestAuditLoggerExportOperation:
-    """Tests for AuditLogger.log_export_operation method."""
+    """Tests for AuditLogger.log_export method."""
 
     def test_log_export_started(self, tmp_path):
         """Test logging export started operation."""
         log_dir = tmp_path / "audit"
         logger = AuditLogger(log_dir=log_dir)
 
-        logger.log_export_operation(
-            subject_id="user1",
-            wiki_path="/repo/.deepwiki",
-            output_path="/tmp/export",
-            export_type="html",
-            operation="started",
-            success=True,
+        logger.log_export(
+            ExportAuditParams(
+                subject_id="user1",
+                wiki_path="/repo/.deepwiki",
+                output_path="/tmp/export",
+                export_type="html",
+                operation="started",
+                success=True,
+            )
         )
 
         for handler in logger._logger.handlers:
@@ -613,15 +635,17 @@ class TestAuditLoggerExportOperation:
         log_dir = tmp_path / "audit"
         logger = AuditLogger(log_dir=log_dir)
 
-        logger.log_export_operation(
-            subject_id="user1",
-            wiki_path="/repo/.deepwiki",
-            output_path="/output.pdf",
-            export_type="pdf",
-            operation="completed",
-            success=True,
-            pages_exported=50,
-            duration_ms=5000,
+        logger.log_export(
+            ExportAuditParams(
+                subject_id="user1",
+                wiki_path="/repo/.deepwiki",
+                output_path="/output.pdf",
+                export_type="pdf",
+                operation="completed",
+                success=True,
+                pages_exported=50,
+                duration_ms=5000,
+            )
         )
 
         for handler in logger._logger.handlers:
@@ -816,3 +840,177 @@ class TestCriticalEventLogging:
             # Restore original state
             module_logger.removeHandler(handler)
             module_logger.setLevel(original_level)
+
+
+class TestAccessDecisionParams:
+    """Tests for AccessDecisionParams frozen dataclass."""
+
+    def test_create_with_required_fields(self):
+        """Test creating params with required fields only."""
+        params = AccessDecisionParams(
+            subject_id="user1",
+            subject_role="ADMIN",
+            resource_type="operation",
+            resource_path="index_repository",
+            permission_requested="execute",
+            granted=True,
+        )
+        assert params.subject_id == "user1"
+        assert params.subject_role == "ADMIN"
+        assert params.granted is True
+        assert params.reason is None
+
+    def test_create_with_reason(self):
+        """Test creating params with optional reason."""
+        params = AccessDecisionParams(
+            subject_id=None,
+            subject_role=None,
+            resource_type="file",
+            resource_path="/secret",
+            permission_requested="read",
+            granted=False,
+            reason="Access denied",
+        )
+        assert params.reason == "Access denied"
+
+    def test_is_frozen(self):
+        """Test that the dataclass is immutable."""
+        params = AccessDecisionParams(
+            subject_id="u",
+            subject_role="VIEWER",
+            resource_type="op",
+            resource_path="/p",
+            permission_requested="exec",
+            granted=True,
+        )
+        with pytest.raises(AttributeError):
+            params.granted = False  # type: ignore[misc]
+
+
+class TestQueryAuditParams:
+    """Tests for QueryAuditParams frozen dataclass."""
+
+    def test_create_with_defaults(self):
+        """Test creating params with default optional fields."""
+        params = QueryAuditParams(
+            subject_id="user1",
+            repo_path="/repo",
+            query="test query",
+            success=True,
+        )
+        assert params.query_type == "search"
+        assert params.error_message is None
+        assert params.chunks_returned is None
+        assert params.duration_ms is None
+
+    def test_create_with_all_fields(self):
+        """Test creating params with all fields specified."""
+        params = QueryAuditParams(
+            subject_id="user1",
+            repo_path="/repo",
+            query="test",
+            success=False,
+            query_type="deep_research",
+            error_message="timeout",
+            chunks_returned=5,
+            duration_ms=3000,
+        )
+        assert params.query_type == "deep_research"
+        assert params.error_message == "timeout"
+        assert params.chunks_returned == 5
+        assert params.duration_ms == 3000
+
+    def test_is_frozen(self):
+        """Test that the dataclass is immutable."""
+        params = QueryAuditParams(
+            subject_id=None, repo_path="/r", query="q", success=True
+        )
+        with pytest.raises(AttributeError):
+            params.success = False  # type: ignore[misc]
+
+
+class TestIndexAuditParams:
+    """Tests for IndexAuditParams frozen dataclass."""
+
+    def test_create_with_defaults(self):
+        """Test creating params with default optional fields."""
+        params = IndexAuditParams(
+            subject_id="system",
+            repo_path="/repo",
+            operation="started",
+            success=True,
+        )
+        assert params.files_processed is None
+        assert params.chunks_created is None
+        assert params.duration_ms is None
+        assert params.error_message is None
+
+    def test_create_with_all_fields(self):
+        """Test creating params with all fields specified."""
+        params = IndexAuditParams(
+            subject_id="user",
+            repo_path="/repo",
+            operation="completed",
+            success=True,
+            files_processed=42,
+            chunks_created=200,
+            duration_ms=5000,
+            error_message=None,
+        )
+        assert params.files_processed == 42
+        assert params.chunks_created == 200
+
+    def test_is_frozen(self):
+        """Test that the dataclass is immutable."""
+        params = IndexAuditParams(
+            subject_id=None, repo_path="/r", operation="started", success=True
+        )
+        with pytest.raises(AttributeError):
+            params.operation = "completed"  # type: ignore[misc]
+
+
+class TestExportAuditParams:
+    """Tests for ExportAuditParams frozen dataclass."""
+
+    def test_create_with_defaults(self):
+        """Test creating params with default optional fields."""
+        params = ExportAuditParams(
+            subject_id="user1",
+            wiki_path="/wiki",
+            output_path="/out",
+            export_type="html",
+            operation="started",
+            success=True,
+        )
+        assert params.pages_exported is None
+        assert params.duration_ms is None
+        assert params.error_message is None
+
+    def test_create_with_all_fields(self):
+        """Test creating params with all fields specified."""
+        params = ExportAuditParams(
+            subject_id="user1",
+            wiki_path="/wiki",
+            output_path="/out.pdf",
+            export_type="pdf",
+            operation="completed",
+            success=True,
+            pages_exported=25,
+            duration_ms=1500,
+            error_message=None,
+        )
+        assert params.pages_exported == 25
+        assert params.duration_ms == 1500
+
+    def test_is_frozen(self):
+        """Test that the dataclass is immutable."""
+        params = ExportAuditParams(
+            subject_id=None,
+            wiki_path="/w",
+            output_path="/o",
+            export_type="html",
+            operation="started",
+            success=True,
+        )
+        with pytest.raises(AttributeError):
+            params.success = False  # type: ignore[misc]

@@ -543,9 +543,9 @@ class TestSearchEngineConfigIntegration:
             config=cfg,
         )
 
-        assert engine._default_search_profile == SearchProfile.THOROUGH
-        assert engine._adaptive_search_enabled is False
-        assert engine._default_search_mode == "hybrid"
+        assert engine.default_search_profile == SearchProfile.THOROUGH
+        assert engine.adaptive_search_enabled is False
+        assert engine._config_resolver.default_search_mode == "hybrid"
         assert engine._bm25_weight == 0.5
 
     def test_search_engine_legacy_kwargs_still_work(self):
@@ -567,9 +567,9 @@ class TestSearchEngineConfigIntegration:
             bm25_weight=0.2,
         )
 
-        assert engine._default_search_profile == SearchProfile.FAST
-        assert engine._adaptive_search_enabled is True
-        assert engine._default_search_mode == "vector"
+        assert engine.default_search_profile == SearchProfile.FAST
+        assert engine.adaptive_search_enabled is True
+        assert engine._config_resolver.default_search_mode == "vector"
         assert engine._bm25_weight == 0.2
 
     def test_explicit_legacy_kwargs_override_config(self):
@@ -600,9 +600,9 @@ class TestSearchEngineConfigIntegration:
             bm25_weight=0.1,
         )
 
-        assert engine._default_search_profile == SearchProfile.FAST
-        assert engine._adaptive_search_enabled is True
-        assert engine._default_search_mode == "vector"
+        assert engine.default_search_profile == SearchProfile.FAST
+        assert engine.adaptive_search_enabled is True
+        assert engine._config_resolver.default_search_mode == "vector"
         assert engine._bm25_weight == 0.1
 
     def test_config_used_when_legacy_kwargs_omitted(self):
@@ -628,9 +628,9 @@ class TestSearchEngineConfigIntegration:
             config=cfg,
         )
 
-        assert engine._default_search_profile == SearchProfile.THOROUGH
-        assert engine._adaptive_search_enabled is False
-        assert engine._default_search_mode == "hybrid"
+        assert engine.default_search_profile == SearchProfile.THOROUGH
+        assert engine.adaptive_search_enabled is False
+        assert engine._config_resolver.default_search_mode == "hybrid"
         assert engine._bm25_weight == 0.8
 
 

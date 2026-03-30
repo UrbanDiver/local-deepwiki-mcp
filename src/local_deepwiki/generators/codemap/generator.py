@@ -38,6 +38,7 @@ from local_deepwiki.generators.codemap.models import (
     CodemapNode,
     CodemapResult,
 )
+from local_deepwiki.generators.codemap.params import CodemapRequest
 from local_deepwiki.generators.codemap.viz import generate_codemap_diagram
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk
@@ -213,29 +214,23 @@ def _bfs_ordered_nodes(graph: CodemapGraph) -> list[CodemapNode]:
 # ---------------------------------------------------------------------------
 
 
-async def generate_codemap(
-    query: str,
-    vector_store: "VectorStore",
-    repo_path: Path,
-    llm: "LLMProvider",
-    *,
-    entry_point: str | None = None,
-    focus: CodemapFocus = CodemapFocus.EXECUTION_FLOW,
-    max_depth: int = 4,
-    max_nodes: int = 40,
-) -> CodemapResult:
-    """Main entry point: build a codemap for *query* and return a full result."""
-    repo = Path(repo_path)
+async def _generate_codemap_impl(req: CodemapRequest) -> CodemapResult:
+    """Core implementation that operates on a ``CodemapRequest``."""
+    repo = Path(req.repo_path)
 
     entry_nodes = await discover_entry_points(
-        query, vector_store, repo, entry_point_hint=entry_point, max_candidates=3
+        req.query,
+        req.vector_store,
+        repo,
+        entry_point_hint=req.entry_point,
+        max_candidates=3,
     )
 
     if not entry_nodes:
         empty_diagram = 'flowchart TD\n    empty["No code paths found for this query"]'
         return CodemapResult(
-            query=query,
-            focus=focus.value,
+            query=req.query,
+            focus=req.focus.value,
             entry_point=None,
             mermaid_diagram=empty_diagram,
             narrative="No relevant entry points found for the given query.",
@@ -249,19 +244,29 @@ async def generate_codemap(
 
     graph = await build_cross_file_graph(
         entry_nodes,
-        vector_store,
+        req.vector_store,
         repo,
-        max_depth=max_depth,
-        max_nodes=max_nodes,
-        focus=focus,
+        max_depth=req.max_depth,
+        max_nodes=req.max_nodes,
+        focus=req.focus,
     )
 
-    diagram = generate_codemap_diagram(graph, focus, repo_path=repo)
-    narrative = await generate_codemap_narrative(graph, query, focus, llm)
+    diagram = generate_codemap_diagram(graph, req.focus, repo_path=repo)
+    narrative = await generate_codemap_narrative(graph, req.query, req.focus, req.llm)
+    return _build_codemap_result(req, graph, diagram, narrative)
+
+
+def _build_codemap_result(
+    req: CodemapRequest,
+    graph: CodemapGraph,
+    diagram: str,
+    narrative: str,
+) -> CodemapResult:
+    """Assemble the final ``CodemapResult`` from graph data."""
 
     return CodemapResult(
-        query=query,
-        focus=focus.value,
+        query=req.query,
+        focus=req.focus.value,
         entry_point=graph.entry_point,
         mermaid_diagram=diagram,
         narrative=narrative,
@@ -293,6 +298,34 @@ async def generate_codemap(
         total_edges=len(graph.edges),
         cross_file_edges=len(graph.cross_file_edges),
     )
+
+
+async def generate_codemap(
+    query: str,
+    vector_store: "VectorStore",
+    repo_path: Path,
+    llm: "LLMProvider",
+    **kwargs: object,
+) -> CodemapResult:
+    """Main entry point: build a codemap for *query* and return a full result.
+
+    Keyword args (all optional):
+        entry_point: Explicit entry point hint.
+        focus: ``CodemapFocus`` traversal mode (default ``EXECUTION_FLOW``).
+        max_depth: Maximum BFS depth (default 4).
+        max_nodes: Maximum graph nodes (default 40).
+    """
+    req = CodemapRequest(
+        query=query,
+        vector_store=vector_store,
+        repo_path=Path(repo_path),
+        llm=llm,
+        entry_point=kwargs.get("entry_point"),  # type: ignore[arg-type]
+        focus=kwargs.get("focus", CodemapFocus.EXECUTION_FLOW),  # type: ignore[arg-type]
+        max_depth=kwargs.get("max_depth", 4),  # type: ignore[arg-type]
+        max_nodes=kwargs.get("max_nodes", 40),  # type: ignore[arg-type]
+    )
+    return await _generate_codemap_impl(req)
 
 
 # ---------------------------------------------------------------------------
