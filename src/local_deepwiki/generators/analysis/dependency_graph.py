@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import dataclasses
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -410,6 +411,21 @@ def _render_module_graph(
     return "\n".join(lines)
 
 
+@dataclass(frozen=True, slots=True)
+class ImportEdgeContext:
+    """Immutable context for adding import edges to a dependency graph.
+
+    Bundles the mutable graph, lookup structures, and configuration flags
+    for :meth:`DependencyGraphGenerator._add_import_edges`.
+    """
+
+    file_to_module: dict[str, str]
+    internal_modules: set[str]
+    repo_path: str
+    show_external: bool
+    exclude_tests: bool
+
+
 class DependencyGraphGenerator:
     """Generator for module and file dependency graphs.
 
@@ -628,15 +644,14 @@ class DependencyGraphGenerator:
             limit=500,
             chunk_type="import",
         )
-        self._add_import_edges(
-            graph,
-            import_results,
-            file_to_module,
-            internal_modules,
-            index_status.repo_path,
-            show_external,
-            exclude_tests,
+        edge_ctx = ImportEdgeContext(
+            file_to_module=file_to_module,
+            internal_modules=internal_modules,
+            repo_path=index_status.repo_path,
+            show_external=show_external,
+            exclude_tests=exclude_tests,
         )
+        self._add_import_edges(graph, import_results, edge_ctx)
         return graph
 
     def _index_source_modules(
@@ -667,30 +682,26 @@ class DependencyGraphGenerator:
         self,
         graph: "DependencyGraph",
         import_results: list,
-        file_to_module: dict[str, str],
-        internal_modules: set[str],
-        repo_path: str,
-        show_external: bool,
-        exclude_tests: bool,
+        ctx: ImportEdgeContext,
     ) -> None:
         """Parse import chunks and add edges to the dependency graph."""
         for result in import_results:
             chunk = result.chunk
             if chunk.chunk_type != ChunkType.IMPORT:
                 continue
-            if exclude_tests and _is_test_path(chunk.file_path):
+            if ctx.exclude_tests and _is_test_path(chunk.file_path):
                 continue
-            source_module = file_to_module.get(chunk.file_path)
+            source_module = ctx.file_to_module.get(chunk.file_path)
             if not source_module:
-                source_module = _extract_module_name(chunk.file_path, repo_path)
+                source_module = _extract_module_name(chunk.file_path, ctx.repo_path)
                 graph.add_node(
                     DependencyNode(name=source_module, file_path=chunk.file_path)
                 )
-                internal_modules.add(source_module)
+                ctx.internal_modules.add(source_module)
             imports = _parse_imports(chunk.content, chunk.language.value)
             for imp in imports:
                 self._process_single_import(
-                    graph, imp, source_module, internal_modules, show_external
+                    graph, imp, source_module, ctx.internal_modules, ctx.show_external
                 )
 
     def _process_single_import(

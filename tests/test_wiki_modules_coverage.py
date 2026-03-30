@@ -589,13 +589,16 @@ class TestModuleDocEnrichment:
         """Test that the enriched file list appears in the LLM prompt."""
         from local_deepwiki.generators.wiki.modules import generate_single_module_doc
 
-        page = await generate_single_module_doc(
-            dir_name="src",
-            files=["src/parser.py", "src/indexer.py", "src/utils.py"],
+        ctx = make_wiki_ctx(
             vector_store=mock_vector_store,
             llm=mock_llm,
             system_prompt="System prompt",
             repo_path=tmp_path,
+        )
+        page = await generate_single_module_doc(
+            dir_name="src",
+            files=["src/parser.py", "src/indexer.py", "src/utils.py"],
+            ctx=ctx,
         )
 
         assert page is not None
@@ -614,13 +617,16 @@ class TestModuleDocEnrichment:
         claude_md = tmp_path / "CLAUDE.md"
         claude_md.write_text("# Project\n\nThis is a code indexing tool.")
 
-        page = await generate_single_module_doc(
-            dir_name="src",
-            files=["src/parser.py", "src/indexer.py"],
+        ctx = make_wiki_ctx(
             vector_store=mock_vector_store,
             llm=mock_llm,
             system_prompt="System prompt",
             repo_path=tmp_path,
+        )
+        page = await generate_single_module_doc(
+            dir_name="src",
+            files=["src/parser.py", "src/indexer.py"],
+            ctx=ctx,
         )
 
         assert page is not None
@@ -634,13 +640,16 @@ class TestModuleDocEnrichment:
         """Test no authoritative section when no docs exist."""
         from local_deepwiki.generators.wiki.modules import generate_single_module_doc
 
-        page = await generate_single_module_doc(
-            dir_name="src",
-            files=["src/parser.py", "src/indexer.py"],
+        ctx = make_wiki_ctx(
             vector_store=mock_vector_store,
             llm=mock_llm,
             system_prompt="System prompt",
             repo_path=tmp_path,
+        )
+        page = await generate_single_module_doc(
+            dir_name="src",
+            files=["src/parser.py", "src/indexer.py"],
+            ctx=ctx,
         )
 
         assert page is not None
@@ -653,13 +662,16 @@ class TestModuleDocEnrichment:
         """Test that file list includes entity names from search results."""
         from local_deepwiki.generators.wiki.modules import generate_single_module_doc
 
-        page = await generate_single_module_doc(
-            dir_name="src",
-            files=["src/parser.py", "src/indexer.py"],
+        ctx = make_wiki_ctx(
             vector_store=mock_vector_store,
             llm=mock_llm,
             system_prompt="System prompt",
             repo_path=tmp_path,
+        )
+        page = await generate_single_module_doc(
+            dir_name="src",
+            files=["src/parser.py", "src/indexer.py"],
+            ctx=ctx,
         )
 
         assert page is not None
@@ -671,13 +683,16 @@ class TestModuleDocEnrichment:
         """Test that generate_single_module_doc works when repo_path is None."""
         from local_deepwiki.generators.wiki.modules import generate_single_module_doc
 
-        page = await generate_single_module_doc(
-            dir_name="src",
-            files=["src/parser.py", "src/indexer.py"],
+        ctx = make_wiki_ctx(
             vector_store=mock_vector_store,
             llm=mock_llm,
             system_prompt="System prompt",
             repo_path=None,
+        )
+        page = await generate_single_module_doc(
+            dir_name="src",
+            files=["src/parser.py", "src/indexer.py"],
+            ctx=ctx,
         )
 
         assert page is not None

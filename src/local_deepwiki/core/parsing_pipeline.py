@@ -9,7 +9,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +21,42 @@ from local_deepwiki.logging import get_logger
 from local_deepwiki.models import CodeChunk, FileInfo, ProgressCallback
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True)
+class PipelineContext:
+    """Immutable configuration for a file-parsing pipeline run.
+
+    Bundles the dependencies and tuning knobs that ``FileParsingPipeline``
+    needs, replacing a long positional/keyword parameter list with a single
+    frozen object.
+    """
+
+    parser: CodeParser
+    chunker: CodeChunker
+    repo_path: Path
+    vector_store: VectorStore
+    batch_size: int
+    parallel_workers: int
+    pipeline_logger: Any | None = None
+
+
+@dataclass(slots=True)
+class _WindowState:
+    """Mutable running state threaded through the sliding-window loop.
+
+    Keeps the accumulating counters and batch buffer in one place so that
+    ``_run_window_loop`` and ``_process_window`` don't need long parameter
+    lists.
+    """
+
+    file_count: int = 0
+    chunk_batch: list[CodeChunk] = field(default_factory=list)
+    processed_files: list[FileInfo] = field(default_factory=list)
+    total_chunks_processed: int = 0
+    is_first_batch: bool = True
+    error_count: int = 0
+    files_completed: int = 0
 
 
 @dataclass(slots=True)
@@ -40,31 +76,18 @@ class FileParsingPipeline:
     and vector store from its caller and orchestrates parsing in a thread pool.
 
     Args:
-        parser: The code parser instance.
-        chunker: The code chunker instance.
-        repo_path: Resolved path to the repository root.
-        vector_store: Vector store for chunk storage.
-        batch_size: Number of chunks per storage batch.
-        parallel_workers: Number of threads for parallel parsing.
+        ctx: Frozen pipeline context containing all dependencies and config.
     """
 
-    def __init__(
-        self,
-        parser: CodeParser,
-        chunker: CodeChunker,
-        repo_path: Path,
-        vector_store: VectorStore,
-        batch_size: int,
-        parallel_workers: int,
-        pipeline_logger: Any | None = None,
-    ) -> None:
-        self.parser = parser
-        self.chunker = chunker
-        self.repo_path = repo_path
-        self.vector_store = vector_store
-        self.batch_size = batch_size
-        self.parallel_workers = parallel_workers
-        self._logger = pipeline_logger or logger
+    def __init__(self, ctx: PipelineContext) -> None:
+        self._ctx = ctx
+        self.parser = ctx.parser
+        self.chunker = ctx.chunker
+        self.repo_path = ctx.repo_path
+        self.vector_store = ctx.vector_store
+        self.batch_size = ctx.batch_size
+        self.parallel_workers = ctx.parallel_workers
+        self._logger = ctx.pipeline_logger or logger
 
     def parse_single_file(self, file_path: Path) -> ParseResult:
         """Parse and chunk a single file (CPU-bound, runs in thread pool).
@@ -114,16 +137,12 @@ class FileParsingPipeline:
             Tuple of (processed_files, total_chunks_processed).
         """
         _parse = parse_fn or self.parse_single_file
-        chunk_batch: list[CodeChunk] = []
-        processed_files: list[FileInfo] = []
-        total_chunks_processed = 0
-        is_first_batch = True
-        error_count = 0
-
         file_count = len(files_to_process)
+        state = _WindowState(file_count=file_count)
+
         if file_count == 0:
             self._logger.info("No files to parse")
-            return processed_files, total_chunks_processed
+            return state.processed_files, state.total_chunks_processed
 
         self._logger.info(
             "Starting parallel file parsing: %d files with %d workers",
@@ -132,113 +151,87 @@ class FileParsingPipeline:
         )
         parse_start_time = time.time()
 
-        error_count, total_chunks_processed = await self._run_window_loop(
+        await self._run_window_loop(
             files_to_process=files_to_process,
-            file_count=file_count,
             _parse=_parse,
-            chunk_batch=chunk_batch,
-            processed_files=processed_files,
-            total_chunks_processed=total_chunks_processed,
-            is_first_batch=is_first_batch,
+            state=state,
             full_rebuild=full_rebuild,
             progress_callback=progress_callback,
-            error_count=error_count,
         )
 
         self._log_parse_metrics(
-            parse_start_time, len(processed_files), total_chunks_processed, error_count
+            parse_start_time,
+            len(state.processed_files),
+            state.total_chunks_processed,
+            state.error_count,
         )
 
-        return processed_files, total_chunks_processed
+        return state.processed_files, state.total_chunks_processed
 
     async def _run_window_loop(
         self,
         *,
         files_to_process: list[Path],
-        file_count: int,
         _parse: Callable[[Path], ParseResult],
-        chunk_batch: list[CodeChunk],
-        processed_files: list[FileInfo],
-        total_chunks_processed: int,
-        is_first_batch: bool,
+        state: _WindowState,
         full_rebuild: bool,
         progress_callback: ProgressCallback | None,
-        error_count: int,
-    ) -> tuple[int, int]:
-        """Process all files in windows and flush chunk batches. Returns (error_count, total_chunks)."""
-        files_completed = 0
+    ) -> None:
+        """Process all files in windows and flush chunk batches.
+
+        Mutates *state* in place with final counts.
+        """
+        file_count = len(files_to_process)
         window_size = max(self.batch_size, self.parallel_workers * 4)
         with ThreadPoolExecutor(max_workers=self.parallel_workers) as executor:
             for window_start in range(0, file_count, window_size):
                 window_end = min(window_start + window_size, file_count)
                 window_files = files_to_process[window_start:window_end]
                 futures = {executor.submit(_parse, fp): fp for fp in window_files}
-                (
-                    files_completed,
-                    error_count,
-                    total_chunks_processed,
-                    is_first_batch,
-                ) = await self._process_window(
-                    futures,
-                    files_completed,
-                    error_count,
-                    file_count,
-                    chunk_batch,
-                    processed_files,
-                    total_chunks_processed,
-                    is_first_batch,
-                    full_rebuild,
-                    progress_callback,
+                await self._process_window(
+                    futures=futures,
+                    file_count=file_count,
+                    state=state,
+                    full_rebuild=full_rebuild,
+                    progress_callback=progress_callback,
                 )
-        if chunk_batch:
+        if state.chunk_batch:
+            # For the final flush, files_completed == file_count
+            state.files_completed = file_count
             chunks_stored = await self._process_chunk_batch(
-                chunk_batch,
-                full_rebuild,
-                is_first_batch,
-                progress_callback,
-                file_count,
-                file_count,
+                state=state,
+                full_rebuild=full_rebuild,
+                progress_callback=progress_callback,
                 is_final=True,
             )
-            total_chunks_processed += chunks_stored
-        return error_count, total_chunks_processed
+            state.total_chunks_processed += chunks_stored
 
     async def _process_window(
         self,
+        *,
         futures: dict,
-        files_completed: int,
-        error_count: int,
         file_count: int,
-        chunk_batch: list[CodeChunk],
-        processed_files: list[FileInfo],
-        total_chunks_processed: int,
-        is_first_batch: bool,
+        state: _WindowState,
         full_rebuild: bool,
         progress_callback: ProgressCallback | None,
-    ) -> tuple[int, int, int, bool]:
+    ) -> None:
         """Iterate completed futures for one sliding window, collecting results.
+
+        Mutates *state* in place with updated counts and batch contents.
 
         Args:
             futures: Mapping of Future -> file_path for the current window.
-            files_completed: Running count of completed files before this window.
-            error_count: Running count of parse errors before this window.
             file_count: Total number of files in the entire parse run.
-            chunk_batch: Mutable list that accumulates chunks across windows.
-            processed_files: Mutable list of successfully parsed FileInfo objects.
-            total_chunks_processed: Running chunk count before this window.
-            is_first_batch: True if no batch has been stored to the vector store yet.
+            state: Mutable running state for the window loop.
             full_rebuild: Passed through to ``_process_chunk_batch``.
             progress_callback: Optional progress callback.
-
-        Returns:
-            Updated (files_completed, error_count, total_chunks_processed, is_first_batch).
         """
         for future in as_completed(futures):
             file_path = futures[future]
             if progress_callback:
                 progress_callback(
                     f"Parsing {file_path.name}",
-                    files_completed,
+                    state.files_completed,
                     file_count,
                 )
 
@@ -246,32 +239,27 @@ class FileParsingPipeline:
             skipped = await self._handle_parse_result(
                 result,
                 progress_callback,
-                files_completed,
+                state.files_completed,
                 file_count,
-                chunk_batch,
-                processed_files,
+                state.chunk_batch,
+                state.processed_files,
             )
             if skipped:
-                error_count += 1
-                files_completed += 1
+                state.error_count += 1
+                state.files_completed += 1
                 continue
 
-            if len(chunk_batch) >= self.batch_size:
+            if len(state.chunk_batch) >= self.batch_size:
                 chunks_stored = await self._process_chunk_batch(
-                    chunk_batch,
-                    full_rebuild,
-                    is_first_batch,
-                    progress_callback,
-                    files_completed,
-                    file_count,
+                    state=state,
+                    full_rebuild=full_rebuild,
+                    progress_callback=progress_callback,
                 )
-                total_chunks_processed += chunks_stored
-                is_first_batch = False
-                chunk_batch.clear()
+                state.total_chunks_processed += chunks_stored
+                state.is_first_batch = False
+                state.chunk_batch.clear()
 
-            files_completed += 1
-
-        return files_completed, error_count, total_chunks_processed, is_first_batch
+            state.files_completed += 1
 
     def _log_parse_metrics(
         self,
@@ -365,23 +353,19 @@ class FileParsingPipeline:
 
     async def _process_chunk_batch(
         self,
-        chunk_batch: list[CodeChunk],
+        *,
+        state: _WindowState,
         full_rebuild: bool,
-        is_first_batch: bool,
         progress_callback: ProgressCallback | None,
-        current: int,
-        total: int,
         is_final: bool = False,
     ) -> int:
         """Process a batch of chunks and store in vector store.
 
         Args:
-            chunk_batch: List of code chunks to store.
+            state: Window state whose ``chunk_batch``, ``is_first_batch``,
+                ``files_completed``, and ``file_count`` are read.
             full_rebuild: If True, may need to create table on first batch.
-            is_first_batch: True if this is the first batch being processed.
             progress_callback: Optional callback for progress updates.
-            current: Current progress index.
-            total: Total number of files being processed.
             is_final: True if this is the final batch.
 
         Returns:
@@ -390,14 +374,14 @@ class FileParsingPipeline:
         batch_type = "final batch" if is_final else "batch"
         if progress_callback:
             progress_callback(
-                f"Storing {batch_type} of {len(chunk_batch)} chunks...",
-                current,
-                total,
+                f"Storing {batch_type} of {len(state.chunk_batch)} chunks...",
+                state.files_completed,
+                state.file_count,
             )
 
-        if full_rebuild and is_first_batch:
-            await self.vector_store.create_or_update_table(chunk_batch)
+        if full_rebuild and state.is_first_batch:
+            await self.vector_store.create_or_update_table(state.chunk_batch)
         else:
-            await self.vector_store.add_chunks(chunk_batch)
+            await self.vector_store.add_chunks(state.chunk_batch)
 
-        return len(chunk_batch)
+        return len(state.chunk_batch)

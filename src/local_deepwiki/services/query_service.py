@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,32 @@ from local_deepwiki.providers.base import LLMProvider
 from .models import QueryResult, SourceEntry
 
 logger = get_logger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class QuestionRequest:
+    """Immutable parameters for the RAG question-answering pipeline."""
+
+    repo_path: Path
+    question: str
+    max_context: int = 10
+    agentic_rag: bool = False
+    wiki_path: Path | None = None
+    debug: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class CodeSearchRequest:
+    """Immutable parameters for code search."""
+
+    repo_path: Path
+    query: str
+    limit: int = 20
+    language: str | None = None
+    chunk_type: str | None = None
+    path_filter: str | None = None
+    use_fuzzy: bool = False
+    fuzzy_weight: float = 0.3
 
 
 class QueryService:
@@ -166,23 +193,13 @@ class QueryService:
 
     async def answer_question(
         self,
-        repo_path: Path,
-        question: str,
-        *,
-        max_context: int = 10,
-        agentic_rag: bool = False,
-        wiki_path: Path | None = None,
-        debug: bool = False,
+        request: QuestionRequest,
     ) -> QueryResult:
         """Execute the full RAG pipeline: search -> [rerank] -> synthesize.
 
         Args:
-            repo_path: Resolved path to the indexed repository.
-            question: The user's natural-language question.
-            max_context: Maximum code chunks for context.
-            agentic_rag: Enable agentic RAG (grade relevance, rewrite query).
-            wiki_path: Path to wiki directory (for wiki_resource URIs).
-            debug: Include a RAGTrace in the result for pipeline debugging.
+            request: Immutable request containing repo path, question,
+                max context, agentic RAG toggle, wiki path, and debug flag.
 
         Returns:
             QueryResult with the synthesized answer and source references.
@@ -190,14 +207,19 @@ class QueryService:
         from local_deepwiki.core.reranker import get_reranker
         from local_deepwiki.core.tracing import RAGTrace
 
-        trace = RAGTrace(query=question) if debug else None
+        trace = RAGTrace(query=request.question) if request.debug else None
 
         reranker = get_reranker(self._config.search.reranker_model)
-        fetch_limit = max_context * 2 if reranker else max_context
+        fetch_limit = request.max_context * 2 if reranker else request.max_context
 
         t0 = time.monotonic()
         search_results, agentic_metadata = await self._retrieve_and_expand(
-            question, repo_path, fetch_limit, agentic_rag, trace, t0
+            request.question,
+            request.repo_path,
+            fetch_limit,
+            request.agentic_rag,
+            trace,
+            t0,
         )
 
         if not search_results:
@@ -208,12 +230,14 @@ class QueryService:
             )
 
         search_results = await self._rerank_results(
-            reranker, question, search_results, max_context, trace
+            reranker, request.question, search_results, request.max_context, trace
         )
 
-        answer = await self._generate_answer(question, search_results, trace)
+        answer = await self._generate_answer(request.question, search_results, trace)
 
-        effective_wiki_path = wiki_path or self._config.get_wiki_path(repo_path)
+        effective_wiki_path = request.wiki_path or self._config.get_wiki_path(
+            request.repo_path
+        )
         sources = _build_source_entries(search_results, effective_wiki_path)
 
         return QueryResult(
@@ -290,47 +314,33 @@ class QueryService:
 
     async def search_code(
         self,
-        repo_path: Path,
-        query: str,
-        *,
-        limit: int = 20,
-        language: str | None = None,
-        chunk_type: str | None = None,
-        path_filter: str | None = None,
-        use_fuzzy: bool = False,
-        fuzzy_weight: float = 0.3,
+        request: CodeSearchRequest,
     ) -> list[dict[str, Any]]:
         """Search code with optional filters.
 
         Args:
-            repo_path: Resolved path to the indexed repository.
-            query: Search query string.
-            limit: Maximum results to return.
-            language: Optional language filter.
-            chunk_type: Optional chunk type filter.
-            path_filter: Optional file path pattern filter.
-            use_fuzzy: Enable fuzzy text matching.
-            fuzzy_weight: Weight for fuzzy vs vector (0.0-1.0).
+            request: Immutable request containing repo path, query,
+                limit, language, chunk type, path filter, fuzzy settings.
 
         Returns:
             List of result dicts with file_path, name, type, language,
             lines, score, preview, docstring, and optional highlights.
         """
         results = await self._vector_store.search(
-            query,
-            limit=limit,
-            language=language,
-            chunk_type=chunk_type,
-            path_pattern=path_filter,
-            use_fuzzy=use_fuzzy,
-            fuzzy_weight=fuzzy_weight,
+            request.query,
+            limit=request.limit,
+            language=request.language,
+            chunk_type=request.chunk_type,
+            path_pattern=request.path_filter,
+            use_fuzzy=request.use_fuzzy,
+            fuzzy_weight=request.fuzzy_weight,
         )
 
         # --- Graph expansion (optional) ---
         from local_deepwiki.services.graph_expansion import expand_with_graph
 
         results = await expand_with_graph(
-            results, self._vector_store, self._config, repo_path
+            results, self._vector_store, self._config, request.repo_path
         )
 
         if not results:

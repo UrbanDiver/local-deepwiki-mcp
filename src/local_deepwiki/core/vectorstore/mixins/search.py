@@ -55,6 +55,7 @@ class SearchMixin:
 
         # Backward-compatible path: build an engine from self attributes
         from local_deepwiki.core.vectorstore.search_engine import SearchEngine
+        from local_deepwiki.core.vectorstore.search_params import SearchEngineConfig
 
         engine = SearchEngine(
             get_table=self._get_table,  # type: ignore[attr-defined]
@@ -64,10 +65,12 @@ class SearchMixin:
             fuzzy_search_config=self._fuzzy_search_config,  # type: ignore[attr-defined]
             adaptive_searcher=self._adaptive_searcher,  # type: ignore[attr-defined]
             lazy_index_manager=self._lazy_index_manager,  # type: ignore[attr-defined]
-            default_search_profile=self._default_search_profile,  # type: ignore[attr-defined]
-            adaptive_search_enabled=self._adaptive_search_enabled,  # type: ignore[attr-defined]
-            default_search_mode=self._default_search_mode,  # type: ignore[attr-defined]
-            bm25_weight=self._bm25_weight,  # type: ignore[attr-defined]
+            config=SearchEngineConfig(
+                default_search_profile=self._default_search_profile,  # type: ignore[attr-defined]
+                adaptive_search_enabled=self._adaptive_search_enabled,  # type: ignore[attr-defined]
+                default_search_mode=self._default_search_mode,  # type: ignore[attr-defined]
+                bm25_weight=self._bm25_weight,  # type: ignore[attr-defined]
+            ),
         )
         self._search_engine = engine  # type: ignore[attr-defined]
         return engine
@@ -178,6 +181,10 @@ class SearchMixin:
         fetch_limit: int,
     ) -> None:
         """Record adaptive search quality and cache results.
+
+        .. note:: This method retains its original signature for backward
+           compatibility with existing tests. The ``SearchEngine`` equivalent
+           (``_record_and_store_results``) uses ``SearchExecutionContext`` instead.
 
         Args:
             query: Original search query.

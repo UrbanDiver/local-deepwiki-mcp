@@ -355,15 +355,20 @@ class WikiGenerator:
         from local_deepwiki.generators.wiki.phases import (
             _add_auxiliary_page as _phases_add_aux,
         )
+        from local_deepwiki.generators.wiki.pipeline_params import WikiPipelineParams
 
+        params = WikiPipelineParams(
+            ctx=self._build_pipeline_context(
+                index_status, full_rebuild=ctx.full_rebuild
+            ),
+            write_callback=self._write_page,
+        )
         await _phases_add_aux(
             ctx,
             content,
             path,
             title,
-            index_status,
-            self.status_manager,
-            self._write_page,
+            params,
         )
 
     async def _try_load_cached_auxiliary_pages(
@@ -472,13 +477,16 @@ class WikiGenerator:
 
     async def _apply_cross_linking(
         self,
-        pages: list[WikiPage],
+        ctx: _GenerationContext,
+        index_status: IndexStatus,
         progress_callback: ProgressCallback | None,
     ) -> list[WikiPage]:
         """Apply cross-links, source refs, and see-also sections to pages."""
         from local_deepwiki.generators.wiki.pipeline import apply_cross_linking_phase
 
-        return await apply_cross_linking_phase(self, pages, progress_callback)
+        return await apply_cross_linking_phase(
+            self, ctx, index_status, progress_callback
+        )
 
     async def _generate_search_and_toc(
         self,

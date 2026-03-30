@@ -22,6 +22,22 @@ logger = get_logger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
+class EntityAnalysisContext:
+    """Immutable context for entity-level impact collection.
+
+    Bundles the parameters shared by _collect_reverse_calls and
+    _collect_inheritance_dependents to reduce their parameter counts.
+    """
+
+    file_path: str
+    entity_name: str | None
+    repo_path: Path | None = None
+    full_file: Path | None = None
+    index_status: Any = None
+    vector_store: Any = None
+
+
+@dataclass(frozen=True, slots=True)
 class ImpactAnalysisRequest:
     """Immutable parameters for impact analysis.
 
@@ -42,6 +58,26 @@ class ImpactAnalysisRequest:
     include_wiki_pages: bool = True
 
 
+@dataclass(frozen=True, slots=True)
+class EntityExplainRequest:
+    """Immutable parameters for entity explanation.
+
+    Consolidates the arguments of :meth:`AnalysisService.explain_entity`
+    and :func:`_populate_entity_sections` into a single object.
+    """
+
+    entity_name: str
+    repo_path: Path
+    index_status: Any
+    wiki_path: Path
+    vector_store: VectorStore | None
+    include_call_graph: bool = True
+    include_inheritance: bool = True
+    include_test_examples: bool = True
+    include_api_docs: bool = True
+    max_test_examples: int = 3
+
+
 def _set_section_error(
     result: dict[str, Any],
     field: str,
@@ -54,49 +90,6 @@ def _set_section_error(
     result[field] = {"error": sanitize_error_message(str(exc))}
 
 
-def _normalize_impact_request(
-    *,
-    request: "ImpactAnalysisRequest | None",
-    file_path: str | None,
-    full_file: "Path | None",
-    repo_path: "Path | None",
-    index_status: Any,
-    wiki_path: "Path | None",
-    vector_store: "VectorStore | None",
-    entity_name: str | None,
-    include_reverse_calls: bool,
-    include_inheritance: bool,
-    include_dependents: bool,
-    include_wiki_pages: bool,
-) -> "ImpactAnalysisRequest":
-    """Normalize loose kwargs into an :class:`ImpactAnalysisRequest`.
-
-    When ``request`` is already provided it is returned unchanged.  Otherwise
-    validates that the required positional arguments are present and builds a
-    new request object.
-    """
-    if request is not None:
-        return request
-    if file_path is None or full_file is None or repo_path is None or wiki_path is None:
-        raise ValueError(
-            "Either 'request' or all of 'file_path', 'full_file', "
-            "'repo_path', and 'wiki_path' must be provided."
-        )
-    return ImpactAnalysisRequest(
-        file_path=file_path,
-        full_file=full_file,
-        repo_path=repo_path,
-        index_status=index_status,
-        wiki_path=wiki_path,
-        vector_store=vector_store,
-        entity_name=entity_name,
-        include_reverse_calls=include_reverse_calls,
-        include_inheritance=include_inheritance,
-        include_dependents=include_dependents,
-        include_wiki_pages=include_wiki_pages,
-    )
-
-
 async def _run_impact_collection(request: ImpactAnalysisRequest) -> dict[str, Any]:
     """Run all enabled impact collection phases and return the result dict."""
     result: dict[str, Any] = {
@@ -107,13 +100,19 @@ async def _run_impact_collection(request: ImpactAnalysisRequest) -> dict[str, An
     affected_files: set[str] = set()
     affected_entities: set[str] = set()
 
+    entity_ctx = EntityAnalysisContext(
+        file_path=request.file_path,
+        entity_name=request.entity_name,
+        repo_path=request.repo_path,
+        full_file=request.full_file,
+        index_status=request.index_status,
+        vector_store=request.vector_store,
+    )
+
     if request.include_reverse_calls:
         _collect_reverse_calls(
             result,
-            request.full_file,
-            request.repo_path,
-            request.file_path,
-            request.entity_name,
+            entity_ctx,
             affected_files,
             affected_entities,
         )
@@ -121,10 +120,7 @@ async def _run_impact_collection(request: ImpactAnalysisRequest) -> dict[str, An
     if request.include_inheritance:
         await _collect_inheritance_dependents(
             result,
-            request.file_path,
-            request.entity_name,
-            request.index_status,
-            request.vector_store,
+            entity_ctx,
             affected_files,
             affected_entities,
         )
@@ -162,17 +158,7 @@ class AnalysisService:
 
     async def explain_entity(
         self,
-        entity_name: str,
-        repo_path: Path,
-        index_status: Any,
-        wiki_path: Path,
-        vector_store: VectorStore | None,
-        *,
-        include_call_graph: bool = True,
-        include_inheritance: bool = True,
-        include_test_examples: bool = True,
-        include_api_docs: bool = True,
-        max_test_examples: int = 3,
+        request: EntityExplainRequest,
     ) -> dict[str, Any]:
         """Composite explanation of a code entity.
 
@@ -180,28 +166,22 @@ class AnalysisService:
         and API docs for a single named entity.
 
         Args:
-            entity_name: Name of the entity to explain.
-            repo_path: Resolved repository path.
-            index_status: Loaded IndexStatus for the repository.
-            wiki_path: Path to the wiki directory.
-            vector_store: Optional vector store (needed for inheritance/tests).
-            include_call_graph: Whether to include call graph data.
-            include_inheritance: Whether to include inheritance data.
-            include_test_examples: Whether to include test examples.
-            include_api_docs: Whether to include API docs.
-            max_test_examples: Maximum test examples to include.
+            request: Immutable request containing entity name, repo path,
+                index status, wiki path, vector store, and section toggles.
 
         Returns:
             Dict with entity info and analysis sections.
         """
-        entity_info = await _lookup_entity_in_search_index(wiki_path, entity_name)
+        entity_info = await _lookup_entity_in_search_index(
+            request.wiki_path, request.entity_name
+        )
         if entity_info is None:
             return {
                 "status": "success",
-                "entity_name": entity_name,
+                "entity_name": request.entity_name,
                 "entity_found": False,
                 "message": (
-                    f"Entity '{entity_name}' not found in the search index. "
+                    f"Entity '{request.entity_name}' not found in the search index. "
                     "Try using fuzzy_search or search_wiki to find the correct name."
                 ),
             }
@@ -211,7 +191,7 @@ class AnalysisService:
 
         result: dict[str, Any] = {
             "status": "success",
-            "entity_name": entity_name,
+            "entity_name": request.entity_name,
             "entity_found": True,
             "entity_info": {
                 "type": entity_type,
@@ -223,36 +203,16 @@ class AnalysisService:
 
         await _populate_entity_sections(
             result,
-            entity_name=entity_name,
+            request=request,
             entity_type=entity_type,
             entity_file=entity_file,
-            repo_path=repo_path,
-            index_status=index_status,
-            vector_store=vector_store,
-            include_call_graph=include_call_graph,
-            include_inheritance=include_inheritance,
-            include_test_examples=include_test_examples,
-            include_api_docs=include_api_docs,
-            max_test_examples=max_test_examples,
         )
 
         return result
 
     async def impact_analysis(
         self,
-        file_path: str | None = None,
-        full_file: Path | None = None,
-        repo_path: Path | None = None,
-        index_status: Any = None,
-        wiki_path: Path | None = None,
-        vector_store: VectorStore | None = None,
-        *,
-        request: ImpactAnalysisRequest | None = None,
-        entity_name: str | None = None,
-        include_reverse_calls: bool = True,
-        include_inheritance: bool = True,
-        include_dependents: bool = True,
-        include_wiki_pages: bool = True,
+        request: ImpactAnalysisRequest,
     ) -> dict[str, Any]:
         """Analyze the blast radius of changes to a file or entity.
 
@@ -260,39 +220,12 @@ class AnalysisService:
         and wiki pages to determine impact.
 
         Args:
-            file_path: Relative path to the target file.
-            full_file: Resolved absolute path to the target file.
-            repo_path: Resolved repository path.
-            index_status: Loaded IndexStatus for the repository.
-            wiki_path: Path to the wiki directory.
-            vector_store: Optional vector store (needed for inheritance/dependents).
-            request: Optional :class:`ImpactAnalysisRequest` consolidating all
-                parameters.  When provided, individual positional/keyword
-                arguments are ignored.
-            entity_name: Optional entity to scope the analysis to.
-            include_reverse_calls: Whether to include reverse call graph.
-            include_inheritance: Whether to include inheritance dependents.
-            include_dependents: Whether to include file dependents.
-            include_wiki_pages: Whether to include affected wiki pages.
+            request: Immutable request containing file path, repo path,
+                index status, wiki path, vector store, and section toggles.
 
         Returns:
             Dict with impact analysis results and risk level.
         """
-        request = _normalize_impact_request(
-            request=request,
-            file_path=file_path,
-            full_file=full_file,
-            repo_path=repo_path,
-            index_status=index_status,
-            wiki_path=wiki_path,
-            vector_store=vector_store,
-            entity_name=entity_name,
-            include_reverse_calls=include_reverse_calls,
-            include_inheritance=include_inheritance,
-            include_dependents=include_dependents,
-            include_wiki_pages=include_wiki_pages,
-        )
-
         return await _run_impact_collection(request)
 
 
@@ -304,44 +237,47 @@ class AnalysisService:
 async def _populate_entity_sections(
     result: dict[str, Any],
     *,
-    entity_name: str,
+    request: EntityExplainRequest,
     entity_type: str,
     entity_file: str,
-    repo_path: Path,
-    index_status: Any,
-    vector_store: Any,
-    include_call_graph: bool,
-    include_inheritance: bool,
-    include_test_examples: bool,
-    include_api_docs: bool,
-    max_test_examples: int,
 ) -> None:
     """Populate optional analysis sections in an explain_entity result dict."""
-    if include_call_graph:
+    if request.include_call_graph:
         if entity_file:
-            _collect_call_graph(result, repo_path, entity_name, entity_file)
-
-    if include_inheritance:
-        if entity_type == "class":
-            if vector_store is not None:
-                await _collect_inheritance(
-                    result, entity_name, index_status, vector_store
-                )
-
-    if include_test_examples:
-        if vector_store is not None:
-            await _collect_test_examples(
-                result,
-                entity_name,
-                entity_type,
-                max_test_examples,
-                repo_path,
-                vector_store,
+            _collect_call_graph(
+                result, request.repo_path, request.entity_name, entity_file
             )
 
-    if include_api_docs:
+    if request.include_inheritance:
+        if entity_type == "class":
+            if request.vector_store is not None:
+                await _collect_inheritance(
+                    result,
+                    request.entity_name,
+                    request.index_status,
+                    request.vector_store,
+                )
+
+    if request.include_test_examples:
+        if request.vector_store is not None:
+            await _collect_test_examples(
+                result,
+                request.entity_name,
+                entity_type,
+                request.max_test_examples,
+                request.repo_path,
+                request.vector_store,
+            )
+
+    if request.include_api_docs:
         if entity_file:
-            _collect_api_docs(result, repo_path, entity_name, entity_type, entity_file)
+            _collect_api_docs(
+                result,
+                request.repo_path,
+                request.entity_name,
+                entity_type,
+                entity_file,
+            )
 
 
 async def _lookup_entity_in_search_index(
@@ -678,10 +614,7 @@ def _find_cross_file_callers(
 
 def _collect_reverse_calls(
     result: dict[str, Any],
-    full_file: Path,
-    repo_path: Path,
-    file_path: str,
-    entity_name: str | None,
+    ctx: EntityAnalysisContext,
     affected_files: set[str],
     affected_entities: set[str],
 ) -> None:
@@ -692,17 +625,24 @@ def _collect_reverse_calls(
             build_reverse_call_graph,
         )
 
+        assert ctx.full_file is not None  # noqa: S101
+        assert ctx.repo_path is not None  # noqa: S101
+
         extractor = CallGraphExtractor()
-        call_graph = extractor.extract_from_file(full_file.resolve(), repo_path)
+        call_graph = extractor.extract_from_file(ctx.full_file.resolve(), ctx.repo_path)
         reverse_graph = build_reverse_call_graph(call_graph)
 
-        target_module_stem = Path(file_path).stem
+        target_module_stem = Path(ctx.file_path).stem
         all_target_entities = set(call_graph.keys()) | set(reverse_graph.keys())
-        if entity_name:
-            all_target_entities.add(entity_name)
+        if ctx.entity_name:
+            all_target_entities.add(ctx.entity_name)
 
         cross_callers = _find_cross_file_callers(
-            extractor, repo_path, full_file, target_module_stem, all_target_entities
+            extractor,
+            ctx.repo_path,
+            ctx.full_file,
+            target_module_stem,
+            all_target_entities,
         )
 
         for callee, callers in cross_callers.items():
@@ -712,8 +652,10 @@ def _collect_reverse_calls(
                 if caller not in reverse_graph[callee]:
                     reverse_graph[callee].append(caller)
 
-        if entity_name:
-            reverse_graph = {k: v for k, v in reverse_graph.items() if k == entity_name}
+        if ctx.entity_name:
+            reverse_graph = {
+                k: v for k, v in reverse_graph.items() if k == ctx.entity_name
+            }
 
         result["reverse_call_graph"] = reverse_graph
 
@@ -731,40 +673,37 @@ def _collect_reverse_calls(
             result,
             "reverse_call_graph",
             "Reverse call graph extraction",
-            file_path,
+            ctx.file_path,
             exc,
         )
 
 
 async def _collect_inheritance_dependents(
     result: dict[str, Any],
-    file_path: str,
-    entity_name: str | None,
-    index_status: Any,
-    vector_store: Any,
+    ctx: EntityAnalysisContext,
     affected_files: set[str],
     affected_entities: set[str],
 ) -> None:
-    """Collect classes that inherit from classes in *file_path*."""
+    """Collect classes that inherit from classes in *ctx.file_path*."""
     try:
         from local_deepwiki.generators.analysis.inheritance import (
             collect_class_hierarchy,
         )
 
-        if vector_store is None:
+        if ctx.vector_store is None:
             raise ValueError("Vector store required for inheritance analysis")
-        classes = await collect_class_hierarchy(index_status, vector_store)
+        classes = await collect_class_hierarchy(ctx.index_status, ctx.vector_store)
 
         inheritance_dependents: dict[str, list[str]] = {}
         for class_name, node in classes.items():
-            if node.file_path != file_path:
+            if node.file_path != ctx.file_path:
                 continue
-            if entity_name and class_name != entity_name:
+            if ctx.entity_name and class_name != ctx.entity_name:
                 continue
             children_with_files: list[str] = []
             for child_name in node.children:
                 child_node = classes.get(child_name)
-                if child_node and child_node.file_path != file_path:
+                if child_node and child_node.file_path != ctx.file_path:
                     children_with_files.append(f"{child_node.file_path}:{child_name}")
                     affected_files.add(child_node.file_path)
                     affected_entities.add(child_name)
@@ -778,7 +717,7 @@ async def _collect_inheritance_dependents(
         result["inheritance_dependents"] = inheritance_dependents
     except (OSError, ValueError, RuntimeError) as exc:
         _set_section_error(
-            result, "inheritance_dependents", "Inheritance analysis", file_path, exc
+            result, "inheritance_dependents", "Inheritance analysis", ctx.file_path, exc
         )
 
 

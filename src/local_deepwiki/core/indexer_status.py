@@ -6,9 +6,10 @@ Handles loading, saving, and managing index status for incremental updates.
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.core.index_manager import IndexStatusManager
 from local_deepwiki.core.indexer_files import (
@@ -21,6 +22,21 @@ if TYPE_CHECKING:
     from local_deepwiki.core.parser import ASTCache, CodeParser
 
 
+@dataclass(frozen=True, slots=True)
+class IndexerStatusDeps:
+    """Immutable dependency bundle for :class:`IndexStatusTracker`.
+
+    Consolidates injected collaborators so the tracker ``__init__`` stays
+    within the 6-parameter limit.
+    """
+
+    status_manager: IndexStatusManager
+    find_source_files_fn: Callable[[], list[Path]]
+    parser: Any  # CodeParser (avoid import cycle)
+    host_module: ModuleType
+    ast_cache: Any | None = None  # ASTCache | None
+
+
 class IndexStatusTracker:
     """Tracks index status for incremental updates.
 
@@ -31,31 +47,23 @@ class IndexStatusTracker:
     Args:
         wiki_path: Path to the wiki output directory.
         repo_path: Resolved path to the repository root.
-        status_manager: IndexStatusManager instance for persistence.
-        find_source_files_fn: Callable that returns the list of source files.
-        parser: CodeParser for file info lookups.
-        host_module: The parent module (``indexer``) whose ``logger`` attribute
-            is used at call time, so that test patches take effect.
-        ast_cache: Optional AST cache for logging stats on save.
+        deps: Dependency bundle with status manager, file finder, parser,
+            host module, and optional AST cache.
     """
 
     def __init__(
         self,
         wiki_path: Path,
         repo_path: Path,
-        status_manager: IndexStatusManager,
-        find_source_files_fn: Callable[[], list[Path]],
-        parser: CodeParser,
-        host_module: ModuleType,
-        ast_cache: ASTCache | None = None,
+        deps: IndexerStatusDeps,
     ) -> None:
         self.wiki_path = wiki_path
         self.repo_path = repo_path
-        self._status_manager = status_manager
-        self._find_source_files = find_source_files_fn
-        self.parser = parser
-        self._host = host_module
-        self.ast_cache = ast_cache
+        self._status_manager = deps.status_manager
+        self._find_source_files = deps.find_source_files_fn
+        self.parser = deps.parser
+        self._host = deps.host_module
+        self.ast_cache = deps.ast_cache
 
     def load_previous_status(
         self, full_rebuild: bool

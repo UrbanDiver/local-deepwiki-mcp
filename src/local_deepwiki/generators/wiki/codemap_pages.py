@@ -158,26 +158,13 @@ def _format_codemap_index(topics: list[dict]) -> str:
 
 async def _process_codemap_topic(
     topic: dict,
-    *,
-    vector_store,
-    llm,
-    repo_path,
-    wiki_path: Path | None,
-    status_manager,
-    config,
-    full_rebuild: bool,
+    ctx: "WikiPipelineContext",
 ) -> tuple[WikiPage | None, bool, bool]:
     """Process a single codemap topic: check cache or generate fresh.
 
     Args:
         topic: Topic dict with entry_point, file_path, suggested_query.
-        vector_store: Vector store for codemap generation.
-        llm: LLM provider for narrative generation.
-        repo_path: Repository root path.
-        wiki_path: Wiki output directory.
-        status_manager: Status manager for cache checks and recording.
-        config: Wiki config with codemap parameters.
-        full_rebuild: Whether to skip cache checks.
+        ctx: Immutable pipeline context bundling shared parameters.
 
     Returns:
         Tuple of (page_or_None, was_skipped, was_generated). Both False when
@@ -188,22 +175,24 @@ async def _process_codemap_topic(
     page_path = f"codemaps/{slug}.md"
     source_files = [topic.get("file_path", "")]
 
+    config = ctx.wiki_config
+
     # Check if page needs regeneration
-    if not full_rebuild and not status_manager.needs_regeneration(
+    if not ctx.full_rebuild and not ctx.status_manager.needs_regeneration(
         page_path, source_files
     ):
-        existing_page = await status_manager.load_existing_page(page_path)
+        existing_page = await ctx.status_manager.load_existing_page(page_path)
         if existing_page is not None:
-            status_manager.record_page_status(existing_page, source_files)
+            ctx.status_manager.record_page_status(existing_page, source_files)
             return existing_page, True, False
 
     # Generate codemap
     try:
         result = await generate_codemap(
             query=topic.get("suggested_query", f"How does {entry_point} work?"),
-            vector_store=vector_store,
-            repo_path=repo_path,
-            llm=llm,
+            vector_store=ctx.vector_store,
+            repo_path=ctx.repo_path,
+            llm=ctx.llm,
             entry_point=entry_point,
             focus=CodemapFocus.EXECUTION_FLOW,
             max_depth=config.codemap_max_depth,
@@ -225,14 +214,14 @@ async def _process_codemap_topic(
         )
         return None, False, False
 
-    content = _format_codemap_page(topic, result, wiki_path)
+    content = _format_codemap_page(topic, result, ctx.wiki_path)
     page = WikiPage(
         path=page_path,
         title=f"Codemap: {entry_point}",
         content=content,
         generated_at=time.time(),
     )
-    status_manager.record_page_status(page, source_files)
+    ctx.status_manager.record_page_status(page, source_files)
     return page, False, True
 
 
@@ -303,13 +292,7 @@ async def generate_codemap_pages(
     for topic in topics:
         page, was_skipped, was_generated = await _process_codemap_topic(
             topic,
-            vector_store=ctx.vector_store,
-            llm=ctx.llm,
-            repo_path=ctx.repo_path,
-            wiki_path=ctx.wiki_path,
-            status_manager=ctx.status_manager,
-            config=config,
-            full_rebuild=ctx.full_rebuild,
+            ctx,
         )
         if page is not None:
             pages.append(page)

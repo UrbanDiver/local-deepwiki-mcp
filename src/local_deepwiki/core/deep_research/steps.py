@@ -20,6 +20,8 @@ from local_deepwiki.models import (
     SubQuestion,
 )
 
+from .checkpoints import checkpoint_to_results, results_to_checkpoint_format
+from .config import CheckpointData
 from .serialization import dict_to_search_result, search_result_to_dict
 
 logger = get_logger(__name__)
@@ -42,7 +44,6 @@ class StepsMixin:
         - _deduplicate_results(results) -> list[SearchResult]
         - _synthesize(question, sub_questions, results) -> str
         - _build_sources(results) -> list[SourceReference]
-        - _results_to_checkpoint_format(results, key) -> dict
         - max_total_chunks: int
     """
 
@@ -81,9 +82,11 @@ class StepsMixin:
         sub_questions, step, calls = await self._step_decompose(question)
         # Save checkpoint after decomposition
         self._save_checkpoint(
-            step=ResearchCheckpointStep.RETRIEVAL,
-            sub_questions=sub_questions,
-            completed_step="decomposition",
+            CheckpointData(
+                step=ResearchCheckpointStep.RETRIEVAL,
+                sub_questions=sub_questions,
+                completed_step="decomposition",
+            )
         )
         return sub_questions, step, calls
 
@@ -109,7 +112,7 @@ class StepsMixin:
             and checkpoint.retrieved_contexts
         ):
             # Restore from checkpoint
-            initial_results = self._checkpoint_to_results(checkpoint.retrieved_contexts)
+            initial_results = checkpoint_to_results(checkpoint.retrieved_contexts)
             logger.info("Restored %s chunks from checkpoint", len(initial_results))
             step = ResearchStep(
                 step_type=ResearchStepType.RETRIEVAL,
@@ -122,11 +125,13 @@ class StepsMixin:
         initial_results, step = await self._step_retrieve(sub_questions)
         # Save checkpoint after retrieval
         self._save_checkpoint(
-            step=ResearchCheckpointStep.GAP_ANALYSIS,
-            retrieved_contexts=self._results_to_checkpoint_format(
-                initial_results, "initial"
-            ),
-            completed_step="retrieval",
+            CheckpointData(
+                step=ResearchCheckpointStep.GAP_ANALYSIS,
+                retrieved_contexts=results_to_checkpoint_format(
+                    initial_results, "initial"
+                ),
+                completed_step="retrieval",
+            )
         )
         return initial_results, step
 
@@ -174,11 +179,13 @@ class StepsMixin:
         )
         # Save checkpoint after gap analysis
         self._save_checkpoint(
-            step=ResearchCheckpointStep.FOLLOW_UP_RETRIEVAL
-            if follow_up_queries
-            else ResearchCheckpointStep.SYNTHESIS,
-            follow_up_queries=follow_up_queries,
-            completed_step="gap_analysis",
+            CheckpointData(
+                step=ResearchCheckpointStep.FOLLOW_UP_RETRIEVAL
+                if follow_up_queries
+                else ResearchCheckpointStep.SYNTHESIS,
+                follow_up_queries=follow_up_queries,
+                completed_step="gap_analysis",
+            )
         )
         return follow_up_queries, step, calls
 
@@ -229,9 +236,13 @@ class StepsMixin:
         )
         # Save checkpoint after follow-up retrieval
         self._save_checkpoint(
-            step=ResearchCheckpointStep.SYNTHESIS,
-            follow_up_contexts=[search_result_to_dict(r) for r in additional_results],
-            completed_step="follow_up_retrieval",
+            CheckpointData(
+                step=ResearchCheckpointStep.SYNTHESIS,
+                follow_up_contexts=[
+                    search_result_to_dict(r) for r in additional_results
+                ],
+                completed_step="follow_up_retrieval",
+            )
         )
         return additional_results, step
 

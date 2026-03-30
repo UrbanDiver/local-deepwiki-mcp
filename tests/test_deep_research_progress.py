@@ -10,6 +10,7 @@ from local_deepwiki.core.deep_research import (
     DeepResearchPipeline,
     ResearchCancelledError,
 )
+from local_deepwiki.core.deep_research.config import ResearchConfig
 from local_deepwiki.models import (
     ChunkType,
     CodeChunk,
@@ -196,6 +197,7 @@ class TestDeepResearchProgress:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         await pipeline.research("Question", progress_callback=capture)
@@ -238,6 +240,7 @@ class TestDeepResearchProgress:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         await pipeline.research("Question", progress_callback=capture)
@@ -269,6 +272,7 @@ class TestDeepResearchProgress:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         await pipeline.research("Question", progress_callback=capture)
@@ -306,6 +310,7 @@ class TestDeepResearchProgress:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         await pipeline.research("Question", progress_callback=capture)
@@ -327,6 +332,7 @@ class TestDeepResearchProgress:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         # Should not raise
@@ -353,6 +359,7 @@ class TestDeepResearchProgress:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         await pipeline.research("Question", progress_callback=capture)
@@ -388,6 +395,7 @@ class TestDeepResearchProgress:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         await pipeline.research("Question", progress_callback=capture)
@@ -441,6 +449,7 @@ class TestResearchCancellation:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         # Cancel immediately
@@ -478,6 +487,7 @@ class TestResearchCancellation:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         with pytest.raises(ResearchCancelledError) as exc_info:
@@ -511,6 +521,7 @@ class TestResearchCancellation:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         with pytest.raises(ResearchCancelledError) as exc_info:
@@ -549,6 +560,7 @@ class TestResearchCancellation:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         with pytest.raises(ResearchCancelledError) as exc_info:
@@ -572,6 +584,7 @@ class TestResearchCancellation:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research(
@@ -594,6 +607,7 @@ class TestResearchCancellation:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         def never_cancelled() -> bool:
@@ -621,6 +635,7 @@ class TestResearchCancellation:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         # Cancel after decomposition
@@ -689,7 +704,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_store,
             llm_provider=llm,
-            max_total_chunks=10,
+            config=ResearchConfig(max_total_chunks=10),
         )
 
         result = await pipeline.research("Question")
@@ -713,6 +728,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("Question")
@@ -750,6 +766,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         # Should not raise, should continue with partial results
@@ -761,6 +778,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=MockLLMProvider(),
+            config=ResearchConfig(),
         )
 
         # Call the method directly with empty results
@@ -784,6 +802,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("Question")
@@ -807,6 +826,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         result = await pipeline.research("Question")
@@ -822,6 +842,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_store,
             llm_provider=MockLLMProvider(),
+            config=ResearchConfig(),
         )
 
         # Call the method directly with empty queries
@@ -865,6 +886,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         # Should not raise, should continue with partial results
@@ -879,6 +901,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_store,
             llm_provider=MockLLMProvider(),
+            config=ResearchConfig(),
         )
 
         # Call the method directly with empty list
@@ -896,6 +919,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_store,
             llm_provider=MockLLMProvider(),
+            config=ResearchConfig(),
         )
 
         # Call directly with empty list
@@ -922,6 +946,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_store,
             llm_provider=llm,
+            config=ResearchConfig(),
         )
 
         # Call _analyze_gaps directly with empty results
@@ -940,6 +965,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=MockLLMProvider(),
+            config=ResearchConfig(),
         )
 
         # Response with empty strings and non-string values in follow_up_queries
@@ -970,6 +996,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=MockLLMProvider(),
+            config=ResearchConfig(),
         )
 
         # Response with some items missing 'question' key
@@ -996,6 +1023,7 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=MockLLMProvider(),
+            config=ResearchConfig(),
         )
 
         # Response with missing category
@@ -1032,9 +1060,11 @@ class TestDeepResearchEdgeCases:
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
             llm_provider=llm,
-            decomposition_prompt=custom_decomposition,
-            gap_analysis_prompt=custom_gap_analysis,
-            synthesis_prompt=custom_synthesis,
+            config=ResearchConfig(
+                decomposition_prompt=custom_decomposition,
+                gap_analysis_prompt=custom_gap_analysis,
+                synthesis_prompt=custom_synthesis,
+            ),
         )
 
         await pipeline.research("Question")

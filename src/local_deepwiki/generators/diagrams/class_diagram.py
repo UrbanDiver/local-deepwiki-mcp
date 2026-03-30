@@ -81,21 +81,21 @@ def _extract_methods_from_class_content(
 
         for chunk in chunks:
             chunk = _unwrap_chunk(chunk)
-            if chunk.chunk_type == ChunkType.CLASS and chunk.name == class_name:
-                for match in method_pattern.finditer(chunk.content):
-                    method_name = match.group(1)
-                    return_type = match.group(2)
-                    if method_name not in [
-                        m[0] for m in methods_by_class.get(class_name, [])
-                    ]:
-                        if class_name not in methods_by_class:
-                            methods_by_class[class_name] = []
-                        sig = (
-                            f"() -> {return_type.strip()}"
-                            if return_type and show_types
-                            else "()"
-                        )
-                        methods_by_class[class_name].append((method_name, sig))
+            if chunk.chunk_type != ChunkType.CLASS or chunk.name != class_name:
+                continue
+            for match in method_pattern.finditer(chunk.content):
+                method_name = match.group(1)
+                if method_name in [m[0] for m in methods_by_class.get(class_name, [])]:
+                    continue
+                if class_name not in methods_by_class:
+                    methods_by_class[class_name] = []
+                return_type = match.group(2)
+                sig = (
+                    f"() -> {return_type.strip()}"
+                    if return_type and show_types
+                    else "()"
+                )
+                methods_by_class[class_name].append((method_name, sig))
 
 
 def _build_class_lines(

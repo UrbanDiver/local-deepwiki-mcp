@@ -12,6 +12,7 @@ import json
 import re
 import subprocess
 from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from pathlib import Path
 
 from flask import Blueprint, Response, abort, jsonify, render_template, request
@@ -246,26 +247,32 @@ def _build_codemap_response(result: object) -> dict:
     }
 
 
+@dataclass(frozen=True, slots=True)
+class CodemapStreamRequest:
+    """Immutable parameters for a codemap SSE stream request."""
+
+    query: str
+    focus: str
+    max_depth: int
+    max_nodes: int
+    entry_point: str | None
+    wiki_path: Path
+    repo_path: Path
+    cache_k: str
+
+
 async def _codemap_sse_stream(
-    *,
-    query: str,
-    focus: str,
-    max_depth: int,
-    max_nodes: int,
-    entry_point: str | None,
-    wiki_path: "Path",
-    repo_path: "Path",
-    cache_k: str,
+    req: CodemapStreamRequest,
 ) -> AsyncIterator[str]:
     """Async generator that streams codemap generation progress and result via SSE."""
     # Try cache hit
-    cached = read_cache(wiki_path, cache_k)
+    cached = read_cache(req.wiki_path, req.cache_k)
     if cached is not None:
         yield f"data: {json.dumps({'type': 'progress', 'message': 'Loading from cache...'})}\n\n"
         response = {
             "type": "result",
-            "query": cached.get("query", query),
-            "focus": cached.get("focus", focus),
+            "query": cached.get("query", req.query),
+            "focus": cached.get("focus", req.focus),
             "entry_point": cached.get("entry_point"),
             "mermaid_diagram": cached.get("mermaid_diagram", ""),
             "narrative": cached.get("narrative", ""),
@@ -284,8 +291,8 @@ async def _codemap_sse_stream(
     from local_deepwiki.generators.codemap import CodemapFocus, generate_codemap
     from local_deepwiki.web.utils import create_providers
 
-    providers = create_providers(repo_path)
-    vector_db_path = providers.config.get_vector_db_path(repo_path)
+    providers = create_providers(req.repo_path)
+    vector_db_path = providers.config.get_vector_db_path(req.repo_path)
 
     if not vector_db_path.exists():
         yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
@@ -299,16 +306,16 @@ async def _codemap_sse_stream(
     yield f"data: {json.dumps({'type': 'progress', 'message': 'Building codemap graph...'})}\n\n"
 
     try:
-        focus_enum = CodemapFocus(focus)
+        focus_enum = CodemapFocus(req.focus)
         result = await generate_codemap(
-            query=query,
+            query=req.query,
             vector_store=vector_store,
             llm=llm,
-            repo_path=repo_path,
+            repo_path=req.repo_path,
             focus=focus_enum,
-            entry_point=entry_point,
-            max_depth=max_depth,
-            max_nodes=max_nodes,
+            entry_point=req.entry_point,
+            max_depth=req.max_depth,
+            max_nodes=req.max_nodes,
         )
 
         yield f"data: {json.dumps({'type': 'progress', 'message': 'Codemap ready.'})}\n\n"
@@ -317,7 +324,7 @@ async def _codemap_sse_stream(
         yield f"data: {json.dumps(response)}\n\n"
 
         # Write to cache
-        write_cache(wiki_path, cache_k, response)
+        write_cache(req.wiki_path, req.cache_k, response)
 
     except Exception as e:  # noqa: BLE001 - Report codemap errors to user via SSE
         logger.exception("Error generating codemap: %s", e)
@@ -365,14 +372,16 @@ def api_codemap() -> Response | tuple[Response, int]:
 
     def _stream() -> AsyncIterator[str]:
         return _codemap_sse_stream(
-            query=query,
-            focus=focus,
-            max_depth=max_depth,
-            max_nodes=max_nodes,
-            entry_point=entry_point,
-            wiki_path=wiki_path,
-            repo_path=repo_path,
-            cache_k=cache_k,
+            CodemapStreamRequest(
+                query=query,
+                focus=focus,
+                max_depth=max_depth,
+                max_nodes=max_nodes,
+                entry_point=entry_point,
+                wiki_path=wiki_path,
+                repo_path=repo_path,
+                cache_k=cache_k,
+            )
         )
 
     return Response(

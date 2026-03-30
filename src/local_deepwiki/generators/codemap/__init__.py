@@ -31,6 +31,10 @@ from local_deepwiki.generators.codemap.models import (
     CodemapNode,
     CodemapResult,
 )
+from local_deepwiki.generators.codemap.params import (
+    CodemapRequest,
+    GraphBuildContext,
+)
 from local_deepwiki.generators.codemap.viz import generate_codemap_diagram
 
 __all__ = [
@@ -38,7 +42,9 @@ __all__ = [
     "CodemapFocus",
     "CodemapGraph",
     "CodemapNode",
+    "CodemapRequest",
     "CodemapResult",
+    "GraphBuildContext",
     "_extract_param_names",
     "build_cross_file_graph",
     "cache_key",

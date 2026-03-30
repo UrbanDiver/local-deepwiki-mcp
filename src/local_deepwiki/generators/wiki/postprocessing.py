@@ -16,6 +16,7 @@ from local_deepwiki.generators.search import write_full_search_index
 from local_deepwiki.generators.see_also import add_see_also_sections
 from local_deepwiki.generators.source_refs import add_source_refs_sections
 from local_deepwiki.generators.wiki.context import WikiPipelineContext
+from local_deepwiki.generators.wiki.pipeline_params import WikiPipelineParams
 from local_deepwiki.generators.wiki.term_validator import apply_term_corrections
 from local_deepwiki.generators.analysis.stale_detection import (
     generate_stale_report_page,
@@ -46,8 +47,7 @@ async def generate_codemap_pages_phase(
     pages_generated: int,
     pages_skipped: int,
     progress: "GenerationProgress",
-    write_callback: "Callable[[WikiPage], Awaitable[None]]",
-    progress_callback: "ProgressCallback | None",
+    params: WikiPipelineParams,
 ) -> tuple[list[WikiPage], int, int]:
     """Generate codemap pages for auto-discovered entry points.
 
@@ -57,8 +57,7 @@ async def generate_codemap_pages_phase(
         pages_generated: Running count of generated pages.
         pages_skipped: Running count of skipped pages.
         progress: Generation progress tracker.
-        write_callback: Async callback to write pages to disk.
-        progress_callback: Optional progress callback.
+        params: Pipeline parameter bundle with write callback and progress callback.
 
     Returns:
         Tuple of (new_codemap_pages, new_pages_generated, new_pages_skipped).
@@ -67,8 +66,8 @@ async def generate_codemap_pages_phase(
     if not isinstance(codemap_enabled, bool) or not codemap_enabled:
         return [], pages_generated, pages_skipped
 
-    if progress_callback:
-        progress_callback("Generating codemaps", 10, 14)
+    if params.progress_callback:
+        params.progress_callback("Generating codemaps", 10, 14)
 
     progress.start_phase("codemaps", total=0)
 
@@ -80,7 +79,7 @@ async def generate_codemap_pages_phase(
     progress.complete_phase()
 
     for page in codemap_pages:
-        await write_callback(page)
+        await params.write_callback(page)
 
     return codemap_pages, pages_generated, pages_skipped
 
@@ -90,10 +89,7 @@ async def apply_cross_linking(
     pages: list[WikiPage],
     entity_registry: EntityRegistry,
     relationship_analyzer: RelationshipAnalyzer,
-    status_manager: WikiStatusManager,
-    wiki_path: Path,
-    write_callback: Callable[[WikiPage], Awaitable[None]],
-    progress_callback: ProgressCallback | None,
+    params: WikiPipelineParams,
 ) -> list[WikiPage]:
     """Apply cross-links, source refs, and see-also sections to pages.
 
@@ -101,14 +97,16 @@ async def apply_cross_linking(
         pages: List of wiki pages to process.
         entity_registry: Entity registry for cross-linking.
         relationship_analyzer: Analyzer for see-also sections.
-        status_manager: Wiki status manager.
-        wiki_path: Path to wiki output directory.
-        write_callback: Async callback to write pages to disk.
-        progress_callback: Optional progress callback.
+        params: Pipeline parameter bundle with status manager, wiki path,
+            write callback, and progress callback.
 
     Returns:
         Updated list of pages with cross-linking applied.
     """
+    progress_callback = params.progress_callback
+    status_manager = params.ctx.status_manager
+    wiki_path = params.ctx.wiki_path
+
     if progress_callback:
         progress_callback("Adding cross-links", 10, 14)
 
@@ -143,7 +141,7 @@ async def apply_cross_linking(
     for page in pages:
         new_hash = hashlib.sha256(page.content.encode()).digest()
         if new_hash != original_hashes.get(page.path):
-            await write_callback(page)
+            await params.write_callback(page)
             pages_rewritten += 1
 
     logger.debug(
@@ -224,33 +222,28 @@ def build_wiki_status(
 
 async def generate_freshness_and_finalize(
     *,
-    ctx: WikiPipelineContext,
+    params: WikiPipelineParams,
     pages: list[WikiPage],
-    all_source_files: list[str],
     pages_generated: int,
     pages_skipped: int,
     wiki_status: WikiGenerationStatus,
-    write_callback: "Callable[[WikiPage], Awaitable[None]]",
-    progress_callback: "ProgressCallback | None",
 ) -> tuple[WikiPage, int]:
     """Generate freshness report and finalize wiki status.
 
     Args:
-        ctx: Immutable pipeline context bundling shared parameters.
+        params: Pipeline parameter bundle with context, callbacks, and source files.
         pages: Current list of wiki pages (will not be mutated).
-        all_source_files: List of all source file paths.
         pages_generated: Running count of generated pages.
         pages_skipped: Running count of skipped pages.
         wiki_status: Wiki generation status to update.
-        write_callback: Async callback to write pages to disk.
-        progress_callback: Optional progress callback.
 
     Returns:
         Tuple of (freshness_page, updated_pages_generated).
     """
-    repo_path = ctx.repo_path
-    index_status = ctx.index_status
-    status_manager = ctx.status_manager
+    repo_path = params.ctx.repo_path
+    index_status = params.ctx.index_status
+    status_manager = params.ctx.status_manager
+    all_source_files = params.all_source_files or []
 
     total_steps = 14
 
@@ -262,7 +255,7 @@ async def generate_freshness_and_finalize(
     status_manager.record_summary_page_status(
         freshness_page, all_source_files, index_status
     )
-    await write_callback(freshness_page)
+    await params.write_callback(freshness_page)
     pages_generated += 1
 
     # Update wiki status with freshness page
@@ -273,8 +266,8 @@ async def generate_freshness_and_finalize(
 
     await status_manager.save_status(wiki_status)
 
-    if progress_callback:
-        progress_callback(
+    if params.progress_callback:
+        params.progress_callback(
             f"Wiki generation complete ({pages_generated} generated, {pages_skipped} unchanged)",
             total_steps,
             total_steps,

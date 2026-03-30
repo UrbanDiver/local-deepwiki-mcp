@@ -7,7 +7,7 @@ import sys
 from contextvars import ContextVar
 from functools import singledispatchmethod
 from pathlib import Path
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from local_deepwiki.logging import get_logger
 from local_deepwiki.plugins.base import (
@@ -259,6 +259,20 @@ class PluginRegistry:
 
         return loaded
 
+    def _load_entry_point(self, ep: Any) -> bool:
+        """Try to load and register a single entry point plugin.
+
+        Returns True on success, False on failure.
+        """
+        try:
+            plugin_class = ep.load()
+            plugin = plugin_class()
+            self.register(plugin)
+            return True
+        except Exception as e:  # noqa: BLE001 — plugin isolation: one bad plugin must not crash the system
+            logger.warning("Failed to load entry point %s: %s", ep.name, e)
+            return False
+
     def load_from_entry_points(self) -> int:
         """Load plugins from setuptools entry points.
 
@@ -275,34 +289,20 @@ class PluginRegistry:
                 from importlib.metadata import entry_points
 
                 for group in self.ENTRY_POINT_GROUPS.values():
-                    eps = entry_points(group=group)
-                    for ep in eps:
-                        try:
-                            plugin_class = ep.load()
-                            plugin = plugin_class()
-                            self.register(plugin)
+                    for ep in entry_points(group=group):
+                        if self._load_entry_point(ep):
                             loaded += 1
-                        except Exception as e:  # noqa: BLE001 — plugin isolation: one bad plugin must not crash the system
-                            logger.warning(
-                                "Failed to load entry point %s: %s", ep.name, e
-                            )
             else:
                 # Python 3.9 compatibility
                 from importlib.metadata import entry_points as get_entry_points
 
                 all_eps = get_entry_points()
                 for group in self.ENTRY_POINT_GROUPS.values():
-                    if group in all_eps:
-                        for ep in all_eps[group]:
-                            try:
-                                plugin_class = ep.load()
-                                plugin = plugin_class()
-                                self.register(plugin)
-                                loaded += 1
-                            except Exception as e:  # noqa: BLE001 — plugin isolation: one bad plugin must not crash the system
-                                logger.warning(
-                                    "Failed to load entry point %s: %s", ep.name, e
-                                )
+                    if group not in all_eps:
+                        continue
+                    for ep in all_eps[group]:
+                        if self._load_entry_point(ep):
+                            loaded += 1
 
         except ImportError:
             logger.debug("importlib.metadata not available, skipping entry points")

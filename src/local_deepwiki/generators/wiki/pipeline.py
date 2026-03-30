@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 
 from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.generators.progress_tracker import GenerationProgress
+from local_deepwiki.generators.wiki.pipeline_params import WikiPipelineParams
 from local_deepwiki.generators.wiki.plugin_runner import run_plugin_generators
 from local_deepwiki.generators.wiki.postprocessing import (
     apply_cross_linking,
@@ -126,6 +127,39 @@ async def init_generation_context(
 # ---------------------------------------------------------------------------
 
 
+def _build_pipeline_params(
+    generator: WikiGenerator,
+    ctx: _GenerationContext,
+    index_status: IndexStatus,
+    progress_callback: ProgressCallback | None,
+) -> WikiPipelineParams:
+    """Build a :class:`WikiPipelineParams` from generator and context state."""
+    from local_deepwiki.generators.wiki.context import WikiPipelineContext
+
+    # Ensure _repo_path is available (may be unset in tests that skip init)
+    repo_path = generator._repo_path or Path(index_status.repo_path)
+    pipeline_ctx = WikiPipelineContext(
+        index_status=index_status,
+        vector_store=generator.vector_store,
+        llm=generator.llm,
+        system_prompt=generator._system_prompt,
+        repo_path=repo_path,
+        wiki_path=generator.wiki_path,
+        config=generator.config,
+        wiki_config=generator.config.wiki,
+        manifest=getattr(generator, "_manifest", None),
+        status_manager=generator.status_manager,
+        full_rebuild=ctx.full_rebuild,
+        max_chunk_content_chars=generator.config.wiki.max_chunk_content_chars,
+    )
+    return WikiPipelineParams(
+        ctx=pipeline_ctx,
+        write_callback=generator._write_page,
+        progress_callback=progress_callback,
+        all_source_files=ctx.all_source_files,
+    )
+
+
 async def analyze_imports_for_relationships(generator: WikiGenerator) -> None:
     """Collect import chunks for relationship analysis (See Also sections)."""
     import_results = await generator.vector_store.search(
@@ -222,17 +256,10 @@ async def run_wiki_plugin_generators(
     progress_callback: ProgressCallback | None,
 ) -> None:
     """Run registered wiki generator plugins."""
+    params = _build_pipeline_params(generator, ctx, index_status, progress_callback)
     new_pages, pages_generated = await run_plugin_generators(
+        params=params,
         pages=ctx.pages,
-        all_source_files=ctx.all_source_files,
-        index_status=index_status,
-        vector_store=generator.vector_store,
-        llm=generator.llm,
-        config=generator.config,
-        wiki_path=generator.wiki_path,
-        status_manager=generator.status_manager,
-        write_callback=generator._write_page,
-        progress_callback=progress_callback,
     )
     ctx.pages.extend(new_pages)
     ctx.pages_generated += pages_generated
@@ -249,41 +276,36 @@ async def generate_codemap_pages(
         "Repository path must be set before generating codemaps"
     )
 
-    pipeline_ctx = generator._build_pipeline_context(
-        index_status,
-        full_rebuild=ctx.full_rebuild,
-    )
+    params = _build_pipeline_params(generator, ctx, index_status, progress_callback)
 
     (
         codemap_pages,
         ctx.pages_generated,
         ctx.pages_skipped,
     ) = await generate_codemap_pages_phase(
-        ctx=pipeline_ctx,
+        ctx=params.ctx,
         pages=ctx.pages,
         pages_generated=ctx.pages_generated,
         pages_skipped=ctx.pages_skipped,
         progress=generator._progress,
-        write_callback=generator._write_page,
-        progress_callback=progress_callback,
+        params=params,
     )
     ctx.pages.extend(codemap_pages)
 
 
 async def apply_cross_linking_phase(
     generator: WikiGenerator,
-    pages: list[WikiPage],
+    ctx: _GenerationContext,
+    index_status: IndexStatus,
     progress_callback: ProgressCallback | None,
 ) -> list[WikiPage]:
     """Apply cross-links, source refs, and see-also sections to pages."""
+    params = _build_pipeline_params(generator, ctx, index_status, progress_callback)
     return await apply_cross_linking(
-        pages=pages,
+        pages=ctx.pages,
         entity_registry=generator.entity_registry,
         relationship_analyzer=generator.relationship_analyzer,
-        status_manager=generator.status_manager,
-        wiki_path=generator.wiki_path,
-        write_callback=generator._write_page,
-        progress_callback=progress_callback,
+        params=params,
     )
 
 
@@ -328,20 +350,14 @@ async def generate_freshness_and_finalize_phase(
         "Repository path must be set before generating wiki"
     )
 
-    pipeline_ctx = generator._build_pipeline_context(
-        index_status,
-        full_rebuild=ctx.full_rebuild,
-    )
+    params = _build_pipeline_params(generator, ctx, index_status, progress_callback)
 
     freshness_page, ctx.pages_generated = await generate_freshness_and_finalize(
-        ctx=pipeline_ctx,
+        params=params,
         pages=ctx.pages,
-        all_source_files=ctx.all_source_files,
         pages_generated=ctx.pages_generated,
         pages_skipped=ctx.pages_skipped,
         wiki_status=wiki_status,
-        write_callback=generator._write_page,
-        progress_callback=progress_callback,
     )
     ctx.pages.append(freshness_page)
 
@@ -432,6 +448,57 @@ async def _init_pipeline_context(
     return ctx
 
 
+async def _generate_content_pages(
+    generator: WikiGenerator,
+    ctx: _GenerationContext,
+    index_status: IndexStatus,
+    progress_callback: ProgressCallback | None,
+    max_file_pages: int | None,
+) -> None:
+    """Run module and file documentation phases concurrently (phases 3+4)."""
+    shared_semaphore = asyncio.Semaphore(generator.config.effective_llm_concurrency)
+    await asyncio.gather(
+        generate_module_pages(
+            generator, ctx, index_status, progress_callback, semaphore=shared_semaphore
+        ),
+        generate_file_pages(
+            generator,
+            ctx,
+            index_status,
+            progress_callback,
+            max_files=max_file_pages,
+            semaphore=shared_semaphore,
+        ),
+    )
+
+
+async def _finalize_pipeline(
+    generator: WikiGenerator,
+    ctx: _GenerationContext,
+    index_status: IndexStatus,
+    progress_callback: ProgressCallback | None,
+) -> None:
+    """Cross-link, build search/TOC, freshness report, and emit completion (phases 8-10)."""
+    # Phase 8: cross-links and see-also sections
+    ctx.pages = await apply_cross_linking_phase(
+        generator, ctx, index_status, progress_callback
+    )
+
+    # Phase 9: search index and TOC
+    await generate_search_and_toc_phase(
+        generator, ctx.pages, index_status, progress_callback
+    )
+
+    # Phase 10: freshness report and finalize
+    wiki_status = build_wiki_status_from_context(generator, ctx, index_status)
+    await generate_freshness_and_finalize_phase(
+        generator, ctx, wiki_status, index_status, progress_callback
+    )
+
+    _log_generation_summary(generator, ctx)
+    await _emit_wiki_complete_event(index_status, ctx)
+
+
 async def run_generation_pipeline(
     generator: WikiGenerator,
     index_status: IndexStatus,
@@ -467,19 +534,8 @@ async def run_generation_pipeline(
     await analyze_imports_for_relationships(generator)
 
     # Phase 3+4: module and file documentation (concurrent)
-    shared_semaphore = asyncio.Semaphore(generator.config.effective_llm_concurrency)
-    await asyncio.gather(
-        generate_module_pages(
-            generator, ctx, index_status, progress_callback, semaphore=shared_semaphore
-        ),
-        generate_file_pages(
-            generator,
-            ctx,
-            index_status,
-            progress_callback,
-            max_files=max_file_pages,
-            semaphore=shared_semaphore,
-        ),
+    await _generate_content_pages(
+        generator, ctx, index_status, progress_callback, max_file_pages
     )
 
     # Phase 5: dependencies page
@@ -493,21 +549,7 @@ async def run_generation_pipeline(
     await run_wiki_plugin_generators(generator, ctx, index_status, progress_callback)
     await generate_codemap_pages(generator, ctx, index_status, progress_callback)
 
-    # Phase 8: cross-links and see-also sections
-    ctx.pages = await apply_cross_linking_phase(generator, ctx.pages, progress_callback)
-
-    # Phase 9: search index and TOC
-    await generate_search_and_toc_phase(
-        generator, ctx.pages, index_status, progress_callback
-    )
-
-    # Phase 10: freshness report and finalize
-    wiki_status = build_wiki_status_from_context(generator, ctx, index_status)
-    await generate_freshness_and_finalize_phase(
-        generator, ctx, wiki_status, index_status, progress_callback
-    )
-
-    _log_generation_summary(generator, ctx)
-    await _emit_wiki_complete_event(index_status, ctx)
+    # Phases 8-10: cross-links, search/TOC, freshness, and completion
+    await _finalize_pipeline(generator, ctx, index_status, progress_callback)
 
     return WikiStructure(root=str(generator.wiki_path), pages=ctx.pages)

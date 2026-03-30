@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, cast
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import CodeChunk
 
+from ..embedding import get_optimal_batch_config, is_local_provider
 from ..iterators import ChunkIterator, LazyChunkLoader
 from ..schema import (
     DEFAULT_MAX_MEMORY_MB,
@@ -404,14 +405,16 @@ class StatsMixin:
             - optimal_batch_size: Calculated optimal batch size
             - optimal_concurrency: Calculated optimal concurrency
         """
-        optimal_batch_size, optimal_concurrency = self._get_optimal_batch_config()
+        optimal_batch_size, optimal_concurrency = get_optimal_batch_config(
+            self._embedding_batch_config, self.embedding_provider
+        )
         return {
             "batch_size": self._embedding_batch_config.batch_size,
             "concurrency": self._embedding_batch_config.concurrency,
             "rate_limit_rpm": self._embedding_batch_config.rate_limit_rpm,
             "retry_max_attempts": self._embedding_batch_config.retry_max_attempts,
             "retry_base_delay": self._embedding_batch_config.retry_base_delay,
-            "is_local_provider": self._is_local_provider(),
+            "is_local_provider": is_local_provider(self.embedding_provider),
             "optimal_batch_size": optimal_batch_size,
             "optimal_concurrency": optimal_concurrency,
         }

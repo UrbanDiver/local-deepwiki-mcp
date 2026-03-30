@@ -9,10 +9,19 @@ from __future__ import annotations
 
 import json
 import time
+import uuid
+from itertools import chain
 from pathlib import Path
+from typing import Any
 
 from local_deepwiki.logging import get_logger
-from local_deepwiki.models import ResearchCheckpoint, ResearchCheckpointStep
+from local_deepwiki.models import (
+    ResearchCheckpoint,
+    ResearchCheckpointStep,
+    SearchResult,
+)
+
+from .serialization import dict_to_search_result, search_result_to_dict
 
 logger = get_logger(__name__)
 
@@ -150,6 +159,134 @@ class CheckpointManager:
                 ResearchCheckpointStep.ERROR,
             )
         ]
+
+    def create_checkpoint(self, question: str) -> ResearchCheckpoint:
+        """Create a new checkpoint for a research session.
+
+        Args:
+            question: The research question.
+
+        Returns:
+            A new ResearchCheckpoint object.
+        """
+        now = time.time()
+        return ResearchCheckpoint(
+            research_id=str(uuid.uuid4()),
+            question=question,
+            repo_path=str(self.repo_path),
+            started_at=now,
+            updated_at=now,
+            current_step=ResearchCheckpointStep.DECOMPOSITION,
+            completed_steps=[],
+        )
+
+    def update_checkpoint(
+        self,
+        checkpoint: ResearchCheckpoint,
+        data: Any,
+    ) -> None:
+        """Update a checkpoint with new data and persist it.
+
+        ``data`` is expected to be a :class:`CheckpointData` instance (imported
+        at the call-site to avoid circular imports).  The function reads its
+        attributes duck-type-style so it does not need to import the class.
+
+        Args:
+            checkpoint: The checkpoint to update.
+            data: A CheckpointData instance with fields to apply.
+        """
+        checkpoint.current_step = data.step
+        checkpoint.updated_at = time.time()
+
+        if data.sub_questions is not None:
+            checkpoint.sub_questions = data.sub_questions
+        if data.retrieved_contexts is not None:
+            checkpoint.retrieved_contexts = data.retrieved_contexts
+        if data.follow_up_queries is not None:
+            checkpoint.follow_up_queries = data.follow_up_queries
+        if data.follow_up_contexts is not None:
+            checkpoint.follow_up_contexts = data.follow_up_contexts
+        if data.partial_synthesis is not None:
+            checkpoint.partial_synthesis = data.partial_synthesis
+        if data.error is not None:
+            checkpoint.error = data.error
+        if (
+            data.completed_step
+            and data.completed_step not in checkpoint.completed_steps
+        ):
+            checkpoint.completed_steps.append(data.completed_step)
+
+        self.save_checkpoint(checkpoint)
+
+    def init_or_restore(
+        self,
+        question: str,
+        resume_id: str | None,
+    ) -> ResearchCheckpoint | None:
+        """Initialize or restore a checkpoint for a research run.
+
+        When *resume_id* is provided the corresponding checkpoint is loaded;
+        otherwise a fresh one is created.
+
+        Args:
+            question: The research question (used when creating a new checkpoint).
+            resume_id: Optional checkpoint ID to resume from.
+
+        Returns:
+            The active checkpoint (new or restored).
+        """
+        if resume_id:
+            checkpoint = self.load_checkpoint(resume_id)
+            if checkpoint:
+                logger.info(
+                    "Resuming research %s from step %s",
+                    resume_id,
+                    checkpoint.current_step,
+                )
+                return checkpoint
+            logger.warning("Checkpoint %s not found, starting fresh", resume_id)
+
+        return self.create_checkpoint(question)
+
+
+def results_to_checkpoint_format(
+    results: list[SearchResult],
+    key: str = "default",
+) -> dict[str, list[dict[str, Any]]]:
+    """Convert search results to checkpoint-serializable format.
+
+    Args:
+        results: List of search results.
+        key: Key to use in the dictionary.
+
+    Returns:
+        Dictionary mapping key to list of serialized results.
+    """
+    return {key: [search_result_to_dict(r) for r in results]}
+
+
+def checkpoint_to_results(
+    contexts: dict[str, list[dict[str, Any]]] | None,
+) -> list[SearchResult]:
+    """Convert checkpoint context data back to SearchResults.
+
+    Args:
+        contexts: Dictionary of serialized contexts from checkpoint.
+
+    Returns:
+        List of reconstructed SearchResult objects.
+    """
+    if not contexts:
+        return []
+
+    results: list[SearchResult] = []
+    for data in chain.from_iterable(contexts.values()):
+        try:
+            results.append(dict_to_search_result(data))
+        except (KeyError, ValueError) as e:
+            logger.warning("Failed to restore search result: %s", e)
+            continue
+    return results
 
 
 def cancel_research(repo_path: Path, research_id: str) -> ResearchCheckpoint | None:

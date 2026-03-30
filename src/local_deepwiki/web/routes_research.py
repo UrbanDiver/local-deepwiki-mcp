@@ -112,16 +112,20 @@ async def _research_stream_generator(
     async def on_progress(progress: Any) -> None:
         progress_queue.put(_build_progress_data(progress))
 
+    from local_deepwiki.core.deep_research.config import ResearchConfig
+
     dr_config = providers.config.deep_research
     pipeline = DeepResearchPipeline(
         vector_store=providers.vector_store,
         llm_provider=providers.llm,
-        max_sub_questions=dr_config.max_sub_questions,
-        chunks_per_subquestion=dr_config.chunks_per_subquestion,
-        max_total_chunks=dr_config.max_total_chunks,
-        max_follow_up_queries=dr_config.max_follow_up_queries,
-        synthesis_temperature=dr_config.synthesis_temperature,
-        synthesis_max_tokens=dr_config.synthesis_max_tokens,
+        config=ResearchConfig(
+            max_sub_questions=dr_config.max_sub_questions,
+            chunks_per_subquestion=dr_config.chunks_per_subquestion,
+            max_total_chunks=dr_config.max_total_chunks,
+            max_follow_up_queries=dr_config.max_follow_up_queries,
+            synthesis_temperature=dr_config.synthesis_temperature,
+            synthesis_max_tokens=dr_config.synthesis_max_tokens,
+        ),
     )
 
     research_task = asyncio.create_task(

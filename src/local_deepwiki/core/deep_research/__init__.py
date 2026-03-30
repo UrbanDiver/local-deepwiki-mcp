@@ -13,16 +13,18 @@ from __future__ import annotations
 from .checkpoints import (
     CheckpointManager,
     cancel_research,
+    checkpoint_to_results,
     delete_research_checkpoint,
     get_research_checkpoint,
     list_research_checkpoints,
+    results_to_checkpoint_format,
 )
 from local_deepwiki.models.foundation import (
     CancellationChecker as CancellationCallback,
     ProgressReporter as ProgressCallback,
 )
 
-from .config import ResearchConfig
+from .config import CheckpointData, ResearchConfig, SynthesisResult
 from .pipeline import (
     DeepResearchPipeline,
     ResearchCancelledError,
@@ -44,9 +46,13 @@ _dict_to_search_result = dict_to_search_result
 __all__ = [
     "CancellationCallback",
     "cancel_research",
+    "checkpoint_to_results",
+    "CheckpointData",
     "CheckpointManager",
     "DeepResearchPipeline",
     "ResearchConfig",
+    "results_to_checkpoint_format",
+    "SynthesisResult",
     "DECOMPOSITION_SYSTEM_PROMPT",
     "DECOMPOSITION_USER_PROMPT",
     "delete_research_checkpoint",

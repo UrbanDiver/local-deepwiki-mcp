@@ -8,7 +8,10 @@ from typing import Any
 
 import pytest
 
-from local_deepwiki.handlers.analysis_entity import _collect_reverse_calls
+from local_deepwiki.handlers.analysis_entity import (
+    EntityAnalysisContext,
+    _collect_reverse_calls,
+)
 
 
 def _make_result_and_sets() -> tuple[dict[str, Any], set[str], set[str]]:
@@ -36,12 +39,15 @@ class TestCollectReverseCalls:
 
         result, affected_files, affected_entities = _make_result_and_sets()
 
-        _collect_reverse_calls(
-            result=result,
-            full_file=target,
-            repo_path=tmp_path,
+        ctx = EntityAnalysisContext(
             file_path="module.py",
             entity_name="helper",
+            full_file=target,
+            repo_path=tmp_path,
+        )
+        _collect_reverse_calls(
+            result=result,
+            ctx=ctx,
             affected_files=affected_files,
             affected_entities=affected_entities,
         )
@@ -79,12 +85,15 @@ class TestCollectReverseCalls:
 
         result, affected_files, affected_entities = _make_result_and_sets()
 
-        _collect_reverse_calls(
-            result=result,
-            full_file=target,
-            repo_path=tmp_path,
+        ctx = EntityAnalysisContext(
             file_path="target.py",
             entity_name="target_func",
+            full_file=target,
+            repo_path=tmp_path,
+        )
+        _collect_reverse_calls(
+            result=result,
+            ctx=ctx,
             affected_files=affected_files,
             affected_entities=affected_entities,
         )
@@ -119,12 +128,15 @@ class TestCollectReverseCalls:
 
         result, affected_files, affected_entities = _make_result_and_sets()
 
-        _collect_reverse_calls(
-            result=result,
-            full_file=target,
-            repo_path=tmp_path,
+        ctx = EntityAnalysisContext(
             file_path="target.py",
             entity_name="target_func",
+            full_file=target,
+            repo_path=tmp_path,
+        )
+        _collect_reverse_calls(
+            result=result,
+            ctx=ctx,
             affected_files=affected_files,
             affected_entities=affected_entities,
         )
@@ -149,12 +161,15 @@ class TestCollectReverseCalls:
 
         result, affected_files, affected_entities = _make_result_and_sets()
 
-        _collect_reverse_calls(
-            result=result,
-            full_file=target,
-            repo_path=tmp_path,
+        ctx = EntityAnalysisContext(
             file_path="target.py",
             entity_name="target_func",
+            full_file=target,
+            repo_path=tmp_path,
+        )
+        _collect_reverse_calls(
+            result=result,
+            ctx=ctx,
             affected_files=affected_files,
             affected_entities=affected_entities,
         )
@@ -187,12 +202,15 @@ class TestCollectReverseCalls:
 
         result, affected_files, affected_entities = _make_result_and_sets()
 
-        _collect_reverse_calls(
-            result=result,
-            full_file=target,
-            repo_path=tmp_path,
+        ctx = EntityAnalysisContext(
             file_path="target.py",
             entity_name="target_func",
+            full_file=target,
+            repo_path=tmp_path,
+        )
+        _collect_reverse_calls(
+            result=result,
+            ctx=ctx,
             affected_files=affected_files,
             affected_entities=affected_entities,
         )
@@ -218,12 +236,15 @@ class TestCollectReverseCalls:
 
         result, affected_files, affected_entities = _make_result_and_sets()
 
-        _collect_reverse_calls(
-            result=result,
-            full_file=target,
-            repo_path=tmp_path,
+        ctx = EntityAnalysisContext(
             file_path="module.py",
             entity_name=None,
+            full_file=target,
+            repo_path=tmp_path,
+        )
+        _collect_reverse_calls(
+            result=result,
+            ctx=ctx,
             affected_files=affected_files,
             affected_entities=affected_entities,
         )
@@ -240,12 +261,15 @@ class TestCollectReverseCalls:
 
         result, affected_files, affected_entities = _make_result_and_sets()
 
-        _collect_reverse_calls(
-            result=result,
-            full_file=target,
-            repo_path=tmp_path,
+        ctx = EntityAnalysisContext(
             file_path="bad_file.xyz",
             entity_name=None,
+            full_file=target,
+            repo_path=tmp_path,
+        )
+        _collect_reverse_calls(
+            result=result,
+            ctx=ctx,
             affected_files=affected_files,
             affected_entities=affected_entities,
         )

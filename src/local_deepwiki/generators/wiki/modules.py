@@ -12,7 +12,6 @@ from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.wiki.context import WikiPipelineContext
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import SearchResult, WikiPage
-from local_deepwiki.providers.base import LLMProvider
 
 logger = get_logger(__name__)
 
@@ -109,12 +108,7 @@ async def _run_concurrent_module_generation(
     max_concurrent: int,
 ) -> tuple[list[WikiPage], int]:
     """Generate module docs concurrently and return (pages, pages_generated)."""
-    index_status = ctx.index_status
-    vector_store = ctx.vector_store
-    llm = ctx.llm
-    system_prompt = ctx.system_prompt
     status_manager = ctx.status_manager
-    max_chunk_content_chars = ctx.max_chunk_content_chars
 
     pages: list[WikiPage] = []
     pages_generated = 0
@@ -132,11 +126,7 @@ async def _run_concurrent_module_generation(
             page = await generate_single_module_doc(
                 dir_name=dir_name,
                 files=files,
-                vector_store=vector_store,
-                llm=llm,
-                system_prompt=system_prompt,
-                repo_path=Path(index_status.repo_path),
-                max_chunk_content_chars=max_chunk_content_chars,
+                ctx=ctx,
             )
             return dir_name, files, page
 
@@ -277,30 +267,21 @@ Format as markdown."""
 async def generate_single_module_doc(
     dir_name: str,
     files: list[str],
-    vector_store: VectorStore,
-    llm: LLMProvider,
-    system_prompt: str,
-    *,
-    repo_path: Path | None = None,
-    max_chunk_content_chars: int = 15000,
+    ctx: WikiPipelineContext,
 ) -> WikiPage | None:
     """Generate documentation for a single module directory.
 
     Args:
         dir_name: Name of the module directory.
         files: List of file paths in this module.
-        vector_store: Vector store with indexed code.
-        llm: LLM provider for generation.
-        system_prompt: System prompt for LLM.
-        repo_path: Optional path to the repository root for authoritative docs.
-        max_chunk_content_chars: Max characters of chunk content in LLM prompt.
+        ctx: Immutable pipeline context bundling shared parameters.
 
     Returns:
         WikiPage with module documentation, or None if no relevant content.
     """
     page_path = f"modules/{dir_name}.md"
 
-    relevant_chunks = await _fetch_module_chunks(dir_name, files, vector_store)
+    relevant_chunks = await _fetch_module_chunks(dir_name, files, ctx.vector_store)
     if not relevant_chunks:
         return None
 
@@ -308,10 +289,10 @@ async def generate_single_module_doc(
         dir_name=dir_name,
         files=files,
         relevant_chunks=relevant_chunks,
-        repo_path=repo_path,
-        max_chunk_content_chars=max_chunk_content_chars,
+        repo_path=ctx.repo_path,
+        max_chunk_content_chars=ctx.max_chunk_content_chars,
     )
-    content = await llm.generate(prompt, system_prompt=system_prompt)
+    content = await ctx.llm.generate(prompt, system_prompt=ctx.system_prompt)
 
     return WikiPage(
         path=page_path,
