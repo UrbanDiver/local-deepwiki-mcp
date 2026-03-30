@@ -22,6 +22,7 @@ from local_deepwiki.generators.wiki.pipeline_params import WikiPipelineParams
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
     IndexStatus,
+    ProgressCallback,
     WikiPage,
 )
 
@@ -39,7 +40,7 @@ def _build_auxiliary_params(
     generator: WikiGenerator,
     ctx: _GenerationContext,
     index_status: IndexStatus,
-    progress_callback: object | None,
+    progress_callback: ProgressCallback | None,
 ) -> WikiPipelineParams:
     """Build :class:`WikiPipelineParams` for auxiliary page generation.
 
@@ -203,6 +204,7 @@ async def generate_summary_pages(
         ``WikiGenerator`` instance providing ``_generate_overview``,
         ``_generate_architecture``, ``status_manager``, and ``_write_page``.
     """
+    assert ctx.index_status is not None, "index_status must be set before summary phase"
     index_status = ctx.index_status
     progress_callback = ctx.progress_callback
 
@@ -256,6 +258,9 @@ async def generate_dependencies_page_phase(
     generator:
         ``WikiGenerator`` instance.
     """
+    assert ctx.index_status is not None, (
+        "index_status must be set before dependencies phase"
+    )
     index_status = ctx.index_status
     progress_callback = ctx.progress_callback
 
@@ -315,6 +320,9 @@ async def generate_changelog_phase(
     generator:
         ``WikiGenerator`` instance.
     """
+    assert ctx.index_status is not None, (
+        "index_status must be set before changelog phase"
+    )
     index_status = ctx.index_status
     progress_callback = ctx.progress_callback
 
@@ -577,6 +585,9 @@ async def generate_auxiliary_pages(
     generator:
         ``WikiGenerator`` instance.
     """
+    assert ctx.index_status is not None, (
+        "index_status must be set before auxiliary phase"
+    )
     index_status = ctx.index_status
     progress_callback = ctx.progress_callback
 
