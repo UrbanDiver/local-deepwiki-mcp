@@ -294,7 +294,7 @@ class PaginationEngine:
         query_embedding: list[float],
         request: SearchRequest,
         profile_config: Any,
-        effective_min_similarity: float | None,
+        effective_min_similarity: float,
         offset: int,
     ) -> SearchResultPage:
         """Run the actual paginated search: estimate total, slice, build result page."""
@@ -557,7 +557,7 @@ class SearchEngine:
         self,
         request: SearchRequest,
         resolved_profile: Any,
-        effective_min_similarity: float | None,
+        effective_min_similarity: float,
         effective_mode: str,
     ) -> tuple[list[float], list[SearchResult] | None, bool]:
         """Compute query embedding and check cache.
