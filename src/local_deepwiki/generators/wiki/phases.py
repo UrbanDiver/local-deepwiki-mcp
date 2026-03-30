@@ -22,7 +22,6 @@ from local_deepwiki.generators.wiki.pipeline_params import WikiPipelineParams
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
     IndexStatus,
-    ProgressCallback,
     WikiPage,
 )
 
@@ -39,39 +38,15 @@ logger = get_logger(__name__)
 def _build_auxiliary_params(
     generator: WikiGenerator,
     ctx: _GenerationContext,
-    index_status: IndexStatus,
-    progress_callback: ProgressCallback | None,
 ) -> WikiPipelineParams:
-    """Build :class:`WikiPipelineParams` for auxiliary page generation.
-
-    Uses ``getattr`` for attributes that may be absent when tests bypass
-    ``WikiGenerator.__init__``.
-    """
-    from local_deepwiki.generators.wiki.context import WikiPipelineContext
-
-    repo_path = getattr(generator, "_repo_path", None) or Path(index_status.repo_path)
-    config = getattr(generator, "config", None)
-    wiki_config = getattr(config, "wiki", None)
-    pipeline_ctx = WikiPipelineContext(
-        index_status=index_status,
-        vector_store=generator.vector_store,
-        llm=getattr(generator, "llm", None),  # type: ignore[arg-type]
-        system_prompt=getattr(generator, "_system_prompt", ""),
-        repo_path=repo_path,
-        wiki_path=generator.wiki_path,
-        config=config,  # type: ignore[arg-type]
-        wiki_config=wiki_config,  # type: ignore[arg-type]
-        manifest=getattr(generator, "_manifest", None),
-        status_manager=generator.status_manager,
-        full_rebuild=ctx.full_rebuild,
-        max_chunk_content_chars=(
-            wiki_config.max_chunk_content_chars if wiki_config else 15000
-        ),
+    """Build :class:`WikiPipelineParams` for auxiliary page generation."""
+    assert ctx.pipeline_ctx is not None, (
+        "pipeline_ctx must be set before building auxiliary params"
     )
     return WikiPipelineParams(
-        ctx=pipeline_ctx,
+        ctx=ctx.pipeline_ctx,
         write_callback=generator._write_page,
-        progress_callback=progress_callback,
+        progress_callback=ctx.progress_callback,
         all_source_files=ctx.all_source_files,
     )
 
@@ -596,7 +571,7 @@ async def generate_auxiliary_pages(
 
     status_manager = generator.status_manager
 
-    params = _build_auxiliary_params(generator, ctx, index_status, progress_callback)
+    params = _build_auxiliary_params(generator, ctx)
 
     if not await _try_load_cached_auxiliary_pages(
         ctx, _AUX_PAGE_METADATA, index_status, status_manager

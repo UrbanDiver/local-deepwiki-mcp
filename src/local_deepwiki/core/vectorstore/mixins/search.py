@@ -11,15 +11,12 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import SearchResult
 
 from ..schema import (
-    SEARCH_PROFILES,
-    VALID_CHUNK_TYPES,
-    VALID_LANGUAGES,
     SearchFeedback,
     SearchProfile,
     SearchResultPage,
