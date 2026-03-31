@@ -219,6 +219,38 @@ def extract_markdown_links(content: str) -> list[tuple[str, str]]:
     return re.findall(r"\[([^\]]*)\]\(([^)]+)\)", content)
 
 
+def _resolve_wiki_link_fallback(
+    _wiki_path: Path, page_dir: Path, target_path: str
+) -> bool:
+    """Try common LLM-generated link variants before flagging as broken.
+
+    LLM-generated wiki content frequently produces links with:
+    - Source file extensions (``.py``) instead of ``.md``
+    - Missing ``src/`` prefix (``files/local_deepwiki/...`` instead of
+      ``files/src/local_deepwiki/...``)
+
+    Returns True if any fallback resolves to an existing file.
+    """
+    resolved = (page_dir / target_path).resolve()
+
+    candidates: list[Path] = []
+
+    # Try .md extension
+    if resolved.suffix and resolved.suffix != ".md":
+        candidates.append(resolved.with_suffix(".md"))
+
+    # Try inserting src/ after files/ (common LLM omission)
+    if target_path.startswith("files/") and "/src/" not in target_path:
+        fixed = target_path.replace("files/", "files/src/", 1)
+        candidates.append((page_dir / fixed).resolve())
+        # Also try .md variant of the src/-inserted path
+        src_resolved = (page_dir / fixed).resolve()
+        if src_resolved.suffix and src_resolved.suffix != ".md":
+            candidates.append(src_resolved.with_suffix(".md"))
+
+    return any(c.exists() for c in candidates)
+
+
 def find_broken_links(wiki_path: Path) -> list[tuple[str, str, str]]:
     """Find all broken internal links across wiki pages.
 
@@ -252,7 +284,17 @@ def find_broken_links(wiki_path: Path) -> list[tuple[str, str, str]]:
 
             # Resolve relative to page's directory
             resolved = (page_dir / target_path).resolve()
-            if not resolved.exists():
-                broken.append((page_rel, link_text, link_target))
+            if resolved.exists():
+                continue
+
+            # Wiki pages use .md extension but LLM-generated links
+            # sometimes use the source file extension (.py, .ts, etc.).
+            # Also, LLM may omit 'src/' from paths (e.g. files/local_deepwiki
+            # instead of files/src/local_deepwiki).  Try common fallbacks
+            # before flagging as broken.
+            if _resolve_wiki_link_fallback(wiki_path, page_dir, target_path):
+                continue
+
+            broken.append((page_rel, link_text, link_target))
 
     return broken
