@@ -448,6 +448,19 @@ def _rank_functions_by_connections(
 MIN_OUTBOUND_FOR_SUGGESTION = 2
 
 
+def _has_enough_outbound_calls(
+    func_name: str,
+    call_graph: dict[str, list[str]] | None,
+) -> bool:
+    """Check whether *func_name* has enough outbound calls for a useful codemap."""
+    if call_graph is None:
+        return True
+    callees = call_graph.get(func_name, [])
+    if not callees and "." in func_name:
+        callees = call_graph.get(func_name.rsplit(".", 1)[-1], [])
+    return len(callees) >= MIN_OUTBOUND_FOR_SUGGESTION
+
+
 def _format_topic_suggestions(
     ranked: list[tuple[str, int]],
     chunk_by_name: dict[str, CodeChunk],
@@ -468,16 +481,8 @@ def _format_topic_suggestions(
         if chunk is None:
             continue
 
-        # Skip functions with too few outbound calls — they produce
-        # empty codemaps because there's no execution flow to trace.
-        if call_graph is not None:
-            callees = call_graph.get(func_name, [])
-            # Also try unqualified name (without parent class prefix)
-            if not callees and "." in func_name:
-                bare_name = func_name.rsplit(".", 1)[-1]
-                callees = call_graph.get(bare_name, [])
-            if len(callees) < MIN_OUTBOUND_FOR_SUGGESTION:
-                continue
+        if not _has_enough_outbound_calls(func_name, call_graph):
+            continue
 
         file_path = chunk.file_path
         try:
@@ -509,6 +514,36 @@ def _format_topic_suggestions(
             break
 
     return suggestions
+
+
+async def _validate_suggestions(
+    candidates: list[dict[str, Any]],
+    vector_store: "VectorStore",
+    max_suggestions: int,
+) -> list[dict[str, Any]]:
+    """Validate candidates by running the same vector search as discover_entry_points.
+
+    Filters out suggestions that would produce an empty codemap because
+    their query returns no callable results above the similarity threshold.
+    """
+    validated: list[dict[str, Any]] = []
+    for candidate in candidates:
+        if len(validated) >= max_suggestions:
+            break
+        query = candidate["suggested_query"]
+        try:
+            results = await vector_store.search(query, limit=10, min_similarity=0.3)
+            callable_hits = [
+                r
+                for r in results
+                if r.chunk.chunk_type.value in CALLABLE_CHUNK_TYPES
+                and not _is_test_path(r.chunk.file_path)
+            ]
+            if callable_hits:
+                validated.append(candidate)
+        except (OSError, ValueError, RuntimeError):
+            continue
+    return validated
 
 
 async def suggest_topics(
@@ -574,25 +609,4 @@ async def suggest_topics(
         call_graph=combined_cg,
     )
 
-    # Validate each candidate by running the same vector search that
-    # discover_entry_points() uses.  This ensures we only suggest topics
-    # that will actually produce a non-empty codemap.
-    validated: list[dict[str, Any]] = []
-    for candidate in candidates:
-        if len(validated) >= max_suggestions:
-            break
-        query = candidate["suggested_query"]
-        try:
-            results = await vector_store.search(query, limit=10, min_similarity=0.3)
-            callable_hits = [
-                r
-                for r in results
-                if r.chunk.chunk_type.value in CALLABLE_CHUNK_TYPES
-                and not _is_test_path(r.chunk.file_path)
-            ]
-            if callable_hits:
-                validated.append(candidate)
-        except (OSError, ValueError, RuntimeError):
-            continue
-
-    return validated
+    return await _validate_suggestions(candidates, vector_store, max_suggestions)
