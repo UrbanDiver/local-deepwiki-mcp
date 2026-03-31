@@ -302,6 +302,10 @@ def find_broken_links(wiki_path: Path) -> list[tuple[str, str, str]]:
                 continue
             if target_path.endswith("/"):
                 continue
+            # Skip bare words that aren't paths (e.g. [text](path) examples
+            # in documentation about link syntax)
+            if "/" not in target_path and "." not in target_path:
+                continue
 
             # Resolve relative to page's directory
             resolved = (page_dir / target_path).resolve()
