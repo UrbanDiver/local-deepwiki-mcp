@@ -259,3 +259,126 @@ def api_chat() -> Response | tuple[Response, int]:
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@chat_bp.route("/api/entity-index")
+def api_entity_index() -> Response | tuple[Response, int]:
+    """Return a lightweight entity name to wiki page map.
+
+    Built from the existing search.json file. Cached for 5 minutes.
+    Excludes dunder names (__init__, __getattr__, etc.) to reduce
+    false positives in inline code reference linking.
+    """
+    wiki_path = _get_wiki_path()
+    if wiki_path is None:
+        return jsonify({"entities": {}})
+
+    search_json_path = wiki_path / "search.json"
+    if not search_json_path.exists():
+        return jsonify({"entities": {}})
+
+    try:
+        search_data = json.loads(search_json_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return jsonify({"entities": {}})
+
+    entities: dict[str, dict[str, str]] = {}
+    for entry in search_data.get("entities", []):
+        name = entry.get("name", "")
+        if name.startswith("__") and name.endswith("__"):
+            continue
+        if len(name) <= 2:
+            continue
+        if name not in entities:
+            entities[name] = {
+                "page": entry.get("path", ""),
+                "type": entry.get("entity_type", ""),
+            }
+
+    resp = jsonify({"entities": entities})
+    resp.headers["Cache-Control"] = "public, max-age=300"
+    return resp
+
+
+_EXT_TO_LANG = {
+    ".py": "python",
+    ".js": "javascript",
+    ".ts": "typescript",
+    ".tsx": "tsx",
+    ".go": "go",
+    ".rs": "rust",
+    ".java": "java",
+    ".c": "c",
+    ".cpp": "cpp",
+    ".swift": "swift",
+    ".rb": "ruby",
+    ".php": "php",
+    ".kt": "kotlin",
+    ".cs": "csharp",
+}
+
+
+@chat_bp.route("/api/code-snippet")
+def api_code_snippet() -> Response | tuple[Response, int]:
+    """Return source code for a file:line range.
+
+    Query parameters:
+        file: Relative file path (required)
+        start: Start line number (optional, 1-based)
+        end: End line number (optional, 1-based)
+
+    Reads the file from the repository on disk.
+    Returns 400 for invalid/traversal paths, 404 for missing files.
+    """
+    wiki_path = _get_wiki_path()
+    if wiki_path is None:
+        return jsonify({"error": "Wiki path not configured"}), 500
+
+    file_path = request.args.get("file", "").strip()
+    if not file_path:
+        return jsonify({"error": "file parameter is required"}), 400
+
+    if ".." in file_path or file_path.startswith("/"):
+        return jsonify({"error": "Invalid file path"}), 400
+
+    repo_path = wiki_path.parent
+    abs_path = (repo_path / file_path).resolve()
+
+    if not abs_path.is_relative_to(repo_path.resolve()):
+        return jsonify({"error": "Invalid file path"}), 400
+
+    if not abs_path.exists():
+        return jsonify({"error": f"File not found: {file_path}"}), 404
+
+    start = request.args.get("start", type=int)
+    end = request.args.get("end", type=int)
+
+    try:
+        all_lines = abs_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return jsonify({"error": "Could not read file"}), 500
+
+    if start is not None and end is not None:
+        selected = all_lines[max(0, start - 1) : end]
+        content = "\n".join(selected)
+    elif start is not None:
+        selected = all_lines[max(0, start - 1) : start + 29]
+        end = start + len(selected) - 1
+        content = "\n".join(selected)
+    else:
+        content = "\n".join(all_lines)
+        start = 1
+        end = len(all_lines)
+
+    language = _EXT_TO_LANG.get(abs_path.suffix, "")
+
+    return jsonify(
+        {
+            "file": file_path,
+            "start": start,
+            "end": end,
+            "language": language,
+            "content": content,
+            "source": "file",
+        }
+    )
