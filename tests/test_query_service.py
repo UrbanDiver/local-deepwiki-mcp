@@ -453,4 +453,30 @@ class TestAnswerQuestionStream:
         # Should pass max_context as limit to vector store search
         call_kwargs = vector_store.search.call_args
         assert call_kwargs[1]["limit"] == 5
+        assert call_kwargs[1]["search_mode"] == "hybrid"
         assert chunks[0]["type"] == "sources"
+
+
+async def test_answer_question_stream_uses_hybrid_search(tmp_path: Path):
+    """answer_question_stream should use hybrid search mode."""
+    mock_vs = MagicMock()
+    mock_vs.search = AsyncMock(return_value=[])
+    mock_llm = MagicMock()
+    mock_config = MagicMock()
+    mock_config.get_wiki_path.return_value = tmp_path / ".deepwiki"
+
+    service = QueryService(mock_vs, mock_llm, mock_config)
+
+    chunks = []
+    async for chunk in service.answer_question_stream(
+        repo_path=tmp_path,
+        question="how are vectors created",
+    ):
+        chunks.append(chunk)
+
+    # Verify hybrid search mode was used
+    mock_vs.search.assert_called_once()
+    _, kwargs = mock_vs.search.call_args
+    assert kwargs.get("search_mode") == "hybrid", (
+        f"Expected search_mode='hybrid', got {kwargs}"
+    )

@@ -270,7 +270,9 @@ class QueryService:
             history: Optional conversation history for follow-up questions.
         """
         # --- Retrieval ---
-        search_results = await self._vector_store.search(question, limit=max_context)
+        search_results = await self._vector_store.search(
+            question, limit=max_context, search_mode="hybrid"
+        )
 
         # Yield sources first (even if empty)
         sources = _format_sources_for_stream(search_results)
