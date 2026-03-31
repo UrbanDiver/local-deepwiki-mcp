@@ -312,6 +312,28 @@ class TestDiscoverEntryPoints:
 # ── Topic suggestion tests ───────────────────────────────────────────
 
 
+def _setup_suggest_topics_mock(mock_vs: MagicMock) -> None:
+    """Add an async search mock that returns callable results for validation.
+
+    ``suggest_topics`` validates each candidate by running a vector search.
+    This helper ensures the mock vector store returns results that pass
+    the validation filter (callable chunk type, non-test file).
+    """
+    chunks = mock_vs.get_all_chunks.return_value
+    callable_results = [
+        _make_mock_search_result(
+            name=c.name,
+            file_path=c.file_path,
+            start_line=c.start_line,
+            end_line=c.end_line,
+            chunk_type=c.chunk_type.value,
+        )
+        for c in chunks
+        if c.chunk_type.value in ("function", "method", "class")
+    ]
+    mock_vs.search = AsyncMock(return_value=callable_results)
+
+
 class TestSuggestTopics:
     async def test_finds_hubs(self, tmp_path):
         from local_deepwiki.generators.codemap import suggest_topics
@@ -337,6 +359,8 @@ class TestSuggestTopics:
                 content="def process_data(): pass",
             ),
         ]
+
+        _setup_suggest_topics_mock(mock_vs)
 
         with patch(
             "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
@@ -399,6 +423,7 @@ class TestSuggestTopics:
                 content="def handle_request(): process(); validate(); transform()",
             ),
         ]
+        _setup_suggest_topics_mock(mock_vs)
 
         with patch(
             "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
@@ -477,6 +502,7 @@ class TestSuggestTopicsStdlibFiltering:
                 content="def process(data): pass",
             ),
         ]
+        _setup_suggest_topics_mock(mock_vs)
 
         with patch(
             "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"
@@ -529,6 +555,7 @@ class TestSuggestTopicsStdlibFiltering:
                 content="def process(req): pass",
             ),
         ]
+        _setup_suggest_topics_mock(mock_vs)
 
         with patch(
             "local_deepwiki.generators.analysis.callgraph.CallGraphExtractor"

@@ -565,10 +565,34 @@ async def suggest_topics(
         repo,
     )
 
-    return _format_topic_suggestions(
+    candidates = _format_topic_suggestions(
         connection_count.most_common(),
         chunk_by_name,
         repo,
-        max_suggestions,
+        # Generate extra candidates since validation may filter some out
+        max_suggestions * 3,
         call_graph=combined_cg,
     )
+
+    # Validate each candidate by running the same vector search that
+    # discover_entry_points() uses.  This ensures we only suggest topics
+    # that will actually produce a non-empty codemap.
+    validated: list[dict[str, Any]] = []
+    for candidate in candidates:
+        if len(validated) >= max_suggestions:
+            break
+        query = candidate["suggested_query"]
+        try:
+            results = await vector_store.search(query, limit=10, min_similarity=0.3)
+            callable_hits = [
+                r
+                for r in results
+                if r.chunk.chunk_type.value in CALLABLE_CHUNK_TYPES
+                and not _is_test_path(r.chunk.file_path)
+            ]
+            if callable_hits:
+                validated.append(candidate)
+        except (OSError, ValueError, RuntimeError):
+            continue
+
+    return validated
