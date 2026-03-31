@@ -235,6 +235,14 @@ def _resolve_wiki_link_fallback(
 
     candidates: list[Path] = []
 
+    # Try directory/index.md for paths ending with /
+    if target_path.endswith("/"):
+        candidates.append(resolved / "index.md")
+        # Also try with src/ inserted
+        if target_path.startswith("files/") and "/src/" not in target_path:
+            fixed_dir = target_path.replace("files/", "files/src/", 1)
+            candidates.append((page_dir / fixed_dir).resolve() / "index.md")
+
     # Try .md extension
     if resolved.suffix and resolved.suffix != ".md":
         candidates.append(resolved.with_suffix(".md"))
@@ -280,6 +288,19 @@ def find_broken_links(wiki_path: Path) -> list[tuple[str, str, str]]:
             # Strip anchor from target
             target_path = link_target.split("#")[0]
             if not target_path:
+                continue
+
+            # Skip links to non-wiki files (LLM-generated references to
+            # repo config files like pyproject.toml, .pre-commit-config.yaml)
+            # and directory links (LLM-generated module references like
+            # files/src/local_deepwiki/processor/)
+            target_lower = target_path.lower()
+            if any(
+                target_lower.endswith(ext)
+                for ext in (".toml", ".yaml", ".yml", ".json", ".cfg", ".ini", ".txt")
+            ):
+                continue
+            if target_path.endswith("/"):
                 continue
 
             # Resolve relative to page's directory
