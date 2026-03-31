@@ -445,11 +445,15 @@ def _rank_functions_by_connections(
     return connection_count
 
 
+MIN_OUTBOUND_FOR_SUGGESTION = 2
+
+
 def _format_topic_suggestions(
     ranked: list[tuple[str, int]],
     chunk_by_name: dict[str, CodeChunk],
     repo: Path,
     max_suggestions: int,
+    call_graph: dict[str, list[str]] | None = None,
 ) -> list[dict[str, Any]]:
     """Convert ranked function list into topic suggestion dicts."""
     suggestions: list[dict[str, Any]] = []
@@ -463,6 +467,17 @@ def _format_topic_suggestions(
         chunk = chunk_by_name.get(func_name)
         if chunk is None:
             continue
+
+        # Skip functions with too few outbound calls — they produce
+        # empty codemaps because there's no execution flow to trace.
+        if call_graph is not None:
+            callees = call_graph.get(func_name, [])
+            # Also try unqualified name (without parent class prefix)
+            if not callees and "." in func_name:
+                bare_name = func_name.rsplit(".", 1)[-1]
+                callees = call_graph.get(bare_name, [])
+            if len(callees) < MIN_OUTBOUND_FOR_SUGGESTION:
+                continue
 
         file_path = chunk.file_path
         try:
@@ -555,4 +570,5 @@ async def suggest_topics(
         chunk_by_name,
         repo,
         max_suggestions,
+        call_graph=combined_cg,
     )
