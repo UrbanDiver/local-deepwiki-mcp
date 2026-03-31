@@ -194,7 +194,7 @@ class WikiConfig(BaseModel):
         description="Maximum number of codemap topics to auto-generate (0 to disable).",
     )
     codemap_max_depth: int = Field(
-        default=4,
+        default=5,
         ge=1,
         le=10,
         description="BFS traversal depth for codemap generation.",

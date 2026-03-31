@@ -730,10 +730,20 @@
                 el.parentNode.insertBefore(wrapper, el);
                 wrapper.appendChild(el);
 
-                // Add link
+                // Add link — use codemap metadata if available (from codemap wiki pages)
+                var meta = document.querySelector('[data-codemap-query]');
                 var link = document.createElement('a');
                 link.className = 'mermaid-codemap-link';
-                link.href = '/codemap?query=' + encodeURIComponent(subject);
+                if (meta) {
+                    var params = new URLSearchParams({
+                        query: meta.dataset.codemapQuery || subject,
+                        entry_point: meta.dataset.codemapEntry || '',
+                        focus: meta.dataset.codemapFocus || 'execution_flow',
+                    });
+                    link.href = '/codemap?' + params.toString();
+                } else {
+                    link.href = '/codemap?query=' + encodeURIComponent(subject);
+                }
                 link.textContent = '\u{1f5fa} Open in Codemap';
                 link.title = 'Explore this topic in the interactive codemap';
                 wrapper.appendChild(link);

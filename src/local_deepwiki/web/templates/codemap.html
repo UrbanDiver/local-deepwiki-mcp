@@ -2126,6 +2126,8 @@
         }
 
         // --- URL State ---
+        var urlEntryPoint = null;  // Entry point hint from URL (codemap wiki pages)
+
         function readUrlState() {
             var params = new URLSearchParams(window.location.search);
             if (params.has('query')) {
@@ -2147,6 +2149,9 @@
             if (params.has('max_nodes')) {
                 var n = parseInt(params.get('max_nodes'), 10);
                 if (n >= 5 && n <= 60) nodesInput.value = n;
+            }
+            if (params.has('entry_point')) {
+                urlEntryPoint = params.get('entry_point');
             }
             return params.has('query') && params.get('query').trim().length > 0;
         }
@@ -2179,15 +2184,21 @@
             updateUrlState();
 
             try {
+                var requestBody = {
+                    query: query,
+                    focus: focusSelect.value,
+                    max_depth: parseInt(depthInput.value, 10),
+                    max_nodes: parseInt(nodesInput.value, 10),
+                };
+                // Pass entry_point hint from wiki page link (used once, then cleared)
+                if (urlEntryPoint) {
+                    requestBody.entry_point = urlEntryPoint;
+                    urlEntryPoint = null;
+                }
                 var response = await fetch('/api/codemap', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        query: query,
-                        focus: focusSelect.value,
-                        max_depth: parseInt(depthInput.value, 10),
-                        max_nodes: parseInt(nodesInput.value, 10),
-                    }),
+                    body: JSON.stringify(requestBody),
                 });
 
                 var reader = response.body.getReader();

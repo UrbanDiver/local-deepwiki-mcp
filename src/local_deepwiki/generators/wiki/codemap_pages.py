@@ -91,8 +91,16 @@ def _format_codemap_page(
     else:
         entry_ref = f"> Entry point: `{entry_point}` in `{file_path}`"
 
+    query = topic.get("suggested_query", f"How does {entry_point} work?")
+
     lines = [
         f"# Codemap: How {entry_point} Works",
+        "",
+        # Hidden metadata for the "Open in Codemap" link in page.html.
+        # The template JS reads data-codemap-* attributes to pass the same
+        # parameters to the interactive codemap, ensuring identical results.
+        f'<div data-codemap-query="{query}" data-codemap-entry="{entry_point}"'
+        f' data-codemap-focus="execution_flow" style="display:none"></div>',
         "",
         entry_ref,
         "",
