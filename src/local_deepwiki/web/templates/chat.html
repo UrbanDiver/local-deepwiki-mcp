@@ -364,6 +364,70 @@
                 justify-content: space-between;
             }
         }
+        /* Code reference links */
+        .code-ref {
+            color: var(--link-color);
+            text-decoration: none;
+            border-bottom: 1px dashed var(--link-color);
+            cursor: pointer;
+        }
+        .code-ref:hover { border-bottom-style: solid; }
+        .code-ref code {
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        .entity-ref { border-bottom-style: dotted; }
+        .code-ref-group { display: inline; }
+        .code-expand-btn {
+            background: none;
+            border: none;
+            color: var(--muted-color, #8b949e);
+            cursor: pointer;
+            font-size: 10px;
+            padding: 0 4px;
+            vertical-align: middle;
+            opacity: 0.6;
+            transition: opacity 0.15s;
+        }
+        .code-expand-btn:hover { opacity: 1; }
+        .code-snippet {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin: 4px 0 12px;
+            overflow: hidden;
+        }
+        .code-snippet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+            background: var(--sidebar-bg);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 12px;
+            color: var(--muted-color, #8b949e);
+        }
+        .code-snippet-header a {
+            color: var(--link-color);
+            text-decoration: none;
+            font-size: 11px;
+        }
+        .code-snippet-header a:hover { text-decoration: underline; }
+        .code-snippet pre {
+            margin: 0;
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+        .code-snippet-error {
+            padding: 8px 12px;
+            color: var(--muted-color, #8b949e);
+            font-size: 12px;
+            font-style: italic;
+        }
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" crossorigin="anonymous" id="hljs-theme">
     <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" crossorigin="anonymous"></script>
@@ -416,6 +480,146 @@
         let conversationHistory = [];
         let isProcessing = false;
         let currentEventSource = null;
+
+        // ── Code reference linking ──────────────────────────────────────
+        let entityIndex = {};
+        (async function loadEntityIndex() {
+            try {
+                const resp = await fetch('/api/entity-index');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    entityIndex = data.entities || {};
+                }
+            } catch (e) {
+                console.warn('Failed to load entity index:', e);
+            }
+        })();
+
+        const FILE_PATH_RE = /^(src\/|tests\/|[\w-]+\/)[^\s]+\.(py|ts|js|jsx|tsx|go|rs|java|c|cpp|swift|rb|php|kt|cs)(:\d+(-\d+)?)?$/;
+
+        function linkCodeReferences(messageEl) {
+            const codeEls = Array.from(messageEl.querySelectorAll('.message-content code'));
+            for (const codeEl of codeEls) {
+                if (codeEl.closest('pre')) continue;
+                const text = codeEl.textContent.trim();
+                if (!text) continue;
+                if (FILE_PATH_RE.test(text)) {
+                    _linkFilePath(codeEl, text);
+                } else if (entityIndex[text]) {
+                    _linkEntity(codeEl, text, entityIndex[text]);
+                }
+            }
+        }
+
+        function _linkFilePath(codeEl, text) {
+            const colonIdx = text.indexOf(':');
+            let filePath, startLine, endLine;
+            if (colonIdx > 0 && /:\d+/.test(text.slice(colonIdx))) {
+                filePath = text.slice(0, colonIdx);
+                const parts = text.slice(colonIdx + 1).split('-');
+                startLine = parseInt(parts[0], 10);
+                endLine = parts[1] ? parseInt(parts[1], 10) : startLine + 29;
+            } else {
+                filePath = text;
+            }
+            const wikiPath = '/wiki/files/' + filePath.replace(/\.[^.]+$/, '.md');
+            if (startLine) {
+                const group = document.createElement('span');
+                group.className = 'code-ref-group';
+                const link = document.createElement('a');
+                link.href = wikiPath;
+                link.className = 'code-ref';
+                link.title = 'Open in Wiki';
+                link.appendChild(codeEl.cloneNode(true));
+                const btn = document.createElement('button');
+                btn.className = 'code-expand-btn';
+                btn.textContent = '\u25B6';
+                btn.title = 'Show source code';
+                btn.dataset.file = filePath;
+                btn.dataset.start = String(startLine);
+                btn.dataset.end = String(endLine);
+                btn.onclick = function() { toggleCodeSnippet(this); };
+                group.appendChild(link);
+                group.appendChild(btn);
+                codeEl.replaceWith(group);
+            } else {
+                const link = document.createElement('a');
+                link.href = wikiPath;
+                link.className = 'code-ref';
+                link.title = 'Open in Wiki';
+                link.appendChild(codeEl.cloneNode(true));
+                codeEl.replaceWith(link);
+            }
+        }
+
+        function _linkEntity(codeEl, name, entity) {
+            const link = document.createElement('a');
+            link.href = '/wiki/' + entity.page;
+            link.className = 'code-ref entity-ref';
+            link.title = entity.type + ' \u2014 Open in Wiki';
+            link.appendChild(codeEl.cloneNode(true));
+            codeEl.replaceWith(link);
+        }
+
+        async function toggleCodeSnippet(btn) {
+            const group = btn.closest('.code-ref-group');
+            const nextEl = group.nextElementSibling;
+            if (nextEl && nextEl.classList.contains('code-snippet')) {
+                nextEl.remove();
+                btn.textContent = '\u25B6';
+                return;
+            }
+            btn.textContent = '\u23F3';
+            const params = new URLSearchParams({
+                file: btn.dataset.file,
+                start: btn.dataset.start,
+                end: btn.dataset.end,
+            });
+            try {
+                const resp = await fetch('/api/code-snippet?' + params);
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    _showSnippetError(group, btn, err.error || 'Could not load source code');
+                    return;
+                }
+                const data = await resp.json();
+                const snippet = document.createElement('div');
+                snippet.className = 'code-snippet';
+                const wikiPath = '/wiki/files/' + data.file.replace(/\.[^.]+$/, '.md');
+                const header = document.createElement('div');
+                header.className = 'code-snippet-header';
+                const loc = document.createElement('span');
+                loc.textContent = data.file + ':' + data.start + '-' + data.end;
+                const wikiLink = document.createElement('a');
+                wikiLink.href = wikiPath;
+                wikiLink.textContent = 'Open in Wiki \u2192';
+                header.appendChild(loc);
+                header.appendChild(wikiLink);
+                const pre = document.createElement('pre');
+                const code = document.createElement('code');
+                if (data.language) code.className = 'language-' + data.language;
+                code.textContent = data.content;
+                pre.appendChild(code);
+                snippet.appendChild(header);
+                snippet.appendChild(pre);
+                group.after(snippet);
+                btn.textContent = '\u25BC';
+                hljs.highlightElement(code);
+            } catch (e) {
+                _showSnippetError(group, btn, 'Network error loading source code');
+            }
+        }
+
+        function _showSnippetError(group, btn, message) {
+            const errEl = document.createElement('div');
+            errEl.className = 'code-snippet';
+            const inner = document.createElement('div');
+            inner.className = 'code-snippet-error';
+            inner.textContent = message;
+            errEl.appendChild(inner);
+            group.after(errEl);
+            btn.textContent = '\u25B6';
+        }
 
         // DOM elements
         const messagesEl = document.getElementById('messages');
@@ -535,6 +739,11 @@
             msgEl.querySelectorAll('pre code').forEach(block => {
                 hljs.highlightElement(block);
             });
+
+            // Link code references in assistant messages
+            if (role === 'assistant') {
+                linkCodeReferences(msgEl);
+            }
 
             return msgEl;
         }
@@ -781,6 +990,11 @@
                     `;
                 }
                 currentResponseEl.innerHTML += sourcesHtml;
+            }
+
+            // Link code references in the finalized response
+            if (currentResponseEl) {
+                linkCodeReferences(currentResponseEl);
             }
 
             scrollToBottom();
