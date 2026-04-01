@@ -47,15 +47,6 @@ try:
         url_for,
     )
 
-    # Re-export symbols that tests and other code import from this module.
-    # The canonical definitions now live in routes_chat but we keep these
-    # importable from app.py for backward compatibility.
-    from local_deepwiki.web.routes_chat import (  # noqa: F401 - backward compat re-exports
-        build_prompt_with_history,
-        format_sources,
-        stream_async_generator,
-    )
-
     _HAS_FLASK = True
 except ImportError:
     _HAS_FLASK = False

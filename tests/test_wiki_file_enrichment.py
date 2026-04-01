@@ -565,7 +565,7 @@ class TestGenerateBlameSectionCoverage:
         """Test generates blame section when blame info is available."""
         from datetime import datetime
         from local_deepwiki.generators.wiki.files import _generate_blame_section
-        from local_deepwiki.core.git_utils import EntityBlameInfo
+        from local_deepwiki.core.git_blame import EntityBlameInfo
 
         chunks = [
             make_code_chunk(
@@ -633,7 +633,7 @@ class TestGenerateBlameSectionCoverage:
         """Test truncates author names longer than 20 characters."""
         from datetime import datetime
         from local_deepwiki.generators.wiki.files import _generate_blame_section
-        from local_deepwiki.core.git_utils import EntityBlameInfo
+        from local_deepwiki.core.git_blame import EntityBlameInfo
 
         chunks = [
             make_code_chunk(
@@ -677,7 +677,7 @@ class TestGenerateBlameSectionCoverage:
         """Test truncates commit summaries longer than 30 characters."""
         from datetime import datetime
         from local_deepwiki.generators.wiki.files import _generate_blame_section
-        from local_deepwiki.core.git_utils import EntityBlameInfo
+        from local_deepwiki.core.git_blame import EntityBlameInfo
 
         chunks = [
             make_code_chunk(

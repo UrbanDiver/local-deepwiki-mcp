@@ -2,7 +2,7 @@
 
 This module provides functions to detect git remote URLs and build
 source file links for GitHub, GitLab, and other hosting services.
-Also provides git blame integration for tracking code authorship.
+Also provides staleness detection and path validation utilities.
 """
 
 from __future__ import annotations
@@ -103,22 +103,6 @@ def _validate_repo_path(repo_path: str | Path) -> Path:
         )
 
     return validated
-
-
-# Re-export blame-related names for backward compatibility
-# NOTE: This import must come after the definitions above to avoid circular imports,
-# since git_blame.py imports _validate_git_path and _validate_repo_path from here.
-from local_deepwiki.core.git_blame import (  # noqa: E402
-    BlameInfo,
-    EntityBlameInfo,
-    _parse_all_porcelain_blame,
-    _parse_line_blame_map,
-    _parse_porcelain_blame,
-    format_blame_date,
-    get_file_entity_blame,
-    get_line_blame,
-    get_range_blame,
-)
 
 
 @dataclass(slots=True)

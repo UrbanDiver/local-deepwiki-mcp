@@ -14,12 +14,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from local_deepwiki.generators.examples.orchestrator import (
+from local_deepwiki.generators.examples.docstring import (
     CodeExample,
-    CodeExampleExtractor,
     parse_docstring_examples,
     parse_doctest_examples,
     parse_google_style_examples,
+)
+from local_deepwiki.generators.examples.extractor import (
+    CodeExampleExtractor,
     format_code_examples_markdown,
 )
 
@@ -227,7 +229,9 @@ class TestParseDocstringExamples:
         examples = parse_docstring_examples(docstring)
 
         # Should have doctest examples
-        doctest_examples = [ex for ex in examples if ">>>" not in ex.code or ex.expected_output]
+        doctest_examples = [
+            ex for ex in examples if ">>>" not in ex.code or ex.expected_output
+        ]
         assert len(doctest_examples) >= 1
 
     def test_falls_back_to_google(self) -> None:
@@ -519,10 +523,7 @@ class TestFormatCodeExamplesMarkdown:
 
     def test_respects_max_examples(self) -> None:
         """Test max_examples limit."""
-        examples = [
-            CodeExample(source="test", code=f"func{i}()")
-            for i in range(10)
-        ]
+        examples = [CodeExample(source="test", code=f"func{i}()") for i in range(10)]
 
         result = format_code_examples_markdown(examples, max_examples=3)
 
@@ -672,7 +673,9 @@ class TestExtractRelevantSnippet:
         assert snippet is not None
         assert "docstring" not in snippet
 
-    def test_extract_returns_none_no_match(self, extractor: CodeExampleExtractor) -> None:
+    def test_extract_returns_none_no_match(
+        self, extractor: CodeExampleExtractor
+    ) -> None:
         """Test returns None when entity not found."""
         content = "result = other_func()"
 

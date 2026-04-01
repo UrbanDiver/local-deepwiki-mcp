@@ -433,38 +433,3 @@ async def batch_embed(
         log_progress=log_progress,
     )
     return _remap_embeddings(all_embeddings, texts, text_to_index)
-
-
-async def batch_embed_sequential(
-    texts: list[str],
-    embedding_provider: EmbeddingProvider,
-    batch_size: int,
-    *,
-    log_progress: bool = False,
-) -> list[list[float]]:
-    """Generate embeddings in sequential batches (legacy method).
-
-    This is the original sequential implementation, kept for backward
-    compatibility and testing purposes.
-
-    Args:
-        texts: List of text strings to embed.
-        embedding_provider: Provider for generating embeddings.
-        batch_size: Number of texts to embed per batch.
-        log_progress: Whether to log batch progress.
-
-    Returns:
-        List of embedding vectors.
-    """
-    embeddings: list[list[float]] = []
-    for i in range(0, len(texts), batch_size):
-        batch = texts[i : i + batch_size]
-        batch_embeddings = await embedding_provider.embed(batch)
-        embeddings.extend(batch_embeddings)
-        if log_progress and len(texts) > batch_size:
-            logger.debug(
-                "Embedded batch %d/%d",
-                i // batch_size + 1,
-                (len(texts) + batch_size - 1) // batch_size,
-            )
-    return embeddings

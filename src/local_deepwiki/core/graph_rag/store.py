@@ -18,6 +18,7 @@ from typing import Any
 import lancedb
 from lancedb.table import Table
 
+from local_deepwiki.core.vectorstore.utils import _sanitize_string_value
 from local_deepwiki.logging import get_logger
 
 from .models import (
@@ -29,11 +30,6 @@ from .models import (
 )
 
 logger = get_logger(__name__)
-
-
-def _sanitize_string_value(value: str) -> str:
-    """Escape single quotes for safe use in LanceDB filter expressions."""
-    return value.replace("'", "''")
 
 
 def _create_index_safe(table: Table, column: str) -> None:

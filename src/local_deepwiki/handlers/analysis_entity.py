@@ -160,7 +160,7 @@ async def _collect_test_examples(
 ) -> None:
     """Extract test examples for *entity_name* from test files."""
     try:
-        from local_deepwiki.generators.examples.orchestrator import CodeExampleExtractor
+        from local_deepwiki.generators.examples.extractor import CodeExampleExtractor
 
         extractor = CodeExampleExtractor(vector_store, repo_path=repo_path)
         if entity_type == "class":

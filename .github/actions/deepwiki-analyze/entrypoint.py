@@ -20,7 +20,7 @@ def _env_bool(name: str) -> bool:
 
 async def run_analysis() -> dict:
     """Run diff analysis and stale docs detection, return combined results."""
-    from local_deepwiki.handlers.analysis import handle_analyze_diff
+    from local_deepwiki.handlers.analysis_diff import handle_analyze_diff
     from local_deepwiki.handlers.generators import handle_detect_stale_docs
 
     repo_path = str(Path(_env("INPUT_REPO_PATH", ".")).resolve())

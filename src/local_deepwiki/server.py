@@ -73,7 +73,7 @@ from local_deepwiki.handlers import (
 from local_deepwiki.handlers.prompts import register_prompt_handlers
 from local_deepwiki.handlers.resources import register_resource_handlers
 from local_deepwiki.logging import get_logger
-from local_deepwiki.server_tool_defs import TOOL_DEFINITIONS
+from local_deepwiki.tool_defs import TOOL_DEFINITIONS
 
 logger = get_logger(__name__)
 

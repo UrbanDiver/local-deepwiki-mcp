@@ -16,9 +16,15 @@ from local_deepwiki.generators.search import (
     generate_search_entry,
     generate_search_index,
     write_full_search_index,
-    write_search_index,
 )
-from local_deepwiki.models import ChunkType, CodeChunk, FileInfo, IndexStatus, Language, WikiPage
+from local_deepwiki.models import (
+    ChunkType,
+    CodeChunk,
+    FileInfo,
+    IndexStatus,
+    Language,
+    WikiPage,
+)
 
 
 class TestExtractHeadings:
@@ -180,32 +186,6 @@ class TestGenerateSearchIndex:
         assert index[1]["path"] == "architecture.md"
 
 
-class TestWriteSearchIndex:
-    """Tests for write_search_index function."""
-
-    def test_writes_json_file(self):
-        """Test that search index is written to disk."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            wiki_path = Path(tmpdir)
-            pages = [
-                WikiPage(
-                    path="index.md",
-                    title="Test",
-                    content="# Test\n\n`TestClass` content.",
-                    generated_at=0,
-                ),
-            ]
-
-            result_path = write_search_index(wiki_path, pages)
-
-            assert result_path.exists()
-            assert result_path.name == "search.json"
-
-            data = json.loads(result_path.read_text())
-            assert len(data) == 1
-            assert data[0]["title"] == "Test"
-
-
 class TestSearchJsonEndpoint:
     """Tests for the Flask /search.json endpoint."""
 
@@ -219,7 +199,13 @@ class TestSearchJsonEndpoint:
             (wiki_path / "index.md").write_text("# Home\n")
             # Create search index
             search_data = [
-                {"path": "index.md", "title": "Home", "headings": [], "terms": [], "snippet": ""}
+                {
+                    "path": "index.md",
+                    "title": "Home",
+                    "headings": [],
+                    "terms": [],
+                    "snippet": "",
+                }
             ]
             (wiki_path / "search.json").write_text(json.dumps(search_data))
 
@@ -419,7 +405,9 @@ class TestGenerateEntityEntries:
         baz_entry = next(e for e in entries if e["name"] == "baz")
         assert baz_entry["is_async"] is True
 
-    async def test_generates_method_display_name(self, mock_index_status, mock_vector_store):
+    async def test_generates_method_display_name(
+        self, mock_index_status, mock_vector_store
+    ):
         """Test that method display name includes parent class."""
         entries = await generate_entity_entries(mock_index_status, mock_vector_store)
 

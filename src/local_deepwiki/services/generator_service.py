@@ -467,7 +467,7 @@ class GeneratorService:
         Returns:
             Dict with examples list.
         """
-        from local_deepwiki.generators.examples.orchestrator import CodeExampleExtractor
+        from local_deepwiki.generators.examples.extractor import CodeExampleExtractor
 
         extractor = CodeExampleExtractor(self._vector_store, repo_path=repo_path)
 

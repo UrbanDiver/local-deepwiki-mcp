@@ -18,24 +18,12 @@ from textwrap import dedent
 from typing import TYPE_CHECKING
 
 from local_deepwiki.core.parser import CodeParser
-from local_deepwiki.generators.examples.docstring import (  # noqa: F401 -- re-export
-    CodeExample,
-    parse_docstring_examples,
-    parse_doctest_examples,
-    parse_google_style_examples,
-)
-from local_deepwiki.generators.examples.extractor import (  # noqa: F401 -- re-export
-    CodeExampleExtractor,
-    format_code_examples_markdown,
-)
 from local_deepwiki.generators.examples.discovery import (
     _find_test_functions,
     _get_docstring,
     _get_function_body,
     _get_function_name,
-    _get_node_text,
     _is_mock_heavy,
-    find_test_file,
     find_test_files,
 )
 from local_deepwiki.logging import get_logger
@@ -44,17 +32,7 @@ from local_deepwiki.models import Language
 if TYPE_CHECKING:
     from tree_sitter import Node
 
-# Re-export all names from extracted modules for backward compatibility
 __all__ = [
-    # From docstring_examples
-    "CodeExample",
-    "parse_docstring_examples",
-    "parse_doctest_examples",
-    "parse_google_style_examples",
-    # From example_extractor
-    "CodeExampleExtractor",
-    "format_code_examples_markdown",
-    # Local
     "UsageExample",
     "_extract_usage_snippet",
     "extract_examples_for_entities",

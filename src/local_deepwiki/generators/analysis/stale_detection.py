@@ -12,11 +12,8 @@ from operator import attrgetter
 from datetime import datetime
 from pathlib import Path
 
-from local_deepwiki.core.git_utils import (
-    StaleInfo,
-    check_page_staleness,
-    format_blame_date,
-)
+from local_deepwiki.core.git_blame import format_blame_date
+from local_deepwiki.core.git_utils import StaleInfo, check_page_staleness
 from local_deepwiki.models import WikiGenerationStatus, WikiPage
 
 

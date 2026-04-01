@@ -11,12 +11,12 @@ import pytest
 from mcp.types import TextContent
 
 from local_deepwiki.handlers.agentic import (
-    TOOL_GRAPH,
     handle_batch_explain_entities,
     handle_query_codebase,
-    handle_run_workflow,
     handle_suggest_next_actions,
 )
+from local_deepwiki.handlers.agentic_data import TOOL_GRAPH
+from local_deepwiki.handlers.agentic_workflows import handle_run_workflow
 
 
 def _parse_response(result: list[TextContent]) -> dict[str, Any]:
@@ -222,7 +222,7 @@ class TestRunWorkflow:
         )
         assert "error" in result[0].text.lower()
 
-    @patch("local_deepwiki.handlers.agentic._run_onboarding")
+    @patch("local_deepwiki.handlers.agentic_workflows._run_onboarding")
     async def test_onboarding_calls_steps(
         self, mock_onboarding: AsyncMock, indexed_repo: Path, mock_rbac
     ) -> None:
@@ -241,7 +241,7 @@ class TestRunWorkflow:
         assert data["completed"] == 2
         assert data["failed"] == 0
 
-    @patch("local_deepwiki.handlers.agentic._run_security_audit")
+    @patch("local_deepwiki.handlers.agentic_workflows._run_security_audit")
     async def test_step_failure_doesnt_cascade(
         self, mock_audit: AsyncMock, indexed_repo: Path, mock_rbac
     ) -> None:

@@ -7,12 +7,8 @@ from dataclasses import dataclass
 from operator import attrgetter
 from pathlib import Path
 
-from local_deepwiki.core.git_utils import (
-    GitRepoInfo,
-    build_source_url,
-    format_blame_date,
-    get_file_entity_blame,
-)
+from local_deepwiki.core.git_blame import format_blame_date, get_file_entity_blame
+from local_deepwiki.core.git_utils import GitRepoInfo, build_source_url
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk
 

@@ -15,7 +15,8 @@ from local_deepwiki.generators.examples.plugin import (
     ExamplesWikiGenerator,
     get_examples_for_api_page,
 )
-from local_deepwiki.generators.examples.orchestrator import CodeExample, CodeExampleExtractor
+from local_deepwiki.generators.examples.docstring import CodeExample
+from local_deepwiki.generators.examples.extractor import CodeExampleExtractor
 from local_deepwiki.models import ChunkType, IndexStatus, Language
 
 
@@ -392,7 +393,9 @@ class TestGenerateExamplesPage:
             ],
         }
 
-        content = generator._generate_examples_page(examples_by_entity, mock_index_status)
+        content = generator._generate_examples_page(
+            examples_by_entity, mock_index_status
+        )
 
         assert "# Code Examples" in content
         assert "Examples from Tests" in content
@@ -420,7 +423,9 @@ class TestGenerateExamplesPage:
             ],
         }
 
-        content = generator._generate_examples_page(examples_by_entity, mock_index_status)
+        content = generator._generate_examples_page(
+            examples_by_entity, mock_index_status
+        )
 
         assert "# Code Examples" in content
         assert "Examples from Documentation" in content
@@ -457,7 +462,9 @@ class TestGenerateExamplesPage:
             ],
         }
 
-        content = generator._generate_examples_page(examples_by_entity, mock_index_status)
+        content = generator._generate_examples_page(
+            examples_by_entity, mock_index_status
+        )
 
         assert "Examples from Tests" in content
         assert "Examples from Documentation" in content
@@ -481,7 +488,9 @@ class TestGenerateExamplesPage:
             ],
         }
 
-        content = generator._generate_examples_page(examples_by_entity, mock_index_status)
+        content = generator._generate_examples_page(
+            examples_by_entity, mock_index_status
+        )
 
         assert "`simple_func`" in content
         assert "tests/test_simple.py" in content
@@ -507,7 +516,9 @@ class TestGenerateExamplesPage:
             ],
         }
 
-        content = generator._generate_examples_page(examples_by_entity, mock_index_status)
+        content = generator._generate_examples_page(
+            examples_by_entity, mock_index_status
+        )
 
         assert "`func`" in content
         # Should not have test file reference
@@ -532,7 +543,9 @@ class TestGenerateExamplesPage:
             ],
         }
 
-        content = generator._generate_examples_page(examples_by_entity, mock_index_status)
+        content = generator._generate_examples_page(
+            examples_by_entity, mock_index_status
+        )
 
         assert "run()" in content
         # Should not have Output: section
@@ -555,7 +568,9 @@ class TestGenerateExamplesPage:
             ],
         }
 
-        content = generator._generate_examples_page(examples_by_entity, mock_index_status)
+        content = generator._generate_examples_page(
+            examples_by_entity, mock_index_status
+        )
 
         assert "```python" in content
 
@@ -572,7 +587,9 @@ class TestGenerateExamplesPage:
             ],
         }
 
-        content = generator._generate_examples_page(examples_by_entity, mock_index_status)
+        content = generator._generate_examples_page(
+            examples_by_entity, mock_index_status
+        )
 
         # Should have at most 2 code blocks for this entity
         assert content.count("func(0)") == 1
@@ -587,14 +604,20 @@ class TestGenerateExamplesPage:
         """Test that entities are sorted alphabetically in output."""
         examples_by_entity = {
             "zebra_func": [
-                CodeExample(source="docstring", code="zebra_func()", entity_name="zebra_func"),
+                CodeExample(
+                    source="docstring", code="zebra_func()", entity_name="zebra_func"
+                ),
             ],
             "alpha_func": [
-                CodeExample(source="docstring", code="alpha_func()", entity_name="alpha_func"),
+                CodeExample(
+                    source="docstring", code="alpha_func()", entity_name="alpha_func"
+                ),
             ],
         }
 
-        content = generator._generate_examples_page(examples_by_entity, mock_index_status)
+        content = generator._generate_examples_page(
+            examples_by_entity, mock_index_status
+        )
 
         # Alpha should come before zebra
         alpha_pos = content.find("alpha_func")
@@ -764,21 +787,26 @@ class TestExamplesWikiGeneratorIntegration:
         class_result = MagicMock()
         class_result.chunk = class_chunk
 
-        mock_vector_store.search = AsyncMock(side_effect=[[func_result], [class_result]])
+        mock_vector_store.search = AsyncMock(
+            side_effect=[[func_result], [class_result]]
+        )
 
         generator = ExamplesWikiGenerator()
 
         # Mock the extractor methods to avoid search calls failing
-        with patch.object(
-            CodeExampleExtractor,
-            "extract_examples_for_function",
-            new_callable=AsyncMock,
-            return_value=[],
-        ), patch.object(
-            CodeExampleExtractor,
-            "extract_examples_for_class",
-            new_callable=AsyncMock,
-            return_value=[],
+        with (
+            patch.object(
+                CodeExampleExtractor,
+                "extract_examples_for_function",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch.object(
+                CodeExampleExtractor,
+                "extract_examples_for_class",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
         ):
             result = await generator.generate(
                 index_status=mock_index_status,

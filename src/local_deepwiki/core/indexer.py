@@ -266,9 +266,6 @@ class RepositoryIndexerProtocol(Protocol):
 class RepositoryIndexer:
     """Orchestrates repository indexing with incremental update support."""
 
-    # Backward compatibility: keep class constant
-    INDEX_STATUS_FILE = INDEX_STATUS_FILE
-
     def __init__(
         self,
         repo_path: Path,

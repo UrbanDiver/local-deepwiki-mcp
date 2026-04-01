@@ -7,26 +7,28 @@ from unittest.mock import patch
 
 import pytest
 
-from local_deepwiki.core.git_utils import (
+from local_deepwiki.core.git_blame import (
     BlameInfo,
     EntityBlameInfo,
+    _parse_all_porcelain_blame,
+    _parse_line_blame_map,
+    format_blame_date,
+    get_file_entity_blame,
+    get_line_blame,
+    get_range_blame,
+)
+from local_deepwiki.core.git_utils import (
     GitPathValidationError,
     GitRepoInfo,
     StaleInfo,
-    _parse_all_porcelain_blame,
-    _parse_line_blame_map,
     _validate_git_path,
     _validate_repo_path,
     build_source_url,
     check_page_staleness,
-    format_blame_date,
     get_default_branch,
-    get_file_entity_blame,
     get_file_last_modified,
     get_files_last_modified,
     get_git_remote_url,
-    get_line_blame,
-    get_range_blame,
     get_repo_info,
     is_github_repo,
     parse_remote_url,

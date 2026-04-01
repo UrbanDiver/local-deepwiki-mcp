@@ -85,15 +85,6 @@ def _build_ask_question_result(question: str, query_result: Any) -> dict[str, An
     return result
 
 
-# Re-export indexing handler and helpers for backward compatibility
-from local_deepwiki.handlers.indexing import (  # noqa: F401
-    _handle_index_repository_impl,
-    _run_indexing_pipeline,
-    _validate_and_build_config,
-    handle_index_repository,
-)
-
-
 @handle_tool_errors
 async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     """Handle ask_question tool call."""

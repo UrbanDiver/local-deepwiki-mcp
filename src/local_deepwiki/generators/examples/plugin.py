@@ -11,11 +11,13 @@ import time
 from pathlib import Path
 from typing import Any
 
-from local_deepwiki.generators.examples.orchestrator import (
+from local_deepwiki.generators.examples.docstring import (
     CodeExample,
+    parse_docstring_examples,
+)
+from local_deepwiki.generators.examples.extractor import (
     CodeExampleExtractor,
     format_code_examples_markdown,
-    parse_docstring_examples,
 )
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, IndexStatus, WikiPage

@@ -13,12 +13,14 @@ from local_deepwiki.web.app import (
     WIKI_PATH,
     app,
     build_breadcrumb,
-    build_prompt_with_history,
     create_app,
     extract_title,
-    format_sources,
     get_wiki_structure,
     render_markdown,
+)
+from local_deepwiki.web.routes_chat import (
+    build_prompt_with_history,
+    format_sources,
 )
 
 
@@ -609,7 +611,7 @@ class TestStreamAsyncGenerator:
 
     def test_streams_items(self):
         """Test that items are streamed correctly."""
-        from local_deepwiki.web.app import stream_async_generator
+        from local_deepwiki.web.routes_chat import stream_async_generator
 
         async def async_gen():
             yield "item1"
@@ -622,7 +624,7 @@ class TestStreamAsyncGenerator:
 
     def test_handles_exception(self):
         """Test that exceptions are handled and reported."""
-        from local_deepwiki.web.app import stream_async_generator
+        from local_deepwiki.web.routes_chat import stream_async_generator
 
         async def failing_gen():
             yield "item1"

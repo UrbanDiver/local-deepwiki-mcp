@@ -7,7 +7,7 @@ from pathlib import Path
 
 from tree_sitter import Node
 
-from local_deepwiki.core.chunker import CLASS_NODE_TYPES, FUNCTION_NODE_TYPES
+from local_deepwiki.core.chunk_extractors import CLASS_NODE_TYPES, FUNCTION_NODE_TYPES
 from local_deepwiki.core.parser import (
     CodeParser,
     find_nodes_by_type,

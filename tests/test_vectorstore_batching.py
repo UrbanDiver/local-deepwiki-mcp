@@ -17,7 +17,6 @@ import pytest
 from local_deepwiki.config import EmbeddingBatchConfig
 from local_deepwiki.core.vectorstore.embedding import (
     batch_embed,
-    batch_embed_sequential,
     get_optimal_batch_config,
     is_local_provider,
 )
@@ -272,26 +271,6 @@ class TestParallelEmbedding:
         assert len(embeddings) == 50
         total_embedded = sum(len(call) for call in provider.embed_calls)
         assert total_embedded == 50
-
-    @pytest.mark.slow
-    async def test_parallel_embedding_faster_than_sequential(
-        self, slow_provider, slow_config
-    ):
-        """Test that parallel embedding is faster than sequential."""
-        texts = [f"text_{i}" for i in range(10)]
-
-        start = time.time()
-        await _do_batch_embed(slow_provider, texts, config=slow_config, batch_size=2)
-        parallel_time = time.time() - start
-
-        start = time.time()
-        await batch_embed_sequential(texts, slow_provider, 2)
-        sequential_time = time.time() - start
-
-        assert parallel_time < sequential_time * 0.95, (
-            f"Parallel ({parallel_time:.3f}s) should be faster than "
-            f"sequential ({sequential_time:.3f}s)"
-        )
 
     async def test_parallel_embedding_concurrency_limited(self):
         """Test that concurrency is properly limited by semaphore."""

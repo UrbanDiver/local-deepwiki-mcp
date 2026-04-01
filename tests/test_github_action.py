@@ -60,7 +60,7 @@ class TestRunAnalysis:
 
         with (
             patch(
-                "local_deepwiki.handlers.analysis.handle_analyze_diff",
+                "local_deepwiki.handlers.analysis_diff.handle_analyze_diff",
                 mock_diff,
             ),
             patch(
@@ -87,7 +87,7 @@ class TestRunAnalysis:
 
         with (
             patch(
-                "local_deepwiki.handlers.analysis.handle_analyze_diff",
+                "local_deepwiki.handlers.analysis_diff.handle_analyze_diff",
                 mock_diff,
             ),
             patch(
@@ -116,7 +116,7 @@ class TestRunAnalysis:
 
         with (
             patch(
-                "local_deepwiki.handlers.analysis.handle_analyze_diff",
+                "local_deepwiki.handlers.analysis_diff.handle_analyze_diff",
                 mock_diff,
             ),
             patch(
@@ -148,7 +148,7 @@ class TestRunAnalysis:
 
         with (
             patch(
-                "local_deepwiki.handlers.analysis.handle_analyze_diff",
+                "local_deepwiki.handlers.analysis_diff.handle_analyze_diff",
                 mock_diff,
             ),
             patch(
@@ -348,7 +348,7 @@ class TestMain:
 
         with (
             patch(
-                "local_deepwiki.handlers.analysis.handle_analyze_diff",
+                "local_deepwiki.handlers.analysis_diff.handle_analyze_diff",
                 AsyncMock(return_value=[_text_content(diff_result)]),
             ),
             patch(

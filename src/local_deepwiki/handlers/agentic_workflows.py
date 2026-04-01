@@ -220,7 +220,7 @@ async def handle_run_workflow(args: dict[str, Any]) -> list[TextContent]:
             value=workflow,
         )
 
-    import local_deepwiki.handlers.agentic as _self_module
+    import local_deepwiki.handlers.agentic_workflows as _self_module
 
     runner = getattr(_self_module, runner_name)
     logger.info("Running workflow '%s' for %s", workflow, repo_path)

@@ -41,21 +41,7 @@ from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk, Language
 from local_deepwiki.plugins.registry import get_plugin_registry
 
-# Re-export extracted names for backward compatibility
-__all__ = [
-    "FUNCTION_NODE_TYPES",
-    "CLASS_NODE_TYPES",
-    "IMPORT_NODE_TYPES",
-    "get_parent_classes",
-    "extract_python_parameter_types",
-    "extract_python_parameter_defaults",
-    "extract_python_return_type",
-    "extract_python_decorators",
-    "is_async_function",
-    "extract_python_raised_exceptions",
-    "extract_function_type_metadata",
-    "CodeChunker",
-]
+__all__ = ["CodeChunker"]
 
 logger = get_logger(__name__)
 
@@ -219,7 +205,7 @@ class CodeChunker:
                 )
         else:
             # Small class - include everything in one chunk
-            chunk_id = self._generate_id(
+            chunk_id = generate_chunk_id(
                 file_path, f"class_{class_name}", class_node.start_point[0]
             )
             metadata: dict[str, int | list[str]] = {"line_count": lines}
@@ -272,7 +258,7 @@ class CodeChunker:
         )
         content = f"{signature}\n    # Methods: {', '.join(method_names)}"
 
-        chunk_id = self._generate_id(
+        chunk_id = generate_chunk_id(
             ctx.file_path, f"class_{ctx.class_name}", ctx.class_node.start_point[0]
         )
         metadata: dict[str, bool | int | list[str]] = {
@@ -321,7 +307,7 @@ class CodeChunker:
         # Extract type annotation metadata
         metadata = extract_function_type_metadata(method_node, source, language)
 
-        chunk_id = self._generate_id(
+        chunk_id = generate_chunk_id(
             file_path, f"{class_name}.{method_name}", method_node.start_point[0]
         )
         return CodeChunk(
@@ -363,7 +349,7 @@ class CodeChunker:
         # Extract type annotation metadata
         metadata = extract_function_type_metadata(func_node, source, language)
 
-        chunk_id = self._generate_id(
+        chunk_id = generate_chunk_id(
             file_path, f"func_{func_name}", func_node.start_point[0]
         )
         return CodeChunk(
@@ -378,7 +364,3 @@ class CodeChunker:
             docstring=docstring,
             metadata=metadata,
         )
-
-    # Delegate static helpers to module-level functions for backward compatibility
-    _is_inside_class = staticmethod(is_inside_class)
-    _generate_id = staticmethod(generate_chunk_id)

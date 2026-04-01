@@ -16,7 +16,7 @@ from local_deepwiki.handlers import (
     handle_get_layer_dependencies,
 )
 from local_deepwiki.server import TOOL_HANDLERS
-from local_deepwiki.server_tool_defs import TOOL_DEFINITIONS
+from local_deepwiki.tool_defs import TOOL_DEFINITIONS
 
 
 # ---------------------------------------------------------------------------

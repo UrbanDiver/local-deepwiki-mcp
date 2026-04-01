@@ -300,7 +300,7 @@ class TestIntegrationWithHandlers:
     def test_index_repository_respects_denylist(self, tmp_path):
         """Test that index_repository handler respects repository access control."""
         # This test verifies the integration at the import level
-        from local_deepwiki.handlers.core import _handle_index_repository_impl
+        from local_deepwiki.handlers.indexing import _handle_index_repository_impl
 
         # Configure restrictive access
         config = RepositoryAccessConfig(

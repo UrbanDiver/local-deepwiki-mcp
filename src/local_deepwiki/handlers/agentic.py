@@ -25,24 +25,10 @@ from local_deepwiki.security import Permission, get_access_controller
 
 logger = get_logger(__name__)
 
-# Re-export data constants and helpers for backward compatibility
-from local_deepwiki.handlers.agentic_data import (  # noqa: F401
+from local_deepwiki.handlers.agentic_data import (
     TOOL_GRAPH,
-    WORKFLOW_PRESETS,
-    _INSUFFICIENT_PHRASES,
     _TOOL_KEYWORDS,
-    _WORKFLOW_RUNNER_NAMES,
     _answer_seems_insufficient,
-)
-
-# Re-export workflow runners and handler for backward compatibility
-from local_deepwiki.handlers.agentic_workflows import (  # noqa: F401
-    _run_full_analysis,
-    _run_onboarding,
-    _run_quick_refresh,
-    _run_security_audit,
-    _run_step,
-    handle_run_workflow,
 )
 
 
@@ -512,7 +498,7 @@ async def handle_find_tools(args: dict[str, Any]) -> list[TextContent]:
     if not query:
         raise ValueError("query is required")
 
-    from local_deepwiki.server_tool_defs import TOOL_DEFINITIONS
+    from local_deepwiki.tool_defs import TOOL_DEFINITIONS
 
     query_lower = query.lower()
     query_words = set(query_lower.split())

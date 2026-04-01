@@ -25,7 +25,7 @@ from local_deepwiki.server import (
     list_tools,
     server,
 )
-from local_deepwiki.server_tool_defs import TOOL_DEFINITIONS
+from local_deepwiki.tool_defs import TOOL_DEFINITIONS
 
 
 class TestServer:

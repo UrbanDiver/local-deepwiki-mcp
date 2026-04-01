@@ -360,7 +360,9 @@ class TestJavaScriptCallExtraction:
         root = parser.parse_source(source, Language.JAVASCRIPT)
         func_node = root.children[0]
 
-        calls = extract_calls_from_function(func_node, source.encode(), Language.JAVASCRIPT)
+        calls = extract_calls_from_function(
+            func_node, source.encode(), Language.JAVASCRIPT
+        )
         assert "processData" in calls
         assert "saveResults" in calls
 
@@ -376,7 +378,9 @@ class TestJavaScriptCallExtraction:
         root = parser.parse_source(source, Language.JAVASCRIPT)
         func_node = root.children[0]
 
-        calls = extract_calls_from_function(func_node, source.encode(), Language.JAVASCRIPT)
+        calls = extract_calls_from_function(
+            func_node, source.encode(), Language.JAVASCRIPT
+        )
         assert "transform" in calls
 
 
@@ -715,7 +719,9 @@ class TestSwiftCallExtraction:
         funcs = find_nodes_by_type(root, {"function_declaration"})
         if funcs:
             func_node = funcs[0]
-            calls = extract_calls_from_function(func_node, source.encode(), Language.SWIFT)
+            calls = extract_calls_from_function(
+                func_node, source.encode(), Language.SWIFT
+            )
             # Swift call extraction may find calls depending on tree-sitter grammar
             assert isinstance(calls, list)
 
@@ -736,7 +742,9 @@ class TestSwiftCallExtraction:
         funcs = find_nodes_by_type(root, {"function_declaration"})
         if funcs:
             func_node = funcs[0]
-            calls = extract_calls_from_function(func_node, source.encode(), Language.SWIFT)
+            calls = extract_calls_from_function(
+                func_node, source.encode(), Language.SWIFT
+            )
             # Swift parsing depends on tree-sitter grammar version
             assert isinstance(calls, list)
 
@@ -1035,16 +1043,20 @@ class TestClassWithoutName:
         original_get_node_name = None
 
         def mock_get_node_name(node, source, language):
-            from local_deepwiki.core.chunker import CLASS_NODE_TYPES
+            from local_deepwiki.core.chunk_extractors import CLASS_NODE_TYPES
 
             class_types = CLASS_NODE_TYPES.get(language, set())
             if node.type in class_types:
                 return None  # Simulate class without name
             # Import original function and call it
             from local_deepwiki.core.parser import get_node_name as orig
+
             return orig(node, source, language)
 
-        with patch("local_deepwiki.generators.analysis.callgraph.get_node_name", side_effect=mock_get_node_name):
+        with patch(
+            "local_deepwiki.generators.analysis.callgraph.get_node_name",
+            side_effect=mock_get_node_name,
+        ):
             result = extractor.extract_from_file(test_file, tmp_path)
 
         # The class method should NOT be in results because class name is None

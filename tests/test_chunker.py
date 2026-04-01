@@ -5,7 +5,8 @@ from pathlib import Path
 import pytest
 
 from local_deepwiki.config import ChunkingConfig
-from local_deepwiki.core.chunker import CodeChunker, get_parent_classes
+from local_deepwiki.core.chunk_extractors import get_parent_classes
+from local_deepwiki.core.chunker import CodeChunker
 from local_deepwiki.core.parser import CodeParser
 from local_deepwiki.models import ChunkType, Language
 
@@ -739,7 +740,7 @@ class TestPythonParameterExtraction:
 
         This covers line 213 - the early return when params_node is None.
         """
-        from local_deepwiki.core.chunker import extract_python_parameter_types
+        from local_deepwiki.core.chunk_extractors import extract_python_parameter_types
 
         # Create a mock node that has no 'parameters' field
         code = "x = lambda: 42"  # Lambda without parameters
@@ -767,7 +768,9 @@ class TestPythonParameterExtraction:
 
         This covers line 316 - the early return when params_node is None.
         """
-        from local_deepwiki.core.chunker import extract_python_parameter_defaults
+        from local_deepwiki.core.chunk_extractors import (
+            extract_python_parameter_defaults,
+        )
 
         # Create a mock node that has no 'parameters' field
         code = "x = lambda: 42"
@@ -791,7 +794,7 @@ class TestPythonParameterExtraction:
 
         This tests the list_splat_pattern with typed_parameter branch (lines 286-298).
         """
-        from local_deepwiki.core.chunker import extract_python_parameter_types
+        from local_deepwiki.core.chunk_extractors import extract_python_parameter_types
 
         code = """
 def func(*args: int) -> None:
@@ -820,7 +823,7 @@ def func(*args: int) -> None:
 
         This tests the dictionary_splat_pattern with typed_parameter branch (lines 286-298).
         """
-        from local_deepwiki.core.chunker import extract_python_parameter_types
+        from local_deepwiki.core.chunk_extractors import extract_python_parameter_types
 
         code = """
 def func(**kwargs: str) -> None:
@@ -849,7 +852,7 @@ def func(**kwargs: str) -> None:
 
         This tests the list_splat_pattern branch (lines 276-283).
         """
-        from local_deepwiki.core.chunker import extract_python_parameter_types
+        from local_deepwiki.core.chunk_extractors import extract_python_parameter_types
 
         code = """
 def func(*args):
@@ -878,7 +881,7 @@ def func(*args):
 
         This tests the dictionary_splat_pattern branch (lines 276-283).
         """
-        from local_deepwiki.core.chunker import extract_python_parameter_types
+        from local_deepwiki.core.chunk_extractors import extract_python_parameter_types
 
         code = """
 def func(**kwargs):
@@ -904,7 +907,7 @@ def func(**kwargs):
 
     def test_mixed_args_kwargs_in_function(self, parser, tmp_path):
         """Test function with mixed regular params, *args, and **kwargs."""
-        from local_deepwiki.core.chunker import extract_python_parameter_types
+        from local_deepwiki.core.chunk_extractors import extract_python_parameter_types
 
         code = """
 def func(a: int, b, *args, **kwargs):

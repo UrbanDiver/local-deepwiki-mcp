@@ -298,22 +298,6 @@ async def generate_full_search_index(
     }
 
 
-def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path:
-    """Generate and write search index to disk (legacy page-only version).
-
-    Args:
-        wiki_path: Path to wiki directory.
-        pages: List of wiki pages.
-
-    Returns:
-        Path to the generated search.json file.
-    """
-    index = generate_search_index(pages)
-    index_path = wiki_path / "search.json"
-    index_path.write_text(json.dumps(index, indent=2))
-    return index_path
-
-
 async def write_full_search_index(
     wiki_path: Path,
     pages: list[WikiPage],

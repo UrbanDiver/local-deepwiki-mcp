@@ -218,7 +218,7 @@ class TestHandleExplainEntityBasic:
                 return_value=mock_reverse,
             ),
             patch(
-                "local_deepwiki.generators.examples.orchestrator.CodeExampleExtractor",
+                "local_deepwiki.generators.examples.extractor.CodeExampleExtractor",
                 return_value=mock_example_extractor,
             ),
             patch(
@@ -309,7 +309,7 @@ class TestHandleExplainEntityClassInheritance:
                 return_value={"Config": mock_class_node},
             ),
             patch(
-                "local_deepwiki.generators.examples.orchestrator.CodeExampleExtractor",
+                "local_deepwiki.generators.examples.extractor.CodeExampleExtractor",
                 return_value=mock_example_extractor,
             ),
             patch(
@@ -376,7 +376,7 @@ class TestHandleExplainEntityFunctionNoInheritance:
             ) as mock_load,
             patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
-                "local_deepwiki.generators.examples.orchestrator.CodeExampleExtractor",
+                "local_deepwiki.generators.examples.extractor.CodeExampleExtractor",
                 return_value=mock_example_extractor,
             ),
             patch(
@@ -437,7 +437,7 @@ class TestHandleExplainEntityDisableCallGraph:
             ) as mock_load,
             patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
-                "local_deepwiki.generators.examples.orchestrator.CodeExampleExtractor",
+                "local_deepwiki.generators.examples.extractor.CodeExampleExtractor",
                 return_value=mock_example_extractor,
             ),
             patch(
@@ -647,7 +647,7 @@ class TestExplainEntityMultipleMatches:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.examples.orchestrator.CodeExampleExtractor",
+                "local_deepwiki.generators.examples.extractor.CodeExampleExtractor",
                 return_value=mock_example_extractor,
             ),
             patch(
@@ -714,7 +714,7 @@ class TestExplainEntityMethodEntity:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.examples.orchestrator.CodeExampleExtractor",
+                "local_deepwiki.generators.examples.extractor.CodeExampleExtractor",
                 return_value=mock_example_extractor,
             ),
             patch(
@@ -778,7 +778,7 @@ class TestExplainEntityNoDocstring:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.examples.orchestrator.CodeExampleExtractor",
+                "local_deepwiki.generators.examples.extractor.CodeExampleExtractor",
                 return_value=mock_example_extractor,
             ),
             patch(
@@ -865,7 +865,7 @@ class TestExplainEntityAsyncFunction:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.examples.orchestrator.CodeExampleExtractor",
+                "local_deepwiki.generators.examples.extractor.CodeExampleExtractor",
                 return_value=mock_example_extractor,
             ),
             patch(
@@ -923,7 +923,7 @@ class TestExplainEntityNoCallersCallees:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.examples.orchestrator.CodeExampleExtractor",
+                "local_deepwiki.generators.examples.extractor.CodeExampleExtractor",
                 return_value=mock_example_extractor,
             ),
             patch(
@@ -974,7 +974,7 @@ class TestExplainEntityDisableApiDocs:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.generators.examples.orchestrator.CodeExampleExtractor",
+                "local_deepwiki.generators.examples.extractor.CodeExampleExtractor",
                 return_value=mock_example_extractor,
             ),
         ):
@@ -1066,7 +1066,7 @@ class TestExplainEntityClassNotInHierarchy:
                 return_value={},  # Empty hierarchy
             ),
             patch(
-                "local_deepwiki.generators.examples.orchestrator.CodeExampleExtractor",
+                "local_deepwiki.generators.examples.extractor.CodeExampleExtractor",
                 return_value=mock_example_extractor,
             ),
             patch(
@@ -1171,7 +1171,7 @@ class TestExplainEntityCallGraphWithCallersCallees:
                 return_value=mock_reverse_graph,
             ),
             patch(
-                "local_deepwiki.generators.examples.orchestrator.CodeExampleExtractor",
+                "local_deepwiki.generators.examples.extractor.CodeExampleExtractor",
                 return_value=mock_example_extractor,
             ),
             patch(
