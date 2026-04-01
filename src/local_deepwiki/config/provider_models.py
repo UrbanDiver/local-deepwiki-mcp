@@ -69,6 +69,10 @@ class OpenAILLMConfig(BaseModel):
     model_config = {"frozen": True}
 
     model: str = Field(default="gpt-4o", description="OpenAI model name")
+    base_url: str | None = Field(
+        default=None,
+        description="Custom API base URL for OpenAI-compatible proxies",
+    )
 
 
 class LLMConfig(BaseModel):
@@ -77,7 +81,7 @@ class LLMConfig(BaseModel):
     model_config = {"frozen": True, "use_enum_values": True}
 
     provider: LLMProviderType = Field(
-        default=LLMProviderType.OLLAMA, description="LLM provider"
+        default=LLMProviderType.OPENAI, description="LLM provider"
     )
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
     anthropic: AnthropicConfig = Field(default_factory=AnthropicConfig)

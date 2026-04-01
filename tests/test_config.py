@@ -42,7 +42,7 @@ class TestConfig:
         config = Config()
 
         assert config.embedding.provider == "local"
-        assert config.llm.provider == "ollama"
+        assert config.llm.provider == "openai"
         assert "python" in config.parsing.languages
         assert config.chunking.max_chunk_tokens == 512
 
@@ -528,10 +528,10 @@ class TestProviderPrompts:
     def test_config_get_prompts_uses_current_provider(self):
         """Test Config.get_prompts() returns prompts for current LLM provider."""
         config = Config()
-        # Default provider is ollama
-        assert config.llm.provider == "ollama"
+        # Default provider is openai
+        assert config.llm.provider == "openai"
         prompts = config.get_prompts()
-        assert prompts == config.prompts.ollama
+        assert prompts == config.prompts.openai
 
     def test_config_get_prompts_changes_with_provider(self):
         """Test Config.get_prompts() changes when provider changes."""
@@ -624,7 +624,7 @@ class TestComputedFields:
 
     def test_effective_llm_concurrency_ollama(self):
         """Test effective_llm_concurrency caps local models at 3."""
-        config = Config()  # Default is ollama
+        config = Config(llm={"provider": "ollama"})
         assert config.llm.provider == "ollama"
         # Local models capped at 3 (single GPU, avoid OOM)
         assert config.effective_llm_concurrency <= 3
@@ -789,8 +789,8 @@ class TestMergeConfigs:
         from local_deepwiki.config import merge_configs
 
         cli = {"llm": {"provider": "anthropic"}}
-        env = {"llm": {"provider": "openai"}}
-        file = {"llm": {"provider": "ollama"}}
+        env = {"llm": {"provider": "ollama"}}
+        file = {"llm": {"provider": "openai"}}
 
         config, diff = merge_configs(cli, env, file)
 
@@ -860,14 +860,16 @@ class TestMergeConfigs:
 class TestValidateConfig:
     """Tests for validate_config function."""
 
-    def test_validate_config_default_no_warnings(self):
-        """Test default config with local providers has no major warnings."""
+    def test_validate_config_default_no_warnings(self, monkeypatch):
+        """Test default config produces no warnings when API key is set."""
         from local_deepwiki.config import validate_config
 
-        config = Config()  # Default uses local/ollama
+        # Default provider is OpenAI, which requires an API key
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-fake-key")
+        config = Config()
         warnings = validate_config(config)
 
-        # Default config should not warn about API keys
+        # With API key set, default config should not warn about API keys
         api_warnings = [w for w in warnings if "API_KEY" in w]
         assert len(api_warnings) == 0
 

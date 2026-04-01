@@ -2,6 +2,24 @@
 
 A local, privacy-focused MCP server that generates DeepWiki-style documentation for private repositories with RAG-based Q&A capabilities.
 
+## Quickstart
+
+```bash
+git clone https://github.com/UrbanDiver/local-deepwiki-mcp.git
+cd local-deepwiki-mcp
+uv sync                          # Install dependencies
+export OPENAI_API_KEY="..."      # Or ANTHROPIC_API_KEY for Anthropic
+deepwiki init                    # Configure LLM + embedding providers
+deepwiki config health-check     # Verify providers are working
+deepwiki update /path/to/repo    # Index a repository and generate wiki
+deepwiki serve .deepwiki         # Browse the wiki at http://localhost:8080
+```
+
+**Requirements:** Python 3.11+, [uv](https://docs.astral.sh/uv/getting-started/installation/) (see [Installing uv](#installing-uv) below), and an LLM provider:
+- **OpenAI** (default) — set `OPENAI_API_KEY` environment variable
+- **Anthropic** — set `ANTHROPIC_API_KEY` environment variable
+- **[Ollama](https://ollama.ai/)** (fully local, requires GPU) — install Ollama, then `ollama pull qwen3-coder:30b`
+
 ## Features
 
 - **Multi-language code parsing** using tree-sitter (Python, TypeScript/JavaScript, Go, Rust, Java, C/C++, Swift, Ruby, PHP, Kotlin, C#)
@@ -27,11 +45,19 @@ cd local-deepwiki-mcp
 uv sync
 ```
 
+All LLM providers and the web UI are included by default. Optional extra for PDF export:
+
+```bash
+uv sync --extra pdf              # Add WeasyPrint for PDF export
+uv sync --extra all              # Same as --extra pdf (all optional extras)
+```
+
 ### Using pip
 
 ```bash
 cd local-deepwiki-mcp
-pip install -e .
+pip install -e ".[all]"          # Recommended: install with all extras
+# or: pip install -e .           # Minimal: core only
 ```
 
 ## Configuration
@@ -54,14 +80,15 @@ embedding:
     model: "text-embedding-3-small"
 
 llm:
-  provider: "ollama"  # or "anthropic" or "openai"
+  provider: "openai"  # or "anthropic" or "ollama"
+  openai:
+    model: "gpt-4o"
+    # base_url: "https://your-proxy.example.com/v1"  # For OpenAI-compatible proxies
+  anthropic:
+    model: "claude-sonnet-4-20250514"
   ollama:
     model: "qwen3-coder:30b"
     base_url: "http://localhost:11434"
-  anthropic:
-    model: "claude-sonnet-4-20250514"
-  openai:
-    model: "gpt-4o"
 
 parsing:
   languages:
@@ -88,9 +115,39 @@ output:
   vector_db_name: "vectors.lance"
 ```
 
-## Claude Code Integration
+## Installing uv
 
-Add to your Claude Code MCP config (`~/.claude/claude_code_config.json`):
+[uv](https://docs.astral.sh/uv/) is a fast Python package manager. If you don't have it:
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Or with pip
+pip install uv
+
+# Or with Homebrew
+brew install uv
+```
+
+After installing, restart your terminal or run `source ~/.bashrc` (or `~/.zshrc`).
+
+## MCP Server Integration
+
+The MCP server runs over stdio and works with any MCP-compatible AI tool. Start it manually with:
+
+```bash
+deepwiki mcp
+```
+
+Or configure your AI tool to launch it automatically:
+
+### Claude Code
+
+Add to `~/.claude/claude_code_config.json`:
 
 ```json
 {
@@ -99,13 +156,82 @@ Add to your Claude Code MCP config (`~/.claude/claude_code_config.json`):
       "command": "uv",
       "args": ["run", "--directory", "/path/to/local-deepwiki-mcp", "local-deepwiki"],
       "env": {
-        "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}",
         "OPENAI_API_KEY": "${OPENAI_API_KEY}"
       }
     }
   }
 }
 ```
+
+### Cursor
+
+Add to Cursor's MCP settings (`Settings > MCP Servers > Add`):
+
+```json
+{
+  "mcpServers": {
+    "local-deepwiki": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/local-deepwiki-mcp", "local-deepwiki"],
+      "env": {
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+### Windsurf
+
+Add to `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "local-deepwiki": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/local-deepwiki-mcp", "local-deepwiki"],
+      "env": {
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+### VS Code (Copilot)
+
+Add to `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "servers": {
+    "local-deepwiki": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/local-deepwiki-mcp", "local-deepwiki"],
+      "env": {
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+### Generic (any MCP client)
+
+The server communicates over stdio using the [MCP protocol](https://modelcontextprotocol.io/). Launch with:
+
+```bash
+uv run --directory /path/to/local-deepwiki-mcp local-deepwiki
+```
+
+Or without uv (after `pip install -e .`):
+
+```bash
+local-deepwiki
+```
+
+**Note:** Replace `/path/to/local-deepwiki-mcp` with the actual path where you cloned the repository. Add `ANTHROPIC_API_KEY` to the `env` block if using Anthropic instead of OpenAI.
 
 ## MCP Tools (43 tools)
 
@@ -284,10 +410,44 @@ deepwiki cache clear --llm --embedding           # Clear caches
 deepwiki cache cleanup                           # Remove expired entries
 ```
 
-## Environment Variables
+## API Keys
 
-- `ANTHROPIC_API_KEY` - Required for Anthropic LLM provider
-- `OPENAI_API_KEY` - Required for OpenAI LLM/embedding providers
+### OpenAI (default)
+
+1. Go to [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+2. Sign in (or create an account)
+3. Click **Create new secret key**
+4. Copy the key and set it in your environment:
+
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+To persist it, add the export to your `~/.zshrc` or `~/.bashrc`.
+
+### Anthropic
+
+1. Go to [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
+2. Click **Create Key**
+3. Set it in your environment:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+## Using an OpenAI-Compatible Proxy
+
+If your organization provides an OpenAI-compatible API endpoint (e.g., through GitHub Copilot Enterprise or a corporate proxy), set the `base_url` in your config:
+
+```yaml
+llm:
+  provider: "openai"
+  openai:
+    model: "gpt-4o"
+    base_url: "https://your-proxy.example.com/v1"
+```
+
+The `OPENAI_API_KEY` environment variable is still required for authentication.
 
 ## Prerequisites
 

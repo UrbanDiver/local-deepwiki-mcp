@@ -49,12 +49,18 @@ OPENAI_MODELS = {
 class OpenAILLMProvider(LLMProvider):
     """LLM provider using OpenAI API."""
 
-    def __init__(self, model: str = "gpt-4o", api_key: str | None = None):
+    def __init__(
+        self,
+        model: str = "gpt-4o",
+        api_key: str | None = None,
+        base_url: str | None = None,
+    ):
         """Initialize the OpenAI provider.
 
         Args:
             model: OpenAI model name.
             api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+            base_url: Optional custom API base URL for OpenAI-compatible proxies.
 
         Raises:
             ProviderAuthenticationError: If no API key is configured or format is invalid.
@@ -74,7 +80,7 @@ class OpenAILLMProvider(LLMProvider):
         )
 
         # Pass directly to client, don't store in self
-        self._client = AsyncOpenAI(api_key=api_key)
+        self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
     def _handle_api_error(self, e: Exception) -> None:
         """Convert OpenAI API errors to standardized provider errors."""

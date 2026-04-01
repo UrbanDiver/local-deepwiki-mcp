@@ -361,21 +361,23 @@ def _prompt_llm_config(
     for name, available in providers.items():
         console.print(f"  {name}: {_provider_status(available)}")
 
+    _priority = ("openai", "anthropic", "ollama")
+
     if non_interactive:
         if provider_flag:
             return provider_flag
         return next(
-            (p for p in ("ollama", "anthropic", "openai") if providers.get(p)),
-            "ollama",
+            (p for p in _priority if providers.get(p)),
+            "openai",
         )
 
     default_provider = next(
-        (p for p in ("ollama", "anthropic", "openai") if providers.get(p)),
-        "ollama",
+        (p for p in _priority if providers.get(p)),
+        "openai",
     )
     return Prompt.ask(
         "\nLLM provider",
-        choices=["ollama", "anthropic", "openai"],
+        choices=["openai", "anthropic", "ollama"],
         default=default_provider,
     )
 

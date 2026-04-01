@@ -42,22 +42,18 @@ dependencies = [
     "nh3>=0.2.14,<1.0.0",  # Pinned: HTML sanitization (Rust-based)
     "watchdog>=4.0,<5.0.0",  # Pinned: File system monitoring
     "psutil>=5.0,<6.0.0",  # Pinned: System utilities
+    "ollama>=0.4,<1.0.0",  # Ollama LLM provider (unconditionally imported)
+    "anthropic>=0.40,<1.0.0",  # Anthropic LLM provider
+    "openai>=1.0,<2.0.0",  # OpenAI LLM provider
+    "flask>=3.0,<4.0.0",  # Web UI server (used in quickstart)
 ]
 
 [project.optional-dependencies]
-web = [
-    "flask>=3.0,<4.0.0",  # Web UI server
-]
 pdf = [
     "weasyprint>=68.0,<69.0.0",  # PDF export
 ]
-cloud = [
-    "openai>=1.0,<2.0.0",  # OpenAI LLM provider
-    "anthropic>=0.40,<1.0.0",  # Anthropic LLM provider
-    "ollama>=0.4,<1.0.0",  # Local LLM provider
-]
 all = [
-    "local-deepwiki[web,pdf,cloud]",
+    "local-deepwiki[pdf]",
 ]
 dev = [
     "local-deepwiki[all]",

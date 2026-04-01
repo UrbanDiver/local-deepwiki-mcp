@@ -247,7 +247,9 @@ class TestConfigValidatorLoadConfig:
         # When no file is found, config and raw_config are set to defaults
         assert validator.raw_config == {}
 
-    def test_load_config_finds_cwd_config_yaml(self, tmp_path, valid_config_yaml, monkeypatch):
+    def test_load_config_finds_cwd_config_yaml(
+        self, tmp_path, valid_config_yaml, monkeypatch
+    ):
         """Test finding config.yaml in current working directory."""
         monkeypatch.chdir(tmp_path)
         config_file = tmp_path / "config.yaml"
@@ -259,7 +261,9 @@ class TestConfigValidatorLoadConfig:
         assert result is True
         assert validator.config_path == config_file
 
-    def test_load_config_finds_local_deepwiki_yaml(self, tmp_path, valid_config_yaml, monkeypatch):
+    def test_load_config_finds_local_deepwiki_yaml(
+        self, tmp_path, valid_config_yaml, monkeypatch
+    ):
         """Test finding .local-deepwiki.yaml in current working directory."""
         monkeypatch.chdir(tmp_path)
         config_file = tmp_path / ".local-deepwiki.yaml"
@@ -406,7 +410,8 @@ class TestConfigValidatorValidateLLMProvider:
 
         # Should not have Anthropic API key errors
         api_errors = [
-            i for i in validator.issues
+            i
+            for i in validator.issues
             if "ANTHROPIC_API_KEY" in i.message and i.level == "error"
         ]
         assert len(api_errors) == 0
@@ -459,7 +464,8 @@ class TestConfigValidatorValidateLLMProvider:
 
         # Should not have OpenAI API key errors
         api_errors = [
-            i for i in validator.issues
+            i
+            for i in validator.issues
             if "OPENAI_API_KEY" in i.message and i.level == "error"
         ]
         assert len(api_errors) == 0
@@ -578,7 +584,8 @@ embedding:
             validator._validate_embedding_provider()
 
             model_warnings = [
-                i for i in validator.issues
+                i
+                for i in validator.issues
                 if "custom embedding model" in i.message.lower()
             ]
             assert len(model_warnings) == 0, f"Should not warn about {model}"
@@ -766,10 +773,7 @@ parsing:
         validator._validate_schema()
         validator._validate_paths()
 
-        path_warnings = [
-            i for i in validator.issues
-            if i.category == "Parsing"
-        ]
+        path_warnings = [i for i in validator.issues if i.category == "Parsing"]
         assert len(path_warnings) == 0
 
     def test_validate_paths_none_config(self):
@@ -977,7 +981,7 @@ class TestDisplayConfig:
 
     def test_display_config_ollama(self, mock_console):
         """Test displaying config with Ollama provider."""
-        config = Config()  # Default uses ollama
+        config = Config(llm={"provider": "ollama"})
         display_config(config, mock_console)
 
         output = mock_console.file.getvalue()
@@ -1253,7 +1257,9 @@ class TestMain:
 
     def test_main_validate_command(self, valid_config_file):
         """Test main with validate command."""
-        with patch("sys.argv", ["deepwiki-config", "-c", str(valid_config_file), "validate"]):
+        with patch(
+            "sys.argv", ["deepwiki-config", "-c", str(valid_config_file), "validate"]
+        ):
             with patch("local_deepwiki.cli.config_cli.Console"):
                 result = main()
 
@@ -1261,7 +1267,9 @@ class TestMain:
 
     def test_main_show_command(self, valid_config_file):
         """Test main with show command."""
-        with patch("sys.argv", ["deepwiki-config", "-c", str(valid_config_file), "show"]):
+        with patch(
+            "sys.argv", ["deepwiki-config", "-c", str(valid_config_file), "show"]
+        ):
             with patch("local_deepwiki.cli.config_cli.Console"):
                 result = main()
 
@@ -1269,7 +1277,10 @@ class TestMain:
 
     def test_main_show_with_raw(self, valid_config_file):
         """Test main with show --raw command."""
-        with patch("sys.argv", ["deepwiki-config", "-c", str(valid_config_file), "show", "--raw"]):
+        with patch(
+            "sys.argv",
+            ["deepwiki-config", "-c", str(valid_config_file), "show", "--raw"],
+        ):
             with patch("local_deepwiki.cli.config_cli.Console"):
                 result = main()
 

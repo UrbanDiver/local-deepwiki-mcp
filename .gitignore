@@ -56,6 +56,8 @@ html-export/
 
 # Development artifacts
 .claude-flow/
+.cognition/
+.superpowers/
 .swarm/
 .windsurf/
 agents/
@@ -64,6 +66,7 @@ coverage_html/
 coverage_openai_embeddings/
 docs/plans/
 docs/plan-*.md
+docs/superpowers/
 docs.pdf
 
 # Screenshots and UI previews

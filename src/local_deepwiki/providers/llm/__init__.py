@@ -28,7 +28,7 @@ def _create_anthropic(config: LLMConfig) -> LLMProvider:
 def _create_openai(config: LLMConfig) -> LLMProvider:
     from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
-    return OpenAILLMProvider(model=config.openai.model)
+    return OpenAILLMProvider(model=config.openai.model, base_url=config.openai.base_url)
 
 
 _LLM_FACTORIES: dict[str, Callable[[LLMConfig], LLMProvider]] = {

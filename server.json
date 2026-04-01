@@ -31,7 +31,7 @@
         },
         {
           "name": "DEEPWIKI_LLM_PROVIDER",
-          "description": "LLM provider to use: ollama, anthropic, or openai (default: ollama)",
+          "description": "LLM provider to use: openai, anthropic, or ollama (default: openai)",
           "isRequired": false,
           "isSecret": false
         },

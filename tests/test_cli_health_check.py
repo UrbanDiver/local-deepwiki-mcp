@@ -152,6 +152,11 @@ class TestHealthCheckFailures:
 class TestHealthCheckConfigOptions:
     """Tests for different config file options."""
 
+    @pytest.fixture(autouse=True)
+    def _set_api_key(self, monkeypatch):
+        """Default provider is OpenAI, which requires an API key."""
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-fake-key")
+
     def test_empty_config_file(self, mock_console, mock_args, tmp_path):
         """Test empty config file uses defaults."""
         config_file = tmp_path / "config.yaml"

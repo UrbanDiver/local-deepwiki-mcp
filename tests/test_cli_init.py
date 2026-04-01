@@ -264,7 +264,7 @@ class TestNonInteractiveMode:
         (repo / "main.py").write_text("")
 
         console = MagicMock()
-        # Mock: no existing config, anthropic available (non-default provider)
+        # Mock: no existing config, ollama available (non-default provider)
         with (
             patch(
                 "local_deepwiki.cli.init_cli.find_existing_config", return_value=None
@@ -282,7 +282,7 @@ class TestNonInteractiveMode:
                 repo,
                 console,
                 non_interactive=True,
-                provider_flag="anthropic",
+                provider_flag="ollama",
                 embedding_flag="local",
                 config_dest=dest,
             )
@@ -290,10 +290,10 @@ class TestNonInteractiveMode:
         assert result == 0
         assert dest.exists()
         loaded = yaml.safe_load(dest.read_text())
-        assert loaded["llm"]["provider"] == "anthropic"
+        assert loaded["llm"]["provider"] == "ollama"
         # Config roundtrip should produce valid Config
         restored = Config.model_validate(loaded)
-        assert restored.llm.provider == "anthropic"
+        assert restored.llm.provider == "ollama"
 
     def test_non_interactive_aborts_on_existing(self, tmp_path: Path):
         existing = tmp_path / "existing.yaml"
@@ -416,7 +416,7 @@ class TestNonInteractiveMode:
         loaded = yaml.safe_load(dest.read_text())
         assert loaded["llm"]["provider"] == "anthropic"
 
-    def test_non_interactive_fallback_to_ollama(self, tmp_path: Path):
+    def test_non_interactive_fallback_to_default(self, tmp_path: Path):
         dest = tmp_path / "config.yaml"
         console = MagicMock()
 
@@ -441,8 +441,9 @@ class TestNonInteractiveMode:
             )
 
         assert result == 0
-        loaded = yaml.safe_load(dest.read_text())
-        assert loaded["llm"]["provider"] == "ollama"
+        # Fallback is openai (the default), so minimal YAML may omit it
+        restored = Config.load(dest)
+        assert restored.llm.provider == "openai"
 
 
 # ── main() dispatch ──────────────────────────────────────────────────

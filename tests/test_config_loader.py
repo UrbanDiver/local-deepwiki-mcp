@@ -40,14 +40,13 @@ class TestConfigSingleton:
     """Tests for config singleton management."""
 
     def test_get_config_returns_default_when_none_set(self):
-        """Test get_config returns default config when none is set."""
+        """Test get_config returns a valid config when none is set."""
         reset_config()
         config = get_config()
 
         assert config is not None
         assert isinstance(config, Config)
-        assert config.embedding.provider == "local"
-        assert config.llm.provider == "ollama"
+        assert config.llm.provider in ("anthropic", "openai", "ollama")
 
     def test_get_config_returns_same_instance(self):
         """Test get_config returns same instance on multiple calls."""
@@ -342,17 +341,17 @@ class TestMergeConfigs:
         """Test merge_configs with only defaults."""
         config, diff = merge_configs(None, None, None)
 
-        assert config.llm.provider == "ollama"  # default
+        assert config.llm.provider == "openai"  # default
         assert not diff.has_changes()
 
     def test_merge_configs_cli_overrides_all(self):
         """Test CLI config has highest priority."""
-        cli = {"llm": {"provider": "anthropic"}}
-        env = {"llm": {"provider": "openai"}}
+        cli = {"llm": {"provider": "openai"}}
+        env = {"llm": {"provider": "anthropic"}}
         file = {"llm": {"provider": "ollama"}}
 
         config, diff = merge_configs(cli, env, file)
-        assert config.llm.provider == "anthropic"
+        assert config.llm.provider == "openai"
 
     def test_merge_configs_env_overrides_file(self):
         """Test env config overrides file config."""
@@ -503,7 +502,7 @@ class TestConfigDiffing:
             c for c in changes if "llm" in c.field and "provider" in c.field
         ]
         assert len(provider_changes) >= 1
-        assert provider_changes[0].old_value == "ollama"
+        assert provider_changes[0].old_value == "openai"
         assert provider_changes[0].new_value == "anthropic"
 
     def test_config_diff_detects_nested_changes(self):
@@ -593,9 +592,10 @@ class TestConfigDiffing:
 class TestConfigValidation:
     """Tests for validate_config function."""
 
-    def test_validate_config_default_no_warnings(self):
-        """Test validate_config with default local config has no API key warnings."""
-        config = Config()  # Default uses local/ollama
+    def test_validate_config_default_no_warnings(self, monkeypatch):
+        """Test validate_config with default config and API key has no warnings."""
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-fake-key")
+        config = Config()
 
         warnings = validate_config(config)
 

@@ -8,12 +8,12 @@ startCommand:
         type: string
         title: LLM Provider
         description: >-
-          LLM provider to use (ollama, anthropic, openai).
-          Default: ollama
+          LLM provider to use (openai, anthropic, ollama).
+          Default: openai
         enum:
-          - ollama
-          - anthropic
           - openai
+          - anthropic
+          - ollama
       embeddingProvider:
         type: string
         title: Embedding Provider
