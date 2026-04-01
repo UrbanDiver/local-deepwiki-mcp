@@ -48,11 +48,9 @@ htmlcov/
 Thumbs.db
 
 # Project specific
-*.lance
 .claude/
 html-export/
 .playwright-mcp/
-.deepwiki/
 
 # Development artifacts
 .claude-flow/

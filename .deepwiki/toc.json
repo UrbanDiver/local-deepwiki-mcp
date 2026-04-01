@@ -1,0 +1,1439 @@
+{
+  "entries": [
+    {
+      "number": "1",
+      "title": "Overview",
+      "path": "index.md"
+    },
+    {
+      "number": "2",
+      "title": "Architecture",
+      "path": "architecture.md"
+    },
+    {
+      "number": "3",
+      "title": "Dependencies",
+      "path": "dependencies.md"
+    },
+    {
+      "number": "4",
+      "title": "Glossary",
+      "path": "glossary.md"
+    },
+    {
+      "number": "5",
+      "title": "Class Inheritance",
+      "path": "inheritance.md"
+    },
+    {
+      "number": "6",
+      "title": "Changelog",
+      "path": "changelog.md"
+    },
+    {
+      "number": "7",
+      "title": "Modules",
+      "path": "modules/index.md",
+      "children": [
+        {
+          "number": "7.1",
+          "title": "Module: src",
+          "path": "modules/src.md"
+        }
+      ]
+    },
+    {
+      "number": "8",
+      "title": "Files",
+      "path": "files/index.md",
+      "children": [
+        {
+          "number": "8.1",
+          "title": "Src",
+          "path": "",
+          "children": [
+            {
+              "number": "8.1.1",
+              "title": "Local Deepwiki",
+              "path": "",
+              "children": [
+                {
+                  "number": "8.1.1.1",
+                  "title": "Cli Progress",
+                  "path": "files/src/local_deepwiki/cli_progress.md"
+                },
+                {
+                  "number": "8.1.1.2",
+                  "title": "Error Factories",
+                  "path": "files/src/local_deepwiki/error_factories.md"
+                },
+                {
+                  "number": "8.1.1.3",
+                  "title": "Errors",
+                  "path": "files/src/local_deepwiki/errors.md"
+                },
+                {
+                  "number": "8.1.1.4",
+                  "title": "Events",
+                  "path": "files/src/local_deepwiki/events.md"
+                },
+                {
+                  "number": "8.1.1.5",
+                  "title": "Logging",
+                  "path": "files/src/local_deepwiki/logging.md"
+                },
+                {
+                  "number": "8.1.1.6",
+                  "title": "Progress",
+                  "path": "files/src/local_deepwiki/progress.md"
+                },
+                {
+                  "number": "8.1.1.7",
+                  "title": "Prompts",
+                  "path": "files/src/local_deepwiki/prompts.md"
+                },
+                {
+                  "number": "8.1.1.8",
+                  "title": "server.py",
+                  "path": "files/src/local_deepwiki/server.md"
+                },
+                {
+                  "number": "8.1.1.9",
+                  "title": "Validation",
+                  "path": "files/src/local_deepwiki/validation.md"
+                },
+                {
+                  "number": "8.1.1.10",
+                  "title": "Watcher",
+                  "path": "files/src/local_deepwiki/watcher.md"
+                },
+                {
+                  "number": "8.1.1.11",
+                  "title": "Cli",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.11.1",
+                      "title": "Cache Cli",
+                      "path": "files/src/local_deepwiki/cli/cache_cli.md"
+                    },
+                    {
+                      "number": "8.1.1.11.2",
+                      "title": "Check Cli",
+                      "path": "files/src/local_deepwiki/cli/check_cli.md"
+                    },
+                    {
+                      "number": "8.1.1.11.3",
+                      "title": "Config Cli",
+                      "path": "files/src/local_deepwiki/cli/config_cli.md"
+                    },
+                    {
+                      "number": "8.1.1.11.4",
+                      "title": "Config Validator",
+                      "path": "files/src/local_deepwiki/cli/config_validator.md"
+                    },
+                    {
+                      "number": "8.1.1.11.5",
+                      "title": "init_cli.py",
+                      "path": "files/src/local_deepwiki/cli/init_cli.md"
+                    },
+                    {
+                      "number": "8.1.1.11.6",
+                      "title": "Interactive Search",
+                      "path": "files/src/local_deepwiki/cli/interactive_search.md"
+                    },
+                    {
+                      "number": "8.1.1.11.7",
+                      "title": "Main",
+                      "path": "files/src/local_deepwiki/cli/main.md"
+                    },
+                    {
+                      "number": "8.1.1.11.8",
+                      "title": "Profile Cli",
+                      "path": "files/src/local_deepwiki/cli/profile_cli.md"
+                    },
+                    {
+                      "number": "8.1.1.11.9",
+                      "title": "Search Models",
+                      "path": "files/src/local_deepwiki/cli/search_models.md"
+                    },
+                    {
+                      "number": "8.1.1.11.10",
+                      "title": "Status Cli",
+                      "path": "files/src/local_deepwiki/cli/status_cli.md"
+                    },
+                    {
+                      "number": "8.1.1.11.11",
+                      "title": "Update Cli",
+                      "path": "files/src/local_deepwiki/cli/update_cli.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "8.1.1.12",
+                  "title": "Config",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.12.1",
+                      "title": "Loader",
+                      "path": "files/src/local_deepwiki/config/loader.md"
+                    },
+                    {
+                      "number": "8.1.1.12.2",
+                      "title": "Models",
+                      "path": "files/src/local_deepwiki/config/models.md"
+                    },
+                    {
+                      "number": "8.1.1.12.3",
+                      "title": "Models Embedding",
+                      "path": "files/src/local_deepwiki/config/models_embedding.md"
+                    },
+                    {
+                      "number": "8.1.1.12.4",
+                      "title": "Models Llm",
+                      "path": "files/src/local_deepwiki/config/models_llm.md"
+                    },
+                    {
+                      "number": "8.1.1.12.5",
+                      "title": "Models Search",
+                      "path": "files/src/local_deepwiki/config/models_search.md"
+                    },
+                    {
+                      "number": "8.1.1.12.6",
+                      "title": "Models Wiki",
+                      "path": "files/src/local_deepwiki/config/models_wiki.md"
+                    },
+                    {
+                      "number": "8.1.1.12.7",
+                      "title": "Processing Models",
+                      "path": "files/src/local_deepwiki/config/processing_models.md"
+                    },
+                    {
+                      "number": "8.1.1.12.8",
+                      "title": "Prompts",
+                      "path": "files/src/local_deepwiki/config/prompts.md"
+                    },
+                    {
+                      "number": "8.1.1.12.9",
+                      "title": "provider_models.py",
+                      "path": "files/src/local_deepwiki/config/provider_models.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "8.1.1.13",
+                  "title": "Core",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.13.1",
+                      "title": "Agentic Rag",
+                      "path": "files/src/local_deepwiki/core/agentic_rag.md"
+                    },
+                    {
+                      "number": "8.1.1.13.2",
+                      "title": "Audit",
+                      "path": "files/src/local_deepwiki/core/audit.md"
+                    },
+                    {
+                      "number": "8.1.1.13.3",
+                      "title": "Chunk Builders",
+                      "path": "files/src/local_deepwiki/core/chunk_builders.md"
+                    },
+                    {
+                      "number": "8.1.1.13.4",
+                      "title": "Chunk Extractors",
+                      "path": "files/src/local_deepwiki/core/chunk_extractors.md"
+                    },
+                    {
+                      "number": "8.1.1.13.5",
+                      "title": "chunker.py",
+                      "path": "files/src/local_deepwiki/core/chunker.md"
+                    },
+                    {
+                      "number": "8.1.1.13.6",
+                      "title": "Fuzzy Search",
+                      "path": "files/src/local_deepwiki/core/fuzzy_search.md"
+                    },
+                    {
+                      "number": "8.1.1.13.7",
+                      "title": "Git Blame",
+                      "path": "files/src/local_deepwiki/core/git_blame.md"
+                    },
+                    {
+                      "number": "8.1.1.13.8",
+                      "title": "git_utils.py",
+                      "path": "files/src/local_deepwiki/core/git_utils.md"
+                    },
+                    {
+                      "number": "8.1.1.13.9",
+                      "title": "Health History",
+                      "path": "files/src/local_deepwiki/core/health_history.md"
+                    },
+                    {
+                      "number": "8.1.1.13.10",
+                      "title": "Index Manager",
+                      "path": "files/src/local_deepwiki/core/index_manager.md"
+                    },
+                    {
+                      "number": "8.1.1.13.11",
+                      "title": "indexer.py",
+                      "path": "files/src/local_deepwiki/core/indexer.md"
+                    },
+                    {
+                      "number": "8.1.1.13.12",
+                      "title": "Indexer Files",
+                      "path": "files/src/local_deepwiki/core/indexer_files.md"
+                    },
+                    {
+                      "number": "8.1.1.13.13",
+                      "title": "Indexer Graph",
+                      "path": "files/src/local_deepwiki/core/indexer_graph.md"
+                    },
+                    {
+                      "number": "8.1.1.13.14",
+                      "title": "Indexer Status",
+                      "path": "files/src/local_deepwiki/core/indexer_status.md"
+                    },
+                    {
+                      "number": "8.1.1.13.15",
+                      "title": "Llm Cache",
+                      "path": "files/src/local_deepwiki/core/llm_cache.md"
+                    },
+                    {
+                      "number": "8.1.1.13.16",
+                      "title": "Parsing Pipeline",
+                      "path": "files/src/local_deepwiki/core/parsing_pipeline.md"
+                    },
+                    {
+                      "number": "8.1.1.13.17",
+                      "title": "Path Utils",
+                      "path": "files/src/local_deepwiki/core/path_utils.md"
+                    },
+                    {
+                      "number": "8.1.1.13.18",
+                      "title": "Protocols",
+                      "path": "files/src/local_deepwiki/core/protocols.md"
+                    },
+                    {
+                      "number": "8.1.1.13.19",
+                      "title": "Query Utils",
+                      "path": "files/src/local_deepwiki/core/query_utils.md"
+                    },
+                    {
+                      "number": "8.1.1.13.20",
+                      "title": "Rate Limiter",
+                      "path": "files/src/local_deepwiki/core/rate_limiter.md"
+                    },
+                    {
+                      "number": "8.1.1.13.21",
+                      "title": "Reranker",
+                      "path": "files/src/local_deepwiki/core/reranker.md"
+                    },
+                    {
+                      "number": "8.1.1.13.22",
+                      "title": "Secret Detector",
+                      "path": "files/src/local_deepwiki/core/secret_detector.md"
+                    },
+                    {
+                      "number": "8.1.1.13.23",
+                      "title": "Tracing",
+                      "path": "files/src/local_deepwiki/core/tracing.md"
+                    },
+                    {
+                      "number": "8.1.1.13.24",
+                      "title": "Deep Research",
+                      "path": "",
+                      "children": [
+                        {
+                          "number": "8.1.1.13.24.1",
+                          "title": "Checkpoints",
+                          "path": "files/src/local_deepwiki/core/deep_research/checkpoints.md"
+                        },
+                        {
+                          "number": "8.1.1.13.24.2",
+                          "title": "Config",
+                          "path": "files/src/local_deepwiki/core/deep_research/config.md"
+                        },
+                        {
+                          "number": "8.1.1.13.24.3",
+                          "title": "Pipeline",
+                          "path": "files/src/local_deepwiki/core/deep_research/pipeline.md"
+                        },
+                        {
+                          "number": "8.1.1.13.24.4",
+                          "title": "Reasoning",
+                          "path": "files/src/local_deepwiki/core/deep_research/reasoning.md"
+                        },
+                        {
+                          "number": "8.1.1.13.24.5",
+                          "title": "Serialization",
+                          "path": "files/src/local_deepwiki/core/deep_research/serialization.md"
+                        },
+                        {
+                          "number": "8.1.1.13.24.6",
+                          "title": "Steps",
+                          "path": "files/src/local_deepwiki/core/deep_research/steps.md"
+                        }
+                      ]
+                    },
+                    {
+                      "number": "8.1.1.13.25",
+                      "title": "Graph Rag",
+                      "path": "",
+                      "children": [
+                        {
+                          "number": "8.1.1.13.25.1",
+                          "title": "Extractor",
+                          "path": "files/src/local_deepwiki/core/graph_rag/extractor.md"
+                        },
+                        {
+                          "number": "8.1.1.13.25.2",
+                          "title": "Models",
+                          "path": "files/src/local_deepwiki/core/graph_rag/models.md"
+                        },
+                        {
+                          "number": "8.1.1.13.25.3",
+                          "title": "Retriever",
+                          "path": "files/src/local_deepwiki/core/graph_rag/retriever.md"
+                        },
+                        {
+                          "number": "8.1.1.13.25.4",
+                          "title": "store.py",
+                          "path": "files/src/local_deepwiki/core/graph_rag/store.md"
+                        }
+                      ]
+                    },
+                    {
+                      "number": "8.1.1.13.26",
+                      "title": "Parser",
+                      "path": "",
+                      "children": [
+                        {
+                          "number": "8.1.1.13.26.1",
+                          "title": "Ast Cache",
+                          "path": "files/src/local_deepwiki/core/parser/ast_cache.md"
+                        },
+                        {
+                          "number": "8.1.1.13.26.2",
+                          "title": "Ast Utils",
+                          "path": "files/src/local_deepwiki/core/parser/ast_utils.md"
+                        },
+                        {
+                          "number": "8.1.1.13.26.3",
+                          "title": "Code Parser",
+                          "path": "files/src/local_deepwiki/core/parser/code_parser.md"
+                        },
+                        {
+                          "number": "8.1.1.13.26.4",
+                          "title": "Docstrings",
+                          "path": "files/src/local_deepwiki/core/parser/docstrings.md"
+                        },
+                        {
+                          "number": "8.1.1.13.26.5",
+                          "title": "Languages",
+                          "path": "files/src/local_deepwiki/core/parser/languages.md"
+                        }
+                      ]
+                    },
+                    {
+                      "number": "8.1.1.13.27",
+                      "title": "Vectorstore",
+                      "path": "",
+                      "children": [
+                        {
+                          "number": "8.1.1.13.27.1",
+                          "title": "Cache",
+                          "path": "files/src/local_deepwiki/core/vectorstore/cache.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.2",
+                          "title": "embedding.py",
+                          "path": "files/src/local_deepwiki/core/vectorstore/embedding.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.3",
+                          "title": "Indexes",
+                          "path": "files/src/local_deepwiki/core/vectorstore/indexes.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.4",
+                          "title": "Iterators",
+                          "path": "files/src/local_deepwiki/core/vectorstore/iterators.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.5",
+                          "title": "Maintenance",
+                          "path": "files/src/local_deepwiki/core/vectorstore/maintenance.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.6",
+                          "title": "Schema",
+                          "path": "files/src/local_deepwiki/core/vectorstore/schema.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.7",
+                          "title": "Search Config Resolver",
+                          "path": "files/src/local_deepwiki/core/vectorstore/search_config_resolver.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.8",
+                          "title": "Search Engine",
+                          "path": "files/src/local_deepwiki/core/vectorstore/search_engine.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.9",
+                          "title": "Search Params",
+                          "path": "files/src/local_deepwiki/core/vectorstore/search_params.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.10",
+                          "title": "Search Pipeline",
+                          "path": "files/src/local_deepwiki/core/vectorstore/search_pipeline.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.11",
+                          "title": "Search Postprocess",
+                          "path": "files/src/local_deepwiki/core/vectorstore/search_postprocess.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.12",
+                          "title": "Store",
+                          "path": "files/src/local_deepwiki/core/vectorstore/store.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.13",
+                          "title": "Utils",
+                          "path": "files/src/local_deepwiki/core/vectorstore/utils.md"
+                        },
+                        {
+                          "number": "8.1.1.13.27.14",
+                          "title": "Mixins",
+                          "path": "",
+                          "children": [
+                            {
+                              "number": "8.1.1.13.27.14.1",
+                              "title": "Lazy Index",
+                              "path": "files/src/local_deepwiki/core/vectorstore/mixins/lazy_index.md"
+                            },
+                            {
+                              "number": "8.1.1.13.27.14.2",
+                              "title": "Search",
+                              "path": "files/src/local_deepwiki/core/vectorstore/mixins/search.md"
+                            },
+                            {
+                              "number": "8.1.1.13.27.14.3",
+                              "title": "Search Types",
+                              "path": "files/src/local_deepwiki/core/vectorstore/mixins/search_types.md"
+                            },
+                            {
+                              "number": "8.1.1.13.27.14.4",
+                              "title": "Stats",
+                              "path": "files/src/local_deepwiki/core/vectorstore/mixins/stats.md"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "number": "8.1.1.14",
+                  "title": "Export",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.14.1",
+                      "title": "Html",
+                      "path": "files/src/local_deepwiki/export/html.md"
+                    },
+                    {
+                      "number": "8.1.1.14.2",
+                      "title": "Html Template",
+                      "path": "files/src/local_deepwiki/export/html_template.md"
+                    },
+                    {
+                      "number": "8.1.1.14.3",
+                      "title": "Mermaid Renderer",
+                      "path": "files/src/local_deepwiki/export/mermaid_renderer.md"
+                    },
+                    {
+                      "number": "8.1.1.14.4",
+                      "title": "Pdf",
+                      "path": "files/src/local_deepwiki/export/pdf.md"
+                    },
+                    {
+                      "number": "8.1.1.14.5",
+                      "title": "Pdf Styles",
+                      "path": "files/src/local_deepwiki/export/pdf_styles.md"
+                    },
+                    {
+                      "number": "8.1.1.14.6",
+                      "title": "Pdf Sync",
+                      "path": "files/src/local_deepwiki/export/pdf_sync.md"
+                    },
+                    {
+                      "number": "8.1.1.14.7",
+                      "title": "Shared",
+                      "path": "files/src/local_deepwiki/export/shared.md"
+                    },
+                    {
+                      "number": "8.1.1.14.8",
+                      "title": "Streaming",
+                      "path": "files/src/local_deepwiki/export/streaming.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "8.1.1.15",
+                  "title": "Generators",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.15.1",
+                      "title": "Changelog",
+                      "path": "files/src/local_deepwiki/generators/changelog.md"
+                    },
+                    {
+                      "number": "8.1.1.15.2",
+                      "title": "Context Builder",
+                      "path": "files/src/local_deepwiki/generators/context_builder.md"
+                    },
+                    {
+                      "number": "8.1.1.15.3",
+                      "title": "Crosslinks",
+                      "path": "files/src/local_deepwiki/generators/crosslinks.md"
+                    },
+                    {
+                      "number": "8.1.1.15.4",
+                      "title": "Dir Tree",
+                      "path": "files/src/local_deepwiki/generators/dir_tree.md"
+                    },
+                    {
+                      "number": "8.1.1.15.5",
+                      "title": "Lazy Cache",
+                      "path": "files/src/local_deepwiki/generators/lazy_cache.md"
+                    },
+                    {
+                      "number": "8.1.1.15.6",
+                      "title": "Lazy Generator",
+                      "path": "files/src/local_deepwiki/generators/lazy_generator.md"
+                    },
+                    {
+                      "number": "8.1.1.15.7",
+                      "title": "Lazy Resources",
+                      "path": "files/src/local_deepwiki/generators/lazy_resources.md"
+                    },
+                    {
+                      "number": "8.1.1.15.8",
+                      "title": "Llms Txt",
+                      "path": "files/src/local_deepwiki/generators/llms_txt.md"
+                    },
+                    {
+                      "number": "8.1.1.15.9",
+                      "title": "Manifest",
+                      "path": "files/src/local_deepwiki/generators/manifest.md"
+                    },
+                    {
+                      "number": "8.1.1.15.10",
+                      "title": "Manifest Parsers",
+                      "path": "files/src/local_deepwiki/generators/manifest_parsers.md"
+                    },
+                    {
+                      "number": "8.1.1.15.11",
+                      "title": "Prefetch",
+                      "path": "files/src/local_deepwiki/generators/prefetch.md"
+                    },
+                    {
+                      "number": "8.1.1.15.12",
+                      "title": "Progress Tracker",
+                      "path": "files/src/local_deepwiki/generators/progress_tracker.md"
+                    },
+                    {
+                      "number": "8.1.1.15.13",
+                      "title": "Protocols",
+                      "path": "files/src/local_deepwiki/generators/protocols.md"
+                    },
+                    {
+                      "number": "8.1.1.15.14",
+                      "title": "search.py",
+                      "path": "files/src/local_deepwiki/generators/search.md"
+                    },
+                    {
+                      "number": "8.1.1.15.15",
+                      "title": "See Also",
+                      "path": "files/src/local_deepwiki/generators/see_also.md"
+                    },
+                    {
+                      "number": "8.1.1.15.16",
+                      "title": "Source Refs",
+                      "path": "files/src/local_deepwiki/generators/source_refs.md"
+                    },
+                    {
+                      "number": "8.1.1.15.17",
+                      "title": "Toc",
+                      "path": "files/src/local_deepwiki/generators/toc.md"
+                    },
+                    {
+                      "number": "8.1.1.15.18",
+                      "title": "Analysis",
+                      "path": "",
+                      "children": [
+                        {
+                          "number": "8.1.1.15.18.1",
+                          "title": "api_docs.py",
+                          "path": "files/src/local_deepwiki/generators/analysis/api_docs.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.2",
+                          "title": "Architecture Compare",
+                          "path": "files/src/local_deepwiki/generators/analysis/architecture_compare.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.3",
+                          "title": "Architecture Composite",
+                          "path": "files/src/local_deepwiki/generators/analysis/architecture_composite.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.4",
+                          "title": "Architecture Health",
+                          "path": "files/src/local_deepwiki/generators/analysis/architecture_health.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.5",
+                          "title": "Architecture Report",
+                          "path": "files/src/local_deepwiki/generators/analysis/architecture_report.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.6",
+                          "title": "callgraph.py",
+                          "path": "files/src/local_deepwiki/generators/analysis/callgraph.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.7",
+                          "title": "Complexity",
+                          "path": "files/src/local_deepwiki/generators/analysis/complexity.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.8",
+                          "title": "Coupling",
+                          "path": "files/src/local_deepwiki/generators/analysis/coupling.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.9",
+                          "title": "Coupling Page",
+                          "path": "files/src/local_deepwiki/generators/analysis/coupling_page.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.10",
+                          "title": "Coverage",
+                          "path": "files/src/local_deepwiki/generators/analysis/coverage.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.11",
+                          "title": "Dependency Graph",
+                          "path": "files/src/local_deepwiki/generators/analysis/dependency_graph.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.12",
+                          "title": "Dependency Graph Data",
+                          "path": "files/src/local_deepwiki/generators/analysis/dependency_graph_data.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.13",
+                          "title": "Design Smells",
+                          "path": "files/src/local_deepwiki/generators/analysis/design_smells.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.14",
+                          "title": "Glossary",
+                          "path": "files/src/local_deepwiki/generators/analysis/glossary.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.15",
+                          "title": "Health Page",
+                          "path": "files/src/local_deepwiki/generators/analysis/health_page.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.16",
+                          "title": "Health Scoring",
+                          "path": "files/src/local_deepwiki/generators/analysis/health_scoring.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.17",
+                          "title": "Hotspots",
+                          "path": "files/src/local_deepwiki/generators/analysis/hotspots.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.18",
+                          "title": "Hotspots Page",
+                          "path": "files/src/local_deepwiki/generators/analysis/hotspots_page.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.19",
+                          "title": "Inheritance",
+                          "path": "files/src/local_deepwiki/generators/analysis/inheritance.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.20",
+                          "title": "Layer Analysis",
+                          "path": "files/src/local_deepwiki/generators/analysis/layer_analysis.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.21",
+                          "title": "Module Dependencies",
+                          "path": "files/src/local_deepwiki/generators/analysis/module_dependencies.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.22",
+                          "title": "Module Health",
+                          "path": "files/src/local_deepwiki/generators/analysis/module_health.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.23",
+                          "title": "Onboarding",
+                          "path": "files/src/local_deepwiki/generators/analysis/onboarding.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.24",
+                          "title": "Recommendations",
+                          "path": "files/src/local_deepwiki/generators/analysis/recommendations.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.25",
+                          "title": "Smells Page",
+                          "path": "files/src/local_deepwiki/generators/analysis/smells_page.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.26",
+                          "title": "Source Filter",
+                          "path": "files/src/local_deepwiki/generators/analysis/source_filter.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.27",
+                          "title": "stale_detection.py",
+                          "path": "files/src/local_deepwiki/generators/analysis/stale_detection.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.28",
+                          "title": "Tours",
+                          "path": "files/src/local_deepwiki/generators/analysis/tours.md"
+                        }
+                      ]
+                    },
+                    {
+                      "number": "8.1.1.15.19",
+                      "title": "Codemap",
+                      "path": "",
+                      "children": [
+                        {
+                          "number": "8.1.1.15.19.1",
+                          "title": "Cache",
+                          "path": "files/src/local_deepwiki/generators/codemap/cache.md"
+                        },
+                        {
+                          "number": "8.1.1.15.19.2",
+                          "title": "Generator",
+                          "path": "files/src/local_deepwiki/generators/codemap/generator.md"
+                        },
+                        {
+                          "number": "8.1.1.15.19.3",
+                          "title": "Graph",
+                          "path": "files/src/local_deepwiki/generators/codemap/graph.md"
+                        },
+                        {
+                          "number": "8.1.1.15.19.4",
+                          "title": "Models",
+                          "path": "files/src/local_deepwiki/generators/codemap/models.md"
+                        },
+                        {
+                          "number": "8.1.1.15.19.5",
+                          "title": "Overview",
+                          "path": "files/src/local_deepwiki/generators/codemap/overview.md"
+                        },
+                        {
+                          "number": "8.1.1.15.19.6",
+                          "title": "Params",
+                          "path": "files/src/local_deepwiki/generators/codemap/params.md"
+                        },
+                        {
+                          "number": "8.1.1.15.19.7",
+                          "title": "Viz",
+                          "path": "files/src/local_deepwiki/generators/codemap/viz.md"
+                        }
+                      ]
+                    },
+                    {
+                      "number": "8.1.1.15.20",
+                      "title": "Diagrams",
+                      "path": "",
+                      "children": [
+                        {
+                          "number": "8.1.1.15.20.1",
+                          "title": " Utils",
+                          "path": "files/src/local_deepwiki/generators/diagrams/_utils.md"
+                        },
+                        {
+                          "number": "8.1.1.15.20.2",
+                          "title": "Class Diagram",
+                          "path": "files/src/local_deepwiki/generators/diagrams/class_diagram.md"
+                        },
+                        {
+                          "number": "8.1.1.15.20.3",
+                          "title": "Dependency Diagram",
+                          "path": "files/src/local_deepwiki/generators/diagrams/dependency_diagram.md"
+                        },
+                        {
+                          "number": "8.1.1.15.20.4",
+                          "title": "Language Pie",
+                          "path": "files/src/local_deepwiki/generators/diagrams/language_pie.md"
+                        },
+                        {
+                          "number": "8.1.1.15.20.5",
+                          "title": "Module Diagram",
+                          "path": "files/src/local_deepwiki/generators/diagrams/module_diagram.md"
+                        },
+                        {
+                          "number": "8.1.1.15.20.6",
+                          "title": "Sequence Diagram",
+                          "path": "files/src/local_deepwiki/generators/diagrams/sequence_diagram.md"
+                        }
+                      ]
+                    },
+                    {
+                      "number": "8.1.1.15.21",
+                      "title": "Examples",
+                      "path": "",
+                      "children": [
+                        {
+                          "number": "8.1.1.15.21.1",
+                          "title": "Discovery",
+                          "path": "files/src/local_deepwiki/generators/examples/discovery.md"
+                        },
+                        {
+                          "number": "8.1.1.15.21.2",
+                          "title": "Docstring",
+                          "path": "files/src/local_deepwiki/generators/examples/docstring.md"
+                        },
+                        {
+                          "number": "8.1.1.15.21.3",
+                          "title": "Extractor",
+                          "path": "files/src/local_deepwiki/generators/examples/extractor.md"
+                        },
+                        {
+                          "number": "8.1.1.15.21.4",
+                          "title": "orchestrator.py",
+                          "path": "files/src/local_deepwiki/generators/examples/orchestrator.md"
+                        },
+                        {
+                          "number": "8.1.1.15.21.5",
+                          "title": "plugin.py",
+                          "path": "files/src/local_deepwiki/generators/examples/plugin.md"
+                        }
+                      ]
+                    },
+                    {
+                      "number": "8.1.1.15.22",
+                      "title": "Wiki",
+                      "path": "",
+                      "children": [
+                        {
+                          "number": "8.1.1.15.22.1",
+                          "title": "Codemap Pages",
+                          "path": "files/src/local_deepwiki/generators/wiki/codemap_pages.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.2",
+                          "title": "Context",
+                          "path": "files/src/local_deepwiki/generators/wiki/context.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.3",
+                          "title": "Files",
+                          "path": "files/src/local_deepwiki/generators/wiki/files.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.4",
+                          "title": "Generator",
+                          "path": "files/src/local_deepwiki/generators/wiki/generator.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.5",
+                          "title": "Modules",
+                          "path": "files/src/local_deepwiki/generators/wiki/modules.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.6",
+                          "title": "Pages",
+                          "path": "files/src/local_deepwiki/generators/wiki/pages.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.7",
+                          "title": "Phases",
+                          "path": "files/src/local_deepwiki/generators/wiki/phases.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.8",
+                          "title": "Pipeline",
+                          "path": "files/src/local_deepwiki/generators/wiki/pipeline.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.9",
+                          "title": "Pipeline Params",
+                          "path": "files/src/local_deepwiki/generators/wiki/pipeline_params.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.10",
+                          "title": "Plugin Runner",
+                          "path": "files/src/local_deepwiki/generators/wiki/plugin_runner.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.11",
+                          "title": "Postprocessing",
+                          "path": "files/src/local_deepwiki/generators/wiki/postprocessing.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.12",
+                          "title": "source_formatter.py",
+                          "path": "files/src/local_deepwiki/generators/wiki/source_formatter.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.13",
+                          "title": "Status",
+                          "path": "files/src/local_deepwiki/generators/wiki/status.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.14",
+                          "title": "Term Validator",
+                          "path": "files/src/local_deepwiki/generators/wiki/term_validator.md"
+                        },
+                        {
+                          "number": "8.1.1.15.22.15",
+                          "title": "Utils",
+                          "path": "files/src/local_deepwiki/generators/wiki/utils.md"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "number": "8.1.1.16",
+                  "title": "Handlers",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.16.1",
+                      "title": " Error Handling",
+                      "path": "files/src/local_deepwiki/handlers/_error_handling.md"
+                    },
+                    {
+                      "number": "8.1.1.16.2",
+                      "title": " Export Validation",
+                      "path": "files/src/local_deepwiki/handlers/_export_validation.md"
+                    },
+                    {
+                      "number": "8.1.1.16.3",
+                      "title": " Index Helpers",
+                      "path": "files/src/local_deepwiki/handlers/_index_helpers.md"
+                    },
+                    {
+                      "number": "8.1.1.16.4",
+                      "title": " Progress",
+                      "path": "files/src/local_deepwiki/handlers/_progress.md"
+                    },
+                    {
+                      "number": "8.1.1.16.5",
+                      "title": " Response",
+                      "path": "files/src/local_deepwiki/handlers/_response.md"
+                    },
+                    {
+                      "number": "8.1.1.16.6",
+                      "title": "agentic.py",
+                      "path": "files/src/local_deepwiki/handlers/agentic.md"
+                    },
+                    {
+                      "number": "8.1.1.16.7",
+                      "title": "Agentic Data",
+                      "path": "files/src/local_deepwiki/handlers/agentic_data.md"
+                    },
+                    {
+                      "number": "8.1.1.16.8",
+                      "title": "agentic_workflows.py",
+                      "path": "files/src/local_deepwiki/handlers/agentic_workflows.md"
+                    },
+                    {
+                      "number": "8.1.1.16.9",
+                      "title": "Analysis Architecture",
+                      "path": "files/src/local_deepwiki/handlers/analysis_architecture.md"
+                    },
+                    {
+                      "number": "8.1.1.16.10",
+                      "title": "Analysis Diff",
+                      "path": "files/src/local_deepwiki/handlers/analysis_diff.md"
+                    },
+                    {
+                      "number": "8.1.1.16.11",
+                      "title": "analysis_entity.py",
+                      "path": "files/src/local_deepwiki/handlers/analysis_entity.md"
+                    },
+                    {
+                      "number": "8.1.1.16.12",
+                      "title": "Analysis Metadata",
+                      "path": "files/src/local_deepwiki/handlers/analysis_metadata.md"
+                    },
+                    {
+                      "number": "8.1.1.16.13",
+                      "title": "Analysis Search",
+                      "path": "files/src/local_deepwiki/handlers/analysis_search.md"
+                    },
+                    {
+                      "number": "8.1.1.16.14",
+                      "title": "Codemap",
+                      "path": "files/src/local_deepwiki/handlers/codemap.md"
+                    },
+                    {
+                      "number": "8.1.1.16.15",
+                      "title": "core.py",
+                      "path": "files/src/local_deepwiki/handlers/core.md"
+                    },
+                    {
+                      "number": "8.1.1.16.16",
+                      "title": "Generators",
+                      "path": "files/src/local_deepwiki/handlers/generators.md"
+                    },
+                    {
+                      "number": "8.1.1.16.17",
+                      "title": "Indexing",
+                      "path": "files/src/local_deepwiki/handlers/indexing.md"
+                    },
+                    {
+                      "number": "8.1.1.16.18",
+                      "title": "Prompts",
+                      "path": "files/src/local_deepwiki/handlers/prompts.md"
+                    },
+                    {
+                      "number": "8.1.1.16.19",
+                      "title": "Research",
+                      "path": "files/src/local_deepwiki/handlers/research.md"
+                    },
+                    {
+                      "number": "8.1.1.16.20",
+                      "title": "Resources",
+                      "path": "files/src/local_deepwiki/handlers/resources.md"
+                    },
+                    {
+                      "number": "8.1.1.16.21",
+                      "title": "Session State",
+                      "path": "files/src/local_deepwiki/handlers/session_state.md"
+                    },
+                    {
+                      "number": "8.1.1.16.22",
+                      "title": "Types",
+                      "path": "files/src/local_deepwiki/handlers/types.md"
+                    },
+                    {
+                      "number": "8.1.1.16.23",
+                      "title": "Web Server",
+                      "path": "files/src/local_deepwiki/handlers/web_server.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "8.1.1.17",
+                  "title": "Models",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.17.1",
+                      "title": "Chunks",
+                      "path": "files/src/local_deepwiki/models/chunks.md"
+                    },
+                    {
+                      "number": "8.1.1.17.2",
+                      "title": "Foundation",
+                      "path": "files/src/local_deepwiki/models/foundation.md"
+                    },
+                    {
+                      "number": "8.1.1.17.3",
+                      "title": "Provider Types",
+                      "path": "files/src/local_deepwiki/models/provider_types.md"
+                    },
+                    {
+                      "number": "8.1.1.17.4",
+                      "title": "Research",
+                      "path": "files/src/local_deepwiki/models/research.md"
+                    },
+                    {
+                      "number": "8.1.1.17.5",
+                      "title": "Tool Args",
+                      "path": "files/src/local_deepwiki/models/tool_args.md"
+                    },
+                    {
+                      "number": "8.1.1.17.6",
+                      "title": "Wiki",
+                      "path": "files/src/local_deepwiki/models/wiki.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "8.1.1.18",
+                  "title": "Plugins",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.18.1",
+                      "title": "Base",
+                      "path": "files/src/local_deepwiki/plugins/base.md"
+                    },
+                    {
+                      "number": "8.1.1.18.2",
+                      "title": "Registry",
+                      "path": "files/src/local_deepwiki/plugins/registry.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "8.1.1.19",
+                  "title": "Providers",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.19.1",
+                      "title": "Base",
+                      "path": "files/src/local_deepwiki/providers/base.md"
+                    },
+                    {
+                      "number": "8.1.1.19.2",
+                      "title": "Credentials",
+                      "path": "files/src/local_deepwiki/providers/credentials.md"
+                    },
+                    {
+                      "number": "8.1.1.19.3",
+                      "title": "Errors",
+                      "path": "files/src/local_deepwiki/providers/errors.md"
+                    },
+                    {
+                      "number": "8.1.1.19.4",
+                      "title": "Retry",
+                      "path": "files/src/local_deepwiki/providers/retry.md"
+                    },
+                    {
+                      "number": "8.1.1.19.5",
+                      "title": "Embeddings",
+                      "path": "",
+                      "children": [
+                        {
+                          "number": "8.1.1.19.5.1",
+                          "title": "Cache",
+                          "path": "files/src/local_deepwiki/providers/embeddings/cache.md"
+                        },
+                        {
+                          "number": "8.1.1.19.5.2",
+                          "title": "Local",
+                          "path": "files/src/local_deepwiki/providers/embeddings/local.md"
+                        },
+                        {
+                          "number": "8.1.1.19.5.3",
+                          "title": "Openai",
+                          "path": "files/src/local_deepwiki/providers/embeddings/openai.md"
+                        }
+                      ]
+                    },
+                    {
+                      "number": "8.1.1.19.6",
+                      "title": "Llm",
+                      "path": "",
+                      "children": [
+                        {
+                          "number": "8.1.1.19.6.1",
+                          "title": "Anthropic",
+                          "path": "files/src/local_deepwiki/providers/llm/anthropic.md"
+                        },
+                        {
+                          "number": "8.1.1.19.6.2",
+                          "title": "Cached",
+                          "path": "files/src/local_deepwiki/providers/llm/cached.md"
+                        },
+                        {
+                          "number": "8.1.1.19.6.3",
+                          "title": "Ollama",
+                          "path": "files/src/local_deepwiki/providers/llm/ollama.md"
+                        },
+                        {
+                          "number": "8.1.1.19.6.4",
+                          "title": "openai.py",
+                          "path": "files/src/local_deepwiki/providers/llm/openai.md"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "number": "8.1.1.20",
+                  "title": "Security",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.20.1",
+                      "title": "Access Control",
+                      "path": "files/src/local_deepwiki/security/access_control.md"
+                    },
+                    {
+                      "number": "8.1.1.20.2",
+                      "title": "Repository Access",
+                      "path": "files/src/local_deepwiki/security/repository_access.md"
+                    },
+                    {
+                      "number": "8.1.1.20.3",
+                      "title": "Role Config",
+                      "path": "files/src/local_deepwiki/security/role_config.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "8.1.1.21",
+                  "title": "Services",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.21.1",
+                      "title": "analysis_service.py",
+                      "path": "files/src/local_deepwiki/services/analysis_service.md"
+                    },
+                    {
+                      "number": "8.1.1.21.2",
+                      "title": "generator_service.py",
+                      "path": "files/src/local_deepwiki/services/generator_service.md"
+                    },
+                    {
+                      "number": "8.1.1.21.3",
+                      "title": "Graph Expansion",
+                      "path": "files/src/local_deepwiki/services/graph_expansion.md"
+                    },
+                    {
+                      "number": "8.1.1.21.4",
+                      "title": "Indexing Service",
+                      "path": "files/src/local_deepwiki/services/indexing_service.md"
+                    },
+                    {
+                      "number": "8.1.1.21.5",
+                      "title": "Models",
+                      "path": "files/src/local_deepwiki/services/models.md"
+                    },
+                    {
+                      "number": "8.1.1.21.6",
+                      "title": "Protocols",
+                      "path": "files/src/local_deepwiki/services/protocols.md"
+                    },
+                    {
+                      "number": "8.1.1.21.7",
+                      "title": "Provider Factory",
+                      "path": "files/src/local_deepwiki/services/provider_factory.md"
+                    },
+                    {
+                      "number": "8.1.1.21.8",
+                      "title": "Query Service",
+                      "path": "files/src/local_deepwiki/services/query_service.md"
+                    },
+                    {
+                      "number": "8.1.1.21.9",
+                      "title": "Wiki Service",
+                      "path": "files/src/local_deepwiki/services/wiki_service.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "8.1.1.22",
+                  "title": "Tool Defs",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.22.1",
+                      "title": "Analysis",
+                      "path": "files/src/local_deepwiki/tool_defs/analysis.md"
+                    },
+                    {
+                      "number": "8.1.1.22.2",
+                      "title": "Annotations",
+                      "path": "files/src/local_deepwiki/tool_defs/annotations.md"
+                    },
+                    {
+                      "number": "8.1.1.22.3",
+                      "title": "Core",
+                      "path": "files/src/local_deepwiki/tool_defs/core.md"
+                    },
+                    {
+                      "number": "8.1.1.22.4",
+                      "title": "Generators",
+                      "path": "files/src/local_deepwiki/tool_defs/generators.md"
+                    },
+                    {
+                      "number": "8.1.1.22.5",
+                      "title": "Workflow",
+                      "path": "files/src/local_deepwiki/tool_defs/workflow.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "8.1.1.23",
+                  "title": "Web",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "8.1.1.23.1",
+                      "title": "app.py",
+                      "path": "files/src/local_deepwiki/web/app.md"
+                    },
+                    {
+                      "number": "8.1.1.23.2",
+                      "title": "Rate Limit",
+                      "path": "files/src/local_deepwiki/web/rate_limit.md"
+                    },
+                    {
+                      "number": "8.1.1.23.3",
+                      "title": "Routes Architecture",
+                      "path": "files/src/local_deepwiki/web/routes_architecture.md"
+                    },
+                    {
+                      "number": "8.1.1.23.4",
+                      "title": "Routes Chat",
+                      "path": "files/src/local_deepwiki/web/routes_chat.md"
+                    },
+                    {
+                      "number": "8.1.1.23.5",
+                      "title": "Routes Codemap",
+                      "path": "files/src/local_deepwiki/web/routes_codemap.md"
+                    },
+                    {
+                      "number": "8.1.1.23.6",
+                      "title": "Routes Research",
+                      "path": "files/src/local_deepwiki/web/routes_research.md"
+                    },
+                    {
+                      "number": "8.1.1.23.7",
+                      "title": "Utils",
+                      "path": "files/src/local_deepwiki/web/utils.md"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": "9",
+      "title": "Codemaps",
+      "path": "codemaps/index.md",
+      "children": [
+        {
+          "number": "9.1",
+          "title": "Codemap: handle_impact_analysis",
+          "path": "codemaps/handle-impact-analysis.md"
+        }
+      ]
+    }
+  ]
+}

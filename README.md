@@ -4,15 +4,23 @@ A local, privacy-focused MCP server that generates DeepWiki-style documentation 
 
 ## Quickstart
 
+**Try it immediately** — a pre-built wiki of this project is included:
+
 ```bash
 git clone https://github.com/UrbanDiver/local-deepwiki-mcp.git
 cd local-deepwiki-mcp
 uv sync                          # Install dependencies
+deepwiki serve .deepwiki         # Browse the wiki at http://localhost:8080
+```
+
+**Index your own repo** — requires an LLM provider (OpenAI, Anthropic, or Ollama):
+
+```bash
 export OPENAI_API_KEY="..."      # Or ANTHROPIC_API_KEY for Anthropic
 deepwiki init                    # Configure LLM + embedding providers
 deepwiki config health-check     # Verify providers are working
 deepwiki update /path/to/repo    # Index a repository and generate wiki
-deepwiki serve .deepwiki         # Browse the wiki at http://localhost:8080
+deepwiki serve /path/to/repo/.deepwiki
 ```
 
 **Requirements:** Python 3.11+, [uv](https://docs.astral.sh/uv/getting-started/installation/) (see [Installing uv](#installing-uv) below), and an LLM provider:
