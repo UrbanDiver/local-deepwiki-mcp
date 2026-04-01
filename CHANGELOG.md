@@ -8,22 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial public release preparation
-- PEP 561 `py.typed` marker for type checker support
-- Tightened mypy configuration with `check_untyped_defs`, `warn_redundant_casts`, `warn_unused_ignores`
+- OpenAI-compatible proxy support via `base_url` config
+- MCP server integration docs for Claude Code, Cursor, Windsurf, VS Code
+- API key setup instructions and uv installation guide
+- Architecture health trending and guided tours
+- Interactive code references in chat responses
+- Codemap wiki page generation
 
 ### Changed
-- Cleaned up public API exports in `handlers/__init__.py` (private symbols now only importable from source modules)
-- Version now sourced from `importlib.metadata` for single source of truth
+- Default LLM provider changed from Ollama to OpenAI
+- All LLM provider packages (openai, anthropic, ollama) and Flask are now core dependencies
+- Removed backward-compatibility re-export shims across handlers, generators, and core modules
+- Init wizard prioritizes cloud providers (OpenAI > Anthropic > Ollama)
 
 ### Fixed
-- Removed unused `type: ignore` comments flagged by stricter mypy config
-- Fixed import ordering across all source files (isort)
+- Wiki link checker handles bare-word targets and LLM hallucination patterns
+- Codemap suggestions filter leaf nodes and trivial wrappers
 
-## [0.1.0] - 2025-02-11
+## [0.1.0] - 2026-02-11
 
 ### Added
-- **MCP Server** with 36 tools for repository documentation and code intelligence
+- **MCP Server** with 43 tools for repository documentation and code intelligence
 - **Multi-language parsing** via tree-sitter (Python, TypeScript, JavaScript, Go, Rust, Java, C/C++, Swift, Ruby, PHP, Kotlin, C#)
 - **AST-based chunking** that respects code structure (functions, classes, methods)
 - **Semantic search** using LanceDB vector database
