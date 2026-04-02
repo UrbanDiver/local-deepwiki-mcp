@@ -11,15 +11,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP server enables private, local documentation generation and querying for code repositories using a modular, configurable architecture. It supports multiple LLM providers and offers tools for indexing, searching, and analyzing repository structure and content. The system is designed for use in development environments where privacy and local execution are priorities.
+Local DeepWiki-style MCP server for private repository documentation. This project provides a local server that enables intelligent, AI-powered search and documentation of code repositories using a hybrid approach combining local LLMs, embeddings, and structured data indexing. It supports both local and cloud-based LLM providers and offers a range of CLI tools for indexing, searching, and exporting documentation.
 
 ## Key Features
 
-- **Multi-provider LLM support** — Configurable integration with providers like Anthropic, OpenAI, and Ollama through a unified abstraction layer
-- **AST-aware code chunking** — Intelligent splitting of source code into semantic chunks at function and class boundaries using tree-sitter
-- **Configurable architecture analysis** — Built-in tools for architecture quality gates, trend analysis, and health reporting
-- **Async core architecture** — Full asynchronous implementation throughout for efficient handling of concurrent operations
-- **Modular CLI and MCP server** — Supports command-line tools for indexing, searching, and serving documentation via MCP protocol
+- **Hybrid LLM Support**: Supports both local (e.g., Ollama) and cloud (e.g., Anthropic, OpenAI) language model providers through a unified provider abstraction layer
+- **AST-Aware Code Chunking**: Uses tree-sitter to split code at function and class boundaries for more precise semantic indexing and retrieval
+- **Multi-Format Documentation Export**: Includes CLI tools for exporting documentation to HTML and PDF formats
+- **Architecture Quality Gates**: Provides commands for checking architecture health and quality through automated analysis and reporting
+- **Async Core Architecture**: All core operations are implemented using asyncio for efficient concurrent processing and responsiveness
 
 ## Technology Stack
 
@@ -78,44 +78,45 @@ local-deepwiki-mcp/
 
 ## 1. System Overview
 
-This system solves the problem of generating intelligent, context-aware documentation for software repositories by combining code analysis, semantic chunking, and LLM-powered summarization. The architecture is designed around a core indexing pipeline that parses source code, chunks it using AST-aware techniques, embeds the chunks, stores them in a vector database, and generates wiki pages using LLMs. The system supports multiple LLM and embedding providers through a provider abstraction layer, and offers flexible configuration via CLI args, environment variables, config files, and defaults.
+This system provides an intelligent, code-aware wiki generation and indexing solution for software repositories. It addresses the challenge of maintaining up-to-date documentation for large codebases by automatically parsing source files, extracting meaningful code chunks, and generating contextual documentation. The approach combines AST-aware parsing with vector embeddings to create a searchable knowledge base that supports both automated and human-readable documentation generation.
 
-The system is built for asynchronous operation throughout, enabling efficient handling of I/O-bound operations like LLM calls and file processing. It supports both local and cloud-based providers, with a focus on modularity and extensibility. The architecture is designed to be incremental, allowing users to rebuild only changed files, and supports hybrid generation modes that balance performance with quality.
+The system operates through a multi-stage pipeline that processes repository files in parallel, chunks code at semantic boundaries, embeds content for similarity search, and generates wiki pages using LLMs. It supports multiple generation modes (eager, hybrid, etc.) and integrates with various LLM and embedding providers through a provider abstraction layer.
 
 ## 2. Key Components
 
 ### RepositoryIndexer
-The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) orchestrates the full indexing pipeline for a repository, managing the parsing, chunking, embedding, and storage of code. It exists to coordinate the complex multi-step process of turning source code into a searchable knowledge base. It depends on the [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md), Parser, Chunker, and [VectorStore](files/src/local_deepwiki/core/vectorstore/store.md), and is depended on by the [IndexingService](files/src/local_deepwiki/services/indexing_service.md). The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) is responsible for coordinating the parallel processing of files and managing the overall indexing state.
+The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) orchestrates the full indexing process for a repository, managing file parsing, chunking, embedding, and storage operations. It exists as a separate component to encapsulate the complex orchestration logic and maintain separation of concerns between parsing and storage operations. The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) depends on the [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) and vector store, while the indexing service depends on it to execute the pipeline.
 
 ### FileParsingPipeline
-The [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) handles the actual parsing and chunking of individual files in parallel, managing the sliding window of processing and batched operations. It exists to abstract the complexity of parallel file processing and batched chunk handling from the [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md). It depends on the Parser and Chunker, and is depended on by the [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) and [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md)'s _parse_files_parallel method. The pipeline uses async operations and manages futures for parallel execution.
+The [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) handles the parallel parsing and chunking of source files, delegating to specific parser and chunker implementations. It exists to abstract the complexity of parallel file processing and batched chunking operations. The [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) depends on a [PipelineContext](files/src/local_deepwiki/core/parsing_pipeline.md) containing parser, chunker, and configuration, and is used by the [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md).
+
+### PipelineContext
+The [PipelineContext](files/src/local_deepwiki/core/parsing_pipeline.md) holds immutable configuration and shared resources for the parsing pipeline. It exists to centralize configuration and avoid passing large parameter sets to every parsing operation. It is consumed by [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) and contains parser, chunker, and other pipeline-related dependencies.
 
 ### ProviderFactory
-The [ProviderFactory](files/src/local_deepwiki/services/provider_factory.md) creates instances of LLM and embedding providers based on configuration, supporting caching and repository-specific provider selection. It exists to centralize provider instantiation logic and support flexible provider selection and caching. It depends on configuration objects and provider implementations, and is depended on by the [IndexingService](files/src/local_deepwiki/services/indexing_service.md) and [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md). The factory abstracts provider creation to support different backends (local, cloud) without coupling consumers to specific implementations.
+The [ProviderFactory](files/src/local_deepwiki/services/provider_factory.md) manages the creation and configuration of LLM and embedding providers. It exists to provide a centralized, consistent way to instantiate different provider implementations based on configuration. It depends on configuration objects and provider base classes, and is used by the indexing service and [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md).
 
 ### IndexingService
-The [IndexingService](files/src/local_deepwiki/services/indexing_service.md) provides the main entry point for executing the indexing pipeline, handling the orchestration of parsing, chunking, embedding, storage, and wiki generation. It exists to provide a clean API for triggering indexing operations with proper request handling and result formatting. It depends on the [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) and [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md), and is depended on by CLI handlers and MCP server endpoints. The service manages the full lifecycle of an indexing operation, including progress reporting and result aggregation.
+The [IndexingService](files/src/local_deepwiki/services/indexing_service.md) provides the main entry point for executing the indexing pipeline with proper request handling and result formatting. It exists to encapsulate the business logic for running the indexing process and coordinating between different subsystems. It depends on [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) and the [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md), and is used by the CLI and MCP handlers.
 
 ### WikiGenerator
-The [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md) creates structured wiki documentation from indexed code, supporting multiple generation modes and LLM-based summarization. It exists to abstract the complexity of wiki page creation and LLM interaction from the core indexing pipeline. It depends on LLM providers and the vector store, and is depended on by the [IndexingService](files/src/local_deepwiki/services/indexing_service.md). The generator handles both eager and hybrid wiki generation modes, creating structured documentation from code chunks.
+The [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md) creates documentation pages from parsed code and LLM responses. It exists to abstract the wiki generation logic from the indexing pipeline and support different generation modes. It depends on LLM providers and the indexing results, and is used by the [IndexingService](files/src/local_deepwiki/services/indexing_service.md).
 
-### Provider Abstraction Layer
-The provider abstraction layer defines base classes for LLM and embedding providers, enabling support for multiple backends. It exists to allow switching between different LLM and embedding providers without changing core logic. It is depended on by the [ProviderFactory](files/src/local_deepwiki/services/provider_factory.md), [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md), and [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md), and depends on specific provider implementations. This layer enables the system to work with local models like Ollama or cloud providers like Anthropic.
+### PluginRegistry
+The [PluginRegistry](files/src/local_deepwiki/plugins/registry.md) manages the registration and retrieval of plugins that extend system functionality. It exists to support a plugin architecture for extending the system's capabilities without modifying core code. It depends on the [Plugin](files/src/local_deepwiki/plugins/base.md) class and is used by the main application components.
 
 ## 3. Data Flow
 
 When a user indexes a repository, the data flows through the following sequence:
 
-1. The CLI dispatcher receives the command and creates an [IndexPipelineRequest](files/src/local_deepwiki/services/indexing_service.md) with repository path, rebuild flag, and progress callback
+1. The CLI dispatcher receives the indexing command and creates an [IndexPipelineRequest](files/src/local_deepwiki/services/indexing_service.md) with repository path and configuration
 2. The [IndexingService](files/src/local_deepwiki/services/indexing_service.md) receives the request and creates a [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) with the specified configuration
-3. The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) calls its index method, which in turn calls _parse_files_parallel
-4. _parse_files_parallel creates a [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) and calls parse_files_parallel with the files to process
-5. [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) processes files in parallel windows, calling _process_window for each completed future
-6. _process_window handles individual file parsing results, collecting chunks for graph entity linking if enabled
-7. The parsed chunks are passed to the [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md)'s vector store for embedding and storage
-8. After indexing completes, the [IndexingService](files/src/local_deepwiki/services/indexing_service.md) calls _generate_wiki to create wiki pages
-9. The [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md) uses the LLM provider to summarize code chunks into wiki documentation
-10. The [IndexingService](files/src/local_deepwiki/services/indexing_service.md) returns an [IndexPipelineResult](files/src/local_deepwiki/services/models.md) containing statistics and metadata
+3. The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) calls its index method which creates a [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) via _create_parsing_pipeline
+4. The [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) parses files in parallel using _parse_files_parallel, which delegates to _parse_single_file
+5. Each file is parsed by the parser, then chunked by the chunker, with chunks stored in a vector database
+6. After parsing completes, the [IndexingService](files/src/local_deepwiki/services/indexing_service.md) calls _generate_wiki to create wiki pages using LLM providers
+7. The [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md) creates documentation pages from the parsed chunks and LLM responses
+8. The [IndexingService](files/src/local_deepwiki/services/indexing_service.md) returns an [IndexPipelineResult](files/src/local_deepwiki/services/models.md) containing statistics and metadata
 
 ## 4. Component Diagram
 
@@ -123,40 +124,60 @@ When a user indexes a repository, the data flows through the following sequence:
 graph TD
     A[CLI] --> B[IndexingService]
     B --> C[RepositoryIndexer]
-    B --> D[WikiGenerator]
-    C --> E[FileParsingPipeline]
+    C --> D[FileParsingPipeline]
+    D --> E[PipelineContext]
     C --> F[VectorStore]
-    C --> G[ProviderFactory]
-    E --> H[Parser]
-    E --> I[Chunker]
-    G --> J[LLMProvider]
-    G --> K[EmbeddingProvider]
-    D --> J
-    D --> F
-    F --> K
-    C --> F
-    C --> H
-    C --> I
-    E --> H
-    E --> I
+    B --> G[WikiGenerator]
+    G --> H[LLMProvider]
+    B --> I[ProviderFactory]
+    I --> J[LLMConfig]
+    I --> K[EmbeddingConfig]
+    C --> L[EmbeddingProvider]
+    D --> M[Parser]
+    D --> N[Chunker]
+    
+    style A fill:#f9f,stroke:#333
+    style B fill:#ff9,stroke:#333
+    style C fill:#ff9,stroke:#333
+    style D fill:#ff9,stroke:#333
+    style E fill:#9ff,stroke:#333
+    style F fill:#9ff,stroke:#333
+    style G fill:#ff9,stroke:#333
+    style H fill:#9ff,stroke:#333
+    style I fill:#9ff,stroke:#333
+    style J fill:#ccc,stroke:#333
+    style K fill:#ccc,stroke:#333
+    style L fill:#9ff,stroke:#333
+    style M fill:#9ff,stroke:#333
+    style N fill:#9ff,stroke:#333
 ```
 
 ## 5. Design Decisions and Trade-offs
 
 ### Async throughout
-The system uses async/await throughout for I/O-bound operations. This approach was chosen because LLM calls and file I/O are inherently asynchronous and benefit from concurrent execution. The trade-off is that all callers must be async-aware, requiring careful attention to async compatibility throughout the codebase.
+**What was chosen**: The entire system uses asyncio for all core operations, including parsing, chunking, and LLM calls.
+**Why**: LLM calls and I/O operations (file reading, database access) are I/O-bound and benefit from concurrent execution, improving throughput for large repositories.
+**Trade-offs**: All callers must be async-aware, and error handling becomes more complex with async/await patterns.
 
 ### AST-aware chunking
-Code chunks are split at function/class boundaries using tree-sitter, rather than simple line-based or regex-based chunking. This approach was chosen because it preserves semantic boundaries in code, making chunks more meaningful for LLM understanding. The trade-off is increased complexity in the chunking logic and dependency on tree-sitter parsing.
-
-### Provider abstraction
-The system implements a provider abstraction layer for LLM and embedding providers. This approach was chosen to support multiple backends (local, cloud) without tightly coupling the system to specific implementations. The trade-off is additional indirection that adds complexity to the provider instantiation and selection logic.
+**What was chosen**: Code chunks are split at function/class boundaries using tree-sitter parsing.
+**Why**: This approach preserves semantic meaning of code units, making documentation more accurate and useful for developers.
+**Trade-offs**: Requires integration with tree-sitter parsing, adds complexity to the chunking process, and may not work well for all file types.
 
 ### Config hierarchy
-Configuration follows a hierarchy of CLI args > env vars > config file > defaults. This approach was chosen to provide flexible configuration management with clear precedence rules. The trade-off is that configuration resolution logic is more complex and requires careful handling of default values.
+**What was chosen**: Configuration follows a hierarchy of CLI args > env vars > config file > defaults.
+**Why**: This approach provides flexibility for different deployment scenarios while maintaining consistent behavior.
+**Trade-offs**: Adds complexity to configuration loading and requires careful handling of precedence rules.
 
-### Parallel processing with batching
-The system uses parallel file processing with batched chunk operations. This approach was chosen to efficiently handle large repositories while maintaining memory usage. The trade-off is increased complexity in managing concurrent operations and ensuring thread safety in shared data structures.
+### Provider abstraction
+**What was chosen**: LLM and embedding providers implement base classes in providers/base.py.
+**Why**: This enables switching between different provider implementations (OpenAI, Anthropic, local models) without changing core logic.
+**Trade-offs**: Requires maintaining base interfaces and adds indirection overhead, but provides flexibility for different deployment scenarios.
+
+### Parallel file processing
+**What was chosen**: Files are parsed in parallel using concurrent execution.
+**Why**: This significantly improves performance for large repositories with many files.
+**Trade-offs**: Requires careful thread safety considerations and adds complexity to error handling and progress tracking.
 
 ## Module Dependencies
 
@@ -166,16 +187,16 @@ For a detailed view of module interdependencies including circular dependency de
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*
@@ -194,155 +215,120 @@ This section contains documentation for each module.
 
 ## Module: src
 
-# Module: local_deepwiki
+# Module: health_scoring
 
 ## Module Purpose
 
-The `local_deepwiki` module provides core functionality for analyzing and understanding code repositories. It includes tools for static analysis, architecture evaluation, dependency mapping, and coupling metrics computation. The module is designed to work as part of an MCP (Model Context Protocol) server, offering analysis capabilities through tool definitions and handlers.
+The `health_scoring` module provides functions for computing architectural health scores for a codebase. It implements a scoring system that evaluates code quality based on multiple dimensions including complexity, coupling, code smells, and architectural layers. The module is designed to work with the output of other analysis modules like coupling metrics and complexity analysis to produce a comprehensive health assessment.
 
 ## Key Classes and Functions
 
-### Analysis Architecture Handlers
+### Function: `letter_grade`
+```python
+def letter_grade(score: float) -> str
+```
+Converts a numerical score (0.0-1.0) into a letter grade (A-F).
 
-- [`handle_get_layer_dependencies`](../files/src/local_deepwiki/handlers/analysis_architecture.md) - Processes tool calls for analyzing architectural layer dependencies in Python files
-- `_collect_file_metrics` - Scans Python files to compute file-level metrics like line counts and file sizes
-- [`handle_get_architecture_summary`](../files/src/local_deepwiki/handlers/analysis_architecture.md) - Deprecated handler that delegates to [`handle_get_architecture_health`](../files/src/local_deepwiki/handlers/analysis_architecture.md) with full detail
-- [`handle_get_hotspots`](../files/src/local_deepwiki/handlers/analysis_architecture.md) - Ranks functions by complexity metrics (cyclomatic complexity, parameter count, etc.)
-- `_count_smells_by_type` - Counts occurrences of design smells grouped by type
-- `_count_module_edges` - Counts total edge appearances per module name in dependency graphs
-- [`handle_get_cross_module_dependencies`](../files/src/local_deepwiki/handlers/analysis_architecture.md) - Builds inter-module import graphs and returns module nodes and edges
-- [`handle_get_coupling_metrics`](../files/src/local_deepwiki/handlers/analysis_architecture.md) - Computes Robert C. Martin coupling metrics (Ca, Ce, I, A, D) per module
+### Function: `score_complexity`
+```python
+def score_complexity(complexity: float) -> float
+```
+Computes a health score based on code complexity metrics. Takes a complexity value and returns a normalized score between 0.0 and 1.0.
 
-### Coupling Metrics Functions
+### Function: `score_coupling`
+```python
+def score_coupling(coupling: dict[str, Any]) -> float
+```
+Computes a health score based on coupling metrics. Takes a dictionary containing coupling data and returns a normalized score between 0.0 and 1.0.
 
-- `_count_classes_in_file` - Counts total and abstract classes in a Python file using AST parsing
-- `_is_abstract_node` - Determines if a class node is abstract based on inheritance or decorators
-- `_walk` - Recursively walks AST nodes to find classes
-- `_candidate_labels` - Generates candidate module labels for file paths
-- `_take2` - Helper function to take first two path parts for module labeling
-- `_compute_abstractness` - Computes abstractness scores for modules
-- `_compute_ca_ce` - Calculates afferent and efferent coupling counts
-- `_is_test_module` - Identifies if a module name looks like a test module
-- [`analyze_coupling_metrics`](../files/src/local_deepwiki/generators/analysis/coupling.md) - Main function that computes all coupling metrics for modules
+### Function: `score_smells`
+```python
+def score_smells(smells: list[dict[str, Any]]) -> float
+```
+Computes a health score based on code smell detection results. Takes a list of smell dictionaries and returns a normalized score between 0.0 and 1.0.
 
-### Tool Definitions
+### Function: `score_layers`
+```python
+def score_layers(layers: dict[str, Any]) -> float
+```
+Computes a health score based on architectural layer analysis. Takes a dictionary containing layer data and returns a normalized score between 0.0 and 1.0.
 
-- `search_wiki` - Tool for searching the wiki
-- `get_project_manifest` - Tool for retrieving project manifest information
-- `get_file_context` - Tool for getting context around a specific file
-- `fuzzy_search` - Tool for fuzzy searching in the repository
-- `get_wiki_stats` - Tool for retrieving wiki statistics
-- `explain_entity` - Tool for explaining code entities
-- `impact_analysis` - Tool for performing impact analysis
-- `get_complexity_metrics` - Tool for getting complexity metrics
-- `analyze_diff` - Tool for analyzing code differences
-- `ask_about_diff` - Tool for asking questions about code differences
-- `get_layer_dependencies` - Tool for getting layer dependencies
-- `get_architecture_summary` - Tool for getting architecture summary
+### Function: `compute_overall`
+```python
+def compute_overall(
+    complexity: float,
+    coupling: dict[str, Any],
+    smells: list[dict[str, Any]],
+    layers: dict[str, Any],
+) -> dict[str, Any]
+```
+Computes the overall health score by combining scores from all dimensions. Takes complexity, coupling, smells, and layers data and returns a dictionary containing the overall score and individual component scores.
 
 ## How Components Interact
 
-The module components work together through a layered architecture:
+The components in this module work together to provide a comprehensive architectural health assessment:
 
-1. **Core Analysis**: The [`analyze_coupling_metrics`](../files/src/local_deepwiki/generators/analysis/coupling.md) function orchestrates coupling analysis by:
-   - Using [`analyze_cross_module_dependencies`](../files/src/local_deepwiki/generators/analysis/module_dependencies.md) to build dependency graphs
-   - Computing afferent/efferent coupling via `_compute_ca_ce`
-   - Calculating abstractness scores with `_compute_abstractness`
-   - Determining instability and distance metrics
+1. Individual scoring functions ([`score_complexity`](../files/src/local_deepwiki/generators/analysis/health_scoring.md), [`score_coupling`](../files/src/local_deepwiki/generators/analysis/health_scoring.md), [`score_smells`](../files/src/local_deepwiki/generators/analysis/health_scoring.md), [`score_layers`](../files/src/local_deepwiki/generators/analysis/health_scoring.md)) process specific aspects of code quality
+2. Each function normalizes its input data to a 0.0-1.0 range
+3. The [`compute_overall`](../files/src/local_deepwiki/generators/analysis/health_scoring.md) function aggregates these normalized scores into a final health assessment
+4. The [`letter_grade`](../files/src/local_deepwiki/generators/analysis/health_scoring.md) function converts the final numerical score into a readable letter grade
 
-2. **File Processing**: Functions like `_count_classes_in_file` and `_walk` process individual Python files using AST parsing via [`CodeParser`](../files/src/local_deepwiki/core/parser/code_parser.md) and `tree-sitter` to extract class information.
-
-3. **Architecture Analysis**: Handlers like [`handle_get_layer_dependencies`](../files/src/local_deepwiki/handlers/analysis_architecture.md) and [`handle_get_cross_module_dependencies`](../files/src/local_deepwiki/handlers/analysis_architecture.md) provide MCP tool interfaces that:
-   - Validate input arguments using pydantic models
-   - Call analysis functions with appropriate parameters
-   - Format results into tool responses using [`make_tool_text_content`](../files/src/local_deepwiki/handlers/_response.md)
-
-4. **Dependency Management**: The module uses `module_dependencies` functions to analyze inter-module relationships and `source_filter` to identify Python files for analysis.
+The module is designed to accept output from other analysis modules (like the coupling analysis and complexity analysis) and transform them into meaningful health metrics.
 
 ## Usage Examples
 
 ```python
-# Analyze coupling metrics for a repository
-from local_deepwiki.generators.analysis.coupling import analyze_coupling_metrics
-from pathlib import Path
+from local_deepwiki.generators.analysis.health_scoring import compute_overall, letter_grade
 
-result = analyze_coupling_metrics(
-    repo_path=Path("/path/to/repo"),
-    module_filter="local_deepwiki",
-    exclude_tests=True
+# Example usage with sample data
+complexity_score = 0.75
+coupling_data = {
+    "total_modules": 10,
+    "avg_instability": 0.45,
+    "avg_abstractness": 0.30
+}
+smells = [
+    {"type": "cyclomatic_complexity", "count": 2},
+    {"type": "long_function", "count": 1}
+]
+layers = {
+    "layer_count": 3,
+    "cross_layer_deps": 5
+}
+
+# Compute overall health score
+health_result = compute_overall(
+    complexity=complexity_score,
+    coupling=coupling_data,
+    smells=smells,
+    layers=layers
 )
-print(result["metrics"])
-```
 
-```python
-# Get cross-module dependencies
-from local_deepwiki.handlers.analysis_architecture import handle_get_cross_module_dependencies
-from local_deepwiki.models import GetCrossModuleDependenciesArgs
-
-args = GetCrossModuleDependenciesArgs(
-    repo_path="/path/to/repo",
-    summary_only=False,
-    top_n=10
-)
-result = handle_get_cross_module_dependencies(args)
-```
-
-```python
-# Analyze layer dependencies
-from local_deepwiki.handlers.analysis_architecture import handle_get_layer_dependencies
-from local_deepwiki.models import GetLayerDependenciesArgs
-
-args = GetLayerDependenciesArgs(
-    repo_path="/path/to/repo",
-    summary_only=False
-)
-result = handle_get_layer_dependencies(args)
+print(f"Overall score: {health_result['overall']}")
+print(f"Letter grade: {letter_grade(health_result['overall'])}")
 ```
 
 ## Dependencies
 
-This module depends on several core components:
+This module depends on:
+- `typing` (for type hints)
 
-- `mcp.types` - For tool definitions and types
-- `local_deepwiki.core.parser` - For code parsing using AST
-- `local_deepwiki.generators.analysis.module_dependencies` - For cross-module dependency analysis
-- `local_deepwiki.generators.analysis.source_filter` - For identifying Python source files
-- `local_deepwiki.logging` - For logging functionality
-- `local_deepwiki.models` - For argument validation using pydantic
-- `local_deepwiki.handlers._error_handling` - For error handling
-- `local_deepwiki.handlers._response` - For response formatting
-- `local_deepwiki.security` - For permission control
-- `tree-sitter` - For AST parsing
-- `pydantic` - For data validation
-- `pathlib` - For path operations
-- `typing` - For type hints
-
-The module also imports various analysis generators including:
-- `local_deepwiki.generators.analysis.layer_analysis`
-- `local_deepwiki.generators.analysis.hotspots`
-- `local_deepwiki.generators.analysis.design_smells`
-- `local_deepwiki.generators.analysis.architecture_health`
-- `local_deepwiki.generators.analysis.architecture_compare`
-- `local_deepwiki.generators.analysis.architecture_composite`
-- `local_deepwiki.generators.analysis.onboarding`
-- `local_deepwiki.generators.analysis.recommendations`
-- `local_deepwiki.generators.analysis.module_health`
-- `local_deepwiki.generators.analysis.tours`
+The module is designed to work with data structures produced by other analysis modules in the `generators.analysis` package, particularly those related to complexity, coupling, code smells, and architectural layers. It does not directly depend on any other modules from the `local_deepwiki` package beyond standard typing functionality.
 
 ## Relevant Source Files
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](../files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](../files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](../files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](../files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](../files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](../files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](../files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](../files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](../files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](../files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](../files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](../files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](../files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*
@@ -369,6 +355,8 @@ Detailed documentation for individual source files.
 - [Agentic Data](src/local_deepwiki/handlers/agentic_data.md)
 - [Agentic Rag](src/local_deepwiki/core/agentic_rag.md)
 - [Agentic Workflows](src/local_deepwiki/handlers/agentic_workflows.md)
+- [Analysis](src/local_deepwiki/tool_defs/analysis.md)
+- [Analysis Architecture](src/local_deepwiki/handlers/analysis_architecture.md)
 - [Analysis Diff](src/local_deepwiki/handlers/analysis_diff.md)
 - [Analysis Entity](src/local_deepwiki/handlers/analysis_entity.md)
 - [Analysis Metadata](src/local_deepwiki/handlers/analysis_metadata.md)
@@ -420,6 +408,7 @@ Detailed documentation for individual source files.
 - [Dependency Diagram](src/local_deepwiki/generators/diagrams/dependency_diagram.md)
 - [Dependency Graph](src/local_deepwiki/generators/analysis/dependency_graph.md)
 - [Dependency Graph Data](src/local_deepwiki/generators/analysis/dependency_graph_data.md)
+- [Design Smells](src/local_deepwiki/generators/analysis/design_smells.md)
 - [Dir Tree](src/local_deepwiki/generators/dir_tree.md)
 - [Discovery](src/local_deepwiki/generators/examples/discovery.md)
 - [Docstring](src/local_deepwiki/generators/examples/docstring.md)
@@ -446,7 +435,6 @@ Detailed documentation for individual source files.
 - [Graph Expansion](src/local_deepwiki/services/graph_expansion.md)
 - [Health History](src/local_deepwiki/core/health_history.md)
 - [Health Page](src/local_deepwiki/generators/analysis/health_page.md)
-- [Health Scoring](src/local_deepwiki/generators/analysis/health_scoring.md)
 - [Hotspots](src/local_deepwiki/generators/analysis/hotspots.md)
 - [Hotspots Page](src/local_deepwiki/generators/analysis/hotspots_page.md)
 - [Html](src/local_deepwiki/export/html.md)
@@ -488,7 +476,6 @@ Detailed documentation for individual source files.
 - [Models Llm](src/local_deepwiki/config/models_llm.md)
 - [Models Search](src/local_deepwiki/config/models_search.md)
 - [Models Wiki](src/local_deepwiki/config/models_wiki.md)
-- [Module Dependencies](src/local_deepwiki/generators/analysis/module_dependencies.md)
 - [Module Diagram](src/local_deepwiki/generators/diagrams/module_diagram.md)
 - [Module Health](src/local_deepwiki/generators/analysis/module_health.md)
 - [Modules](src/local_deepwiki/generators/wiki/modules.md)
@@ -576,6 +563,7 @@ Detailed documentation for individual source files.
 - [Streaming](src/local_deepwiki/export/streaming.md)
 - [Term Validator](src/local_deepwiki/generators/wiki/term_validator.md)
 - [Toc](src/local_deepwiki/generators/toc.md)
+- [Tool Args](src/local_deepwiki/models/tool_args.md)
 - [Tours](src/local_deepwiki/generators/analysis/tours.md)
 - [Tracing](src/local_deepwiki/core/tracing.md)
 - [Types](src/local_deepwiki/handlers/types.md)
@@ -590,11 +578,9 @@ Detailed documentation for individual source files.
 - [Wiki](src/local_deepwiki/models/wiki.md)
 - [Wiki Service](src/local_deepwiki/services/wiki_service.md)
 - [Workflow](src/local_deepwiki/tool_defs/workflow.md)
-- [analysis.py](src/local_deepwiki/tool_defs/analysis.md)
-- [analysis_architecture.py](src/local_deepwiki/handlers/analysis_architecture.md)
 - [coupling.py](src/local_deepwiki/generators/analysis/coupling.md)
-- [design_smells.py](src/local_deepwiki/generators/analysis/design_smells.md)
-- [tool_args.py](src/local_deepwiki/models/tool_args.md)
+- [health_scoring.py](src/local_deepwiki/generators/analysis/health_scoring.md)
+- [module_dependencies.py](src/local_deepwiki/generators/analysis/module_dependencies.md)
 
 ---
 
@@ -5019,6 +5005,11 @@ def _prompt_wiki_config(
 - [main](main.md) - shares 3 dependencies
 - [logging](../logging.md) - shares 3 dependencies
 
+## See Also
+
+- [main](main.md) - shares 3 dependencies
+- [logging](../logging.md) - shares 3 dependencies
+
 ---
 
 ## Interactive Search
@@ -6659,6 +6650,10 @@ Functions and methods in this file and their callers:
 ## See Also
 
 - [cli_progress](../cli_progress.md) - shares 2 dependencies
+
+## See Also
+
+- [init_cli](init_cli.md) - shares 3 dependencies
 
 ## See Also
 
@@ -12534,6 +12529,10 @@ assert json.loads(record["metadata"]) == {"key": "value", "count": 42}
 ## Relevant Source Files
 
 - `src/local_deepwiki/config/models.py:70-92`
+
+## See Also
+
+- [init_cli](../cli/init_cli.md) - uses this
 
 ## See Also
 
@@ -68607,85 +68606,59 @@ def _compute_aggregate_metrics(
 
 ## File Overview
 
-This file implements **Robert C. Martin's coupling metrics** for analyzing package-level stability in Python projects. It computes several key metrics for each module in a repository, including afferent coupling (Ca), efferent coupling (Ce), instability (I), abstractness (A), and distance from the main sequence (D).
+This file implements Robert C. Martin's package-level stability metrics for analyzing coupling between modules in a Python project. It computes key coupling metrics — afferent coupling (Ca), efferent coupling (Ce), instability (I), abstractness (A), and distance from the main sequence (D) — using only local filesystem and AST analysis.
 
-The analysis is performed purely using filesystem traversal and AST parsing — no external services or LLMs are involved. The results are used to identify unstable modules, understand architectural dependencies, and support architectural analysis tasks like hotspot detection and design smell identification.
-
-This file integrates with other modules in the `local_deepwiki.generators.analysis` package to provide a complete analysis pipeline for project architecture.
+The file is designed to be used as part of a larger static analysis pipeline, providing data that can be visualized or used for architectural decision-making.
 
 ## Key Concepts
 
-### 1. **Coupling Metrics**
-The file implements the core metrics defined by Robert C. Martin for software architecture analysis:
-- **Afferent Coupling (Ca)**: Number of modules that depend on a given module.
-- **Efferent Coupling (Ce)**: Number of modules that a given module depends on.
-- **Instability (I)**: Ce / (Ca + Ce), where 0 = maximally stable, 1 = maximally unstable.
-- **Abstractness (A)**: Fraction of abstract classes in a module (defined as classes inheriting from `ABC`, `ABCMeta`, `Protocol`, or containing `@abstractmethod`).
-- **Distance from Main Sequence (D)**: |A + I - 1|, used to identify modules that deviate from the ideal balance of stability and abstractness.
+### Coupling Metrics
+The core of this module is the computation of coupling metrics:
+- **Afferent Coupling (Ca)**: The number of modules that depend on a given module.
+- **Efferent Coupling (Ce)**: The number of modules that a given module depends on.
+- **Instability (I)**: `Ce / (Ca + Ce)`. A value of 0 indicates maximum stability; 1 indicates maximum instability.
+- **Abstractness (A)**: The fraction of abstract classes in a module.
+- **Distance from Main Sequence (D)**: `|A + I - 1|`. This metric helps identify modules that are either too abstract or too concrete.
 
-### 2. **Abstractness Calculation**
-Abstractness is computed by:
-- Parsing each Python file to extract class definitions.
-- Identifying abstract classes based on inheritance from `ABC`, `ABCMeta`, `Protocol`, or presence of `@abstractmethod`.
-- Aggregating class counts per module and calculating the fraction of abstract classes.
+These metrics are used to classify modules into different architectural zones (stable, unstable, abstract, concrete) and are useful for identifying architectural smells or potential refactoring candidates.
 
-### 3. **Module Labeling and Resolution**
-Modules are labeled in two ways:
-- **Source label**: Based on file path (e.g., `src/local_deepwiki/providers/base.py` → `local_deepwiki.providers`).
-- **Import target label**: Based on resolved import paths (e.g., `from local_deepwiki.providers.base import X` → `providers.base`).
+### AST Parsing and Class Detection
+The file leverages `tree-sitter` and [`CodeParser`](../../core/parser/code_parser.md) to parse Python source code and detect class definitions. It identifies abstract classes by checking for inheritance from `ABC`, `ABCMeta`, or `Protocol`, and by looking for `@abstractmethod` decorators.
 
-This dual labeling ensures that abstractness and coupling metrics are attributed to the most specific module node that exists in the dependency graph.
-
-### 4. **Test Module Filtering**
-Test modules (identified by labels like `test_`, `tests`, or `conftest`) are filtered out by default to avoid skewing architectural metrics.
+### Module Labeling and Mapping
+To correctly attribute class counts and coupling metrics, the file implements logic to map file paths to module labels. It strips project top-level packages and handles special cases like `__init__.py` files to ensure consistent labeling across source and import nodes.
 
 ## Integration
 
-This file is part of the `local_deepwiki.generators.analysis` module and integrates with:
-- `module_dependencies`: Used for discovering project tops and analyzing cross-module dependencies.
-- `source_filter`: Used to iterate over Python source files in the repository.
-- [`CodeParser`](../../core/parser/code_parser.md): Used to parse Python files into ASTs for class and method analysis.
-- [`get_logger`](../../logging.md): Used for logging during analysis.
+This file is part of the analysis pipeline in `local_deepwiki` and integrates with:
+- `module_dependencies.py`: Uses `_discover_project_tops` and [`analyze_cross_module_dependencies`](module_dependencies.md) to build the dependency graph.
+- `source_filter.py`: Uses [`iter_python_files`](source_filter.md) to iterate over Python source files.
+- [`CodeParser`](../../core/parser/code_parser.md): Used to parse source code into ASTs for analysis.
+- [`get_logger`](../../logging.md): For logging information about the analysis process.
 
-Functions in this file are called by:
-- `_walk` (used by `complexity`, `design_smells`, `hotspots`)
-- `_is_test_module` (used by `dependency_diagram`, `test_diagrams_misc`)
-- `analyze_coupling_metrics` (used by `coupling_page`, `analysis_architecture`, `test_analysis_architecture`)
+The functions in this file are called by:
+- `_walk`: Used by complexity, design_smells, and hotspots analysis modules.
+- `_is_test_module`: Used by dependency_diagram and test_diagrams_misc.
+- `analyze_coupling_metrics`: Used by coupling_page, analysis_architecture, and test_analysis_architecture.
 
-The `analyze_coupling_metrics` function is the primary entry point and is used to generate coupling reports for the documentation system.
+This file is a core part of the static analysis engine, contributing to architectural analysis and metrics generation.
 
 ## Design Notes
 
-### 1. **AST Parsing Strategy**
-The code uses `tree-sitter` to parse Python files and traverse the AST for class definitions. This approach is chosen for its performance and accuracy in parsing Python syntax, especially in complex codebases.
+### Abstract Class Detection
+The method for detecting abstract classes is robust, checking both base class inheritance and [decorator](../../providers/retry.md) usage. This ensures that classes conforming to Python's abstract base class protocols are correctly identified.
 
-### 2. **Abstract Class Detection**
-Abstract classes are detected by:
-- Looking for inheritance from `ABC`, `ABCMeta`, or `Protocol`.
-- Scanning the class body for `@abstractmethod` decorators.
+### Module Label Consistency
+The `_candidate_labels` function ensures that module labels are consistent across the dependency graph, resolving ambiguities between source file paths and import targets. This is critical for accurate attribution of abstractness scores.
 
-This dual-check ensures accurate detection of abstract classes even in edge cases.
+### Test Module Exclusion
+The `analyze_coupling_metrics` function includes an option to exclude test modules from the analysis. This is important for architectural metrics, as test code often introduces artificial coupling that does not reflect the structure of the production code.
 
-### 3. **Module Label Resolution**
-To ensure that metrics are attributed to the most precise module node, the code generates two candidate labels for each file:
-- A stripped label (e.g., `providers.base`) for import targets.
-- An unstripped label (e.g., `local_deepwiki.providers`) for source nodes.
+### File-Level Analysis
+This module avoids any external dependencies or LLM calls, relying entirely on local filesystem and AST parsing. This ensures reproducibility and performance, making it suitable for large codebases or CI/CD pipelines.
 
-The most specific label that exists in the dependency graph is used for attribution.
-
-### 4. **Test Module Exclusion**
-Test modules are excluded by default to avoid skewing architectural metrics. This behavior is configurable via the `exclude_tests` parameter.
-
-### 5. **Performance Considerations**
-- The file re-walks the repository to map files to modules, which is a trade-off for not persisting this mapping.
-- AST parsing is reused from [`CodeParser`](../../core/parser/code_parser.md), which likely caches parsed results for performance.
-
-### 6. **Edge Cases**
-- Unparseable or unsupported files return `(0, 0)` for class counts.
-- Modules with zero total classes return an abstractness of `0.0`.
-- Empty dependency graphs are handled gracefully with safe defaults.
-
-This design ensures robustness and usability in a wide variety of project structures.
+### Edge Case Handling
+The module gracefully handles unparseable files by returning `(0, 0)` for class counts, ensuring that analysis does not fail on malformed code. It also ensures that division by zero does not occur when calculating instability or abstractness.
 
 ## API Reference
 
@@ -68712,7 +68685,7 @@ Compute Robert C. Martin coupling metrics per module.
 
 
 <details>
-<summary>View Source (lines 210-285) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L210-L285">GitHub</a></summary>
+<summary>View Source (lines 185-260) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L185-L260">GitHub</a></summary>
 
 ```python
 def analyze_coupling_metrics(
@@ -68807,40 +68780,38 @@ flowchart TD
     N5[_discover_project_tops]
     N6[_is_abstract_node]
     N7[_is_test_module]
-    N8[_take2]
-    N9[_walk]
-    N10[analyze_coupling_metrics]
-    N11[analyze_cross_module_depend...]
-    N12[decode]
-    N13[iter_python_files]
-    N14[parse_file]
-    N15[search]
-    N16[sort]
-    N17[splitlines]
-    N18[with_suffix]
+    N8[_walk]
+    N9[analyze_coupling_metrics]
+    N10[analyze_cross_module_depend...]
+    N11[decode]
+    N12[iter_python_files]
+    N13[parse_file]
+    N14[search]
+    N15[sort]
+    N16[splitlines]
+    N17[with_suffix]
     N4 --> N0
+    N4 --> N13
+    N4 --> N11
+    N4 --> N16
     N4 --> N14
-    N4 --> N12
-    N4 --> N17
-    N4 --> N15
     N4 --> N6
-    N4 --> N9
-    N6 --> N15
-    N9 --> N6
-    N9 --> N9
-    N1 --> N18
-    N1 --> N8
+    N4 --> N8
+    N6 --> N14
+    N8 --> N6
+    N8 --> N8
+    N1 --> N17
     N2 --> N5
-    N2 --> N13
+    N2 --> N12
     N2 --> N1
     N2 --> N4
-    N10 --> N11
-    N10 --> N7
-    N10 --> N3
-    N10 --> N2
-    N10 --> N16
+    N9 --> N10
+    N9 --> N7
+    N9 --> N3
+    N9 --> N2
+    N9 --> N15
     classDef func fill:#e1f5fe
-    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18 func
+    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17 func
 ```
 
 ## Used By
@@ -68855,7 +68826,6 @@ Functions and methods in this file and their callers:
 - **`_discover_project_tops`**: called by `_compute_abstractness`
 - **`_is_abstract_node`**: called by `_count_classes_in_file`, `_walk`
 - **`_is_test_module`**: called by `analyze_coupling_metrics`
-- **`_take2`**: called by `_candidate_labels`
 - **`_walk`**: called by `_count_classes_in_file`, `_walk`
 - **[`analyze_cross_module_dependencies`](module_dependencies.md)**: called by `analyze_coupling_metrics`
 - **`decode`**: called by `_count_classes_in_file`
@@ -68897,11 +68867,10 @@ result = generate_coupling_page(_make_data())
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
+| `_candidate_labels` | function | Brian Breidenbach | today | `c0fe1bd` fix: unify module labels in... |
 | `_is_test_module` | function | Brian Breidenbach | today | `56000bf` fix: improve analysis accur... |
 | `analyze_coupling_metrics` | function | Brian Breidenbach | today | `56000bf` fix: improve analysis accur... |
 | `_compute_ca_ce` | function | Brian Breidenbach | 3 days ago | `29ae780` refactor: decompose long me... |
-| `_candidate_labels` | function | Brian Breidenbach | 3 days ago | `515ba66` refactor: improve coupling ... |
-| `_take2` | function | Brian Breidenbach | 3 days ago | `515ba66` refactor: improve coupling ... |
 | `_compute_abstractness` | function | Brian Breidenbach | 3 days ago | `515ba66` refactor: improve coupling ... |
 | `_count_classes_in_file` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
 | `_is_abstract_node` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
@@ -69008,67 +68977,28 @@ def _walk(n: Node) -> None:
 #### `_candidate_labels`
 
 <details>
-<summary>View Source (lines 93-136) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L93-L136">GitHub</a></summary>
+<summary>View Source (lines 93-111) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L93-L111">GitHub</a></summary>
 
 ```python
 def _candidate_labels(rel_path: Path, project_tops: set[str]) -> list[str]:
-    """Return candidate module labels for *rel_path* in order of specificity.
+    """Return candidate module labels for *rel_path*.
 
-    The dependency graph builds two kinds of node labels for the same file:
-
-    1. The **source label** (via :func:`_module_label`): takes the first two
-       parts of the path after stripping ``src/``, e.g.
-       ``src/local_deepwiki/providers/base.py`` → ``local_deepwiki.providers``.
-
-    2. The **import target label** (via :func:`_resolve_import_target`): strips
-       the project top-level package name from import paths, e.g.
-       ``from local_deepwiki.providers.base import X`` → ``providers.base``.
-
-    Both labels may appear in the graph.  We return the stripped label first
-    (most specific, e.g. ``providers.base``) followed by the unstripped label
-    (``local_deepwiki.providers``) so that abstractness is attributed to the
-    most precise module node that actually exists.
+    Now that :func:`_module_label` strips the project top-level package
+    (matching :func:`_resolve_import_target`), source labels and import
+    labels are consistent.  We return the single canonical label.
     """
     parts = list(rel_path.with_suffix("").parts)
-    # Drop common source-layout wrapper directories.
     while parts and parts[0] in ("src", "lib", "pkg"):
         parts = parts[1:]
     if not parts:
         return ["root"]
-
-    # Unstripped label (matches _module_label output).
-    def _take2(ps: list[str]) -> str:
-        meaningful = [p for p in ps[:2] if p != "__init__"]
-        return ".".join(meaningful) if meaningful else (ps[0] if ps else "root")
-
-    unstripped = _take2(parts)
-
-    # Stripped label (matches _resolve_import_target output for imports).
-    stripped: str | None = None
     if parts[0] in project_tops:
-        tail = parts[1:]
-        if tail:
-            stripped = _take2(tail)
-
-    candidates: list[str] = []
-    if stripped and stripped != unstripped:
-        candidates.append(stripped)
-    candidates.append(unstripped)
-    return candidates
-```
-
-</details>
-
-
-#### `_take2`
-
-<details>
-<summary>View Source (lines 119-121) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L119-L121">GitHub</a></summary>
-
-```python
-def _take2(ps: list[str]) -> str:
-        meaningful = [p for p in ps[:2] if p != "__init__"]
-        return ".".join(meaningful) if meaningful else (ps[0] if ps else "root")
+        parts = parts[1:]
+    if not parts:
+        return ["root"]
+    meaningful = [p for p in parts[:2] if p != "__init__"]
+    label = ".".join(meaningful) if meaningful else (parts[0] if parts else "root")
+    return [label]
 ```
 
 </details>
@@ -69077,7 +69007,7 @@ def _take2(ps: list[str]) -> str:
 #### `_compute_abstractness`
 
 <details>
-<summary>View Source (lines 139-186) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L139-L186">GitHub</a></summary>
+<summary>View Source (lines 114-161) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L114-L161">GitHub</a></summary>
 
 ```python
 def _compute_abstractness(
@@ -69136,7 +69066,7 @@ def _compute_abstractness(
 #### `_compute_ca_ce`
 
 <details>
-<summary>View Source (lines 189-201) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L189-L201">GitHub</a></summary>
+<summary>View Source (lines 164-176) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L164-L176">GitHub</a></summary>
 
 ```python
 def _compute_ca_ce(
@@ -69160,7 +69090,7 @@ def _compute_ca_ce(
 #### `_is_test_module`
 
 <details>
-<summary>View Source (lines 204-207) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L204-L207">GitHub</a></summary>
+<summary>View Source (lines 179-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L179-L182">GitHub</a></summary>
 
 ```python
 def _is_test_module(name: str) -> bool:
@@ -72760,7 +72690,7 @@ def dfs(node: str, path: list[str]) -> None:
 
 ---
 
-## design_smells.py
+## Design Smells
 
 # File: `src/local_deepwiki/generators/analysis/design_smells.py`
 
@@ -74898,76 +74828,65 @@ def _render_layer_section(lines: list[str], violations: list) -> None:
 
 ---
 
-## Health Scoring
+## health_scoring.py
 
 # File: `src/local_deepwiki/generators/analysis/health_scoring.py`
 
 ## File Overview
 
-This file implements a health scoring system that translates raw architectural metrics into dimension-specific scores (0–100) and an overall letter grade (A–F). It provides a consistent, computable way to assess code quality based on architectural health indicators such as complexity, coupling, design smells, and layer discipline.
+This module is responsible for converting raw architectural metrics into meaningful health scores and letter grades. It provides a suite of functions that evaluate different aspects of code health — complexity, coupling, design smells, and layer discipline — and then combines these into an overall score.
 
-The module is designed for pure computation and does not perform any I/O operations. It is intended to be used by other components in the analysis pipeline that provide metric summaries, and it returns structured data that can be consumed by downstream reporting or visualization logic.
+The module is designed to be purely computational, taking in metric summaries and returning structured score data without performing any I/O operations. It serves as a core component in the architecture analysis pipeline, enabling the generation of health reports.
 
 ## Key Concepts
 
 ### Dimension-Based Scoring
-
-Each function in this module corresponds to a specific dimension of code health:
+Each function in this module evaluates a specific dimension of code health:
 - **Complexity**: Based on cyclomatic complexity and percentage of functions exceeding a threshold.
-- **Coupling**: Evaluates module instability and distance from main sequence.
-- **Smells**: Considers density and severity of design smells, with special weight for "god class" violations.
-- **Layers**: Simple count of layer discipline violations.
+- **Coupling**: Evaluates module distances and instability, with a focus on disconnected modules.
+- **Smells**: Measures density of design smells and counts of high-impact issues like "god classes".
+- **Layers**: Simple count of layer violations.
 
-Each dimension is scored independently using a consistent algorithm:
-1. Start with a perfect score of 100.
-2. Apply deductions based on observed metrics.
-3. Cap deductions to prevent negative scores.
-4. Assign a letter grade using a predefined threshold mapping.
+These dimensions are weighted when computing an overall score, reflecting their relative importance in determining system health.
 
-### Weighted Overall Score
+### Scoring Algorithm Design
+Each scoring function follows a consistent pattern:
+1. **Base Score**: Starts at 100.
+2. **Penalties**: Deduct points based on metric thresholds.
+3. **Normalization**: Caps penalties and ensures final score is within [0, 100].
+4. **Grading**: Converts the final score to a letter grade using `letter_grade`.
 
-The `compute_overall` function aggregates dimension scores using predefined weights (`_DIMENSION_WEIGHTS`) to produce a composite score. This approach allows prioritizing certain architectural aspects over others, reflecting the project's specific quality goals.
+This approach ensures that scores are intuitive, consistent, and easy to interpret.
 
-### Why This Approach
-
-The scoring logic is designed to be:
-- **Relative**: Metrics are normalized or scaled so that larger projects don't get unfairly penalized.
-- **Threshold-based**: Simple, interpretable rules that map easily to actionable insights.
-- **Scalable**: Functions handle edge cases like empty inputs gracefully.
+### Letter Grade Conversion
+The `letter_grade` function maps a numerical score (0–100) to a letter grade (A–F). This is implemented using a threshold-based lookup table (`_GRADE_THRESHOLDS`) which is referenced by the other scoring functions.
 
 ## Integration
 
-This module is part of the analysis pipeline and is called by:
-- `test_health_scoring`: Unit tests that validate the scoring functions.
-- `architecture_health`: Likely a handler or service that orchestrates health scoring across multiple dimensions.
-  
-It imports `Any` from `typing` to support flexible data structures for metrics and hotspots, aligning with the dynamic nature of architectural data.
+This module is used by:
+- `architecture_health` — likely in `src/local_deepwiki/generators/analysis/architecture_report.py`, which generates architecture health reports.
+- `test_health_scoring` — a test module that validates the correctness of scoring logic.
 
-The module is closely related to:
-- `src/local_deepwiki/generators/analysis/api_docs.py`: May use similar scoring logic or data structures.
-- `src/local_deepwiki/handlers/types.py`: Could define the types used for metrics and hotspots.
-- `src/local_deepwiki/validation.py`: Possibly integrates with validation logic for metric data integrity.
+The module is imported by `architecture_health` and directly used in `test_health_scoring`, making it a key part of the analysis pipeline and its testing.
+
+It does not depend on any external libraries beyond standard typing constructs, ensuring it's lightweight and suitable for integration into larger analysis workflows.
 
 ## Design Notes
 
-### Edge Case Handling
+### Weighted Overall Score
+The `compute_overall` function aggregates dimension scores using predefined weights (`_DIMENSION_WEIGHTS`). This reflects the idea that not all aspects of code health are equally important, and allows for prioritization of certain dimensions in the final health assessment.
 
-- Functions return a score of 100 with an "A" grade when inputs are empty or invalid (e.g., zero functions, no metrics).
-- Deductions are capped to ensure scores never drop below 0.
-- Division by zero is avoided through conditional checks.
+### Handling Edge Cases
+- **Zero Division**: Functions like `score_complexity` and `score_smells` handle cases where `total_functions` or `total_lines` are zero, returning a perfect score of 100.
+- **Empty Metrics**: Functions like `score_coupling` return a perfect score if no metrics are provided.
+- **Penalty Capping**: All penalties are capped to prevent a single bad metric from causing a score to drop below zero, ensuring meaningful scores across all inputs.
 
-### Scoring Algorithm Details
+### Threshold Selection
+Thresholds for penalties (e.g., max CC > 50, unstable modules with Ca=0 and high Ce) are chosen to reflect real-world architectural concerns. For example:
+- Modules with `Ca=0` and high `Ce` are flagged as disconnected and problematic.
+- God classes are heavily penalized due to their impact on maintainability.
 
-- **Complexity scoring** uses thresholds for maximum cyclomatic complexity and percentage of functions over CC=15.
-- **Coupling scoring** scales penalties based on average distance and percentage of unstable modules, using percentage-based thresholds to normalize for project size.
-- **Smells scoring** applies severity weights to different types of smells, with a strong penalty for "god class" violations.
-- **Layer scoring** uses a linear deduction model — each violation deducts 10 points, capped at 0.
-
-### Weighted Aggregation
-
-The `compute_overall` function aggregates scores using fixed weights (`_DIMENSION_WEIGHTS`), which are not visible in the code snippet but are expected to be defined elsewhere in the module. This ensures that some dimensions (e.g., coupling or complexity) are considered more important than others in the final score.
-
-This design choice allows for a balance between simplicity and configurability, enabling project-specific tuning of architectural priorities without requiring complex logic in the scoring functions themselves.
+This design choice ensures that the scoring system aligns with best practices in software architecture and maintainability.
 
 ## API Reference
 
@@ -75076,7 +74995,7 @@ def score_complexity(
 def score_coupling(metrics: list[dict[str, Any]]) -> dict[str, Any]
 ```
 
-Score coupling dimension (0-100).  Factors: - Average distance from main sequence (lower is better) - Percentage of highly unstable modules (I>0.8 and Ce>5)  Uses percentage-based thresholds so the score scales with project size rather than penalizing large projects with many small modules.
+Score coupling dimension (0-100).  Factors: - Average distance from main sequence (lower is better) - Percentage of problematic unstable modules  Highly unstable modules are only flagged when they have Ca=0 (nothing depends on them) AND high Ce — these are disconnected modules that import a lot but provide no value to the rest of the system. Edge modules with Ca>0 (handlers that are imported by __init__.py, services used by handlers) are expected to be unstable and are not penalized.
 
 
 | Parameter | Type | Default | Description |
@@ -75088,7 +75007,7 @@ Score coupling dimension (0-100).  Factors: - Average distance from main sequenc
 
 
 <details>
-<summary>View Source (lines 79-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L79-L115">GitHub</a></summary>
+<summary>View Source (lines 79-121) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L79-L121">GitHub</a></summary>
 
 ```python
 def score_coupling(metrics: list[dict[str, Any]]) -> dict[str, Any]:
@@ -75096,26 +75015,32 @@ def score_coupling(metrics: list[dict[str, Any]]) -> dict[str, Any]:
 
     Factors:
     - Average distance from main sequence (lower is better)
-    - Percentage of highly unstable modules (I>0.8 and Ce>5)
+    - Percentage of problematic unstable modules
 
-    Uses percentage-based thresholds so the score scales with project size
-    rather than penalizing large projects with many small modules.
+    Highly unstable modules are only flagged when they have Ca=0 (nothing
+    depends on them) AND high Ce — these are disconnected modules that
+    import a lot but provide no value to the rest of the system. Edge
+    modules with Ca>0 (handlers that are imported by __init__.py, services
+    used by handlers) are expected to be unstable and are not penalized.
     """
     if not metrics:
         return {"score": 100, "grade": "A", "factors": {}}
 
     distances = [m.get("distance", 0) for m in metrics]
     avg_distance = sum(distances) / len(distances) if distances else 0
+    # Only flag modules that are fully disconnected (Ca=0) with high outgoing deps
     highly_unstable = sum(
         1
         for m in metrics
-        if m.get("instability", 0) > 0.8 and m.get("efferent_coupling", 0) > 5
+        if m.get("instability", 0) > 0.8
+        and m.get("efferent_coupling", 0) > 5
+        and m.get("afferent_coupling", 0) == 0
     )
     unstable_pct = (highly_unstable / len(metrics)) * 100 if metrics else 0
 
     score = 100.0
-    score -= min(avg_distance * 50, 40)  # avg distance penalty, cap 40
-    score -= min(unstable_pct * 2, 25)  # unstable % penalty, cap 25
+    score -= min(avg_distance * 30, 25)  # avg distance penalty, cap 25
+    score -= min(unstable_pct * 2, 25)  # disconnected unstable % penalty, cap 25
 
     score = max(0.0, min(100.0, score))
     return {
@@ -75151,7 +75076,7 @@ Score design smells dimension (0-100).  Factors: - Smell density: smells per 100
 
 
 <details>
-<summary>View Source (lines 118-151) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L118-L151">GitHub</a></summary>
+<summary>View Source (lines 124-157) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L124-L157">GitHub</a></summary>
 
 ```python
 def score_smells(
@@ -75210,7 +75135,7 @@ Score layer discipline dimension (0-100).  Simple: 100 minus 10 per violation, f
 
 
 <details>
-<summary>View Source (lines 154-167) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L154-L167">GitHub</a></summary>
+<summary>View Source (lines 160-173) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L160-L173">GitHub</a></summary>
 
 ```python
 def score_layers(violations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -75250,7 +75175,7 @@ Compute weighted overall score from dimension scores.
 
 
 <details>
-<summary>View Source (lines 170-183) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L170-L183">GitHub</a></summary>
+<summary>View Source (lines 176-189) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L176-L189">GitHub</a></summary>
 
 ```python
 def compute_overall(dimension_scores: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -75357,7 +75282,7 @@ result = score_coupling([])
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `score_coupling` | function | Brian Breidenbach | 1 week ago | `9a560e1` refactor: recalibrate coupl... |
+| `score_coupling` | function | Brian Breidenbach | today | `c0fe1bd` fix: unify module labels in... |
 | `score_smells` | function | Brian Breidenbach | 1 week ago | `b12031b` fix: recalibrate smells sco... |
 | `letter_grade` | function | Brian Breidenbach | 1 week ago | `c9f0d4d` refactor: extract source_fi... |
 | `score_complexity` | function | Brian Breidenbach | 1 week ago | `c9f0d4d` refactor: extract source_fi... |
@@ -77113,94 +77038,94 @@ def _resolve_import_layer(module_name: str) -> str | None:
 
 ---
 
-## Module Dependencies
+## module_dependencies.py
 
 # File: `src/local_deepwiki/generators/analysis/module_dependencies.py`
 
 ## File Overview
 
-This file implements cross-module dependency analysis for Python projects. It scans source files to build an inter-module import graph, identifying how modules depend on each other. The analysis is purely based on filesystem and regex parsing, without any external service or LLM calls.
+This file provides functionality for analyzing cross-module dependencies within a Python project. It scans Python source files to build an inter-module import graph, identifying how modules depend on one another. The analysis is purely based on filesystem and regex parsing — no external services or LLMs are involved.
 
-The core responsibility of this module is to:
-- Extract import statements from Python files
-- Resolve import targets to module labels
-- Build a graph of module dependencies
-- Compute statistics about coupling between modules
-- Generate Mermaid diagrams for visualization
-
-This functionality is used by the `module_health` generator to analyze module structure and health within a project.
+The core purpose of this module is to support architectural analysis, coupling metrics, and dependency visualization. It is used by various tools in the `local_deepwiki` project, including `coupling`, `module_health`, and `analysis_architecture`.
 
 ## Key Concepts
 
-### Module Labeling Strategy
+### Module Labeling and Resolution
 
-The `_module_label` function defines how Python files are mapped to module labels. It uses a two-level package naming scheme:
-- It strips common [wrapper](../../handlers/_error_handling.md) directories like `src`, `lib`, or `pkg`
-- It takes up to the first two meaningful package parts
-- This ensures that sibling modules like `core/indexer.py` and `core/vectorstore/base.py` both map to `core`
+The system uses a consistent labeling scheme for modules:
+- Modules are identified as second-level packages (e.g., `core.indexer`, `generators.wiki`) relative to the project root.
+- The `_module_label` function strips common [wrapper](../../handlers/_error_handling.md) directories (`src`, `lib`, `pkg`) and the top-level project package name (e.g., `local_deepwiki`) to ensure that labels match import targets.
+- The `_discover_project_tops` function identifies all top-level packages in the repository, which are used to distinguish internal from external imports.
 
-This design choice balances specificity (avoiding overly broad labels) with simplicity (not requiring deep package hierarchy resolution).
+This approach allows for accurate resolution of imports and ensures that the analysis focuses on internal project dependencies.
 
-### Import Resolution Logic
+### Dependency Graph Construction
 
-The `_resolve_import_target` function implements a classification system for imports:
-- Determines if an import is internal (within the project) or external
-- Filters out imports based on `module_filter` and `include_external` flags
-- Resolves internal imports to their module label, handling both direct and relative imports
-- Skips self-imports and filtered-out modules
+The `_build_module_graph` function scans all Python files in the repository, extracts import statements, and builds a graph of module dependencies:
+- It tracks file counts and line counts per module.
+- It counts how many times one module imports from another (edge weights).
+- It records the actual import statements associated with each edge for detailed reporting.
 
-This approach allows for flexible filtering and analysis, enabling users to focus on specific parts of the codebase or exclude third-party dependencies.
+This data structure supports both statistical analysis (e.g., afferent/efferent coupling) and visualization (e.g., Mermaid diagrams).
 
-### Graph Building and Statistics
+### Import Pattern Matching
 
-The `_build_module_graph` function:
-- Iterates over all Python files in the repository
-- Builds counts of files and lines per module
-- Tracks import edges with weights (number of occurrences)
-- Aggregates import statements per edge
-
-The `_compute_dependency_stats` function calculates:
-- Afferent coupling (how many modules depend on a given module)
-- Efferent coupling (how many modules a given module depends on)
-- Identifies the most depended-on and most dependent modules
-
-These statistics provide insight into module cohesion and coupling, which are key indicators of code quality and maintainability.
-
-## Integration
-
-This file integrates with the broader `local_deepwiki` codebase as part of the analysis generators. It depends on:
-- [`iter_python_files`](source_filter.md) from `source_filter` to enumerate Python source files
-- [`get_logger`](../../logging.md) for logging output during analysis
-
-It is called by:
-- `analyze_cross_module_dependencies` which is used by the `module_health` generator
-- `_resolve_import_target` which is used by the `test_module_health` function
-
-The file's role is to provide core dependency analysis functionality that supports higher-level tools like the `module_health` generator and CLI commands such as those found in `main.py` and `config_validator.py`.
-
-## Design Notes
-
-### Why Pure Regex Parsing?
-
-The module avoids using AST parsers or other complex analysis tools. Instead, it relies on regex patterns to extract import statements. This choice was made for:
-- Performance: Regex parsing is faster than full AST traversal
-- Simplicity: Reduces complexity and potential failure points
-- Compatibility: Works with a wide range of Python syntax without needing Python version-specific handling
-
-### Handling of External Dependencies
-
-The `include_external` flag allows filtering out third-party and standard library imports. This is crucial for focusing analysis on project-specific dependencies and avoiding noise from external libraries.
-
-### Edge Case Handling
-
-- **File Reading Errors**: When a file cannot be read, it's skipped with a warning
-- **Self-Imports**: These are filtered out to prevent circular references in the graph
-- **Module Filtering**: The `module_filter` parameter allows analysis of subsets of the codebase
-- **Edge Weight Thresholding**: The `min_edge_weight` parameter allows filtering out weak dependencies
+The `_extract_full_imports` function uses regular expressions to identify all import statements in a source file:
+- It handles various import patterns (`import x`, `from x import y`, `import x as y`, etc.).
+- This allows the system to accurately extract module names from code without relying on AST parsing, which keeps the tool lightweight and fast.
 
 ### Mermaid Diagram Generation
 
-The `_build_mermaid` function generates visual representations of the dependency graph using Mermaid syntax. This provides a human-readable way to understand module relationships, particularly useful for documentation and architectural review. The `_sanitize_id` function ensures that module names (which may contain dots or hyphens) are valid Mermaid node IDs.
+The `_build_mermaid` function converts the dependency graph into a Mermaid diagram for visualization:
+- It ensures that module names are sanitized to be valid Mermaid node IDs (replacing dots and hyphens with underscores).
+- This provides a visual representation of module dependencies that can be embedded in documentation or reports.
+
+## Integration
+
+This file is part of the `local_deepwiki.generators.analysis` module and integrates with:
+- `source_filter.py`: Used by `_build_module_graph` to iterate over Python files.
+- `logging.py`: Used for logging warnings when files cannot be read.
+
+It is consumed by:
+- `coupling.py`: Uses `_module_label` and `analyze_cross_module_dependencies`.
+- `test_module_health.py`: Uses `_discover_project_tops` and `_resolve_import_target`.
+- `analysis_architecture.py`: Uses `analyze_cross_module_dependencies`.
+
+The functions in this file are designed to be modular and composable, enabling reuse in different analysis contexts. For example, `analyze_cross_module_dependencies` is the main entry point used by multiple tools, while lower-level functions like `_resolve_import_target` and `_build_module_graph` support more granular control.
+
+## Design Notes
+
+### Why Regex for Import Parsing?
+
+The decision to use regex for import parsing, rather than AST parsing, was made to:
+- Keep the analysis lightweight and fast.
+- Avoid dependencies on full Python parsers.
+- Maintain compatibility with Python versions and syntax that may not be fully supported by AST parsers.
+
+This trade-off is acceptable because the goal is to extract module names, not to analyze code semantics.
+
+### Handling `__init__.py` Files
+
+The `_module_label` function collapses `__init__.py` files into their parent package:
+- For example, `core/__init__.py` becomes `core` in the module label.
+- This simplifies the module graph and avoids clutter from `__init__.py` files.
+
+### Filtering and Exclusion
+
+The `analyze_cross_module_dependencies` function supports filtering:
+- `module_filter`: Only include modules matching a given prefix.
+- `include_external`: Toggle inclusion of third-party or stdlib imports.
+- `min_edge_weight`: Exclude weak dependencies.
+
+This flexibility allows users to tailor the analysis to their needs, whether they're interested in a full project overview or a focused subset of modules.
+
+### Sanitization for Mermaid
+
+The `_sanitize_id` function ensures that module names are valid Mermaid node IDs:
+- Replaces dots (`.`) and hyphens (`-`) with underscores (`_`).
+- Prevents rendering issues in Mermaid diagrams.
+
+This is a pragmatic choice to support visualization without requiring complex ID generation logic.
 
 ## API Reference
 
@@ -77228,7 +77153,7 @@ Build and return the inter-module import graph for *repo_path*.
 
 
 <details>
-<summary>View Source (lines 218-285) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L218-L285">GitHub</a></summary>
+<summary>View Source (lines 224-291) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L224-L291">GitHub</a></summary>
 
 ```python
 def analyze_cross_module_dependencies(
@@ -77413,13 +77338,13 @@ for edge in data["edges"]:
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `_resolve_import_target` | function | Brian Breidenbach | 3 days ago | `27721d1` refactor: extract _resolve_... |
-| `_build_module_graph` | function | Brian Breidenbach | 3 days ago | `27721d1` refactor: extract _resolve_... |
+| `_module_label` | function | Brian Breidenbach | today | `c0fe1bd` fix: unify module labels in... |
+| `_build_module_graph` | function | Brian Breidenbach | today | `c0fe1bd` fix: unify module labels in... |
+| `_resolve_import_target` | function | Brian Breidenbach | 5 days ago | `27721d1` refactor: extract _resolve_... |
 | `_discover_project_tops` | function | Brian Breidenbach | 1 week ago | `ed42442` refactor: split 10+ long me... |
 | `_compute_dependency_stats` | function | Brian Breidenbach | 1 week ago | `ed42442` refactor: split 10+ long me... |
 | `analyze_cross_module_dependencies` | function | Brian Breidenbach | 1 week ago | `ed42442` refactor: split 10+ long me... |
 | `_extract_full_imports` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
-| `_module_label` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
 | `_top_level` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
 | `_build_mermaid` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
 | `_sanitize_id` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
@@ -77453,18 +77378,17 @@ def _extract_full_imports(source: str) -> list[str]:
 #### `_module_label`
 
 <details>
-<summary>View Source (lines 43-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L43-L59">GitHub</a></summary>
+<summary>View Source (lines 43-65) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L43-L65">GitHub</a></summary>
 
 ```python
-def _module_label(rel_path: Path) -> str:
+def _module_label(rel_path: Path, project_tops: set[str] | None = None) -> str:
     """Convert a relative file path to a dotted module label.
 
     ``src/local_deepwiki/core/indexer.py`` -> ``core.indexer``
 
-    We take up to the first two meaningful package parts (skipping ``src``
-    and single top-level project wrappers) so that siblings like
-    ``core/indexer.py`` and ``core/vectorstore/base.py`` both map to
-    ``core``.
+    Strips ``src/`` layout dirs and the top-level project package name
+    (e.g. ``local_deepwiki``) so that source labels match import-target
+    labels produced by :func:`_resolve_import_target`.
     """
     parts = list(rel_path.with_suffix("").parts)
     # Drop common wrapper dirs.
@@ -77472,7 +77396,14 @@ def _module_label(rel_path: Path) -> str:
         parts = parts[1:]
     if not parts:
         return "root"
-    return ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
+    # Strip the project top-level package (e.g. "local_deepwiki")
+    if project_tops and parts[0] in project_tops:
+        parts = parts[1:]
+    if not parts:
+        return "root"
+    # Collapse __init__ to parent
+    meaningful = [p for p in parts[:2] if p != "__init__"]
+    return ".".join(meaningful) if meaningful else parts[0]
 ```
 
 </details>
@@ -77481,7 +77412,7 @@ def _module_label(rel_path: Path) -> str:
 #### `_top_level`
 
 <details>
-<summary>View Source (lines 62-64) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L62-L64">GitHub</a></summary>
+<summary>View Source (lines 68-70) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L68-L70">GitHub</a></summary>
 
 ```python
 def _top_level(dotted: str) -> str:
@@ -77495,7 +77426,7 @@ def _top_level(dotted: str) -> str:
 #### `_discover_project_tops`
 
 <details>
-<summary>View Source (lines 67-88) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L67-L88">GitHub</a></summary>
+<summary>View Source (lines 73-94) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L73-L94">GitHub</a></summary>
 
 ```python
 def _discover_project_tops(repo_path: Path) -> set[str]:
@@ -77528,7 +77459,7 @@ def _discover_project_tops(repo_path: Path) -> set[str]:
 #### `_resolve_import_target`
 
 <details>
-<summary>View Source (lines 91-126) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L91-L126">GitHub</a></summary>
+<summary>View Source (lines 97-132) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L97-L132">GitHub</a></summary>
 
 ```python
 def _resolve_import_target(
@@ -77575,7 +77506,7 @@ def _resolve_import_target(
 #### `_build_module_graph`
 
 <details>
-<summary>View Source (lines 129-184) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L129-L184">GitHub</a></summary>
+<summary>View Source (lines 135-190) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L135-L190">GitHub</a></summary>
 
 ```python
 def _build_module_graph(
@@ -77607,7 +77538,7 @@ def _build_module_graph(
     edge_imports: dict[tuple[str, str], list[str]] = defaultdict(list)
 
     for py_file, rel_path in iter_python_files(repo_path, exclude_tests=False):
-        src_module = _module_label(rel_path)
+        src_module = _module_label(rel_path, project_tops)
         if module_filter and not src_module.startswith(module_filter):
             continue
 
@@ -77642,7 +77573,7 @@ def _build_module_graph(
 #### `_compute_dependency_stats`
 
 <details>
-<summary>View Source (lines 187-215) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L187-L215">GitHub</a></summary>
+<summary>View Source (lines 193-221) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L193-L221">GitHub</a></summary>
 
 ```python
 def _compute_dependency_stats(
@@ -77682,7 +77613,7 @@ def _compute_dependency_stats(
 #### `_build_mermaid`
 
 <details>
-<summary>View Source (lines 288-300) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L288-L300">GitHub</a></summary>
+<summary>View Source (lines 294-306) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L294-L306">GitHub</a></summary>
 
 ```python
 def _build_mermaid(edges: list[dict[str, Any]]) -> str:
@@ -77706,7 +77637,7 @@ def _build_mermaid(edges: list[dict[str, Any]]) -> str:
 #### `_sanitize_id`
 
 <details>
-<summary>View Source (lines 303-305) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L303-L305">GitHub</a></summary>
+<summary>View Source (lines 309-311) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L309-L311">GitHub</a></summary>
 
 ```python
 def _sanitize_id(name: str) -> str:
@@ -80681,6 +80612,10 @@ assert not any("test" in str(p) for p in rel_paths)
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/analysis/source_filter.py:47-52`
+
+## See Also
+
+- [coupling](coupling.md) - uses this
 
 ## See Also
 
@@ -117899,7 +117834,7 @@ async def _run_quick_refresh(repo_path: str) -> list[dict[str, Any]]:
 
 ---
 
-## analysis_architecture.py
+## Analysis Architecture
 
 # File: `src/local_deepwiki/handlers/analysis_architecture.py`
 
@@ -130078,6 +130013,11 @@ assert logger.name == f"{PACKAGE_NAME}.{module_name}"
 - [coupling](generators/analysis/coupling.md) - uses this
 - [init_cli](cli/init_cli.md) - shares 3 dependencies
 
+## See Also
+
+- [coupling](generators/analysis/coupling.md) - uses this
+- [init_cli](cli/init_cli.md) - shares 3 dependencies
+
 ---
 
 ## Chunks
@@ -131667,7 +131607,7 @@ classDiagram
 
 ---
 
-## tool_args.py
+## Tool Args
 
 # File: src/local_deepwiki/models/tool_args.py
 
@@ -157607,7 +157547,7 @@ async def _build_structure_from_files(wiki_path: Path) -> dict[str, Any]:
 
 ---
 
-## analysis.py
+## Analysis
 
 # File: `src/local_deepwiki/tool_defs/analysis.py`
 
@@ -165052,6 +164992,12 @@ Recent changes to this repository.
 
 ### April 01, 2026
 
+- [`d437e06`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d437e06) chore: update pre-built wiki with latest analysis fixes
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coupling.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md` (+68 more)
+
+- [`c0fe1bd`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c0fe1bd) fix: unify module labels in coupling analysis
+  - Files: `src/local_deepwiki/generators/analysis/coupling.py`, `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/generators/analysis/module_dependencies.py`, `tests/test_coupling_metrics.py`, `tests/test_health_scoring.py` (+1 more)
+
 - [`56000bf`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/56000bf) fix: improve analysis accuracy for coupling, feature envy, and long_method
   - Files: `src/local_deepwiki/generators/analysis/coupling.py`, `src/local_deepwiki/generators/analysis/design_smells.py`, `src/local_deepwiki/handlers/analysis_architecture.py`, `src/local_deepwiki/models/tool_args.py`, `src/local_deepwiki/tool_defs/analysis.py` (+1 more)
 
@@ -165140,11 +165086,6 @@ Recent changes to this repository.
 - [`a6e9042`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/a6e9042) refactor: remove legacy kwargs from [SearchEngine](files/src/local_deepwiki/core/vectorstore/search_engine.md).__init__
   - Files: `src/local_deepwiki/core/vectorstore/search_engine.py`, `tests/test_search_params.py`
 
-- [`063dccf`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/063dccf) refactor: architecture Grade A improvements (B 80.6 → A 91.2)
-
-- [`1eef062`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1eef062) refactor: complete Grade A architecture improvements (B 80.6 → A 91.2)
-  - Files: `src/local_deepwiki/cli/init_cli.py`, `src/local_deepwiki/cli/update_cli.py`, `src/local_deepwiki/core/__init__.py`, `src/local_deepwiki/core/audit.py`, `src/local_deepwiki/core/chunk_builders.py` (+57 more)
-
 ## Statistics
 
 - **Commits shown**: 30
@@ -165155,16 +165096,16 @@ Recent changes to this repository.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*
@@ -165334,372 +165275,247 @@ Robert C. Martin's package coupling metrics measure the stability and abstractne
 
 ## Summary
 
-- **Total modules:** 183
-- **Average distance from main sequence:** 0.850
-- **Average instability:** 0.115
-- **Average abstractness:** 0.035
+- **Total modules:** 164
+- **Average distance from main sequence:** 0.493
+- **Average instability:** 0.491
+- **Average abstractness:** 0.039
 
 ## Metrics by Module
 
 | Module | Ca | Ce | I | A | D |
 |--------|----|----|---|---|---|
+| `__init__` | 0 | 0 | 0.000 | 0.000 | 1.000 |
 | `cli.cache_cli` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `cli.check_cli` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `cli.config_cli` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `cli.config_validator` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `cli.init_cli` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `cli.interactive_search` | 1 | 0 | 0.000 | 0.000 | 1.000 |
 | `cli.main` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `cli.profile_cli` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `cli.search_models` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `cli.status_cli` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `cli.update_cli` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `cli_progress` | 3 | 0 | 0.000 | 0.000 | 1.000 |
-| `config` | 10 | 0 | 0.000 | 0.000 | 1.000 |
-| `config.loader` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `config.models` | 5 | 0 | 0.000 | 0.000 | 1.000 |
+| `cli_progress` | 4 | 0 | 0.000 | 0.000 | 1.000 |
 | `config.models_embedding` | 2 | 0 | 0.000 | 0.000 | 1.000 |
 | `config.models_llm` | 2 | 0 | 0.000 | 0.000 | 1.000 |
 | `config.models_search` | 1 | 0 | 0.000 | 0.000 | 1.000 |
 | `config.models_wiki` | 1 | 0 | 0.000 | 0.000 | 1.000 |
 | `config.processing_models` | 1 | 0 | 0.000 | 0.000 | 1.000 |
 | `config.prompts` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `config.provider_models` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `core` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.agentic_rag` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.audit` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.chunk_builders` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.chunk_extractors` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.chunker` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.deep_research` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.fuzzy_search` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.git_blame` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.git_utils` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.graph_rag` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.health_history` | 3 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.index_manager` | 5 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.indexer_files` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.indexer_graph` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.indexer_status` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.llm_cache` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.parsing_pipeline` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.path_utils` | 4 | 0 | 0.000 | 0.000 | 1.000 |
 | `core.query_utils` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.rate_limiter` | 3 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.secret_detector` | 2 | 0 | 0.000 | 0.000 | 1.000 |
 | `core.tracing` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `error_factories` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `errors` | 7 | 0 | 0.000 | 0.000 | 1.000 |
-| `events` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `export` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `export.html` | 3 | 0 | 0.000 | 0.000 | 1.000 |
 | `export.html_template` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `export.mermaid_renderer` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `export.pdf` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `export.pdf_styles` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `export.pdf_sync` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `export.shared` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.analysis` | 6 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.changelog` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.codemap` | 3 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.context_builder` | 3 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.crosslinks` | 3 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.diagrams` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.dir_tree` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.examples` | 3 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.lazy_cache` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.lazy_generator` | 4 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.lazy_resources` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.llms_txt` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.manifest` | 4 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.manifest_parsers` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.prefetch` | 1 | 0 | 0.000 | 0.000 | 1.000 |
+| `export.pdf_styles` | 2 | 0 | 0.000 | 0.000 | 1.000 |
+| `fixtures.sample_repo` | 0 | 0 | 0.000 | 0.000 | 1.000 |
+| `generators.dir_tree` | 2 | 0 | 0.000 | 0.000 | 1.000 |
 | `generators.progress_tracker` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.search` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.see_also` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `generators.source_refs` | 1 | 0 | 0.000 | 0.000 | 1.000 |
 | `generators.toc` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers._error_handling` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers._export_validation` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers._index_helpers` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers._progress` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers._response` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.agentic` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.agentic_data` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.agentic_workflows` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.analysis_architecture` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.analysis_diff` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.analysis_entity` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.analysis_metadata` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.analysis_search` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.codemap` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.core` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.generators` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.indexing` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.prompts` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.research` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.resources` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.session_state` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.types` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `handlers.web_server` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `local_deepwiki.__init__` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `local_deepwiki.cli_progress` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `local_deepwiki.logging` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `logging` | 15 | 0 | 0.000 | 0.000 | 1.000 |
-| `models` | 7 | 0 | 0.000 | 0.000 | 1.000 |
-| `models.chunks` | 3 | 0 | 0.000 | 0.000 | 1.000 |
-| `models.provider_types` | 3 | 0 | 0.000 | 0.000 | 1.000 |
-| `models.research` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `models.tool_args` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `models.wiki` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `plugins` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `plugins.registry` | 4 | 0 | 0.000 | 0.000 | 1.000 |
-| `progress` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `prompts` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `providers` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `providers.credentials` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `providers.embeddings` | 7 | 0 | 0.000 | 0.000 | 1.000 |
-| `providers.errors` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `providers.llm` | 5 | 0 | 0.000 | 0.000 | 1.000 |
-| `providers.retry` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `security` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `security.access_control` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `security.repository_access` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `security.role_config` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `server` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `services` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `services.analysis_service` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `services.generator_service` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `services.graph_expansion` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `services.indexing_service` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `services.models` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `services.provider_factory` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `services.query_service` | 3 | 0 | 0.000 | 0.000 | 1.000 |
-| `services.wiki_service` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `tool_defs` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `tool_defs.analysis` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `tool_defs.annotations` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `tool_defs.core` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `tool_defs.generators` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `tool_defs.workflow` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `validation` | 2 | 0 | 0.000 | 0.000 | 1.000 |
-| `watcher` | 0 | 0 | 0.000 | 0.000 | 1.000 |
+| `handlers._response` | 12 | 0 | 0.000 | 0.000 | 1.000 |
+| `handlers.agentic_data` | 2 | 0 | 0.000 | 0.000 | 1.000 |
+| `handlers.session_state` | 3 | 0 | 0.000 | 0.000 | 1.000 |
+| `handlers.types` | 3 | 0 | 0.000 | 0.000 | 1.000 |
+| `logging` | 79 | 0 | 0.000 | 0.000 | 1.000 |
+| `models.provider_types` | 6 | 0 | 0.000 | 0.000 | 1.000 |
+| `models.research` | 2 | 0 | 0.000 | 0.000 | 1.000 |
+| `providers.credentials` | 3 | 0 | 0.000 | 0.000 | 1.000 |
+| `security.access_control` | 4 | 0 | 0.000 | 0.000 | 1.000 |
+| `services.models` | 2 | 0 | 0.000 | 0.000 | 1.000 |
+| `tool_defs.annotations` | 5 | 0 | 0.000 | 0.000 | 1.000 |
 | `web` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `web.app` | 0 | 0 | 0.000 | 0.000 | 1.000 |
-| `web.routes_architecture` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `web.routes_chat` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `web.routes_codemap` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `web.routes_research` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `web.utils` | 1 | 0 | 0.000 | 0.000 | 1.000 |
-| `core.vectorstore` | 6 | 0 | 0.000 | 0.036 | 0.964 |
-| `generators.wiki` | 5 | 0 | 0.000 | 0.100 | 0.900 |
-| `export.streaming` | 3 | 0 | 0.000 | 0.167 | 0.833 |
-| `core.parser` | 6 | 0 | 0.000 | 0.200 | 0.800 |
-| `core.indexer` | 4 | 0 | 0.000 | 0.500 | 0.500 |
-| `core.reranker` | 1 | 0 | 0.000 | 0.500 | 0.500 |
-| `providers.base` | 5 | 0 | 0.000 | 0.500 | 0.500 |
-| `plugins.base` | 3 | 0 | 0.000 | 0.667 | 0.333 |
-| `models.foundation` | 3 | 0 | 0.000 | 0.750 | 0.250 |
+| `web.rate_limit` | 0 | 0 | 0.000 | 0.000 | 1.000 |
+| `errors` | 29 | 1 | 0.033 | 0.000 | 0.967 |
+| `config` | 33 | 2 | 0.057 | 0.000 | 0.943 |
+| `models` | 49 | 6 | 0.109 | 0.000 | 0.891 |
+| `core.path_utils` | 13 | 2 | 0.133 | 0.000 | 0.867 |
+| `models.chunks` | 6 | 1 | 0.143 | 0.000 | 0.857 |
+| `core.rate_limiter` | 5 | 1 | 0.167 | 0.000 | 0.833 |
+| `events` | 5 | 1 | 0.167 | 0.000 | 0.833 |
+| `security` | 14 | 3 | 0.176 | 0.000 | 0.824 |
+| `core.git_utils` | 4 | 1 | 0.200 | 0.000 | 0.800 |
+| `core.health_history` | 4 | 1 | 0.200 | 0.000 | 0.800 |
+| `core.index_manager` | 8 | 2 | 0.200 | 0.000 | 0.800 |
+| `services.protocols` | 1 | 4 | 0.800 | 1.000 | 0.800 |
+| `handlers._error_handling` | 14 | 4 | 0.222 | 0.000 | 0.778 |
+| `core.vectorstore` | 23 | 6 | 0.207 | 0.036 | 0.757 |
+| `generators.manifest` | 9 | 3 | 0.250 | 0.000 | 0.750 |
+| `progress` | 3 | 1 | 0.250 | 0.000 | 0.750 |
+| `validation` | 6 | 2 | 0.250 | 0.000 | 0.750 |
+| `core.parser` | 15 | 2 | 0.118 | 0.200 | 0.682 |
+| `cli.profile_cli` | 2 | 1 | 0.333 | 0.000 | 0.667 |
+| `config.loader` | 2 | 1 | 0.333 | 0.000 | 0.667 |
+| `core.audit` | 2 | 1 | 0.333 | 0.000 | 0.667 |
+| `core.chunk_extractors` | 4 | 2 | 0.333 | 0.000 | 0.667 |
+| `export.shared` | 2 | 1 | 0.333 | 0.000 | 0.667 |
+| `generators.crosslinks` | 4 | 2 | 0.333 | 0.000 | 0.667 |
+| `handlers._export_validation` | 2 | 1 | 0.333 | 0.000 | 0.667 |
+| `models.wiki` | 2 | 1 | 0.333 | 0.000 | 0.667 |
+| `plugins.registry` | 4 | 2 | 0.333 | 0.000 | 0.667 |
+| `export.streaming` | 5 | 1 | 0.167 | 0.167 | 0.667 |
+| `providers.embeddings` | 10 | 6 | 0.375 | 0.000 | 0.625 |
+| `providers.llm` | 8 | 5 | 0.385 | 0.000 | 0.615 |
+| `providers.errors` | 3 | 2 | 0.400 | 0.000 | 0.600 |
+| `generators.analysis` | 16 | 13 | 0.448 | 0.000 | 0.552 |
+| `handlers._index_helpers` | 10 | 9 | 0.474 | 0.000 | 0.526 |
+| `cli.config_validator` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `cli.search_models` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `config.provider_models` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `core.git_blame` | 2 | 2 | 0.500 | 0.000 | 0.500 |
+| `core.secret_detector` | 2 | 2 | 0.500 | 0.000 | 0.500 |
+| `error_factories` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `export.mermaid_renderer` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `generators.changelog` | 2 | 2 | 0.500 | 0.000 | 0.500 |
+| `generators.context_builder` | 4 | 4 | 0.500 | 0.000 | 0.500 |
+| `generators.diagrams` | 4 | 4 | 0.500 | 0.000 | 0.500 |
+| `generators.examples` | 5 | 5 | 0.500 | 0.000 | 0.500 |
+| `generators.lazy_cache` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `generators.manifest_parsers` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `generators.protocols` | 1 | 1 | 0.500 | 1.000 | 0.500 |
+| `handlers.prompts` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `models.tool_args` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `prompts` | 2 | 2 | 0.500 | 0.000 | 0.500 |
+| `providers.retry` | 2 | 2 | 0.500 | 0.000 | 0.500 |
+| `security.role_config` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `tool_defs.analysis` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `tool_defs.core` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `tool_defs.generators` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `tool_defs.workflow` | 1 | 1 | 0.500 | 0.000 | 0.500 |
+| `web.routes_chat` | 3 | 4 | 0.571 | 0.000 | 0.429 |
+| `generators.lazy_generator` | 7 | 10 | 0.588 | 0.000 | 0.412 |
+| `core.fuzzy_search` | 2 | 3 | 0.600 | 0.000 | 0.400 |
+| `core.indexer_files` | 2 | 3 | 0.600 | 0.000 | 0.400 |
+| `handlers._progress` | 2 | 3 | 0.600 | 0.000 | 0.400 |
+| `config.models` | 5 | 8 | 0.615 | 0.000 | 0.385 |
+| `export.html` | 3 | 5 | 0.625 | 0.000 | 0.375 |
+| `providers.base` | 14 | 2 | 0.125 | 0.500 | 0.375 |
+| `export` | 1 | 2 | 0.667 | 0.000 | 0.333 |
+| `generators.llms_txt` | 1 | 2 | 0.667 | 0.000 | 0.333 |
+| `generators.prefetch` | 1 | 2 | 0.667 | 0.000 | 0.333 |
+| `generators.search` | 1 | 2 | 0.667 | 0.000 | 0.333 |
+| `generators.see_also` | 1 | 2 | 0.667 | 0.000 | 0.333 |
+| `security.repository_access` | 1 | 2 | 0.667 | 0.000 | 0.333 |
+| `generators.codemap` | 4 | 9 | 0.692 | 0.000 | 0.308 |
+| `core.indexer` | 4 | 16 | 0.800 | 0.500 | 0.300 |
+| `services.analysis_service` | 3 | 7 | 0.700 | 0.000 | 0.300 |
+| `tool_defs` | 2 | 5 | 0.714 | 0.000 | 0.286 |
+| `core.graph_rag` | 3 | 8 | 0.727 | 0.000 | 0.273 |
+| `web.utils` | 3 | 8 | 0.727 | 0.000 | 0.273 |
+| `cli.status_cli` | 1 | 3 | 0.750 | 0.000 | 0.250 |
+| `core.chunk_builders` | 1 | 3 | 0.750 | 0.000 | 0.250 |
+| `core.llm_cache` | 1 | 3 | 0.750 | 0.000 | 0.250 |
+| `export.pdf` | 2 | 6 | 0.750 | 0.000 | 0.250 |
+| `generators.source_refs` | 1 | 3 | 0.750 | 0.000 | 0.250 |
+| `services.query_service` | 4 | 12 | 0.750 | 0.000 | 0.250 |
+| `core.chunker` | 2 | 7 | 0.778 | 0.000 | 0.222 |
+| `core.deep_research` | 2 | 7 | 0.778 | 0.000 | 0.222 |
+| `services.indexing_service` | 2 | 7 | 0.778 | 0.000 | 0.222 |
+| `services.provider_factory` | 2 | 7 | 0.778 | 0.000 | 0.222 |
+| `handlers.generators` | 3 | 11 | 0.786 | 0.000 | 0.214 |
+| `cli.config_cli` | 1 | 4 | 0.800 | 0.000 | 0.200 |
+| `core.agentic_rag` | 1 | 4 | 0.800 | 0.000 | 0.200 |
+| `core.indexer_graph` | 1 | 4 | 0.800 | 0.000 | 0.200 |
+| `core.indexer_status` | 1 | 4 | 0.800 | 0.000 | 0.200 |
+| `export.pdf_sync` | 1 | 4 | 0.800 | 0.000 | 0.200 |
+| `handlers.resources` | 1 | 4 | 0.800 | 0.000 | 0.200 |
+| `services.wiki_service` | 2 | 9 | 0.818 | 0.000 | 0.182 |
+| `generators.wiki` | 11 | 29 | 0.725 | 0.100 | 0.175 |
+| `cli.interactive_search` | 1 | 5 | 0.833 | 0.000 | 0.167 |
+| `core.reranker` | 1 | 2 | 0.667 | 0.500 | 0.167 |
+| `services.graph_expansion` | 1 | 5 | 0.833 | 0.000 | 0.167 |
+| `web.routes_architecture` | 1 | 5 | 0.833 | 0.000 | 0.167 |
+| `web.routes_codemap` | 1 | 5 | 0.833 | 0.000 | 0.167 |
+| `web.routes_research` | 1 | 5 | 0.833 | 0.000 | 0.167 |
+| `plugins.base` | 5 | 1 | 0.167 | 0.667 | 0.167 |
+| `handlers.analysis_entity` | 2 | 11 | 0.846 | 0.000 | 0.154 |
+| `handlers.codemap` | 2 | 11 | 0.846 | 0.000 | 0.154 |
+| `core.parsing_pipeline` | 1 | 6 | 0.857 | 0.000 | 0.143 |
+| `handlers.core` | 3 | 18 | 0.857 | 0.000 | 0.143 |
+| `handlers.web_server` | 1 | 6 | 0.857 | 0.000 | 0.143 |
+| `services.generator_service` | 2 | 12 | 0.857 | 0.000 | 0.143 |
+| `handlers.analysis_metadata` | 2 | 14 | 0.875 | 0.000 | 0.125 |
+| `handlers.research` | 2 | 14 | 0.875 | 0.000 | 0.125 |
+| `models.foundation` | 5 | 3 | 0.375 | 0.750 | 0.125 |
+| `handlers.analysis_search` | 1 | 9 | 0.900 | 0.000 | 0.100 |
+| `generators.lazy_resources` | 1 | 10 | 0.909 | 0.000 | 0.091 |
+| `handlers.agentic_workflows` | 1 | 12 | 0.923 | 0.000 | 0.077 |
+| `handlers.analysis_diff` | 1 | 12 | 0.923 | 0.000 | 0.077 |
+| `handlers.analysis_architecture` | 1 | 13 | 0.929 | 0.000 | 0.071 |
+| `handlers.agentic` | 1 | 14 | 0.933 | 0.000 | 0.067 |
+| `handlers` | 1 | 16 | 0.941 | 0.000 | 0.059 |
+| `handlers.indexing` | 1 | 16 | 0.941 | 0.000 | 0.059 |
+| `cli` | 0 | 5 | 1.000 | 0.000 | 0.000 |
+| `cli.check_cli` | 0 | 3 | 1.000 | 0.000 | 0.000 |
+| `cli.init_cli` | 0 | 2 | 1.000 | 0.000 | 0.000 |
+| `cli.update_cli` | 0 | 9 | 1.000 | 0.000 | 0.000 |
+| `core` | 0 | 1 | 1.000 | 0.000 | 0.000 |
 | `core.protocols` | 1 | 0 | 0.000 | 1.000 | 0.000 |
-| `generators.protocols` | 1 | 0 | 0.000 | 1.000 | 0.000 |
-| `local_deepwiki.cli` | 0 | 24 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.config` | 0 | 10 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.core` | 0 | 30 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.error_factories` | 0 | 1 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.errors` | 0 | 2 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.events` | 0 | 1 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.export` | 0 | 10 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.generators` | 0 | 41 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.handlers` | 0 | 59 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.models` | 0 | 6 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.plugins` | 0 | 4 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.progress` | 0 | 1 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.prompts` | 0 | 2 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.providers` | 0 | 12 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.security` | 0 | 4 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.server` | 0 | 7 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.services` | 0 | 45 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.tool_defs` | 0 | 5 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.validation` | 0 | 2 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.watcher` | 0 | 6 | 1.000 | 0.000 | 0.000 |
-| `local_deepwiki.web` | 0 | 20 | 1.000 | 0.000 | 0.000 |
-| `services.protocols` | 1 | 0 | 0.000 | 1.000 | 0.000 |
+| `generators` | 0 | 3 | 1.000 | 0.000 | 0.000 |
+| `plugins` | 0 | 2 | 1.000 | 0.000 | 0.000 |
+| `providers` | 0 | 3 | 1.000 | 0.000 | 0.000 |
+| `server` | 0 | 7 | 1.000 | 0.000 | 0.000 |
+| `services` | 0 | 8 | 1.000 | 0.000 | 0.000 |
+| `watcher` | 0 | 6 | 1.000 | 0.000 | 0.000 |
+| `web.app` | 0 | 7 | 1.000 | 0.000 | 0.000 |
+| `wiki_output_helpers` | 0 | 1 | 1.000 | 0.000 | 0.000 |
 
 ## Far from Main Sequence
 
-The following 154 module(s) have D > 0.7, indicating they may be either too concrete and stable (zone of pain) or too abstract and unstable (zone of uselessness):
+The following 48 module(s) have D > 0.7, indicating they may be either too concrete and stable (zone of pain) or too abstract and unstable (zone of uselessness):
 
+- **`__init__`** -- D=1.000 (I=0.000, A=0.000)
 - **`cli.cache_cli`** -- D=1.000 (I=0.000, A=0.000)
-- **`cli.check_cli`** -- D=1.000 (I=0.000, A=0.000)
-- **`cli.config_cli`** -- D=1.000 (I=0.000, A=0.000)
-- **`cli.config_validator`** -- D=1.000 (I=0.000, A=0.000)
-- **`cli.init_cli`** -- D=1.000 (I=0.000, A=0.000)
-- **`cli.interactive_search`** -- D=1.000 (I=0.000, A=0.000)
 - **`cli.main`** -- D=1.000 (I=0.000, A=0.000)
-- **`cli.profile_cli`** -- D=1.000 (I=0.000, A=0.000)
-- **`cli.search_models`** -- D=1.000 (I=0.000, A=0.000)
-- **`cli.status_cli`** -- D=1.000 (I=0.000, A=0.000)
-- **`cli.update_cli`** -- D=1.000 (I=0.000, A=0.000)
 - **`cli_progress`** -- D=1.000 (I=0.000, A=0.000)
-- **`config`** -- D=1.000 (I=0.000, A=0.000)
-- **`config.loader`** -- D=1.000 (I=0.000, A=0.000)
-- **`config.models`** -- D=1.000 (I=0.000, A=0.000)
 - **`config.models_embedding`** -- D=1.000 (I=0.000, A=0.000)
 - **`config.models_llm`** -- D=1.000 (I=0.000, A=0.000)
 - **`config.models_search`** -- D=1.000 (I=0.000, A=0.000)
 - **`config.models_wiki`** -- D=1.000 (I=0.000, A=0.000)
 - **`config.processing_models`** -- D=1.000 (I=0.000, A=0.000)
 - **`config.prompts`** -- D=1.000 (I=0.000, A=0.000)
-- **`config.provider_models`** -- D=1.000 (I=0.000, A=0.000)
-- **`core`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.agentic_rag`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.audit`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.chunk_builders`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.chunk_extractors`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.chunker`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.deep_research`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.fuzzy_search`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.git_blame`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.git_utils`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.graph_rag`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.health_history`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.index_manager`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.indexer_files`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.indexer_graph`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.indexer_status`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.llm_cache`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.parsing_pipeline`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.path_utils`** -- D=1.000 (I=0.000, A=0.000)
 - **`core.query_utils`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.rate_limiter`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.secret_detector`** -- D=1.000 (I=0.000, A=0.000)
 - **`core.tracing`** -- D=1.000 (I=0.000, A=0.000)
-- **`error_factories`** -- D=1.000 (I=0.000, A=0.000)
-- **`errors`** -- D=1.000 (I=0.000, A=0.000)
-- **`events`** -- D=1.000 (I=0.000, A=0.000)
-- **`export`** -- D=1.000 (I=0.000, A=0.000)
-- **`export.html`** -- D=1.000 (I=0.000, A=0.000)
 - **`export.html_template`** -- D=1.000 (I=0.000, A=0.000)
-- **`export.mermaid_renderer`** -- D=1.000 (I=0.000, A=0.000)
-- **`export.pdf`** -- D=1.000 (I=0.000, A=0.000)
 - **`export.pdf_styles`** -- D=1.000 (I=0.000, A=0.000)
-- **`export.pdf_sync`** -- D=1.000 (I=0.000, A=0.000)
-- **`export.shared`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.analysis`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.changelog`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.codemap`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.context_builder`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.crosslinks`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.diagrams`** -- D=1.000 (I=0.000, A=0.000)
+- **`fixtures.sample_repo`** -- D=1.000 (I=0.000, A=0.000)
 - **`generators.dir_tree`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.examples`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.lazy_cache`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.lazy_generator`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.lazy_resources`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.llms_txt`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.manifest`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.manifest_parsers`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.prefetch`** -- D=1.000 (I=0.000, A=0.000)
 - **`generators.progress_tracker`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.search`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.see_also`** -- D=1.000 (I=0.000, A=0.000)
-- **`generators.source_refs`** -- D=1.000 (I=0.000, A=0.000)
 - **`generators.toc`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers._error_handling`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers._export_validation`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers._index_helpers`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers._progress`** -- D=1.000 (I=0.000, A=0.000)
 - **`handlers._response`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.agentic`** -- D=1.000 (I=0.000, A=0.000)
 - **`handlers.agentic_data`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.agentic_workflows`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.analysis_architecture`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.analysis_diff`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.analysis_entity`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.analysis_metadata`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.analysis_search`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.codemap`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.core`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.generators`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.indexing`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.prompts`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.research`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.resources`** -- D=1.000 (I=0.000, A=0.000)
 - **`handlers.session_state`** -- D=1.000 (I=0.000, A=0.000)
 - **`handlers.types`** -- D=1.000 (I=0.000, A=0.000)
-- **`handlers.web_server`** -- D=1.000 (I=0.000, A=0.000)
-- **`local_deepwiki.__init__`** -- D=1.000 (I=0.000, A=0.000)
-- **`local_deepwiki.cli_progress`** -- D=1.000 (I=0.000, A=0.000)
-- **`local_deepwiki.logging`** -- D=1.000 (I=0.000, A=0.000)
 - **`logging`** -- D=1.000 (I=0.000, A=0.000)
-- **`models`** -- D=1.000 (I=0.000, A=0.000)
-- **`models.chunks`** -- D=1.000 (I=0.000, A=0.000)
 - **`models.provider_types`** -- D=1.000 (I=0.000, A=0.000)
 - **`models.research`** -- D=1.000 (I=0.000, A=0.000)
-- **`models.tool_args`** -- D=1.000 (I=0.000, A=0.000)
-- **`models.wiki`** -- D=1.000 (I=0.000, A=0.000)
-- **`plugins`** -- D=1.000 (I=0.000, A=0.000)
-- **`plugins.registry`** -- D=1.000 (I=0.000, A=0.000)
-- **`progress`** -- D=1.000 (I=0.000, A=0.000)
-- **`prompts`** -- D=1.000 (I=0.000, A=0.000)
-- **`providers`** -- D=1.000 (I=0.000, A=0.000)
 - **`providers.credentials`** -- D=1.000 (I=0.000, A=0.000)
-- **`providers.embeddings`** -- D=1.000 (I=0.000, A=0.000)
-- **`providers.errors`** -- D=1.000 (I=0.000, A=0.000)
-- **`providers.llm`** -- D=1.000 (I=0.000, A=0.000)
-- **`providers.retry`** -- D=1.000 (I=0.000, A=0.000)
-- **`security`** -- D=1.000 (I=0.000, A=0.000)
 - **`security.access_control`** -- D=1.000 (I=0.000, A=0.000)
-- **`security.repository_access`** -- D=1.000 (I=0.000, A=0.000)
-- **`security.role_config`** -- D=1.000 (I=0.000, A=0.000)
-- **`server`** -- D=1.000 (I=0.000, A=0.000)
-- **`services`** -- D=1.000 (I=0.000, A=0.000)
-- **`services.analysis_service`** -- D=1.000 (I=0.000, A=0.000)
-- **`services.generator_service`** -- D=1.000 (I=0.000, A=0.000)
-- **`services.graph_expansion`** -- D=1.000 (I=0.000, A=0.000)
-- **`services.indexing_service`** -- D=1.000 (I=0.000, A=0.000)
 - **`services.models`** -- D=1.000 (I=0.000, A=0.000)
-- **`services.provider_factory`** -- D=1.000 (I=0.000, A=0.000)
-- **`services.query_service`** -- D=1.000 (I=0.000, A=0.000)
-- **`services.wiki_service`** -- D=1.000 (I=0.000, A=0.000)
-- **`tool_defs`** -- D=1.000 (I=0.000, A=0.000)
-- **`tool_defs.analysis`** -- D=1.000 (I=0.000, A=0.000)
 - **`tool_defs.annotations`** -- D=1.000 (I=0.000, A=0.000)
-- **`tool_defs.core`** -- D=1.000 (I=0.000, A=0.000)
-- **`tool_defs.generators`** -- D=1.000 (I=0.000, A=0.000)
-- **`tool_defs.workflow`** -- D=1.000 (I=0.000, A=0.000)
-- **`validation`** -- D=1.000 (I=0.000, A=0.000)
-- **`watcher`** -- D=1.000 (I=0.000, A=0.000)
 - **`web`** -- D=1.000 (I=0.000, A=0.000)
-- **`web.app`** -- D=1.000 (I=0.000, A=0.000)
-- **`web.routes_architecture`** -- D=1.000 (I=0.000, A=0.000)
-- **`web.routes_chat`** -- D=1.000 (I=0.000, A=0.000)
-- **`web.routes_codemap`** -- D=1.000 (I=0.000, A=0.000)
-- **`web.routes_research`** -- D=1.000 (I=0.000, A=0.000)
-- **`web.utils`** -- D=1.000 (I=0.000, A=0.000)
-- **`core.vectorstore`** -- D=0.964 (I=0.000, A=0.036)
-- **`generators.wiki`** -- D=0.900 (I=0.000, A=0.100)
-- **`export.streaming`** -- D=0.833 (I=0.000, A=0.167)
-- **`core.parser`** -- D=0.800 (I=0.000, A=0.200)
+- **[`web.rate_limit`](files/src/local_deepwiki/web/rate_limit.md)** -- D=1.000 (I=0.000, A=0.000)
+- **`errors`** -- D=0.967 (I=0.033, A=0.000)
+- **`config`** -- D=0.943 (I=0.057, A=0.000)
+- **`models`** -- D=0.891 (I=0.109, A=0.000)
+- **`core.path_utils`** -- D=0.867 (I=0.133, A=0.000)
+- **`models.chunks`** -- D=0.857 (I=0.143, A=0.000)
+- **`core.rate_limiter`** -- D=0.833 (I=0.167, A=0.000)
+- **`events`** -- D=0.833 (I=0.167, A=0.000)
+- **`security`** -- D=0.824 (I=0.176, A=0.000)
+- **`core.git_utils`** -- D=0.800 (I=0.200, A=0.000)
+- **`core.health_history`** -- D=0.800 (I=0.200, A=0.000)
+- **`core.index_manager`** -- D=0.800 (I=0.200, A=0.000)
+- **`services.protocols`** -- D=0.800 (I=0.800, A=1.000)
+- **`handlers._error_handling`** -- D=0.778 (I=0.222, A=0.000)
+- **`core.vectorstore`** -- D=0.757 (I=0.207, A=0.036)
+- **`generators.manifest`** -- D=0.750 (I=0.250, A=0.000)
+- **`progress`** -- D=0.750 (I=0.250, A=0.000)
+- **`validation`** -- D=0.750 (I=0.250, A=0.000)
 
 ## Relevant Source Files
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*
@@ -165714,16 +165530,16 @@ This report shows the documentation coverage for the codebase.
 
 ## Summary
 
-🟢 **Overall Coverage: 95.3%**
+🟢 **Overall Coverage: 95.4%**
 
-- **2411** / **2529** entities documented
+- **2411** / **2528** entities documented
 
 ### By Type
 
 | Type | Documented | Total | Coverage |
 |------|------------|-------|----------|
 | Classes | 409 | 409 | 100.0% |
-| Functions | 1227 | 1296 | 94.7% |
+| Functions | 1227 | 1295 | 94.7% |
 | Methods | 775 | 824 | 94.1% |
 
 ## Coverage by File
@@ -165745,7 +165561,6 @@ This report shows the documentation coverage for the codebase.
 | 🟡 [stats.py](files/src/local_deepwiki/core/vectorstore/mixins/stats.md) | 13 | 17 | 76.5% |
 | 🟡 [routes_chat.py](files/src/local_deepwiki/web/routes_chat.md) | 10 | 13 | 76.9% |
 | 🟡 [dependency_graph_data.py](files/src/local_deepwiki/generators/analysis/dependency_graph_data.md) | 10 | 13 | 76.9% |
-| 🟡 [coupling.py](files/src/local_deepwiki/generators/analysis/coupling.md) | 7 | 9 | 77.8% |
 | 🟡 [update_cli.py](files/src/local_deepwiki/cli/update_cli.md) | 7 | 9 | 77.8% |
 | 🟡 [design_smells.py](files/src/local_deepwiki/generators/analysis/design_smells.md) | 18 | 23 | 78.3% |
 | 🟡 [routes_codemap.py](files/src/local_deepwiki/web/routes_codemap.md) | 12 | 15 | 80.0% |
@@ -165759,6 +165574,7 @@ This report shows the documentation coverage for the codebase.
 | 🟡 [hotspots.py](files/src/local_deepwiki/generators/analysis/hotspots.md) | 6 | 7 | 85.7% |
 | 🟡 [wiki_service.py](files/src/local_deepwiki/services/wiki_service.md) | 6 | 7 | 85.7% |
 | 🟡 [crosslinks.py](files/src/local_deepwiki/generators/crosslinks.md) | 25 | 29 | 86.2% |
+| 🟡 [coupling.py](files/src/local_deepwiki/generators/analysis/coupling.md) | 7 | 8 | 87.5% |
 | 🟡 [indexer_graph.py](files/src/local_deepwiki/core/indexer_graph.md) | 7 | 8 | 87.5% |
 | 🟡 [complexity.py](files/src/local_deepwiki/generators/analysis/complexity.md) | 7 | 8 | 87.5% |
 | 🟡 [status.py](files/src/local_deepwiki/generators/wiki/status.md) | 21 | 24 | 87.5% |
@@ -165784,8 +165600,8 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [generator.py](files/src/local_deepwiki/generators/wiki/generator.md) | 18 | 19 | 94.7% |
 | 🟢 [cache.py](files/src/local_deepwiki/providers/embeddings/cache.md) | 38 | 40 | 95.0% |
 | 🟢 [indexer.py](files/src/local_deepwiki/core/indexer.md) | 20 | 21 | 95.2% |
-| 🟢 [analysis_architecture.py](files/src/local_deepwiki/handlers/analysis_architecture.md) | 18 | 18 | 100.0% |
-| 🟢 [tool_args.py](files/src/local_deepwiki/models/tool_args.md) | 52 | 52 | 100.0% |
+| 🟢 [module_dependencies.py](files/src/local_deepwiki/generators/analysis/module_dependencies.md) | 10 | 10 | 100.0% |
+| 🟢 [health_scoring.py](files/src/local_deepwiki/generators/analysis/health_scoring.md) | 6 | 6 | 100.0% |
 | 🟢 [logging.py](files/src/local_deepwiki/logging.md) | 2 | 2 | 100.0% |
 | 🟢 [cli_progress.py](files/src/local_deepwiki/cli_progress.md) | 13 | 13 | 100.0% |
 | 🟢 [prompts.py](files/src/local_deepwiki/prompts.md) | 14 | 14 | 100.0% |
@@ -165863,6 +165679,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [research.py](files/src/local_deepwiki/models/research.md) | 14 | 14 | 100.0% |
 | 🟢 [provider_types.py](files/src/local_deepwiki/models/provider_types.md) | 4 | 4 | 100.0% |
 | 🟢 [foundation.py](files/src/local_deepwiki/models/foundation.md) | 8 | 8 | 100.0% |
+| 🟢 [tool_args.py](files/src/local_deepwiki/models/tool_args.md) | 52 | 52 | 100.0% |
 | 🟢 [wiki.py](files/src/local_deepwiki/models/wiki.md) | 5 | 5 | 100.0% |
 | 🟢 [chunks.py](files/src/local_deepwiki/models/chunks.md) | 3 | 3 | 100.0% |
 | 🟢 [status_cli.py](files/src/local_deepwiki/cli/status_cli.md) | 17 | 17 | 100.0% |
@@ -165889,7 +165706,6 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [see_also.py](files/src/local_deepwiki/generators/see_also.md) | 14 | 14 | 100.0% |
 | 🟢 [architecture_composite.py](files/src/local_deepwiki/generators/analysis/architecture_composite.md) | 2 | 2 | 100.0% |
 | 🟢 [architecture_health.py](files/src/local_deepwiki/generators/analysis/architecture_health.md) | 4 | 4 | 100.0% |
-| 🟢 [health_scoring.py](files/src/local_deepwiki/generators/analysis/health_scoring.md) | 6 | 6 | 100.0% |
 | 🟢 [stale_detection.py](files/src/local_deepwiki/generators/analysis/stale_detection.md) | 7 | 7 | 100.0% |
 | 🟢 [module_health.py](files/src/local_deepwiki/generators/analysis/module_health.md) | 4 | 4 | 100.0% |
 | 🟢 [source_filter.py](files/src/local_deepwiki/generators/analysis/source_filter.md) | 4 | 4 | 100.0% |
@@ -165902,7 +165718,6 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [tours.py](files/src/local_deepwiki/generators/analysis/tours.md) | 5 | 5 | 100.0% |
 | 🟢 [layer_analysis.py](files/src/local_deepwiki/generators/analysis/layer_analysis.md) | 4 | 4 | 100.0% |
 | 🟢 [api_docs.py](files/src/local_deepwiki/generators/analysis/api_docs.md) | 31 | 31 | 100.0% |
-| 🟢 [module_dependencies.py](files/src/local_deepwiki/generators/analysis/module_dependencies.md) | 10 | 10 | 100.0% |
 | 🟢 [health_page.py](files/src/local_deepwiki/generators/analysis/health_page.md) | 7 | 7 | 100.0% |
 | 🟢 [coupling_page.py](files/src/local_deepwiki/generators/analysis/coupling_page.md) | 6 | 6 | 100.0% |
 | 🟢 [smells_page.py](files/src/local_deepwiki/generators/analysis/smells_page.md) | 6 | 6 | 100.0% |
@@ -165951,6 +165766,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [codemap.py](files/src/local_deepwiki/handlers/codemap.md) | 2 | 2 | 100.0% |
 | 🟢 [types.py](files/src/local_deepwiki/handlers/types.md) | 9 | 9 | 100.0% |
 | 🟢 [web_server.py](files/src/local_deepwiki/handlers/web_server.md) | 15 | 15 | 100.0% |
+| 🟢 [analysis_architecture.py](files/src/local_deepwiki/handlers/analysis_architecture.md) | 18 | 18 | 100.0% |
 | 🟢 [generators.py](files/src/local_deepwiki/handlers/generators.md) | 13 | 13 | 100.0% |
 | 🟢 [analysis_diff.py](files/src/local_deepwiki/handlers/analysis_diff.md) | 12 | 12 | 100.0% |
 | 🟢 [_export_validation.py](files/src/local_deepwiki/handlers/_export_validation.md) | 2 | 2 | 100.0% |
@@ -166008,16 +165824,16 @@ Undocumented:
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*
@@ -166030,115 +165846,89 @@ The following source files were used to generate this documentation:
 
 ## External Dependencies
 
-| Dependency                  | Purpose                                                                 |
-|-----------------------------|-------------------------------------------------------------------------|
-| `anthropic`                 | Provides access to Anthropic's AI models, such as Claude.              |
-| `flask`                     | Web framework for building the application's HTTP server.               |
-| `LanceDB`                   | Vector database for storing and querying embeddings.                    |
-| `markdown`                  | Library for parsing and rendering Markdown text.                        |
-| `mcp`                       | Model Control Protocol client for interacting with LLMs.                |
-| `nh3`                       | HTML sanitization library to clean user-provided HTML content.          |
-| `ollama`                    | Interface for running local LLMs via Ollama.                            |
-| `openai`                    | Client for interacting with OpenAI's API.                               |
-| `pandas`                    | Data manipulation and analysis library.                                 |
-| `psutil`                    | System and process utilities for monitoring system resources.           |
-| `pydantic`                  | Data validation and settings management using Python type annotations.  |
-| `pyyaml`                    | YAML parsing and serialization.                                         |
-| `rapidfuzz`                 | Fast fuzzy string matching and similarity scoring.                      |
-| `rich`                      | Library for rich text and beautiful formatting in the terminal.         |
-| `sentence-transformers`     | Provides pre-trained models for generating sentence embeddings.         |
-| `tree-sitter`               | General-purpose parsing library for code analysis.                      |
-| `tree-sitter-c`             | Tree-sitter grammar for C language parsing.                             |
-| `tree-sitter-c-sharp`       | Tree-sitter grammar for C# language parsing.                            |
-| `tree-sitter-cpp`           | Tree-sitter grammar for C++ language parsing.                           |
-| `tree-sitter-go`            | Tree-sitter grammar for Go language parsing.                            |
-| `tree-sitter-java`          | Tree-sitter grammar for Java language parsing.                          |
-| `tree-sitter-javascript`    | Tree-sitter grammar for JavaScript language parsing.                    |
-| `tree-sitter-kotlin`        | Tree-sitter grammar for Kotlin language parsing.                        |
-| `tree-sitter-php`           | Tree-sitter grammar for PHP language parsing.                           |
-| `tree-sitter-python`        | Tree-sitter grammar for Python language parsing.                        |
-| `tree-sitter-ruby`          | Tree-sitter grammar for Ruby language parsing.                          |
-| `tree-sitter-rust`          | Tree-sitter grammar for Rust language parsing.                          |
-| `tree-sitter-swift`         | Tree-sitter grammar for Swift language parsing.                         |
-| `tree-sitter-typescript`    | Tree-sitter grammar for TypeScript language parsing.                    |
-| `watchdog`                  | File system monitoring library for watching changes in directories.     |
+| Dependency                | Purpose |
+|---------------------------|---------|
+| `anthropic`               | Provides access to Anthropic's AI models, such as Claude, for natural language processing tasks. |
+| `flask`                   | A lightweight WSGI web application framework used for building web interfaces or APIs. |
+| `LanceDB`                 | A vector database for building AI-powered applications, used for storing and querying embeddings. |
+| `markdown`                | Library for parsing and rendering Markdown text into HTML. |
+| `mcp`                     | Used for managing model communication protocol (MCP) in AI applications. |
+| `nh3`                     | A fast, safe HTML sanitization library to prevent XSS attacks. |
+| `ollama`                  | Provides access to locally hosted large language models via Ollama API. |
+| `openai`                  | Official Python client for OpenAI's API, used for interacting with GPT models. |
+| `pandas`                  | Data manipulation and analysis library, used for handling structured data. |
+| `psutil`                  | System and process utilities for monitoring system resources and performance. |
+| `pydantic`                | Data validation and settings management using Python type annotations. |
+| `pyyaml`                  | YAML parser and emitter for configuration files and data serialization. |
+| `rapidfuzz`               | Fast fuzzy string matching library for similarity comparisons. |
+| `rich`                    | Library for rich text and beautiful formatting in the terminal. |
+| `sentence-transformers`   | Provides pre-trained models for generating sentence embeddings. |
+| `tree-sitter`             | A parser generator tool and an incremental parsing library for syntax tree construction. |
+| `tree-sitter-c`           | Tree-sitter grammar for C language. |
+| `tree-sitter-c-sharp`     | Tree-sitter grammar for C# language. |
+| `tree-sitter-cpp`         | Tree-sitter grammar for C++ language. |
+| `tree-sitter-go`          | Tree-sitter grammar for Go language. |
+| `tree-sitter-java`        | Tree-sitter grammar for Java language. |
+| `tree-sitter-javascript`  | Tree-sitter grammar for JavaScript language. |
+| `tree-sitter-kotlin`      | Tree-sitter grammar for Kotlin language. |
+| `tree-sitter-php`         | Tree-sitter grammar for PHP language. |
+| `tree-sitter-python`      | Tree-sitter grammar for Python language. |
+| `tree-sitter-ruby`        | Tree-sitter grammar for Ruby language. |
+| `tree-sitter-rust`        | Tree-sitter grammar for Rust language. |
+| `tree-sitter-swift`       | Tree-sitter grammar for Swift language. |
+| `tree-sitter-typescript`  | Tree-sitter grammar for TypeScript language. |
+| `watchdog`                | File system event monitoring library for watching file changes. |
 
 ## Dev Dependencies
 
-| Dependency              | Purpose                                                                 |
-|-------------------------|-------------------------------------------------------------------------|
-| `black`                 | Code formatter to enforce consistent Python style.                      |
-| `isort`                 | Import sorter to organize and format import statements.                 |
-| `local-deepwiki`        | Development package for local development and testing.                  |
-| `mypy`                  | Static type checker for Python.                                         |
-| `pip-audit`             | Security audit tool for Python package dependencies.                    |
-| `pre-commit`            | Framework for managing and maintaining pre-commit hooks.                |
-| `pypdf`                 | PDF parsing and manipulation library.                                   |
-| `pytest`                | Testing framework for Python.                                           |
-| `pytest-asyncio`        | Plugin for pytest to support asynchronous tests.                        |
-| `types-Markdown`        | Type stubs for the `markdown` library.                                  |
-| `types-PyYAML`          | Type stubs for the `pyyaml` library.                                    |
-| `weasyprint`            | HTML to PDF converter.                                                  |
+| Dependency                | Purpose |
+|---------------------------|---------|
+| `black`                   | Code formatter to enforce consistent Python code style. |
+| `isort`                   | Tool to sort and organize import statements. |
+| `local-deepwiki ([all])`  | Development package for local deepwiki with all optional dependencies. |
+| `mypy`                    | Static type checker for Python to catch type-related errors. |
+| `pip-audit`               | Security audit tool for Python package dependencies. |
+| `pre-commit`              | Framework for managing and maintaining pre-commit hooks. |
+| `pypdf`                   | Library for working with PDF files. |
+| `pytest`                  | Testing framework for Python. |
+| `pytest-asyncio`          | Plugin for pytest to support asynchronous tests. |
+| `types-Markdown`          | Type stubs for the `markdown` library. |
+| `types-PyYAML`            | Type stubs for the `pyyaml` library. |
+| `weasyprint`              | HTML to PDF converter used for report generation. |
 
 ## Internal Module Dependencies
 
 - [`WikiGenerator`](files/src/local_deepwiki/generators/wiki/generator.md) depends on [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md)
-- [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md) depends on [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md)
-- [`LLMProvider`](files/src/local_deepwiki/providers/base.md) is used by various generators and handlers
-- [`Config`](files/src/local_deepwiki/config/models.md) is imported and used in `cli/init_cli.py`
-- [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md) is imported and used in `cli/init_cli.py`
-- `DataParser` is used in `tests/fixtures/sample_repo/tests/test_parser.py`
-- `User` is imported in `tests/fixtures/sample_repo/src/parser.py`, `tests/fixtures/sample_repo/src/sub/processor.py`, and `tests/fixtures/sample_repo/tests/test_parser.py`
-- `Order` is imported in `tests/fixtures/sample_repo/src/sub/processor.py`
-- [`ChunkType`](files/src/local_deepwiki/models/foundation.md) and [`CodeChunk`](files/src/local_deepwiki/models/chunks.md) are imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
-- [`GitRepoInfo`](files/src/local_deepwiki/core/git_utils.md) and [`build_source_url`](files/src/local_deepwiki/core/git_utils.md) are imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
-- [`format_blame_date`](files/src/local_deepwiki/core/git_blame.md) and [`get_file_entity_blame`](files/src/local_deepwiki/core/git_blame.md) are imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
-- [`get_logger`](files/src/local_deepwiki/logging.md) is imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
-- [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md) is imported in `src/local_deepwiki/core/vectorstore/mixins/search_types.py`
-- [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md) and [`LLMProvider`](files/src/local_deepwiki/providers/base.md) are imported in `tests/wiki_output_helpers.py`
-- `Console` is imported in `src/local_deepwiki/cli/main.py` and `src/local_deepwiki/cli/init_cli.py`
-- `Table` is imported in `src/local_deepwiki/cli/main.py` and `src/local_deepwiki/cli/init_cli.py`
-- `Panel` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `Prompt` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `argparse` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `yaml` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `Literal` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `Path` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `Counter` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `dataclass` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `os` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `urllib.request` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `sys` is imported in `src/local_deepwiki/cli/main.py` and `src/local_deepwiki/cli/init_cli.py`
-- `importlib` is imported in `src/local_deepwiki/cli/main.py`
-- `hashlib` is imported in `tests/fixtures/sample_repo/src/utils.py` and `tests/wiki_output_helpers.py`
-- `re` is imported in `src/local_deepwiki/generators/wiki/term_validator.py`, `tests/fixtures/sample_repo/src/utils.py`, and `tests/wiki_output_helpers.py`
-- `struct` is imported in `tests/wiki_output_helpers.py`
-- `AsyncIterator` is imported in `tests/wiki_output_helpers.py`
-- `Protocol` and `runtime_checkable` are imported in `src/local_deepwiki/core/protocols.py`
-- `Iterator` is imported in `src/local_deepwiki/core/protocols.py`
-- `Path` is imported in `src/local_deepwiki/core/protocols.py`
-- `StrEnum` is imported in `src/local_deepwiki/models/provider_types.py` and `src/local_deepwiki/security/access_control.py`
-- `TypedDict` is imported in `src/local_deepwiki/handlers/types.py`
-- `Literal` is imported in `src/local_deepwiki/handlers/types.py`
-- `TypeVar` is imported in `src/local_deepwiki/security/access_control.py`
-- `Callable` is imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
-- `attrgetter` is imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
-- `ContextVar` is imported in `src/local_deepwiki/security/access_control.py`
-- `wraps` is imported in `src/local_deepwiki/security/access_control.py`
-- `asyncio` is imported in `src/local_deepwiki/security/access_control.py`
-- `logging` is imported in `src/local_deepwiki/logging.py`
-- `sys` is imported in `src/local_deepwiki/logging.py`
-- `os` is imported in `src/local_deepwiki/logging.py`
-- `Literal` is imported in `src/local_deepwiki/logging.py`
-- `dataclass` is imported in `src/local_deepwiki/core/vectorstore/mixins/search_types.py`
-- [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md) is imported in `src/local_deepwiki/core/vectorstore/mixins/search_types.py`
-- `json` is imported in `tests/fixtures/sample_repo/src/parser.py`
-- `Path` is imported in `tests/fixtures/sample_repo/src/parser.py`
-- `Any` is imported in `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/generators/analysis/architecture_report.py`, `src/local_deepwiki/handlers/session_state.py`, `tests/fixtures/sample_repo/lib/external.py`, `tests/fixtures/sample_repo/src/parser.py`, `tests/fixtures/sample_repo/src/sub/processor.py`, and `tests/fixtures/sample_repo/src/utils.py`
-- `defaultdict` is imported in `src/local_deepwiki/generators/analysis/smells_page.py`
-- `version` is imported in `src/local_deepwiki/__init__.py`
-- `os` is imported in `src/local_deepwiki/providers/credentials.py`
-- `importlib` is imported in `src/local_deepwiki/cli/main.py`
+- [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md) depends on [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md)
+- `SourceFormatter` depends on [`GitRepoInfo`](files/src/local_deepwiki/core/git_utils.md), [`ChunkType`](files/src/local_deepwiki/models/foundation.md), [`CodeChunk`](files/src/local_deepwiki/models/chunks.md)
+- `SecurityAccessControl` depends on `ContextVar`, `Callable`, `StrEnum`, `TypeVar`, `asyncio`
+- `CLI` depends on `Console`, `Table`, `argparse`, `yaml`, [`Config`](files/src/local_deepwiki/config/models.md), [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
+- `InitCLI` depends on `Console`, `Panel`, `Prompt`, `Table`, [`Config`](files/src/local_deepwiki/config/models.md), [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
+- `Analysis` modules depend on `Any`, `defaultdict`
+- `DataParser` depends on `User`, `json`, `Path`
+- `Processor` depends on `Order`, `User`
+- `TestParser` depends on `User`, `DataParser`
+- `WikiOutputHelpers` depends on `AsyncIterator`, `Path`, [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md), [`LLMProvider`](files/src/local_deepwiki/providers/base.md)
+- `Logging` depends on `logging`, `os`, `sys`
+- `Protocols` depends on `Iterator`, `Path`, `Protocol`, `runtime_checkable`
+- `SessionState` depends on `Any`
+- `HealthScoring` depends on `Any`
+- `SmellsPage` depends on `Any`
+- `TermValidator` depends on `re`
+- `Credentials` depends on `os`
+- `MainCLI` depends on `Console`, `Table`, `importlib`, `sys`
+- `DirTree` depends on `Path`, `subprocess`
+- `ProviderTypes` depends on `StrEnum`
+- `Types` depends on `TypedDict`
+- `GitBlame` depends on [`format_blame_date`](files/src/local_deepwiki/core/git_blame.md), [`get_file_entity_blame`](files/src/local_deepwiki/core/git_blame.md)
+- `GitUtils` depends on [`build_source_url`](files/src/local_deepwiki/core/git_utils.md)
+- `SearchTypes` depends on `dataclass`, [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md)
+- `Models` depends on `version` (from `importlib.metadata`)
+- `External` depends on `Any`
+- `Utils` depends on `hashlib`, `re`
+- [`Config`](files/src/local_deepwiki/config/models.md) depends on `yaml`
+- `ConfigModels` depends on [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
+- `BaseProvider` depends on [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md), [`LLMProvider`](files/src/local_deepwiki/providers/base.md)
 
 ## Module Dependency Graph
 
@@ -166273,9 +166063,9 @@ The following source files were used to generate this documentation:
 - [`src/local_deepwiki/providers/credentials.py:12-80`](files/src/local_deepwiki/providers/credentials.md)
 - [`src/local_deepwiki/generators/wiki/term_validator.py:43-82`](files/src/local_deepwiki/generators/wiki/term_validator.md)
 - `src/local_deepwiki/__init__.py`
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/generators/analysis/architecture_report.py:15-36`](files/src/local_deepwiki/generators/analysis/architecture_report.md)
 - [`src/local_deepwiki/handlers/session_state.py:20-27`](files/src/local_deepwiki/handlers/session_state.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/generators/analysis/smells_page.py:25-31`](files/src/local_deepwiki/generators/analysis/smells_page.md)
 - [`src/local_deepwiki/cli/main.py:57-90`](files/src/local_deepwiki/cli/main.md)
 - [`src/local_deepwiki/models/provider_types.py:8-13`](files/src/local_deepwiki/models/provider_types.md)
@@ -166585,7 +166375,7 @@ flowchart TD
     M15 -.-> E266
     M15 -.-> E267
     M15 -.-> E268
-    M15 --> M132
+    M15 --> M16
     M15 --> M209
     M75 -.-> E268
     M75 --> M77
@@ -166892,16 +166682,16 @@ flowchart TD
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*
@@ -166916,14 +166706,14 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 **Quick Navigation:** [#](##) | [A](#a) | [B](#b) | [C](#c) | [D](#d) | [E](#e) | [F](#f) | [G](#g) | [H](#h) | [I](#i) | [K](#k) | [L](#l) | [M](#m) | [N](#n) | [O](#o) | [P](#p) | [Q](#q) | [R](#r) | [S](#s) | [T](#t) | [U](#u) | [V](#v) | [W](#w)
 
-**Total:** 2529 entities (409 classes, 1296 functions, 824 methods)
+**Total:** 2528 entities (409 classes, 1295 functions, 824 methods)
 
 ---
 
 <p><a href="#" onclick="document.querySelectorAll('details').forEach(d=>d.open=true);return false">Expand All</a> | <a href="#" onclick="document.querySelectorAll('details').forEach(d=>d.open=false);return false">Collapse All</a></p>
 
 <details id="#" markdown="1">
-<summary><strong>#</strong> — 1115 entities</summary>
+<summary><strong>#</strong> — 1114 entities</summary>
 
 - ▪️ **[`PluginRegistry._`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: LanguageParserPlugin) → None` (`registry.py`)
 - ▪️ **[`PluginRegistry._`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: WikiGeneratorPlugin) → None` (`registry.py`)
@@ -167172,7 +166962,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`GenerationProgress._calculate_eta_minutes`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → float | None` (`progress_tracker.py`) - Calculate estimated time remaining in minutes.
 - ▪️ **[`AdaptiveSearcher._calculate_query_complexity`](files/src/local_deepwiki/core/vectorstore/cache.md)** `(query: str) → float` (`cache.py`) - Calculate a complexity score for a query.
 - ▪️ **[`GenerationProgress._calculate_rate`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → float` (`progress_tracker.py`) - Calculate files per minute based on recent completions.
-- 🔹 **[`_candidate_labels`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(rel_path: Path, project_tops: set[str]) → list[str]` (`coupling.py`) - Return candidate module labels for *rel_path* in order of...
+- 🔹 **[`_candidate_labels`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(rel_path: Path, project_tops: set[str]) → list[str]` (`coupling.py`) - Return candidate module labels for *rel_path*.
 - ▪️ **[`ProjectManifest._categorize_dependencies`](files/src/local_deepwiki/generators/manifest.md)** `(...) → dict[str, list[str]]` (`manifest.py`) - Categorize dependencies by their purpose.
 - 🔹 **[`_categorize_file_change`](files/src/local_deepwiki/cli/status_cli.md)** `(file_path: Path, rel_path: str, compiled_patterns: list, ...+3) → str | None` (`status_cli.py`) - Return the hash for *file_path* if it should be included,...
 - 🔹 **[`_categorize_import_files`](files/src/local_deepwiki/generators/wiki/pages.md)** `(import_chunks: list) → tuple[list[str], list[str]]` (`pages.py`) - Split import chunks into source and test file paths (dedu...
@@ -167723,7 +167513,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_merge_graded_results`](files/src/local_deepwiki/core/agentic_rag.md)** `(first_graded: list[[GradedChunk](files/src/local_deepwiki/core/agentic_rag.md)], new_graded: list[[GradedChunk](files/src/local_deepwiki/core/agentic_rag.md)], max_context: int) → list[[GradedChunk](files/src/local_deepwiki/core/agentic_rag.md)]` (`agentic_rag.py`) - Merge two rounds of graded results, deduplicating by file...
 - ▪️ **[`StreamingPdfExporter._merge_pdfs`](files/src/local_deepwiki/export/pdf.md)** `(pdf_files: list[Path], output_path: Path) → None` (`pdf.py`) - Merge multiple PDF files into one.
 - 🔹 **[`_migrate_status`](files/src/local_deepwiki/core/index_manager.md)** `(status: [IndexStatus](files/src/local_deepwiki/models/wiki.md)) → tuple[[IndexStatus](files/src/local_deepwiki/models/wiki.md), bool]` (`index_manager.py`) - Migrate an index status to the current schema version.
-- 🔹 **[`_module_label`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)** `(rel_path: Path) → str` (`module_dependencies.py`) - Convert a relative file path to a dotted module label.
+- 🔹 **[`_module_label`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)** `(rel_path: Path, project_tops: set[str] | None) → str` (`module_dependencies.py`) - Convert a relative file path to a dotted module label.
 - ▪️ **[`RelationshipAnalyzer._module_matches_file`](files/src/local_deepwiki/generators/see_also.md)** `(module: str, file_path: str) → bool` (`see_also.py`) - Check if a module name refers to a file path.
 - ▪️ **[`RelationshipAnalyzer._module_to_file_path`](files/src/local_deepwiki/generators/see_also.md)** `(module: str) → str | None` (`see_also.py`) - Try to find a file path that matches a module name.
 - 🔹 **[`_module_to_wiki_path`](files/src/local_deepwiki/generators/diagrams/dependency_diagram.md)** `(module: str, project_name: str) → str` (`dependency_diagram.py`) - Convert module name to wiki file path.
@@ -167995,7 +167785,6 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`ReasoningMixin._synthesize`](files/src/local_deepwiki/core/deep_research/reasoning.md)** `(question: str, sub_questions: list[[SubQuestion](files/src/local_deepwiki/models/research.md)], results: list[[SearchResult](files/src/local_deepwiki/handlers/types.md)]) → str` (`reasoning.py`) - Synthesize a comprehensive answer from all context.
 - 🔹⚡ **[`_synthesize_diff_answer`](files/src/local_deepwiki/handlers/analysis_diff.md)** `(diff_ctx: [DiffSynthesisContext](files/src/local_deepwiki/handlers/analysis_diff.md), wiki_path: Any, config: Any, ...+1) → str` (`analysis_diff.py`) - Call the LLM to synthesize an answer about the diff.
 - 🔹⚡ **[`_synthesize_onboarding_guide`](files/src/local_deepwiki/generators/analysis/onboarding.md)** `(llm: Any, ctx: [OnboardingContext](files/src/local_deepwiki/generators/analysis/onboarding.md)) → str` (`onboarding.py`) - Ask the LLM to synthesize the full onboarding guide.
-- 🔹 **[`_take2`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(ps: list[str]) → str` (`coupling.py`)
 - ▪️⚡ **[`ReasoningMixin._targeted_retrieve`](files/src/local_deepwiki/core/deep_research/reasoning.md)** `(queries: list[str]) → list[[SearchResult](files/src/local_deepwiki/handlers/types.md)]` ⚠️`result_or_exc` (`reasoning.py`) - Perform targeted retrieval for follow-up queries.
 - 🔹 **[`_threshold_str`](files/src/local_deepwiki/cli/check_cli.md)** `(value: Any) → str` (`check_cli.py`) - Return the threshold value as a string, or '-' when unset.
 - 🔹 **[`_top_level`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)** `(dotted: str) → str` (`module_dependencies.py`) - Return the first component of a dotted module name.
@@ -168037,8 +167826,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`RateLimiter._wait_for_minute_limit`](files/src/local_deepwiki/core/rate_limiter.md)** `(now: float) → None` ⚠️[`RateLimitExceeded`](files/src/local_deepwiki/core/rate_limiter.md) (`rate_limiter.py`) - Wait for minute limit to reset if exceeded.
 - 🔹⚡ **[`_wait_for_server_ready`](files/src/local_deepwiki/handlers/web_server.md)** `(host: str, port: int, timeout: float) → bool` (`web_server.py`) - Poll until the server is accepting connections or timeout.
 - 🔹 **[`_walk`](files/src/local_deepwiki/generators/analysis/complexity.md)** `(n: Node) → None` (`complexity.py`)
-- 🔹 **[`_walk`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(n: Node) → None` (`coupling.py`)
 - 🔹 **[`_walk`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(n: Node) → None` (`design_smells.py`)
+- 🔹 **[`_walk`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(n: Node) → None` (`coupling.py`)
 - 🔹 **[`_walk_ast`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(node: Any, rel_path: Path, threshold_level: int, ...+2) → None` (`design_smells.py`) - Recursively walk the AST, dispatching to class/function h...
 - 🔹 **[`_walk_class_node`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(node: Any, rel_path: Path, threshold_level: int, ...+1) → None` (`design_smells.py`) - Detect god-class smells for a class AST node.
 - 🔹 **[`_walk_function_node`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(node: Any, rel_path: Path, threshold_level: int, ...+2) → None` (`design_smells.py`) - Detect all function-level smells for a function AST node.
@@ -169606,16 +169395,16 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*
@@ -169626,21 +169415,21 @@ The following source files were used to generate this documentation:
 
 # Architecture Health
 
-**Overall Grade: B (86/100)**
+**Overall Grade: A (94/100)**
 
 ## Scores by Dimension
 
 | Dimension | Score | Grade |
 |-----------|-------|-------|
 | Complexity | 100.0 | A |
-| Coupling | 46.9 | D |
+| Coupling | 79.1 | B |
 | Smells | 96.2 | A |
 | Layers | 100.0 | A |
 
 ## Codebase Stats
 
-- **Total lines:** 78,369
-- **Total functions:** 2,323
+- **Total lines:** 78,356
+- **Total functions:** 2,322
 - **Files scanned:** 263
 
 ## Complexity Hotspots
@@ -169661,16 +169450,16 @@ No layer violations detected.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*
@@ -169683,7 +169472,7 @@ The following source files were used to generate this documentation:
 
 ## Summary
 
-- **Total functions scanned:** 2,323
+- **Total functions scanned:** 2,322
 - **Files scanned:** 263
 - **Metric used:** complexity
 
@@ -169716,16 +169505,16 @@ The following source files were used to generate this documentation:
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*
@@ -169935,16 +169724,16 @@ classDiagram
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*
@@ -169955,42 +169744,48 @@ The following source files were used to generate this documentation:
 
 # Developer Onboarding Guide
 
-The **local-deepwiki** project is a local, private documentation server that enables developers to explore and understand code repositories using a DeepWiki-style interface. It's designed for teams who want to maintain comprehensive, AI-enhanced documentation for their internal projects without relying on external services. By leveraging local LLMs, vector databases, and code analysis tools, local-deepwiki transforms codebases into searchable knowledge graphs, allowing developers to quickly find answers to questions about how code works, where it's used, and how it relates to other parts of the system. This tool is especially valuable for large codebases where understanding code relationships and documentation is crucial for onboarding new team members or performing impact analysis.
+Local DeepWiki is a powerful, local-first tool that transforms your private repository documentation into a searchable, intelligent knowledge base using AI-driven retrieval-augmented generation (RAG) techniques. Designed for developers, technical writers, and engineering teams, it enables seamless access to contextual information from your codebase without the need for external services or cloud dependencies. This project solves the common problem of scattered, hard-to-find documentation by creating a unified, AI-enhanced search layer that understands code relationships and semantic context.
 
-At its core, the project integrates several technologies including Flask for the web server, LanceDB for vector storage, and various AI/ML libraries such as OpenAI, Anthropic, and Ollama for language processing. It supports multiple configuration modes, including local, hybrid, and cloud-based setups, making it flexible for different deployment scenarios. The system supports Markdown documentation, code analysis through call graph extraction, and semantic search capabilities powered by sentence transformers. It also provides a command-line interface for managing the documentation server, including tools for initialization, updating, configuration management, and status checks.
+The system operates as a Flask-based web server that integrates with local code repositories, using vector databases to store embeddings of documentation chunks and leveraging various AI providers (Anthropic, OpenAI, Ollama) to power natural language queries. It supports multiple configuration modes including local, hybrid, and cloud-based setups, allowing teams to choose the best approach for their infrastructure. By combining traditional code analysis with modern NLP techniques, Local DeepWiki provides a deep understanding of your codebase, enabling both code exploration and documentation retrieval with intelligent context awareness.
 
 ## Architecture at a Glance
 
 ```mermaid
 componentDiagram
-    direction LR
-    component "CLI Layer" as cli
-    component "Web Server" as web
-    component "Core Services" as core
-    component "Data Stores" as data
-    component "AI/ML Providers" as ai
+    component "CLI Interface" as CLI
+    component "Web Server" as Web
+    component "Configuration System" as Config
+    component "Core Services" as Core
+    component "AI Providers" as AI
+    component "Data Stores" as Data
+    component "Documentation Parser" as Parser
 
-    cli --> web : HTTP Requests
-    web --> core : API Calls
-    core --> data : Vector DB Access
-    core --> ai : LLM Embeddings
-    ai --> core : Model Responses
-    data --> core : Search Results
+    CLI --> Web
+    Web --> Core
+    Core --> Config
+    Core --> AI
+    Core --> Data
+    Core --> Parser
+    Config --> Data
+    Parser --> Data
+    AI --> Data
 ```
 
-- **CLI Layer**: The command-line interface provides tools for managing the local-deepwiki server, including initialization, configuration, status checks, and updates. [CLI Components](files/src/local_deepwiki/cli/main.md)
-- **Web Server**: The Flask-based web server exposes the API and web interface for querying documentation and code analysis. [Web Server](src/local_deepwiki/web/app.py)
-- **Core Services**: Contains the business logic for processing documentation, generating call graphs, and managing vector stores. [Core Services](src/local_deepwiki/core)
-- **Data Stores**: Uses LanceDB for vector storage and retrieval of code documentation embeddings. [LanceDB Integration](files/src/local_deepwiki/config/models.md)
-- **AI/ML Providers**: Integrates with various LLM providers such as OpenAI, Anthropic, and Ollama for language processing and embeddings. [AI Providers](files/src/local_deepwiki/config/provider_models.md)
+The architecture is organized into several key subsystems:
+
+- **CLI Interface** ([`src/local_deepwiki/cli/main.py`](files/src/local_deepwiki/cli/main.py)) - Provides command-line tools for configuration, initialization, and management of the documentation system.
+- **Web Server** ([`src/local_deepwiki/web/app.py`](files/src/local_deepwiki/web/app.py)) - Serves the Flask web application that handles HTTP requests and routes them to appropriate handlers.
+- **Configuration System** ([`src/local_deepwiki/config/`](files/src/local_deepwiki/config/index.md)) - Manages all configuration loading and model definitions for LLMs, embeddings, and search parameters.
+- **Core Services** ([`src/local_deepwiki/core/`](files/src/local_deepwiki/core/index.md)) - Contains the main logic for processing, analysis, and retrieval operations including deep research, graph RAG, and code parsing.
+- **AI Providers** ([`src/local_deepwiki/plugins/registry.py`](files/src/local_deepwiki/plugins/registry.md)) - Integrates with various AI services like OpenAI, Anthropic, and Ollama for language model and embedding generation.
+- **Data Stores** ([`src/local_deepwiki/config/models.py`](files/src/local_deepwiki/config/models.md)) - Handles vector database operations using LanceDB for semantic search and storage of embeddings.
+- **Documentation Parser** ([`src/local_deepwiki/core/parser/`](files/src/local_deepwiki/core/parser/index.md)) - Parses source code and documentation files to extract meaningful chunks for indexing and retrieval.
 
 ## How It Works
 
-### Flow: Server Request Handling
+### Flow: Server Request Processing
 
-Question: How does the core server handle incoming requests and route them to appropriate processing modules?
-
-Files: src/local_deepwiki/web/app.py
+Question: How does the core server process incoming requests and route them to the appropriate handlers for documentation retrieval?
 
 ```mermaid
 flowchart TD
@@ -170009,18 +169804,15 @@ flowchart TD
     click N1 "files/src/local_deepwiki/web/app.py" _blank
 ```
 
-This code flow demonstrates the initialization and setup of a wiki web server by creating a Flask application instance that is configured with a specific wiki path. The execution begins with the [`run_server`](files/src/local_deepwiki/web/app.md) function which serves as the entry point for starting the web server, and it delegates the actual Flask application creation to the [`create_app`](files/src/local_deepwiki/web/app.md) function.
+This code flow demonstrates the initialization and setup of a wiki web server that processes incoming requests for documentation retrieval. The server begins with a [`run_server`](files/src/local_deepwiki/web/app.md) function that creates a Flask application instance through [`create_app`](files/src/local_deepwiki/web/app.md), which configures the wiki path and sets up the routing infrastructure for handling documentation requests.
 
-1. **[run_server](files/src/local_deepwiki/web/app.md)** (`src/local_deepwiki/web/app.py:558-575`): This function serves as the main entry point for starting the wiki web server, accepting parameters for the wiki path and host configuration, and is responsible for initializing the server with the specified settings.
-2. **[create_app](files/src/local_deepwiki/web/app.md)** (`src/local_deepwiki/web/app.py:543-555`): This function creates and returns a configured Flask application instance, setting up the global WIKI_PATH variable with the provided wiki path parameter to ensure the Flask app has access to the correct wiki data directory for processing requests.
+The execution trace starts with the [`run_server`](files/src/local_deepwiki/web/app.md) function at [`src/local_deepwiki/web/app.py:558-575`](files/src/local_deepwiki/web/app.py), which serves as the entry point for starting the wiki web server, accepting parameters like wiki path and host configuration, and acts as the main execution driver for the server startup process. This function then calls [`create_app`](files/src/local_deepwiki/web/app.md) at [`src/local_deepwiki/web/app.py:543-555`](files/src/local_deepwiki/web/app.py), which creates and configures a Flask application instance with the specified wiki path, setting up the global `WIKI_PATH` variable and establishing the foundation for request routing and documentation handling.
 
-The code follows a clear separation of concerns where [`run_server`](files/src/local_deepwiki/web/app.md) handles server initialization and configuration while [`create_app`](files/src/local_deepwiki/web/app.md) focuses specifically on Flask application creation and setup. The use of a global variable `WIKI_PATH` suggests a singleton pattern for wiki configuration, which may create challenges for testing or multiple server instances. The function signatures use type hints (`str | Path`) and proper documentation strings, indicating good code quality and maintainability practices.
+Key observations include the clear separation of concerns pattern where [`run_server`](files/src/local_deepwiki/web/app.md) handles server initialization and [`create_app`](files/src/local_deepwiki/web/app.md) manages Flask application configuration, making the code modular and testable. The global variable `WIKI_PATH` is used to maintain state across the Flask application, which is a common pattern for sharing configuration data throughout the application's request lifecycle. The execution flow shows a simple but effective bootstrapping approach where the server setup is minimal and focused, relying on Flask's built-in routing mechanisms for handling incoming requests.
 
 ### Flow: Documentation Retrieval
 
-Question: How does the graph-based retrieval system search and return relevant documentation from the local repository?
-
-Files: src/local_deepwiki/config/models.py, src/local_deepwiki/core/path_utils.py, src/local_deepwiki/error_factories.py, src/local_deepwiki/errors.py, src/local_deepwiki/generators/analysis/callgraph.py, src/local_deepwiki/handlers/_index_helpers.py, src/local_deepwiki/handlers/_response.py, src/local_deepwiki/handlers/analysis_entity.py, src/local_deepwiki/handlers/generators.py, src/local_deepwiki/plugins/registry.py
+Question: How does the graph-based RAG system retrieve and rank relevant documentation chunks from the local repository?
 
 ```mermaid
 flowchart TD
@@ -170120,53 +169912,83 @@ flowchart TD
     click N19 "files/src/local_deepwiki/services/generator_service.py" _blank
 ```
 
-This code flow implements a graph-based retrieval system that searches and returns relevant documentation from a local repository by processing call graphs. It begins with a handler function that orchestrates access control, validates file paths, and extracts call graphs from source files. The system uses a generator service with vector storage to analyze code relationships and generate documentation diagrams, while maintaining security through role-based access control and proper error handling.
+This code flow implements a graph-based Retrieval-Augmented Generation (RAG) system that retrieves and ranks relevant documentation chunks from a local repository when handling a call graph generation request. The system first validates the requested file path within the repository, then uses a generator service with a vector store to extract and process call graphs, ultimately returning structured documentation content to the user.
 
-1. [`handle_get_call_graph`](files/src/local_deepwiki/handlers/generators.md) (`src/local_deepwiki/handlers/generators.py:152-189`) - Main handler function that processes the get_call_graph tool request and initializes the call graph extraction process
-2. [`get_access_controller`](files/src/local_deepwiki/security/access_control.md) (`src/local_deepwiki/security/access_control.py:347-361`) - Retrieves the global access controller instance for authentication and authorization checks
-3. [`validate_file_in_repo`](files/src/local_deepwiki/core/path_utils.md) (`src/local_deepwiki/core/path_utils.py:17-40`) - Validates that the requested file path is within the repository boundaries and exists
-4. [`CallGraphExtractor`](files/src/local_deepwiki/generators/analysis/callgraph.md) (`src/local_deepwiki/generators/analysis/callgraph.py:314-382`) - Initializes the call graph extractor class to analyze source code relationships
-5. `_build_generator_service` (`src/local_deepwiki/handlers/generators.py:44-47`) - Creates a [GeneratorService](files/src/local_deepwiki/services/generator_service.md) instance with vector store for the repository to enable semantic search capabilities
-6. `_create_vector_store` (`src/local_deepwiki/handlers/_index_helpers.py:52-68`) - Initializes the vector store with configured embedding provider for storing and retrieving document embeddings
-7. [`GeneratorService`](files/src/local_deepwiki/services/generator_service.md) (`src/local_deepwiki/services/generator_service.py:23-602`) - Encapsulates the business logic for generating various documentation artifacts including call graphs and diagrams
-8. [`generate_call_graph_diagram`](files/src/local_deepwiki/generators/analysis/callgraph.md) (`src/local_deepwiki/generators/analysis/callgraph.py:443-470`) - Generates Mermaid flowchart representations of the call graph for visualization purposes
-9. [`build_reverse_call_graph`](files/src/local_deepwiki/generators/analysis/callgraph.md) (`src/local_deepwiki/generators/analysis/callgraph.py:488-504`) - Creates a reverse mapping of callees to callers for bidirectional graph traversal
-10. [`make_tool_text_content`](files/src/local_deepwiki/handlers/_response.md) (`src/local_deepwiki/handlers/_response.py:40-61`) - Wraps the generated call graph data in a standardized JSON response format for client consumption
+The execution trace begins with [`handle_get_call_graph`](files/src/local_deepwiki/handlers/generators.md) at [`src/local_deepwiki/handlers/generators.py:152-189`](files/src/local_deepwiki/handlers/generators.py), which handles the get_call_graph tool call request and initializes the process. It calls `get_access_controller()` at [`src/local_deepwiki/security/access_control.py:347-361`](files/src/local_deepwiki/security/access_control.py) to verify access permissions before proceeding. Next, [`validate_file_in_repo`](files/src/local_deepwiki/core/path_utils.md) at [`src/local_deepwiki/core/path_utils.py:17-40`](files/src/local_deepwiki/core/path_utils.py) validates that the requested file path is within the repository boundaries and exists, raising a [ValidationError](files/src/local_deepwiki/errors.md) if path validation fails.
 
-The system employs a layered architecture where access control is enforced at the handler level before any processing occurs, ensuring security through RBAC mode configuration. Error handling is comprehensive with dedicated error factories that sanitize sensitive information from error messages and provide clear validation feedback. The retrieval system combines static code analysis (call graph extraction) with semantic search capabilities through vector stores, enabling both precise code relationship mapping and broader documentation relevance matching.
+The process continues with `_build_generator_service` at [`src/local_deepwiki/handlers/generators.py:44-47`](files/src/local_deepwiki/handlers/generators.py), which creates a [GeneratorService](files/src/local_deepwiki/services/generator_service.md) with a vector store for the specified repository by calling `_create_vector_store()` at [`src/local_deepwiki/handlers/_index_helpers.py:52-68`](files/src/local_deepwiki/handlers/_index_helpers.py). This initializes a [VectorStore](files/src/local_deepwiki/core/vectorstore/store.md) with the configured embedding provider, using `get_vector_db_path` at [`src/local_deepwiki/config/models.py:255-257`](files/src/local_deepwiki/config/models.py) to determine the vector database path for the repository.
+
+The `GeneratorService.generate_call_graph` at [`src/local_deepwiki/services/generator_service.py:23-602`](files/src/local_deepwiki/services/generator_service.py) then generates call graph information for the specified repository, processing the call graph data through various analysis steps. The [`CallGraphExtractor`](files/src/local_deepwiki/generators/analysis/callgraph.md) at [`src/local_deepwiki/generators/analysis/callgraph.py:314-382`](files/src/local_deepwiki/generators/analysis/callgraph.py) extracts call graphs from source files using the repository's code analysis capabilities, building forward and reverse call graphs for comprehensive analysis.
+
+Finally, [`generate_call_graph_diagram`](files/src/local_deepwiki/generators/analysis/callgraph.md) at [`src/local_deepwiki/generators/analysis/callgraph.py:443-470`](files/src/local_deepwiki/generators/analysis/callgraph.py) creates a Mermaid flowchart representation of the call graph, returning a formatted diagram string for visualization. The [`make_tool_text_content`](files/src/local_deepwiki/handlers/_response.md) at [`src/local_deepwiki/handlers/_response.py:40-61`](files/src/local_deepwiki/handlers/_response.py) wraps the generated call graph data in a standardized JSON envelope, preparing the response content for delivery to the requesting agent.
+
+Key observations include the layered architecture pattern where access control is enforced early in the process, followed by validation, then generation, and finally response formatting. Error handling is comprehensive with specific [ValidationError](files/src/local_deepwiki/errors.md) types and sanitization of error messages to prevent information leakage. The RAG system leverages vector stores for semantic similarity search, enabling intelligent retrieval of relevant documentation chunks from the local repository based on query context.
 
 ## Getting Started
 
-To get started with local-deepwiki, you'll need Python 3.11 or higher installed on your system. The project uses a standard Python package setup with dependencies managed via `pyproject.toml`. Here's how to install and run the project:
+To get started with Local DeepWiki, you'll need Python 3.11 or higher and the following dependencies:
 
-1. Clone the repository
-2. Install dependencies with `pip install -e .`
-3. Initialize the documentation server with `local-deepwiki init`
-4. Run the server with `local-deepwiki run`
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-repo/local-deepwiki.git
+   cd local-deepwiki
+   ```
 
-Configuration files are located in the `examples/` directory and can be customized for your specific needs. The CLI provides several tools for managing the server, including status checks, updates, and configuration validation.
+2. Install the project in development mode:
+   ```bash
+   pip install -e .
+   ```
+
+3. Initialize the configuration:
+   ```bash
+   local-deepwiki init
+   ```
+
+4. Run the server:
+   ```bash
+   local-deepwiki serve --wiki-path /path/to/your/repo
+   ```
+
+The server will start on `http://localhost:5173` by default. You can also run the CLI commands to check configuration, update models, or perform cache operations.
 
 ## Key Concepts
 
 | Concept | What It Means |
-|---------|---------------|
-| **Vector Store** | A database that stores embeddings of documentation and code snippets for semantic search |
-| **Call Graph** | A representation of how functions and methods in code call each other, used for code analysis |
-| **Embedding Provider** | An AI service that converts text into numerical vectors for semantic similarity |
-| **Access Control** | A system that restricts access to documentation based on user roles and permissions |
-| **Generator Service** | A service that orchestrates the creation of documentation artifacts like call graphs and diagrams |
-| **CLI Layer** | The command-line interface that provides tools for managing the documentation server |
-| **Web Server** | The Flask-based web server that exposes API endpoints for querying documentation |
-| **DeepWiki-style** | A documentation approach that allows for semantic search and exploration of code relationships |
+|--------|---------------|
+| **Retrieval-Augmented Generation (RAG)** | A technique that combines information retrieval with language generation to produce more accurate and contextual responses by retrieving relevant documents from a knowledge base |
+| **Vector Store** | A database that stores vector embeddings of text chunks for semantic similarity search, enabling intelligent document retrieval based on meaning rather than keywords |
+| **Call Graph** | A representation of the relationships between functions or methods in a codebase, showing which functions call which others |
+| **Embedding Provider** | An AI service that converts text into numerical vectors (embeddings) that capture semantic meaning for use in similarity searches |
+| **CLI Interface** | Command-line tools for managing and configuring the Local DeepWiki system, including initialization, configuration, and maintenance commands |
+| **Flask Web Server** | The web framework used to serve HTTP endpoints for documentation retrieval and interaction with the AI system |
+| **Access Control** | A system that enforces permissions and restrictions on who can access specific repository files or functionality |
+| **Graph RAG** | A variant of RAG that uses graph-based representations of code relationships to enhance documentation retrieval and understanding |
 
 ## Development Workflow
 
-The development workflow for local-deepwiki is based on standard Python practices with pre-commit hooks for code quality checks. To run tests, use `pytest` from the root directory. Linting and formatting are handled by pre-commit hooks defined in `.pre-commit-config.yaml`. Common development tasks include:
+To run tests, lint, and perform common development tasks:
 
-- Running tests: `pytest tests/`
-- Formatting code: `pre-commit run --all-files`
-- Updating dependencies: `pip install -e . --upgrade`
-- Checking configuration: `local-deepwiki config validate`
+1. Install development dependencies:
+   ```bash
+   pip install -e ".[dev]"
+   ```
+
+2. Run tests:
+   ```bash
+   pytest tests/
+   ```
+
+3. Run linting:
+   ```bash
+   pre-commit run --all-files
+   ```
+
+4. Format code:
+   ```bash
+   black src/
+   ```
+
+The project uses pre-commit hooks for automatic formatting and linting. Make sure to run `pre-commit install` after cloning the repository to set up the hooks.
 
 ## Further Reading
 
@@ -170179,16 +170001,16 @@ The development workflow for local-deepwiki is based on standard Python practice
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*
@@ -170268,16 +170090,16 @@ The following source files were used to generate this documentation:
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*

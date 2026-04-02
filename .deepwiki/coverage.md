@@ -4,16 +4,16 @@ This report shows the documentation coverage for the codebase.
 
 ## Summary
 
-🟢 **Overall Coverage: 95.3%**
+🟢 **Overall Coverage: 95.4%**
 
-- **2411** / **2529** entities documented
+- **2411** / **2528** entities documented
 
 ### By Type
 
 | Type | Documented | Total | Coverage |
 |------|------------|-------|----------|
 | Classes | 409 | 409 | 100.0% |
-| Functions | 1227 | 1296 | 94.7% |
+| Functions | 1227 | 1295 | 94.7% |
 | Methods | 775 | 824 | 94.1% |
 
 ## Coverage by File
@@ -35,7 +35,6 @@ This report shows the documentation coverage for the codebase.
 | 🟡 [stats.py](files/src/local_deepwiki/core/vectorstore/mixins/stats.md) | 13 | 17 | 76.5% |
 | 🟡 [routes_chat.py](files/src/local_deepwiki/web/routes_chat.md) | 10 | 13 | 76.9% |
 | 🟡 [dependency_graph_data.py](files/src/local_deepwiki/generators/analysis/dependency_graph_data.md) | 10 | 13 | 76.9% |
-| 🟡 [coupling.py](files/src/local_deepwiki/generators/analysis/coupling.md) | 7 | 9 | 77.8% |
 | 🟡 [update_cli.py](files/src/local_deepwiki/cli/update_cli.md) | 7 | 9 | 77.8% |
 | 🟡 [design_smells.py](files/src/local_deepwiki/generators/analysis/design_smells.md) | 18 | 23 | 78.3% |
 | 🟡 [routes_codemap.py](files/src/local_deepwiki/web/routes_codemap.md) | 12 | 15 | 80.0% |
@@ -49,6 +48,7 @@ This report shows the documentation coverage for the codebase.
 | 🟡 [hotspots.py](files/src/local_deepwiki/generators/analysis/hotspots.md) | 6 | 7 | 85.7% |
 | 🟡 [wiki_service.py](files/src/local_deepwiki/services/wiki_service.md) | 6 | 7 | 85.7% |
 | 🟡 [crosslinks.py](files/src/local_deepwiki/generators/crosslinks.md) | 25 | 29 | 86.2% |
+| 🟡 [coupling.py](files/src/local_deepwiki/generators/analysis/coupling.md) | 7 | 8 | 87.5% |
 | 🟡 [indexer_graph.py](files/src/local_deepwiki/core/indexer_graph.md) | 7 | 8 | 87.5% |
 | 🟡 [complexity.py](files/src/local_deepwiki/generators/analysis/complexity.md) | 7 | 8 | 87.5% |
 | 🟡 [status.py](files/src/local_deepwiki/generators/wiki/status.md) | 21 | 24 | 87.5% |
@@ -74,8 +74,8 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [generator.py](files/src/local_deepwiki/generators/wiki/generator.md) | 18 | 19 | 94.7% |
 | 🟢 [cache.py](files/src/local_deepwiki/providers/embeddings/cache.md) | 38 | 40 | 95.0% |
 | 🟢 [indexer.py](files/src/local_deepwiki/core/indexer.md) | 20 | 21 | 95.2% |
-| 🟢 [analysis_architecture.py](files/src/local_deepwiki/handlers/analysis_architecture.md) | 18 | 18 | 100.0% |
-| 🟢 [tool_args.py](files/src/local_deepwiki/models/tool_args.md) | 52 | 52 | 100.0% |
+| 🟢 [module_dependencies.py](files/src/local_deepwiki/generators/analysis/module_dependencies.md) | 10 | 10 | 100.0% |
+| 🟢 [health_scoring.py](files/src/local_deepwiki/generators/analysis/health_scoring.md) | 6 | 6 | 100.0% |
 | 🟢 [logging.py](files/src/local_deepwiki/logging.md) | 2 | 2 | 100.0% |
 | 🟢 [cli_progress.py](files/src/local_deepwiki/cli_progress.md) | 13 | 13 | 100.0% |
 | 🟢 [prompts.py](files/src/local_deepwiki/prompts.md) | 14 | 14 | 100.0% |
@@ -153,6 +153,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [research.py](files/src/local_deepwiki/models/research.md) | 14 | 14 | 100.0% |
 | 🟢 [provider_types.py](files/src/local_deepwiki/models/provider_types.md) | 4 | 4 | 100.0% |
 | 🟢 [foundation.py](files/src/local_deepwiki/models/foundation.md) | 8 | 8 | 100.0% |
+| 🟢 [tool_args.py](files/src/local_deepwiki/models/tool_args.md) | 52 | 52 | 100.0% |
 | 🟢 [wiki.py](files/src/local_deepwiki/models/wiki.md) | 5 | 5 | 100.0% |
 | 🟢 [chunks.py](files/src/local_deepwiki/models/chunks.md) | 3 | 3 | 100.0% |
 | 🟢 [status_cli.py](files/src/local_deepwiki/cli/status_cli.md) | 17 | 17 | 100.0% |
@@ -179,7 +180,6 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [see_also.py](files/src/local_deepwiki/generators/see_also.md) | 14 | 14 | 100.0% |
 | 🟢 [architecture_composite.py](files/src/local_deepwiki/generators/analysis/architecture_composite.md) | 2 | 2 | 100.0% |
 | 🟢 [architecture_health.py](files/src/local_deepwiki/generators/analysis/architecture_health.md) | 4 | 4 | 100.0% |
-| 🟢 [health_scoring.py](files/src/local_deepwiki/generators/analysis/health_scoring.md) | 6 | 6 | 100.0% |
 | 🟢 [stale_detection.py](files/src/local_deepwiki/generators/analysis/stale_detection.md) | 7 | 7 | 100.0% |
 | 🟢 [module_health.py](files/src/local_deepwiki/generators/analysis/module_health.md) | 4 | 4 | 100.0% |
 | 🟢 [source_filter.py](files/src/local_deepwiki/generators/analysis/source_filter.md) | 4 | 4 | 100.0% |
@@ -192,7 +192,6 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [tours.py](files/src/local_deepwiki/generators/analysis/tours.md) | 5 | 5 | 100.0% |
 | 🟢 [layer_analysis.py](files/src/local_deepwiki/generators/analysis/layer_analysis.md) | 4 | 4 | 100.0% |
 | 🟢 [api_docs.py](files/src/local_deepwiki/generators/analysis/api_docs.md) | 31 | 31 | 100.0% |
-| 🟢 [module_dependencies.py](files/src/local_deepwiki/generators/analysis/module_dependencies.md) | 10 | 10 | 100.0% |
 | 🟢 [health_page.py](files/src/local_deepwiki/generators/analysis/health_page.md) | 7 | 7 | 100.0% |
 | 🟢 [coupling_page.py](files/src/local_deepwiki/generators/analysis/coupling_page.md) | 6 | 6 | 100.0% |
 | 🟢 [smells_page.py](files/src/local_deepwiki/generators/analysis/smells_page.md) | 6 | 6 | 100.0% |
@@ -241,6 +240,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [codemap.py](files/src/local_deepwiki/handlers/codemap.md) | 2 | 2 | 100.0% |
 | 🟢 [types.py](files/src/local_deepwiki/handlers/types.md) | 9 | 9 | 100.0% |
 | 🟢 [web_server.py](files/src/local_deepwiki/handlers/web_server.md) | 15 | 15 | 100.0% |
+| 🟢 [analysis_architecture.py](files/src/local_deepwiki/handlers/analysis_architecture.md) | 18 | 18 | 100.0% |
 | 🟢 [generators.py](files/src/local_deepwiki/handlers/generators.md) | 13 | 13 | 100.0% |
 | 🟢 [analysis_diff.py](files/src/local_deepwiki/handlers/analysis_diff.md) | 12 | 12 | 100.0% |
 | 🟢 [_export_validation.py](files/src/local_deepwiki/handlers/_export_validation.md) | 2 | 2 | 100.0% |
@@ -298,16 +298,16 @@ Undocumented:
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*

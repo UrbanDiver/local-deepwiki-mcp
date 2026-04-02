@@ -6,6 +6,12 @@ Recent changes to this repository.
 
 ### April 01, 2026
 
+- [`d437e06`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d437e06) chore: update pre-built wiki with latest analysis fixes
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coupling.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md` (+68 more)
+
+- [`c0fe1bd`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c0fe1bd) fix: unify module labels in coupling analysis
+  - Files: `src/local_deepwiki/generators/analysis/coupling.py`, `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/generators/analysis/module_dependencies.py`, `tests/test_coupling_metrics.py`, `tests/test_health_scoring.py` (+1 more)
+
 - [`56000bf`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/56000bf) fix: improve analysis accuracy for coupling, feature envy, and long_method
   - Files: `src/local_deepwiki/generators/analysis/coupling.py`, `src/local_deepwiki/generators/analysis/design_smells.py`, `src/local_deepwiki/handlers/analysis_architecture.py`, `src/local_deepwiki/models/tool_args.py`, `src/local_deepwiki/tool_defs/analysis.py` (+1 more)
 
@@ -94,11 +100,6 @@ Recent changes to this repository.
 - [`a6e9042`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/a6e9042) refactor: remove legacy kwargs from [SearchEngine](files/src/local_deepwiki/core/vectorstore/search_engine.md).__init__
   - Files: `src/local_deepwiki/core/vectorstore/search_engine.py`, `tests/test_search_params.py`
 
-- [`063dccf`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/063dccf) refactor: architecture Grade A improvements (B 80.6 → A 91.2)
-
-- [`1eef062`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1eef062) refactor: complete Grade A architecture improvements (B 80.6 → A 91.2)
-  - Files: `src/local_deepwiki/cli/init_cli.py`, `src/local_deepwiki/cli/update_cli.py`, `src/local_deepwiki/core/__init__.py`, `src/local_deepwiki/core/audit.py`, `src/local_deepwiki/core/chunk_builders.py` (+57 more)
-
 ## Statistics
 
 - **Commits shown**: 30
@@ -109,16 +110,16 @@ Recent changes to this repository.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*

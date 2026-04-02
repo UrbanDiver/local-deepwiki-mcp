@@ -4,14 +4,14 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 **Quick Navigation:** [#](##) | [A](#a) | [B](#b) | [C](#c) | [D](#d) | [E](#e) | [F](#f) | [G](#g) | [H](#h) | [I](#i) | [K](#k) | [L](#l) | [M](#m) | [N](#n) | [O](#o) | [P](#p) | [Q](#q) | [R](#r) | [S](#s) | [T](#t) | [U](#u) | [V](#v) | [W](#w)
 
-**Total:** 2529 entities (409 classes, 1296 functions, 824 methods)
+**Total:** 2528 entities (409 classes, 1295 functions, 824 methods)
 
 ---
 
 <p><a href="#" onclick="document.querySelectorAll('details').forEach(d=>d.open=true);return false">Expand All</a> | <a href="#" onclick="document.querySelectorAll('details').forEach(d=>d.open=false);return false">Collapse All</a></p>
 
 <details id="#" markdown="1">
-<summary><strong>#</strong> — 1115 entities</summary>
+<summary><strong>#</strong> — 1114 entities</summary>
 
 - ▪️ **[`PluginRegistry._`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: LanguageParserPlugin) → None` (`registry.py`)
 - ▪️ **[`PluginRegistry._`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: WikiGeneratorPlugin) → None` (`registry.py`)
@@ -260,7 +260,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`GenerationProgress._calculate_eta_minutes`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → float | None` (`progress_tracker.py`) - Calculate estimated time remaining in minutes.
 - ▪️ **[`AdaptiveSearcher._calculate_query_complexity`](files/src/local_deepwiki/core/vectorstore/cache.md)** `(query: str) → float` (`cache.py`) - Calculate a complexity score for a query.
 - ▪️ **[`GenerationProgress._calculate_rate`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → float` (`progress_tracker.py`) - Calculate files per minute based on recent completions.
-- 🔹 **[`_candidate_labels`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(rel_path: Path, project_tops: set[str]) → list[str]` (`coupling.py`) - Return candidate module labels for *rel_path* in order of...
+- 🔹 **[`_candidate_labels`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(rel_path: Path, project_tops: set[str]) → list[str]` (`coupling.py`) - Return candidate module labels for *rel_path*.
 - ▪️ **[`ProjectManifest._categorize_dependencies`](files/src/local_deepwiki/generators/manifest.md)** `(...) → dict[str, list[str]]` (`manifest.py`) - Categorize dependencies by their purpose.
 - 🔹 **[`_categorize_file_change`](files/src/local_deepwiki/cli/status_cli.md)** `(file_path: Path, rel_path: str, compiled_patterns: list, ...+3) → str | None` (`status_cli.py`) - Return the hash for *file_path* if it should be included,...
 - 🔹 **[`_categorize_import_files`](files/src/local_deepwiki/generators/wiki/pages.md)** `(import_chunks: list) → tuple[list[str], list[str]]` (`pages.py`) - Split import chunks into source and test file paths (dedu...
@@ -811,7 +811,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_merge_graded_results`](files/src/local_deepwiki/core/agentic_rag.md)** `(first_graded: list[[GradedChunk](files/src/local_deepwiki/core/agentic_rag.md)], new_graded: list[[GradedChunk](files/src/local_deepwiki/core/agentic_rag.md)], max_context: int) → list[[GradedChunk](files/src/local_deepwiki/core/agentic_rag.md)]` (`agentic_rag.py`) - Merge two rounds of graded results, deduplicating by file...
 - ▪️ **[`StreamingPdfExporter._merge_pdfs`](files/src/local_deepwiki/export/pdf.md)** `(pdf_files: list[Path], output_path: Path) → None` (`pdf.py`) - Merge multiple PDF files into one.
 - 🔹 **[`_migrate_status`](files/src/local_deepwiki/core/index_manager.md)** `(status: [IndexStatus](files/src/local_deepwiki/models/wiki.md)) → tuple[[IndexStatus](files/src/local_deepwiki/models/wiki.md), bool]` (`index_manager.py`) - Migrate an index status to the current schema version.
-- 🔹 **[`_module_label`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)** `(rel_path: Path) → str` (`module_dependencies.py`) - Convert a relative file path to a dotted module label.
+- 🔹 **[`_module_label`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)** `(rel_path: Path, project_tops: set[str] | None) → str` (`module_dependencies.py`) - Convert a relative file path to a dotted module label.
 - ▪️ **[`RelationshipAnalyzer._module_matches_file`](files/src/local_deepwiki/generators/see_also.md)** `(module: str, file_path: str) → bool` (`see_also.py`) - Check if a module name refers to a file path.
 - ▪️ **[`RelationshipAnalyzer._module_to_file_path`](files/src/local_deepwiki/generators/see_also.md)** `(module: str) → str | None` (`see_also.py`) - Try to find a file path that matches a module name.
 - 🔹 **[`_module_to_wiki_path`](files/src/local_deepwiki/generators/diagrams/dependency_diagram.md)** `(module: str, project_name: str) → str` (`dependency_diagram.py`) - Convert module name to wiki file path.
@@ -1083,7 +1083,6 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`ReasoningMixin._synthesize`](files/src/local_deepwiki/core/deep_research/reasoning.md)** `(question: str, sub_questions: list[[SubQuestion](files/src/local_deepwiki/models/research.md)], results: list[[SearchResult](files/src/local_deepwiki/handlers/types.md)]) → str` (`reasoning.py`) - Synthesize a comprehensive answer from all context.
 - 🔹⚡ **[`_synthesize_diff_answer`](files/src/local_deepwiki/handlers/analysis_diff.md)** `(diff_ctx: [DiffSynthesisContext](files/src/local_deepwiki/handlers/analysis_diff.md), wiki_path: Any, config: Any, ...+1) → str` (`analysis_diff.py`) - Call the LLM to synthesize an answer about the diff.
 - 🔹⚡ **[`_synthesize_onboarding_guide`](files/src/local_deepwiki/generators/analysis/onboarding.md)** `(llm: Any, ctx: [OnboardingContext](files/src/local_deepwiki/generators/analysis/onboarding.md)) → str` (`onboarding.py`) - Ask the LLM to synthesize the full onboarding guide.
-- 🔹 **[`_take2`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(ps: list[str]) → str` (`coupling.py`)
 - ▪️⚡ **[`ReasoningMixin._targeted_retrieve`](files/src/local_deepwiki/core/deep_research/reasoning.md)** `(queries: list[str]) → list[[SearchResult](files/src/local_deepwiki/handlers/types.md)]` ⚠️`result_or_exc` (`reasoning.py`) - Perform targeted retrieval for follow-up queries.
 - 🔹 **[`_threshold_str`](files/src/local_deepwiki/cli/check_cli.md)** `(value: Any) → str` (`check_cli.py`) - Return the threshold value as a string, or '-' when unset.
 - 🔹 **[`_top_level`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)** `(dotted: str) → str` (`module_dependencies.py`) - Return the first component of a dotted module name.
@@ -1125,8 +1124,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`RateLimiter._wait_for_minute_limit`](files/src/local_deepwiki/core/rate_limiter.md)** `(now: float) → None` ⚠️[`RateLimitExceeded`](files/src/local_deepwiki/core/rate_limiter.md) (`rate_limiter.py`) - Wait for minute limit to reset if exceeded.
 - 🔹⚡ **[`_wait_for_server_ready`](files/src/local_deepwiki/handlers/web_server.md)** `(host: str, port: int, timeout: float) → bool` (`web_server.py`) - Poll until the server is accepting connections or timeout.
 - 🔹 **[`_walk`](files/src/local_deepwiki/generators/analysis/complexity.md)** `(n: Node) → None` (`complexity.py`)
-- 🔹 **[`_walk`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(n: Node) → None` (`coupling.py`)
 - 🔹 **[`_walk`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(n: Node) → None` (`design_smells.py`)
+- 🔹 **[`_walk`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(n: Node) → None` (`coupling.py`)
 - 🔹 **[`_walk_ast`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(node: Any, rel_path: Path, threshold_level: int, ...+2) → None` (`design_smells.py`) - Recursively walk the AST, dispatching to class/function h...
 - 🔹 **[`_walk_class_node`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(node: Any, rel_path: Path, threshold_level: int, ...+1) → None` (`design_smells.py`) - Detect god-class smells for a class AST node.
 - 🔹 **[`_walk_function_node`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(node: Any, rel_path: Path, threshold_level: int, ...+2) → None` (`design_smells.py`) - Detect all function-level smells for a function AST node.
@@ -2694,16 +2693,16 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*

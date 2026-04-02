@@ -2,44 +2,45 @@
 
 ## 1. System Overview
 
-This system solves the problem of generating intelligent, context-aware documentation for software repositories by combining code analysis, semantic chunking, and LLM-powered summarization. The architecture is designed around a core indexing pipeline that parses source code, chunks it using AST-aware techniques, embeds the chunks, stores them in a vector database, and generates wiki pages using LLMs. The system supports multiple LLM and embedding providers through a provider abstraction layer, and offers flexible configuration via CLI args, environment variables, config files, and defaults.
+This system provides an intelligent, code-aware wiki generation and indexing solution for software repositories. It addresses the challenge of maintaining up-to-date documentation for large codebases by automatically parsing source files, extracting meaningful code chunks, and generating contextual documentation. The approach combines AST-aware parsing with vector embeddings to create a searchable knowledge base that supports both automated and human-readable documentation generation.
 
-The system is built for asynchronous operation throughout, enabling efficient handling of I/O-bound operations like LLM calls and file processing. It supports both local and cloud-based providers, with a focus on modularity and extensibility. The architecture is designed to be incremental, allowing users to rebuild only changed files, and supports hybrid generation modes that balance performance with quality.
+The system operates through a multi-stage pipeline that processes repository files in parallel, chunks code at semantic boundaries, embeds content for similarity search, and generates wiki pages using LLMs. It supports multiple generation modes (eager, hybrid, etc.) and integrates with various LLM and embedding providers through a provider abstraction layer.
 
 ## 2. Key Components
 
 ### RepositoryIndexer
-The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) orchestrates the full indexing pipeline for a repository, managing the parsing, chunking, embedding, and storage of code. It exists to coordinate the complex multi-step process of turning source code into a searchable knowledge base. It depends on the [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md), Parser, Chunker, and [VectorStore](files/src/local_deepwiki/core/vectorstore/store.md), and is depended on by the [IndexingService](files/src/local_deepwiki/services/indexing_service.md). The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) is responsible for coordinating the parallel processing of files and managing the overall indexing state.
+The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) orchestrates the full indexing process for a repository, managing file parsing, chunking, embedding, and storage operations. It exists as a separate component to encapsulate the complex orchestration logic and maintain separation of concerns between parsing and storage operations. The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) depends on the [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) and vector store, while the indexing service depends on it to execute the pipeline.
 
 ### FileParsingPipeline
-The [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) handles the actual parsing and chunking of individual files in parallel, managing the sliding window of processing and batched operations. It exists to abstract the complexity of parallel file processing and batched chunk handling from the [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md). It depends on the Parser and Chunker, and is depended on by the [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) and [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md)'s _parse_files_parallel method. The pipeline uses async operations and manages futures for parallel execution.
+The [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) handles the parallel parsing and chunking of source files, delegating to specific parser and chunker implementations. It exists to abstract the complexity of parallel file processing and batched chunking operations. The [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) depends on a [PipelineContext](files/src/local_deepwiki/core/parsing_pipeline.md) containing parser, chunker, and configuration, and is used by the [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md).
+
+### PipelineContext
+The [PipelineContext](files/src/local_deepwiki/core/parsing_pipeline.md) holds immutable configuration and shared resources for the parsing pipeline. It exists to centralize configuration and avoid passing large parameter sets to every parsing operation. It is consumed by [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) and contains parser, chunker, and other pipeline-related dependencies.
 
 ### ProviderFactory
-The [ProviderFactory](files/src/local_deepwiki/services/provider_factory.md) creates instances of LLM and embedding providers based on configuration, supporting caching and repository-specific provider selection. It exists to centralize provider instantiation logic and support flexible provider selection and caching. It depends on configuration objects and provider implementations, and is depended on by the [IndexingService](files/src/local_deepwiki/services/indexing_service.md) and [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md). The factory abstracts provider creation to support different backends (local, cloud) without coupling consumers to specific implementations.
+The [ProviderFactory](files/src/local_deepwiki/services/provider_factory.md) manages the creation and configuration of LLM and embedding providers. It exists to provide a centralized, consistent way to instantiate different provider implementations based on configuration. It depends on configuration objects and provider base classes, and is used by the indexing service and [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md).
 
 ### IndexingService
-The [IndexingService](files/src/local_deepwiki/services/indexing_service.md) provides the main entry point for executing the indexing pipeline, handling the orchestration of parsing, chunking, embedding, storage, and wiki generation. It exists to provide a clean API for triggering indexing operations with proper request handling and result formatting. It depends on the [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) and [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md), and is depended on by CLI handlers and MCP server endpoints. The service manages the full lifecycle of an indexing operation, including progress reporting and result aggregation.
+The [IndexingService](files/src/local_deepwiki/services/indexing_service.md) provides the main entry point for executing the indexing pipeline with proper request handling and result formatting. It exists to encapsulate the business logic for running the indexing process and coordinating between different subsystems. It depends on [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) and the [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md), and is used by the CLI and MCP handlers.
 
 ### WikiGenerator
-The [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md) creates structured wiki documentation from indexed code, supporting multiple generation modes and LLM-based summarization. It exists to abstract the complexity of wiki page creation and LLM interaction from the core indexing pipeline. It depends on LLM providers and the vector store, and is depended on by the [IndexingService](files/src/local_deepwiki/services/indexing_service.md). The generator handles both eager and hybrid wiki generation modes, creating structured documentation from code chunks.
+The [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md) creates documentation pages from parsed code and LLM responses. It exists to abstract the wiki generation logic from the indexing pipeline and support different generation modes. It depends on LLM providers and the indexing results, and is used by the [IndexingService](files/src/local_deepwiki/services/indexing_service.md).
 
-### Provider Abstraction Layer
-The provider abstraction layer defines base classes for LLM and embedding providers, enabling support for multiple backends. It exists to allow switching between different LLM and embedding providers without changing core logic. It is depended on by the [ProviderFactory](files/src/local_deepwiki/services/provider_factory.md), [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md), and [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md), and depends on specific provider implementations. This layer enables the system to work with local models like Ollama or cloud providers like Anthropic.
+### PluginRegistry
+The [PluginRegistry](files/src/local_deepwiki/plugins/registry.md) manages the registration and retrieval of plugins that extend system functionality. It exists to support a plugin architecture for extending the system's capabilities without modifying core code. It depends on the [Plugin](files/src/local_deepwiki/plugins/base.md) class and is used by the main application components.
 
 ## 3. Data Flow
 
 When a user indexes a repository, the data flows through the following sequence:
 
-1. The CLI dispatcher receives the command and creates an [IndexPipelineRequest](files/src/local_deepwiki/services/indexing_service.md) with repository path, rebuild flag, and progress callback
+1. The CLI dispatcher receives the indexing command and creates an [IndexPipelineRequest](files/src/local_deepwiki/services/indexing_service.md) with repository path and configuration
 2. The [IndexingService](files/src/local_deepwiki/services/indexing_service.md) receives the request and creates a [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) with the specified configuration
-3. The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) calls its index method, which in turn calls _parse_files_parallel
-4. _parse_files_parallel creates a [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) and calls parse_files_parallel with the files to process
-5. [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) processes files in parallel windows, calling _process_window for each completed future
-6. _process_window handles individual file parsing results, collecting chunks for graph entity linking if enabled
-7. The parsed chunks are passed to the [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md)'s vector store for embedding and storage
-8. After indexing completes, the [IndexingService](files/src/local_deepwiki/services/indexing_service.md) calls _generate_wiki to create wiki pages
-9. The [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md) uses the LLM provider to summarize code chunks into wiki documentation
-10. The [IndexingService](files/src/local_deepwiki/services/indexing_service.md) returns an [IndexPipelineResult](files/src/local_deepwiki/services/models.md) containing statistics and metadata
+3. The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) calls its index method which creates a [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) via _create_parsing_pipeline
+4. The [FileParsingPipeline](files/src/local_deepwiki/core/parsing_pipeline.md) parses files in parallel using _parse_files_parallel, which delegates to _parse_single_file
+5. Each file is parsed by the parser, then chunked by the chunker, with chunks stored in a vector database
+6. After parsing completes, the [IndexingService](files/src/local_deepwiki/services/indexing_service.md) calls _generate_wiki to create wiki pages using LLM providers
+7. The [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md) creates documentation pages from the parsed chunks and LLM responses
+8. The [IndexingService](files/src/local_deepwiki/services/indexing_service.md) returns an [IndexPipelineResult](files/src/local_deepwiki/services/models.md) containing statistics and metadata
 
 ## 4. Component Diagram
 
@@ -47,40 +48,60 @@ When a user indexes a repository, the data flows through the following sequence:
 graph TD
     A[CLI] --> B[IndexingService]
     B --> C[RepositoryIndexer]
-    B --> D[WikiGenerator]
-    C --> E[FileParsingPipeline]
+    C --> D[FileParsingPipeline]
+    D --> E[PipelineContext]
     C --> F[VectorStore]
-    C --> G[ProviderFactory]
-    E --> H[Parser]
-    E --> I[Chunker]
-    G --> J[LLMProvider]
-    G --> K[EmbeddingProvider]
-    D --> J
-    D --> F
-    F --> K
-    C --> F
-    C --> H
-    C --> I
-    E --> H
-    E --> I
+    B --> G[WikiGenerator]
+    G --> H[LLMProvider]
+    B --> I[ProviderFactory]
+    I --> J[LLMConfig]
+    I --> K[EmbeddingConfig]
+    C --> L[EmbeddingProvider]
+    D --> M[Parser]
+    D --> N[Chunker]
+    
+    style A fill:#f9f,stroke:#333
+    style B fill:#ff9,stroke:#333
+    style C fill:#ff9,stroke:#333
+    style D fill:#ff9,stroke:#333
+    style E fill:#9ff,stroke:#333
+    style F fill:#9ff,stroke:#333
+    style G fill:#ff9,stroke:#333
+    style H fill:#9ff,stroke:#333
+    style I fill:#9ff,stroke:#333
+    style J fill:#ccc,stroke:#333
+    style K fill:#ccc,stroke:#333
+    style L fill:#9ff,stroke:#333
+    style M fill:#9ff,stroke:#333
+    style N fill:#9ff,stroke:#333
 ```
 
 ## 5. Design Decisions and Trade-offs
 
 ### Async throughout
-The system uses async/await throughout for I/O-bound operations. This approach was chosen because LLM calls and file I/O are inherently asynchronous and benefit from concurrent execution. The trade-off is that all callers must be async-aware, requiring careful attention to async compatibility throughout the codebase.
+**What was chosen**: The entire system uses asyncio for all core operations, including parsing, chunking, and LLM calls.
+**Why**: LLM calls and I/O operations (file reading, database access) are I/O-bound and benefit from concurrent execution, improving throughput for large repositories.
+**Trade-offs**: All callers must be async-aware, and error handling becomes more complex with async/await patterns.
 
 ### AST-aware chunking
-Code chunks are split at function/class boundaries using tree-sitter, rather than simple line-based or regex-based chunking. This approach was chosen because it preserves semantic boundaries in code, making chunks more meaningful for LLM understanding. The trade-off is increased complexity in the chunking logic and dependency on tree-sitter parsing.
-
-### Provider abstraction
-The system implements a provider abstraction layer for LLM and embedding providers. This approach was chosen to support multiple backends (local, cloud) without tightly coupling the system to specific implementations. The trade-off is additional indirection that adds complexity to the provider instantiation and selection logic.
+**What was chosen**: Code chunks are split at function/class boundaries using tree-sitter parsing.
+**Why**: This approach preserves semantic meaning of code units, making documentation more accurate and useful for developers.
+**Trade-offs**: Requires integration with tree-sitter parsing, adds complexity to the chunking process, and may not work well for all file types.
 
 ### Config hierarchy
-Configuration follows a hierarchy of CLI args > env vars > config file > defaults. This approach was chosen to provide flexible configuration management with clear precedence rules. The trade-off is that configuration resolution logic is more complex and requires careful handling of default values.
+**What was chosen**: Configuration follows a hierarchy of CLI args > env vars > config file > defaults.
+**Why**: This approach provides flexibility for different deployment scenarios while maintaining consistent behavior.
+**Trade-offs**: Adds complexity to configuration loading and requires careful handling of precedence rules.
 
-### Parallel processing with batching
-The system uses parallel file processing with batched chunk operations. This approach was chosen to efficiently handle large repositories while maintaining memory usage. The trade-off is increased complexity in managing concurrent operations and ensuring thread safety in shared data structures.
+### Provider abstraction
+**What was chosen**: LLM and embedding providers implement base classes in providers/base.py.
+**Why**: This enables switching between different provider implementations (OpenAI, Anthropic, local models) without changing core logic.
+**Trade-offs**: Requires maintaining base interfaces and adds indirection overhead, but provides flexibility for different deployment scenarios.
+
+### Parallel file processing
+**What was chosen**: Files are parsed in parallel using concurrent execution.
+**Why**: This significantly improves performance for large repositories with many files.
+**Trade-offs**: Requires careful thread safety considerations and adds complexity to error handling and progress tracking.
 
 ## Module Dependencies
 
@@ -90,16 +111,16 @@ For a detailed view of module interdependencies including circular dependency de
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
 - [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
 - [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
 - `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
 
 
 *Showing 10 of 263 source files.*

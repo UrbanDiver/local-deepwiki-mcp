@@ -742,7 +742,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.13",
-                          "title": "design_smells.py",
+                          "title": "Design Smells",
                           "path": "files/src/local_deepwiki/generators/analysis/design_smells.md"
                         },
                         {
@@ -757,7 +757,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.16",
-                          "title": "Health Scoring",
+                          "title": "health_scoring.py",
                           "path": "files/src/local_deepwiki/generators/analysis/health_scoring.md"
                         },
                         {
@@ -782,7 +782,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.21",
-                          "title": "Module Dependencies",
+                          "title": "module_dependencies.py",
                           "path": "files/src/local_deepwiki/generators/analysis/module_dependencies.md"
                         },
                         {
@@ -1064,7 +1064,7 @@
                     },
                     {
                       "number": "8.1.1.16.9",
-                      "title": "analysis_architecture.py",
+                      "title": "Analysis Architecture",
                       "path": "files/src/local_deepwiki/handlers/analysis_architecture.md"
                     },
                     {
@@ -1166,7 +1166,7 @@
                     },
                     {
                       "number": "8.1.1.17.5",
-                      "title": "tool_args.py",
+                      "title": "Tool Args",
                       "path": "files/src/local_deepwiki/models/tool_args.md"
                     },
                     {
@@ -1350,7 +1350,7 @@
                   "children": [
                     {
                       "number": "8.1.1.22.1",
-                      "title": "analysis.py",
+                      "title": "Analysis",
                       "path": "files/src/local_deepwiki/tool_defs/analysis.md"
                     },
                     {

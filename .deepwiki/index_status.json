@@ -1,59 +1,59 @@
 {
   "repo_path": "/Users/brian/Projects/local-deepwiki-mcp",
-  "indexed_at": 1775096686.1190841,
+  "indexed_at": 1775098214.186978,
   "total_files": 496,
-  "total_chunks": 8890,
+  "total_chunks": 8889,
   "languages": {
     "python": 496
   },
   "files": [
     {
-      "path": "tests/test_design_smells.py",
+      "path": "tests/test_module_health.py",
       "language": "python",
-      "size_bytes": 14880,
-      "last_modified": 1775096364.3836198,
-      "hash": "d63d9c2d263c30ca840011fe7b961177b93cfc75c6ee657d665136b36c90629b",
-      "chunk_count": 30
+      "size_bytes": 10951,
+      "last_modified": 1775097664.930876,
+      "hash": "225c5b8fb5b05b9c920c645e6f826fcacb142e2823037d8c7773e58cb7c4d29f",
+      "chunk_count": 22
     },
     {
-      "path": "src/local_deepwiki/tool_defs/analysis.py",
+      "path": "tests/test_coupling_metrics.py",
       "language": "python",
-      "size_bytes": 34119,
-      "last_modified": 1775096283.1158285,
-      "hash": "9b61f310cbeaffe184fb6d86b7d26e5bb1b73d79f075623eec1be12f1e9e553f",
-      "chunk_count": 3
+      "size_bytes": 10943,
+      "last_modified": 1775097664.9306383,
+      "hash": "355372320e1996ba5deaf62479a83f178bfbd4a461b0fe76236beafceb580c0a",
+      "chunk_count": 22
+    },
+    {
+      "path": "tests/test_health_scoring.py",
+      "language": "python",
+      "size_bytes": 15157,
+      "last_modified": 1775097664.930756,
+      "hash": "d7c10fd4de801b3f0d8866fcc330d1c82cf828b3adcb78de7cfadef6d79771bb",
+      "chunk_count": 58
     },
     {
       "path": "src/local_deepwiki/generators/analysis/coupling.py",
       "language": "python",
-      "size_bytes": 10164,
-      "last_modified": 1775096266.1415567,
-      "hash": "43483f7dcc4fd80e722649ebcf27088905e7655d1469d85c829b47746a4cba9c",
-      "chunk_count": 12
+      "size_bytes": 9105,
+      "last_modified": 1775097664.930239,
+      "hash": "80491f68941f1c913c12b5a26d1368696bd82c9daabffd5d897bea09943bfd9d",
+      "chunk_count": 11
     },
     {
-      "path": "src/local_deepwiki/handlers/analysis_architecture.py",
+      "path": "src/local_deepwiki/generators/analysis/module_dependencies.py",
       "language": "python",
-      "size_bytes": 26444,
-      "last_modified": 1775096298.986229,
-      "hash": "4a1533cb4c3f27e1a206d2d560f9f60b85c6a06b282f47e5f9ab8c39d48f1820",
-      "chunk_count": 21
+      "size_bytes": 9828,
+      "last_modified": 1775097664.930501,
+      "hash": "2f140c6e8be768a94215e4466f77978856df7412271159c10c49644968226cd1",
+      "chunk_count": 13
     },
     {
-      "path": "src/local_deepwiki/models/tool_args.py",
+      "path": "src/local_deepwiki/generators/analysis/health_scoring.py",
       "language": "python",
-      "size_bytes": 27496,
-      "last_modified": 1775096320.0455482,
-      "hash": "c08dee1ee485dd5b3ef74092865da9a5f0db21ee59a3e34d359f90272c218821",
-      "chunk_count": 55
-    },
-    {
-      "path": "src/local_deepwiki/generators/analysis/design_smells.py",
-      "language": "python",
-      "size_bytes": 23099,
-      "last_modified": 1775096249.9304814,
-      "hash": "857224815fc5ad3eaf6f0e0244efb5544e037cf296938e24a6e690a1ab93513b",
-      "chunk_count": 26
+      "size_bytes": 5787,
+      "last_modified": 1775097664.9303734,
+      "hash": "9c2a1225fcb2155998726fc9396da8615385b66c5c66356c32b8ef8f37f8452e",
+      "chunk_count": 9
     },
     {
       "path": "tests/test_provider_factories.py",
@@ -142,14 +142,6 @@
       "last_modified": 1771830896.9427955,
       "hash": "f05c77877d6117b2784a54d85a29f4ee7dacc12df87857820a3f5cb9c977f192",
       "chunk_count": 11
-    },
-    {
-      "path": "tests/test_module_health.py",
-      "language": "python",
-      "size_bytes": 11064,
-      "last_modified": 1774828586.0870607,
-      "hash": "d164aac8e16a79c17928e2a501bae9d81471eac8d87df4571eec7c5ef90f61dc",
-      "chunk_count": 22
     },
     {
       "path": "tests/test_export_progress.py",
@@ -1064,6 +1056,14 @@
       "chunk_count": 26
     },
     {
+      "path": "tests/test_design_smells.py",
+      "language": "python",
+      "size_bytes": 14880,
+      "last_modified": 1775096364.3836198,
+      "hash": "d63d9c2d263c30ca840011fe7b961177b93cfc75c6ee657d665136b36c90629b",
+      "chunk_count": 30
+    },
+    {
       "path": "tests/test_stale_detection.py",
       "language": "python",
       "size_bytes": 23989,
@@ -1344,14 +1344,6 @@
       "chunk_count": 19
     },
     {
-      "path": "tests/test_health_scoring.py",
-      "language": "python",
-      "size_bytes": 15033,
-      "last_modified": 1774141850.5562515,
-      "hash": "eb0fbd278fa43441d2da3e6b247333422d43b43ca2c8247e994fe40ec76de5cf",
-      "chunk_count": 58
-    },
-    {
       "path": "tests/test_github_action.py",
       "language": "python",
       "size_bytes": 12490,
@@ -1486,14 +1478,6 @@
       "last_modified": 1773955612.320858,
       "hash": "b71dbdb7fcfa2ed4b2c0950fdecd5ef6fc82d51e4cc913395dc5220a4688df6c",
       "chunk_count": 14
-    },
-    {
-      "path": "tests/test_coupling_metrics.py",
-      "language": "python",
-      "size_bytes": 10910,
-      "last_modified": 1774636700.1216614,
-      "hash": "a0f72852d0dae229a2c7e0f036ce9aebaf059bd256922a5f5cb3a17a9c1dd2f8",
-      "chunk_count": 22
     },
     {
       "path": "tests/test_wiki_codemaps.py",
@@ -2800,6 +2784,14 @@
       "chunk_count": 13
     },
     {
+      "path": "src/local_deepwiki/tool_defs/analysis.py",
+      "language": "python",
+      "size_bytes": 34119,
+      "last_modified": 1775096283.1158285,
+      "hash": "9b61f310cbeaffe184fb6d86b7d26e5bb1b73d79f075623eec1be12f1e9e553f",
+      "chunk_count": 3
+    },
+    {
       "path": "src/local_deepwiki/tool_defs/__init__.py",
       "language": "python",
       "size_bytes": 917,
@@ -2870,6 +2862,14 @@
       "last_modified": 1773606679.8143246,
       "hash": "25d00000bfdf6a28b87256c1f5a2923a80eba0d0a8588b4c7f6201588e897e3d",
       "chunk_count": 11
+    },
+    {
+      "path": "src/local_deepwiki/models/tool_args.py",
+      "language": "python",
+      "size_bytes": 27496,
+      "last_modified": 1775096320.0455482,
+      "hash": "c08dee1ee485dd5b3ef74092865da9a5f0db21ee59a3e34d359f90272c218821",
+      "chunk_count": 55
     },
     {
       "path": "src/local_deepwiki/models/wiki.py",
@@ -3144,14 +3144,6 @@
       "chunk_count": 7
     },
     {
-      "path": "src/local_deepwiki/generators/analysis/health_scoring.py",
-      "language": "python",
-      "size_bytes": 5425,
-      "last_modified": 1774141850.5512567,
-      "hash": "a38c8cb353aa0e178beed90b41c7479e4cd9b32515701a548a2332d704832b0b",
-      "chunk_count": 9
-    },
-    {
       "path": "src/local_deepwiki/generators/analysis/stale_detection.py",
       "language": "python",
       "size_bytes": 7712,
@@ -3272,6 +3264,14 @@
       "chunk_count": 14
     },
     {
+      "path": "src/local_deepwiki/generators/analysis/design_smells.py",
+      "language": "python",
+      "size_bytes": 23099,
+      "last_modified": 1775096249.9304814,
+      "hash": "857224815fc5ad3eaf6f0e0244efb5544e037cf296938e24a6e690a1ab93513b",
+      "chunk_count": 26
+    },
+    {
       "path": "src/local_deepwiki/generators/analysis/hotspots.py",
       "language": "python",
       "size_bytes": 7242,
@@ -3294,14 +3294,6 @@
       "last_modified": 1775002662.0793004,
       "hash": "387d58ebde542d0cf42c15ea1342db074ad06e636918533845caeb30c2d9b6c5",
       "chunk_count": 34
-    },
-    {
-      "path": "src/local_deepwiki/generators/analysis/module_dependencies.py",
-      "language": "python",
-      "size_bytes": 9530,
-      "last_modified": 1774664702.0964737,
-      "hash": "e94d824cbcb29e4e4c11777f86a5d6d0aa7f28879de70ed815aa80de93eaf181",
-      "chunk_count": 13
     },
     {
       "path": "src/local_deepwiki/generators/analysis/health_page.py",
@@ -3830,6 +3822,14 @@
       "last_modified": 1771828171.8413503,
       "hash": "429a879753848bce3037fb87cd46477f7853a7bc77922859c4b34a19ab773849",
       "chunk_count": 10
+    },
+    {
+      "path": "src/local_deepwiki/handlers/analysis_architecture.py",
+      "language": "python",
+      "size_bytes": 26444,
+      "last_modified": 1775096298.986229,
+      "hash": "4a1533cb4c3f27e1a206d2d560f9f60b85c6a06b282f47e5f9ab8c39d48f1820",
+      "chunk_count": 21
     },
     {
       "path": "src/local_deepwiki/handlers/generators.py",

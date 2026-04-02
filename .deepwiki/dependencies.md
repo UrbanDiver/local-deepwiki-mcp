@@ -2,115 +2,89 @@
 
 ## External Dependencies
 
-| Dependency                  | Purpose                                                                 |
-|-----------------------------|-------------------------------------------------------------------------|
-| `anthropic`                 | Provides access to Anthropic's AI models, such as Claude.              |
-| `flask`                     | Web framework for building the application's HTTP server.               |
-| `LanceDB`                   | Vector database for storing and querying embeddings.                    |
-| `markdown`                  | Library for parsing and rendering Markdown text.                        |
-| `mcp`                       | Model Control Protocol client for interacting with LLMs.                |
-| `nh3`                       | HTML sanitization library to clean user-provided HTML content.          |
-| `ollama`                    | Interface for running local LLMs via Ollama.                            |
-| `openai`                    | Client for interacting with OpenAI's API.                               |
-| `pandas`                    | Data manipulation and analysis library.                                 |
-| `psutil`                    | System and process utilities for monitoring system resources.           |
-| `pydantic`                  | Data validation and settings management using Python type annotations.  |
-| `pyyaml`                    | YAML parsing and serialization.                                         |
-| `rapidfuzz`                 | Fast fuzzy string matching and similarity scoring.                      |
-| `rich`                      | Library for rich text and beautiful formatting in the terminal.         |
-| `sentence-transformers`     | Provides pre-trained models for generating sentence embeddings.         |
-| `tree-sitter`               | General-purpose parsing library for code analysis.                      |
-| `tree-sitter-c`             | Tree-sitter grammar for C language parsing.                             |
-| `tree-sitter-c-sharp`       | Tree-sitter grammar for C# language parsing.                            |
-| `tree-sitter-cpp`           | Tree-sitter grammar for C++ language parsing.                           |
-| `tree-sitter-go`            | Tree-sitter grammar for Go language parsing.                            |
-| `tree-sitter-java`          | Tree-sitter grammar for Java language parsing.                          |
-| `tree-sitter-javascript`    | Tree-sitter grammar for JavaScript language parsing.                    |
-| `tree-sitter-kotlin`        | Tree-sitter grammar for Kotlin language parsing.                        |
-| `tree-sitter-php`           | Tree-sitter grammar for PHP language parsing.                           |
-| `tree-sitter-python`        | Tree-sitter grammar for Python language parsing.                        |
-| `tree-sitter-ruby`          | Tree-sitter grammar for Ruby language parsing.                          |
-| `tree-sitter-rust`          | Tree-sitter grammar for Rust language parsing.                          |
-| `tree-sitter-swift`         | Tree-sitter grammar for Swift language parsing.                         |
-| `tree-sitter-typescript`    | Tree-sitter grammar for TypeScript language parsing.                    |
-| `watchdog`                  | File system monitoring library for watching changes in directories.     |
+| Dependency                | Purpose |
+|---------------------------|---------|
+| `anthropic`               | Provides access to Anthropic's AI models, such as Claude, for natural language processing tasks. |
+| `flask`                   | A lightweight WSGI web application framework used for building web interfaces or APIs. |
+| `LanceDB`                 | A vector database for building AI-powered applications, used for storing and querying embeddings. |
+| `markdown`                | Library for parsing and rendering Markdown text into HTML. |
+| `mcp`                     | Used for managing model communication protocol (MCP) in AI applications. |
+| `nh3`                     | A fast, safe HTML sanitization library to prevent XSS attacks. |
+| `ollama`                  | Provides access to locally hosted large language models via Ollama API. |
+| `openai`                  | Official Python client for OpenAI's API, used for interacting with GPT models. |
+| `pandas`                  | Data manipulation and analysis library, used for handling structured data. |
+| `psutil`                  | System and process utilities for monitoring system resources and performance. |
+| `pydantic`                | Data validation and settings management using Python type annotations. |
+| `pyyaml`                  | YAML parser and emitter for configuration files and data serialization. |
+| `rapidfuzz`               | Fast fuzzy string matching library for similarity comparisons. |
+| `rich`                    | Library for rich text and beautiful formatting in the terminal. |
+| `sentence-transformers`   | Provides pre-trained models for generating sentence embeddings. |
+| `tree-sitter`             | A parser generator tool and an incremental parsing library for syntax tree construction. |
+| `tree-sitter-c`           | Tree-sitter grammar for C language. |
+| `tree-sitter-c-sharp`     | Tree-sitter grammar for C# language. |
+| `tree-sitter-cpp`         | Tree-sitter grammar for C++ language. |
+| `tree-sitter-go`          | Tree-sitter grammar for Go language. |
+| `tree-sitter-java`        | Tree-sitter grammar for Java language. |
+| `tree-sitter-javascript`  | Tree-sitter grammar for JavaScript language. |
+| `tree-sitter-kotlin`      | Tree-sitter grammar for Kotlin language. |
+| `tree-sitter-php`         | Tree-sitter grammar for PHP language. |
+| `tree-sitter-python`      | Tree-sitter grammar for Python language. |
+| `tree-sitter-ruby`        | Tree-sitter grammar for Ruby language. |
+| `tree-sitter-rust`        | Tree-sitter grammar for Rust language. |
+| `tree-sitter-swift`       | Tree-sitter grammar for Swift language. |
+| `tree-sitter-typescript`  | Tree-sitter grammar for TypeScript language. |
+| `watchdog`                | File system event monitoring library for watching file changes. |
 
 ## Dev Dependencies
 
-| Dependency              | Purpose                                                                 |
-|-------------------------|-------------------------------------------------------------------------|
-| `black`                 | Code formatter to enforce consistent Python style.                      |
-| `isort`                 | Import sorter to organize and format import statements.                 |
-| `local-deepwiki`        | Development package for local development and testing.                  |
-| `mypy`                  | Static type checker for Python.                                         |
-| `pip-audit`             | Security audit tool for Python package dependencies.                    |
-| `pre-commit`            | Framework for managing and maintaining pre-commit hooks.                |
-| `pypdf`                 | PDF parsing and manipulation library.                                   |
-| `pytest`                | Testing framework for Python.                                           |
-| `pytest-asyncio`        | Plugin for pytest to support asynchronous tests.                        |
-| `types-Markdown`        | Type stubs for the `markdown` library.                                  |
-| `types-PyYAML`          | Type stubs for the `pyyaml` library.                                    |
-| `weasyprint`            | HTML to PDF converter.                                                  |
+| Dependency                | Purpose |
+|---------------------------|---------|
+| `black`                   | Code formatter to enforce consistent Python code style. |
+| `isort`                   | Tool to sort and organize import statements. |
+| `local-deepwiki ([all])`  | Development package for local deepwiki with all optional dependencies. |
+| `mypy`                    | Static type checker for Python to catch type-related errors. |
+| `pip-audit`               | Security audit tool for Python package dependencies. |
+| `pre-commit`              | Framework for managing and maintaining pre-commit hooks. |
+| `pypdf`                   | Library for working with PDF files. |
+| `pytest`                  | Testing framework for Python. |
+| `pytest-asyncio`          | Plugin for pytest to support asynchronous tests. |
+| `types-Markdown`          | Type stubs for the `markdown` library. |
+| `types-PyYAML`            | Type stubs for the `pyyaml` library. |
+| `weasyprint`              | HTML to PDF converter used for report generation. |
 
 ## Internal Module Dependencies
 
 - [`WikiGenerator`](files/src/local_deepwiki/generators/wiki/generator.md) depends on [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md)
-- [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md) depends on [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md)
-- [`LLMProvider`](files/src/local_deepwiki/providers/base.md) is used by various generators and handlers
-- [`Config`](files/src/local_deepwiki/config/models.md) is imported and used in `cli/init_cli.py`
-- [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md) is imported and used in `cli/init_cli.py`
-- `DataParser` is used in `tests/fixtures/sample_repo/tests/test_parser.py`
-- `User` is imported in `tests/fixtures/sample_repo/src/parser.py`, `tests/fixtures/sample_repo/src/sub/processor.py`, and `tests/fixtures/sample_repo/tests/test_parser.py`
-- `Order` is imported in `tests/fixtures/sample_repo/src/sub/processor.py`
-- [`ChunkType`](files/src/local_deepwiki/models/foundation.md) and [`CodeChunk`](files/src/local_deepwiki/models/chunks.md) are imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
-- [`GitRepoInfo`](files/src/local_deepwiki/core/git_utils.md) and [`build_source_url`](files/src/local_deepwiki/core/git_utils.md) are imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
-- [`format_blame_date`](files/src/local_deepwiki/core/git_blame.md) and [`get_file_entity_blame`](files/src/local_deepwiki/core/git_blame.md) are imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
-- [`get_logger`](files/src/local_deepwiki/logging.md) is imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
-- [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md) is imported in `src/local_deepwiki/core/vectorstore/mixins/search_types.py`
-- [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md) and [`LLMProvider`](files/src/local_deepwiki/providers/base.md) are imported in `tests/wiki_output_helpers.py`
-- `Console` is imported in `src/local_deepwiki/cli/main.py` and `src/local_deepwiki/cli/init_cli.py`
-- `Table` is imported in `src/local_deepwiki/cli/main.py` and `src/local_deepwiki/cli/init_cli.py`
-- `Panel` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `Prompt` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `argparse` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `yaml` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `Literal` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `Path` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `Counter` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `dataclass` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `os` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `urllib.request` is imported in `src/local_deepwiki/cli/init_cli.py`
-- `sys` is imported in `src/local_deepwiki/cli/main.py` and `src/local_deepwiki/cli/init_cli.py`
-- `importlib` is imported in `src/local_deepwiki/cli/main.py`
-- `hashlib` is imported in `tests/fixtures/sample_repo/src/utils.py` and `tests/wiki_output_helpers.py`
-- `re` is imported in `src/local_deepwiki/generators/wiki/term_validator.py`, `tests/fixtures/sample_repo/src/utils.py`, and `tests/wiki_output_helpers.py`
-- `struct` is imported in `tests/wiki_output_helpers.py`
-- `AsyncIterator` is imported in `tests/wiki_output_helpers.py`
-- `Protocol` and `runtime_checkable` are imported in `src/local_deepwiki/core/protocols.py`
-- `Iterator` is imported in `src/local_deepwiki/core/protocols.py`
-- `Path` is imported in `src/local_deepwiki/core/protocols.py`
-- `StrEnum` is imported in `src/local_deepwiki/models/provider_types.py` and `src/local_deepwiki/security/access_control.py`
-- `TypedDict` is imported in `src/local_deepwiki/handlers/types.py`
-- `Literal` is imported in `src/local_deepwiki/handlers/types.py`
-- `TypeVar` is imported in `src/local_deepwiki/security/access_control.py`
-- `Callable` is imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
-- `attrgetter` is imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
-- `ContextVar` is imported in `src/local_deepwiki/security/access_control.py`
-- `wraps` is imported in `src/local_deepwiki/security/access_control.py`
-- `asyncio` is imported in `src/local_deepwiki/security/access_control.py`
-- `logging` is imported in `src/local_deepwiki/logging.py`
-- `sys` is imported in `src/local_deepwiki/logging.py`
-- `os` is imported in `src/local_deepwiki/logging.py`
-- `Literal` is imported in `src/local_deepwiki/logging.py`
-- `dataclass` is imported in `src/local_deepwiki/core/vectorstore/mixins/search_types.py`
-- [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md) is imported in `src/local_deepwiki/core/vectorstore/mixins/search_types.py`
-- `json` is imported in `tests/fixtures/sample_repo/src/parser.py`
-- `Path` is imported in `tests/fixtures/sample_repo/src/parser.py`
-- `Any` is imported in `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/generators/analysis/architecture_report.py`, `src/local_deepwiki/handlers/session_state.py`, `tests/fixtures/sample_repo/lib/external.py`, `tests/fixtures/sample_repo/src/parser.py`, `tests/fixtures/sample_repo/src/sub/processor.py`, and `tests/fixtures/sample_repo/src/utils.py`
-- `defaultdict` is imported in `src/local_deepwiki/generators/analysis/smells_page.py`
-- `version` is imported in `src/local_deepwiki/__init__.py`
-- `os` is imported in `src/local_deepwiki/providers/credentials.py`
-- `importlib` is imported in `src/local_deepwiki/cli/main.py`
+- [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md) depends on [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md)
+- `SourceFormatter` depends on [`GitRepoInfo`](files/src/local_deepwiki/core/git_utils.md), [`ChunkType`](files/src/local_deepwiki/models/foundation.md), [`CodeChunk`](files/src/local_deepwiki/models/chunks.md)
+- `SecurityAccessControl` depends on `ContextVar`, `Callable`, `StrEnum`, `TypeVar`, `asyncio`
+- `CLI` depends on `Console`, `Table`, `argparse`, `yaml`, [`Config`](files/src/local_deepwiki/config/models.md), [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
+- `InitCLI` depends on `Console`, `Panel`, `Prompt`, `Table`, [`Config`](files/src/local_deepwiki/config/models.md), [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
+- `Analysis` modules depend on `Any`, `defaultdict`
+- `DataParser` depends on `User`, `json`, `Path`
+- `Processor` depends on `Order`, `User`
+- `TestParser` depends on `User`, `DataParser`
+- `WikiOutputHelpers` depends on `AsyncIterator`, `Path`, [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md), [`LLMProvider`](files/src/local_deepwiki/providers/base.md)
+- `Logging` depends on `logging`, `os`, `sys`
+- `Protocols` depends on `Iterator`, `Path`, `Protocol`, `runtime_checkable`
+- `SessionState` depends on `Any`
+- `HealthScoring` depends on `Any`
+- `SmellsPage` depends on `Any`
+- `TermValidator` depends on `re`
+- `Credentials` depends on `os`
+- `MainCLI` depends on `Console`, `Table`, `importlib`, `sys`
+- `DirTree` depends on `Path`, `subprocess`
+- `ProviderTypes` depends on `StrEnum`
+- `Types` depends on `TypedDict`
+- `GitBlame` depends on [`format_blame_date`](files/src/local_deepwiki/core/git_blame.md), [`get_file_entity_blame`](files/src/local_deepwiki/core/git_blame.md)
+- `GitUtils` depends on [`build_source_url`](files/src/local_deepwiki/core/git_utils.md)
+- `SearchTypes` depends on `dataclass`, [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md)
+- `Models` depends on `version` (from `importlib.metadata`)
+- `External` depends on `Any`
+- `Utils` depends on `hashlib`, `re`
+- [`Config`](files/src/local_deepwiki/config/models.md) depends on `yaml`
+- `ConfigModels` depends on [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
+- `BaseProvider` depends on [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md), [`LLMProvider`](files/src/local_deepwiki/providers/base.md)
 
 ## Module Dependency Graph
 
@@ -245,9 +219,9 @@ The following source files were used to generate this documentation:
 - [`src/local_deepwiki/providers/credentials.py:12-80`](files/src/local_deepwiki/providers/credentials.md)
 - [`src/local_deepwiki/generators/wiki/term_validator.py:43-82`](files/src/local_deepwiki/generators/wiki/term_validator.md)
 - `src/local_deepwiki/__init__.py`
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/generators/analysis/architecture_report.py:15-36`](files/src/local_deepwiki/generators/analysis/architecture_report.md)
 - [`src/local_deepwiki/handlers/session_state.py:20-27`](files/src/local_deepwiki/handlers/session_state.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
 - [`src/local_deepwiki/generators/analysis/smells_page.py:25-31`](files/src/local_deepwiki/generators/analysis/smells_page.md)
 - [`src/local_deepwiki/cli/main.py:57-90`](files/src/local_deepwiki/cli/main.md)
 - [`src/local_deepwiki/models/provider_types.py:8-13`](files/src/local_deepwiki/models/provider_types.md)

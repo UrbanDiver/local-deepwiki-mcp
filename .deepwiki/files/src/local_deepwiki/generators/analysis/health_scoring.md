@@ -2,70 +2,59 @@
 
 ## File Overview
 
-This file implements a health scoring system that translates raw architectural metrics into dimension-specific scores (0–100) and an overall letter grade (A–F). It provides a consistent, computable way to assess code quality based on architectural health indicators such as complexity, coupling, design smells, and layer discipline.
+This module is responsible for converting raw architectural metrics into meaningful health scores and letter grades. It provides a suite of functions that evaluate different aspects of code health — complexity, coupling, design smells, and layer discipline — and then combines these into an overall score.
 
-The module is designed for pure computation and does not perform any I/O operations. It is intended to be used by other components in the analysis pipeline that provide metric summaries, and it returns structured data that can be consumed by downstream reporting or visualization logic.
+The module is designed to be purely computational, taking in metric summaries and returning structured score data without performing any I/O operations. It serves as a core component in the architecture analysis pipeline, enabling the generation of health reports.
 
 ## Key Concepts
 
 ### Dimension-Based Scoring
-
-Each function in this module corresponds to a specific dimension of code health:
+Each function in this module evaluates a specific dimension of code health:
 - **Complexity**: Based on cyclomatic complexity and percentage of functions exceeding a threshold.
-- **Coupling**: Evaluates module instability and distance from main sequence.
-- **Smells**: Considers density and severity of design smells, with special weight for "god class" violations.
-- **Layers**: Simple count of layer discipline violations.
+- **Coupling**: Evaluates module distances and instability, with a focus on disconnected modules.
+- **Smells**: Measures density of design smells and counts of high-impact issues like "god classes".
+- **Layers**: Simple count of layer violations.
 
-Each dimension is scored independently using a consistent algorithm:
-1. Start with a perfect score of 100.
-2. Apply deductions based on observed metrics.
-3. Cap deductions to prevent negative scores.
-4. Assign a letter grade using a predefined threshold mapping.
+These dimensions are weighted when computing an overall score, reflecting their relative importance in determining system health.
 
-### Weighted Overall Score
+### Scoring Algorithm Design
+Each scoring function follows a consistent pattern:
+1. **Base Score**: Starts at 100.
+2. **Penalties**: Deduct points based on metric thresholds.
+3. **Normalization**: Caps penalties and ensures final score is within [0, 100].
+4. **Grading**: Converts the final score to a letter grade using `letter_grade`.
 
-The `compute_overall` function aggregates dimension scores using predefined weights (`_DIMENSION_WEIGHTS`) to produce a composite score. This approach allows prioritizing certain architectural aspects over others, reflecting the project's specific quality goals.
+This approach ensures that scores are intuitive, consistent, and easy to interpret.
 
-### Why This Approach
-
-The scoring logic is designed to be:
-- **Relative**: Metrics are normalized or scaled so that larger projects don't get unfairly penalized.
-- **Threshold-based**: Simple, interpretable rules that map easily to actionable insights.
-- **Scalable**: Functions handle edge cases like empty inputs gracefully.
+### Letter Grade Conversion
+The `letter_grade` function maps a numerical score (0–100) to a letter grade (A–F). This is implemented using a threshold-based lookup table (`_GRADE_THRESHOLDS`) which is referenced by the other scoring functions.
 
 ## Integration
 
-This module is part of the analysis pipeline and is called by:
-- `test_health_scoring`: Unit tests that validate the scoring functions.
-- `architecture_health`: Likely a handler or service that orchestrates health scoring across multiple dimensions.
-  
-It imports `Any` from `typing` to support flexible data structures for metrics and hotspots, aligning with the dynamic nature of architectural data.
+This module is used by:
+- `architecture_health` — likely in `src/local_deepwiki/generators/analysis/architecture_report.py`, which generates architecture health reports.
+- `test_health_scoring` — a test module that validates the correctness of scoring logic.
 
-The module is closely related to:
-- `src/local_deepwiki/generators/analysis/api_docs.py`: May use similar scoring logic or data structures.
-- `src/local_deepwiki/handlers/types.py`: Could define the types used for metrics and hotspots.
-- `src/local_deepwiki/validation.py`: Possibly integrates with validation logic for metric data integrity.
+The module is imported by `architecture_health` and directly used in `test_health_scoring`, making it a key part of the analysis pipeline and its testing.
+
+It does not depend on any external libraries beyond standard typing constructs, ensuring it's lightweight and suitable for integration into larger analysis workflows.
 
 ## Design Notes
 
-### Edge Case Handling
+### Weighted Overall Score
+The `compute_overall` function aggregates dimension scores using predefined weights (`_DIMENSION_WEIGHTS`). This reflects the idea that not all aspects of code health are equally important, and allows for prioritization of certain dimensions in the final health assessment.
 
-- Functions return a score of 100 with an "A" grade when inputs are empty or invalid (e.g., zero functions, no metrics).
-- Deductions are capped to ensure scores never drop below 0.
-- Division by zero is avoided through conditional checks.
+### Handling Edge Cases
+- **Zero Division**: Functions like `score_complexity` and `score_smells` handle cases where `total_functions` or `total_lines` are zero, returning a perfect score of 100.
+- **Empty Metrics**: Functions like `score_coupling` return a perfect score if no metrics are provided.
+- **Penalty Capping**: All penalties are capped to prevent a single bad metric from causing a score to drop below zero, ensuring meaningful scores across all inputs.
 
-### Scoring Algorithm Details
+### Threshold Selection
+Thresholds for penalties (e.g., max CC > 50, unstable modules with Ca=0 and high Ce) are chosen to reflect real-world architectural concerns. For example:
+- Modules with `Ca=0` and high `Ce` are flagged as disconnected and problematic.
+- God classes are heavily penalized due to their impact on maintainability.
 
-- **Complexity scoring** uses thresholds for maximum cyclomatic complexity and percentage of functions over CC=15.
-- **Coupling scoring** scales penalties based on average distance and percentage of unstable modules, using percentage-based thresholds to normalize for project size.
-- **Smells scoring** applies severity weights to different types of smells, with a strong penalty for "god class" violations.
-- **Layer scoring** uses a linear deduction model — each violation deducts 10 points, capped at 0.
-
-### Weighted Aggregation
-
-The `compute_overall` function aggregates scores using fixed weights (`_DIMENSION_WEIGHTS`), which are not visible in the code snippet but are expected to be defined elsewhere in the module. This ensures that some dimensions (e.g., coupling or complexity) are considered more important than others in the final score.
-
-This design choice allows for a balance between simplicity and configurability, enabling project-specific tuning of architectural priorities without requiring complex logic in the scoring functions themselves.
+This design choice ensures that the scoring system aligns with best practices in software architecture and maintainability.
 
 ## API Reference
 
@@ -174,7 +163,7 @@ def score_complexity(
 def score_coupling(metrics: list[dict[str, Any]]) -> dict[str, Any]
 ```
 
-Score coupling dimension (0-100).  Factors: - Average distance from main sequence (lower is better) - Percentage of highly unstable modules (I>0.8 and Ce>5)  Uses percentage-based thresholds so the score scales with project size rather than penalizing large projects with many small modules.
+Score coupling dimension (0-100).  Factors: - Average distance from main sequence (lower is better) - Percentage of problematic unstable modules  Highly unstable modules are only flagged when they have Ca=0 (nothing depends on them) AND high Ce — these are disconnected modules that import a lot but provide no value to the rest of the system. Edge modules with Ca>0 (handlers that are imported by __init__.py, services used by handlers) are expected to be unstable and are not penalized.
 
 
 | Parameter | Type | Default | Description |
@@ -186,7 +175,7 @@ Score coupling dimension (0-100).  Factors: - Average distance from main sequenc
 
 
 <details>
-<summary>View Source (lines 79-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L79-L115">GitHub</a></summary>
+<summary>View Source (lines 79-121) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L79-L121">GitHub</a></summary>
 
 ```python
 def score_coupling(metrics: list[dict[str, Any]]) -> dict[str, Any]:
@@ -194,26 +183,32 @@ def score_coupling(metrics: list[dict[str, Any]]) -> dict[str, Any]:
 
     Factors:
     - Average distance from main sequence (lower is better)
-    - Percentage of highly unstable modules (I>0.8 and Ce>5)
+    - Percentage of problematic unstable modules
 
-    Uses percentage-based thresholds so the score scales with project size
-    rather than penalizing large projects with many small modules.
+    Highly unstable modules are only flagged when they have Ca=0 (nothing
+    depends on them) AND high Ce — these are disconnected modules that
+    import a lot but provide no value to the rest of the system. Edge
+    modules with Ca>0 (handlers that are imported by __init__.py, services
+    used by handlers) are expected to be unstable and are not penalized.
     """
     if not metrics:
         return {"score": 100, "grade": "A", "factors": {}}
 
     distances = [m.get("distance", 0) for m in metrics]
     avg_distance = sum(distances) / len(distances) if distances else 0
+    # Only flag modules that are fully disconnected (Ca=0) with high outgoing deps
     highly_unstable = sum(
         1
         for m in metrics
-        if m.get("instability", 0) > 0.8 and m.get("efferent_coupling", 0) > 5
+        if m.get("instability", 0) > 0.8
+        and m.get("efferent_coupling", 0) > 5
+        and m.get("afferent_coupling", 0) == 0
     )
     unstable_pct = (highly_unstable / len(metrics)) * 100 if metrics else 0
 
     score = 100.0
-    score -= min(avg_distance * 50, 40)  # avg distance penalty, cap 40
-    score -= min(unstable_pct * 2, 25)  # unstable % penalty, cap 25
+    score -= min(avg_distance * 30, 25)  # avg distance penalty, cap 25
+    score -= min(unstable_pct * 2, 25)  # disconnected unstable % penalty, cap 25
 
     score = max(0.0, min(100.0, score))
     return {
@@ -249,7 +244,7 @@ Score design smells dimension (0-100).  Factors: - Smell density: smells per 100
 
 
 <details>
-<summary>View Source (lines 118-151) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L118-L151">GitHub</a></summary>
+<summary>View Source (lines 124-157) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L124-L157">GitHub</a></summary>
 
 ```python
 def score_smells(
@@ -308,7 +303,7 @@ Score layer discipline dimension (0-100).  Simple: 100 minus 10 per violation, f
 
 
 <details>
-<summary>View Source (lines 154-167) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L154-L167">GitHub</a></summary>
+<summary>View Source (lines 160-173) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L160-L173">GitHub</a></summary>
 
 ```python
 def score_layers(violations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -348,7 +343,7 @@ Compute weighted overall score from dimension scores.
 
 
 <details>
-<summary>View Source (lines 170-183) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L170-L183">GitHub</a></summary>
+<summary>View Source (lines 176-189) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L176-L189">GitHub</a></summary>
 
 ```python
 def compute_overall(dimension_scores: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -455,7 +450,7 @@ result = score_coupling([])
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `score_coupling` | function | Brian Breidenbach | 1 week ago | `9a560e1` refactor: recalibrate coupl... |
+| `score_coupling` | function | Brian Breidenbach | today | `c0fe1bd` fix: unify module labels in... |
 | `score_smells` | function | Brian Breidenbach | 1 week ago | `b12031b` fix: recalibrate smells sco... |
 | `letter_grade` | function | Brian Breidenbach | 1 week ago | `c9f0d4d` refactor: extract source_fi... |
 | `score_complexity` | function | Brian Breidenbach | 1 week ago | `c9f0d4d` refactor: extract source_fi... |

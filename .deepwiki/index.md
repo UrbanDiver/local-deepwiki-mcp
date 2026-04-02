@@ -5,15 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP server enables private, local documentation generation and querying for code repositories using a modular, configurable architecture. It supports multiple LLM providers and offers tools for indexing, searching, and analyzing repository structure and content. The system is designed for use in development environments where privacy and local execution are priorities.
+Local DeepWiki-style MCP server for private repository documentation. This project provides a local server that enables intelligent, AI-powered search and documentation of code repositories using a hybrid approach combining local LLMs, embeddings, and structured data indexing. It supports both local and cloud-based LLM providers and offers a range of CLI tools for indexing, searching, and exporting documentation.
 
 ## Key Features
 
-- **Multi-provider LLM support** — Configurable integration with providers like Anthropic, OpenAI, and Ollama through a unified abstraction layer
-- **AST-aware code chunking** — Intelligent splitting of source code into semantic chunks at function and class boundaries using tree-sitter
-- **Configurable architecture analysis** — Built-in tools for architecture quality gates, trend analysis, and health reporting
-- **Async core architecture** — Full asynchronous implementation throughout for efficient handling of concurrent operations
-- **Modular CLI and MCP server** — Supports command-line tools for indexing, searching, and serving documentation via MCP protocol
+- **Hybrid LLM Support**: Supports both local (e.g., Ollama) and cloud (e.g., Anthropic, OpenAI) language model providers through a unified provider abstraction layer
+- **AST-Aware Code Chunking**: Uses tree-sitter to split code at function and class boundaries for more precise semantic indexing and retrieval
+- **Multi-Format Documentation Export**: Includes CLI tools for exporting documentation to HTML and PDF formats
+- **Architecture Quality Gates**: Provides commands for checking architecture health and quality through automated analysis and reporting
+- **Async Core Architecture**: All core operations are implemented using asyncio for efficient concurrent processing and responsiveness
 
 ## Technology Stack
 

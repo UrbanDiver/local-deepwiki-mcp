@@ -2,88 +2,88 @@
 
 ## File Overview
 
-This file implements cross-module dependency analysis for Python projects. It scans source files to build an inter-module import graph, identifying how modules depend on each other. The analysis is purely based on filesystem and regex parsing, without any external service or LLM calls.
+This file provides functionality for analyzing cross-module dependencies within a Python project. It scans Python source files to build an inter-module import graph, identifying how modules depend on one another. The analysis is purely based on filesystem and regex parsing — no external services or LLMs are involved.
 
-The core responsibility of this module is to:
-- Extract import statements from Python files
-- Resolve import targets to module labels
-- Build a graph of module dependencies
-- Compute statistics about coupling between modules
-- Generate Mermaid diagrams for visualization
-
-This functionality is used by the `module_health` generator to analyze module structure and health within a project.
+The core purpose of this module is to support architectural analysis, coupling metrics, and dependency visualization. It is used by various tools in the `local_deepwiki` project, including `coupling`, `module_health`, and `analysis_architecture`.
 
 ## Key Concepts
 
-### Module Labeling Strategy
+### Module Labeling and Resolution
 
-The `_module_label` function defines how Python files are mapped to module labels. It uses a two-level package naming scheme:
-- It strips common [wrapper](../../handlers/_error_handling.md) directories like `src`, `lib`, or `pkg`
-- It takes up to the first two meaningful package parts
-- This ensures that sibling modules like `core/indexer.py` and `core/vectorstore/base.py` both map to `core`
+The system uses a consistent labeling scheme for modules:
+- Modules are identified as second-level packages (e.g., `core.indexer`, `generators.wiki`) relative to the project root.
+- The `_module_label` function strips common [wrapper](../../handlers/_error_handling.md) directories (`src`, `lib`, `pkg`) and the top-level project package name (e.g., `local_deepwiki`) to ensure that labels match import targets.
+- The `_discover_project_tops` function identifies all top-level packages in the repository, which are used to distinguish internal from external imports.
 
-This design choice balances specificity (avoiding overly broad labels) with simplicity (not requiring deep package hierarchy resolution).
+This approach allows for accurate resolution of imports and ensures that the analysis focuses on internal project dependencies.
 
-### Import Resolution Logic
+### Dependency Graph Construction
 
-The `_resolve_import_target` function implements a classification system for imports:
-- Determines if an import is internal (within the project) or external
-- Filters out imports based on `module_filter` and `include_external` flags
-- Resolves internal imports to their module label, handling both direct and relative imports
-- Skips self-imports and filtered-out modules
+The `_build_module_graph` function scans all Python files in the repository, extracts import statements, and builds a graph of module dependencies:
+- It tracks file counts and line counts per module.
+- It counts how many times one module imports from another (edge weights).
+- It records the actual import statements associated with each edge for detailed reporting.
 
-This approach allows for flexible filtering and analysis, enabling users to focus on specific parts of the codebase or exclude third-party dependencies.
+This data structure supports both statistical analysis (e.g., afferent/efferent coupling) and visualization (e.g., Mermaid diagrams).
 
-### Graph Building and Statistics
+### Import Pattern Matching
 
-The `_build_module_graph` function:
-- Iterates over all Python files in the repository
-- Builds counts of files and lines per module
-- Tracks import edges with weights (number of occurrences)
-- Aggregates import statements per edge
-
-The `_compute_dependency_stats` function calculates:
-- Afferent coupling (how many modules depend on a given module)
-- Efferent coupling (how many modules a given module depends on)
-- Identifies the most depended-on and most dependent modules
-
-These statistics provide insight into module cohesion and coupling, which are key indicators of code quality and maintainability.
-
-## Integration
-
-This file integrates with the broader `local_deepwiki` codebase as part of the analysis generators. It depends on:
-- [`iter_python_files`](source_filter.md) from `source_filter` to enumerate Python source files
-- [`get_logger`](../../logging.md) for logging output during analysis
-
-It is called by:
-- `analyze_cross_module_dependencies` which is used by the `module_health` generator
-- `_resolve_import_target` which is used by the `test_module_health` function
-
-The file's role is to provide core dependency analysis functionality that supports higher-level tools like the `module_health` generator and CLI commands such as those found in `main.py` and `config_validator.py`.
-
-## Design Notes
-
-### Why Pure Regex Parsing?
-
-The module avoids using AST parsers or other complex analysis tools. Instead, it relies on regex patterns to extract import statements. This choice was made for:
-- Performance: Regex parsing is faster than full AST traversal
-- Simplicity: Reduces complexity and potential failure points
-- Compatibility: Works with a wide range of Python syntax without needing Python version-specific handling
-
-### Handling of External Dependencies
-
-The `include_external` flag allows filtering out third-party and standard library imports. This is crucial for focusing analysis on project-specific dependencies and avoiding noise from external libraries.
-
-### Edge Case Handling
-
-- **File Reading Errors**: When a file cannot be read, it's skipped with a warning
-- **Self-Imports**: These are filtered out to prevent circular references in the graph
-- **Module Filtering**: The `module_filter` parameter allows analysis of subsets of the codebase
-- **Edge Weight Thresholding**: The `min_edge_weight` parameter allows filtering out weak dependencies
+The `_extract_full_imports` function uses regular expressions to identify all import statements in a source file:
+- It handles various import patterns (`import x`, `from x import y`, `import x as y`, etc.).
+- This allows the system to accurately extract module names from code without relying on AST parsing, which keeps the tool lightweight and fast.
 
 ### Mermaid Diagram Generation
 
-The `_build_mermaid` function generates visual representations of the dependency graph using Mermaid syntax. This provides a human-readable way to understand module relationships, particularly useful for documentation and architectural review. The `_sanitize_id` function ensures that module names (which may contain dots or hyphens) are valid Mermaid node IDs.
+The `_build_mermaid` function converts the dependency graph into a Mermaid diagram for visualization:
+- It ensures that module names are sanitized to be valid Mermaid node IDs (replacing dots and hyphens with underscores).
+- This provides a visual representation of module dependencies that can be embedded in documentation or reports.
+
+## Integration
+
+This file is part of the `local_deepwiki.generators.analysis` module and integrates with:
+- `source_filter.py`: Used by `_build_module_graph` to iterate over Python files.
+- `logging.py`: Used for logging warnings when files cannot be read.
+
+It is consumed by:
+- `coupling.py`: Uses `_module_label` and `analyze_cross_module_dependencies`.
+- `test_module_health.py`: Uses `_discover_project_tops` and `_resolve_import_target`.
+- `analysis_architecture.py`: Uses `analyze_cross_module_dependencies`.
+
+The functions in this file are designed to be modular and composable, enabling reuse in different analysis contexts. For example, `analyze_cross_module_dependencies` is the main entry point used by multiple tools, while lower-level functions like `_resolve_import_target` and `_build_module_graph` support more granular control.
+
+## Design Notes
+
+### Why Regex for Import Parsing?
+
+The decision to use regex for import parsing, rather than AST parsing, was made to:
+- Keep the analysis lightweight and fast.
+- Avoid dependencies on full Python parsers.
+- Maintain compatibility with Python versions and syntax that may not be fully supported by AST parsers.
+
+This trade-off is acceptable because the goal is to extract module names, not to analyze code semantics.
+
+### Handling `__init__.py` Files
+
+The `_module_label` function collapses `__init__.py` files into their parent package:
+- For example, `core/__init__.py` becomes `core` in the module label.
+- This simplifies the module graph and avoids clutter from `__init__.py` files.
+
+### Filtering and Exclusion
+
+The `analyze_cross_module_dependencies` function supports filtering:
+- `module_filter`: Only include modules matching a given prefix.
+- `include_external`: Toggle inclusion of third-party or stdlib imports.
+- `min_edge_weight`: Exclude weak dependencies.
+
+This flexibility allows users to tailor the analysis to their needs, whether they're interested in a full project overview or a focused subset of modules.
+
+### Sanitization for Mermaid
+
+The `_sanitize_id` function ensures that module names are valid Mermaid node IDs:
+- Replaces dots (`.`) and hyphens (`-`) with underscores (`_`).
+- Prevents rendering issues in Mermaid diagrams.
+
+This is a pragmatic choice to support visualization without requiring complex ID generation logic.
 
 ## API Reference
 
@@ -111,7 +111,7 @@ Build and return the inter-module import graph for *repo_path*.
 
 
 <details>
-<summary>View Source (lines 218-285) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L218-L285">GitHub</a></summary>
+<summary>View Source (lines 224-291) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L224-L291">GitHub</a></summary>
 
 ```python
 def analyze_cross_module_dependencies(
@@ -296,13 +296,13 @@ for edge in data["edges"]:
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `_resolve_import_target` | function | Brian Breidenbach | 3 days ago | `27721d1` refactor: extract _resolve_... |
-| `_build_module_graph` | function | Brian Breidenbach | 3 days ago | `27721d1` refactor: extract _resolve_... |
+| `_module_label` | function | Brian Breidenbach | today | `c0fe1bd` fix: unify module labels in... |
+| `_build_module_graph` | function | Brian Breidenbach | today | `c0fe1bd` fix: unify module labels in... |
+| `_resolve_import_target` | function | Brian Breidenbach | 5 days ago | `27721d1` refactor: extract _resolve_... |
 | `_discover_project_tops` | function | Brian Breidenbach | 1 week ago | `ed42442` refactor: split 10+ long me... |
 | `_compute_dependency_stats` | function | Brian Breidenbach | 1 week ago | `ed42442` refactor: split 10+ long me... |
 | `analyze_cross_module_dependencies` | function | Brian Breidenbach | 1 week ago | `ed42442` refactor: split 10+ long me... |
 | `_extract_full_imports` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
-| `_module_label` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
 | `_top_level` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
 | `_build_mermaid` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
 | `_sanitize_id` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
@@ -336,18 +336,17 @@ def _extract_full_imports(source: str) -> list[str]:
 #### `_module_label`
 
 <details>
-<summary>View Source (lines 43-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L43-L59">GitHub</a></summary>
+<summary>View Source (lines 43-65) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L43-L65">GitHub</a></summary>
 
 ```python
-def _module_label(rel_path: Path) -> str:
+def _module_label(rel_path: Path, project_tops: set[str] | None = None) -> str:
     """Convert a relative file path to a dotted module label.
 
     ``src/local_deepwiki/core/indexer.py`` -> ``core.indexer``
 
-    We take up to the first two meaningful package parts (skipping ``src``
-    and single top-level project wrappers) so that siblings like
-    ``core/indexer.py`` and ``core/vectorstore/base.py`` both map to
-    ``core``.
+    Strips ``src/`` layout dirs and the top-level project package name
+    (e.g. ``local_deepwiki``) so that source labels match import-target
+    labels produced by :func:`_resolve_import_target`.
     """
     parts = list(rel_path.with_suffix("").parts)
     # Drop common wrapper dirs.
@@ -355,7 +354,14 @@ def _module_label(rel_path: Path) -> str:
         parts = parts[1:]
     if not parts:
         return "root"
-    return ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
+    # Strip the project top-level package (e.g. "local_deepwiki")
+    if project_tops and parts[0] in project_tops:
+        parts = parts[1:]
+    if not parts:
+        return "root"
+    # Collapse __init__ to parent
+    meaningful = [p for p in parts[:2] if p != "__init__"]
+    return ".".join(meaningful) if meaningful else parts[0]
 ```
 
 </details>
@@ -364,7 +370,7 @@ def _module_label(rel_path: Path) -> str:
 #### `_top_level`
 
 <details>
-<summary>View Source (lines 62-64) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L62-L64">GitHub</a></summary>
+<summary>View Source (lines 68-70) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L68-L70">GitHub</a></summary>
 
 ```python
 def _top_level(dotted: str) -> str:
@@ -378,7 +384,7 @@ def _top_level(dotted: str) -> str:
 #### `_discover_project_tops`
 
 <details>
-<summary>View Source (lines 67-88) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L67-L88">GitHub</a></summary>
+<summary>View Source (lines 73-94) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L73-L94">GitHub</a></summary>
 
 ```python
 def _discover_project_tops(repo_path: Path) -> set[str]:
@@ -411,7 +417,7 @@ def _discover_project_tops(repo_path: Path) -> set[str]:
 #### `_resolve_import_target`
 
 <details>
-<summary>View Source (lines 91-126) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L91-L126">GitHub</a></summary>
+<summary>View Source (lines 97-132) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L97-L132">GitHub</a></summary>
 
 ```python
 def _resolve_import_target(
@@ -458,7 +464,7 @@ def _resolve_import_target(
 #### `_build_module_graph`
 
 <details>
-<summary>View Source (lines 129-184) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L129-L184">GitHub</a></summary>
+<summary>View Source (lines 135-190) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L135-L190">GitHub</a></summary>
 
 ```python
 def _build_module_graph(
@@ -490,7 +496,7 @@ def _build_module_graph(
     edge_imports: dict[tuple[str, str], list[str]] = defaultdict(list)
 
     for py_file, rel_path in iter_python_files(repo_path, exclude_tests=False):
-        src_module = _module_label(rel_path)
+        src_module = _module_label(rel_path, project_tops)
         if module_filter and not src_module.startswith(module_filter):
             continue
 
@@ -525,7 +531,7 @@ def _build_module_graph(
 #### `_compute_dependency_stats`
 
 <details>
-<summary>View Source (lines 187-215) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L187-L215">GitHub</a></summary>
+<summary>View Source (lines 193-221) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L193-L221">GitHub</a></summary>
 
 ```python
 def _compute_dependency_stats(
@@ -565,7 +571,7 @@ def _compute_dependency_stats(
 #### `_build_mermaid`
 
 <details>
-<summary>View Source (lines 288-300) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L288-L300">GitHub</a></summary>
+<summary>View Source (lines 294-306) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L294-L306">GitHub</a></summary>
 
 ```python
 def _build_mermaid(edges: list[dict[str, Any]]) -> str:
@@ -589,7 +595,7 @@ def _build_mermaid(edges: list[dict[str, Any]]) -> str:
 #### `_sanitize_id`
 
 <details>
-<summary>View Source (lines 303-305) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L303-L305">GitHub</a></summary>
+<summary>View Source (lines 309-311) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/module_dependencies.py#L309-L311">GitHub</a></summary>
 
 ```python
 def _sanitize_id(name: str) -> str:
