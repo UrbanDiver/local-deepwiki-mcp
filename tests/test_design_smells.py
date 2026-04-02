@@ -43,10 +43,15 @@ def god_class_file(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def long_method_file(tmp_path: Path) -> Path:
-    """Create a file with a Long Method (>80 lines)."""
-    # Build a function with 85 lines.
-    body = "\n".join(f"    x{i} = {i}" for i in range(85))
-    content = f"def long_function(a):\n{body}\n    return a\n"
+    """Create a file with a Long Method (>80 lines AND CC > 7)."""
+    # Build a function with 85 lines and enough branching to exceed CC floor.
+    lines = ["def long_function(a):"]
+    for i in range(10):
+        lines.append(f"    if a == {i}:")
+        for j in range(7):
+            lines.append(f"        x{i}_{j} = {i * 10 + j}")
+    lines.append("    return a")
+    content = "\n".join(lines) + "\n"
     path = tmp_path / "long_method.py"
     path.write_text(content)
     return tmp_path

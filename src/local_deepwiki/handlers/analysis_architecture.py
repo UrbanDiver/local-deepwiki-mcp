@@ -317,6 +317,7 @@ async def handle_get_coupling_metrics(
     result = analyze_coupling_metrics(
         repo_path=repo_path,
         module_filter=validated.module_filter,
+        exclude_tests=validated.exclude_tests,
     )
 
     # Filter out pure leaf modules (Ce == 0) unless explicitly requested.

@@ -561,6 +561,10 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
                     "type": "boolean",
                     "description": "Return only stats without individual module metrics (default: false)",
                 },
+                "exclude_tests": {
+                    "type": "boolean",
+                    "description": "Exclude test modules from metrics (default: true)",
+                },
             },
             "required": ["repo_path"],
         },
@@ -570,8 +574,8 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         name="get_design_smells",
         description=(
             "Detect common design smells using heuristic AST-based thresholds: "
-            "God Class (>15 methods AND >500 lines), Long Method (>80 lines OR "
-            "cyclomatic complexity >15), Long Parameter List (>6 params), "
+            "God Class (>15 methods AND >500 lines), Long Method (>80 lines AND "
+            "cyclomatic complexity >7, or CC >15), Long Parameter List (>6 params), "
             "Feature Envy (>3 calls to another class's methods), Large File "
             "(>800 lines), Deep Nesting (>4 levels), Data Clump (3+ functions "
             "share 3+ identical parameter names). Returns smells with severity, "

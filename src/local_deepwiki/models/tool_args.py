@@ -672,6 +672,10 @@ class GetCouplingMetricsArgs(BaseModel):
         default=False,
         description="Return only stats without individual module metrics",
     )
+    exclude_tests: bool = Field(
+        default=True,
+        description="Exclude test modules from metrics",
+    )
 
 
 class GetDesignSmellsArgs(BaseModel):

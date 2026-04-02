@@ -43,8 +43,16 @@ _GOD_CLASS_METHOD_THRESHOLD = 15
 _GOD_CLASS_LINE_THRESHOLD = 500
 _LONG_METHOD_LINE_THRESHOLD = 80
 _LONG_METHOD_CC_THRESHOLD = 15
+_LONG_METHOD_CC_FLOOR = 7  # long + branchy = smell; long + linear = fine
 _LONG_PARAM_THRESHOLD = 6
 _FEATURE_ENVY_CALL_THRESHOLD = 5
+_FEATURE_ENVY_IGNORED_PREFIXES: tuple[str, ...] = (
+    "register_",
+    "setup_",
+    "configure_",
+    "init_",
+    "install_",
+)
 _FEATURE_ENVY_IGNORED_OBJECTS: frozenset[str] = frozenset(
     {
         "logger",
@@ -292,9 +300,13 @@ def _detect_long_method(
     """Return a long-method smell dict or None."""
     func_lines = func_node.end_point[0] - func_node.start_point[0] + 1
     cyclomatic = _estimate_cyclomatic(func_node)
+    # Flag if: (long AND branchy) OR (very high CC regardless of length)
+    is_long_and_branchy = (
+        func_lines > _LONG_METHOD_LINE_THRESHOLD and cyclomatic > _LONG_METHOD_CC_FLOOR
+    )
+    is_high_cc = cyclomatic > _LONG_METHOD_CC_THRESHOLD
     if _SEVERITY_ORDER[SEVERITY_HIGH] >= threshold_level and (
-        func_lines > _LONG_METHOD_LINE_THRESHOLD
-        or cyclomatic > _LONG_METHOD_CC_THRESHOLD
+        is_long_and_branchy or is_high_cc
     ):
         return {
             "type": "long_method",
@@ -388,6 +400,8 @@ def _detect_feature_envy(
     """Return feature-envy smell dicts (0 or 1) for *func_node*."""
     smells: list[dict[str, Any]] = []
     if _SEVERITY_ORDER[SEVERITY_MEDIUM] < threshold_level:
+        return smells
+    if func_name.startswith(_FEATURE_ENVY_IGNORED_PREFIXES):
         return smells
     result = _count_external_calls(func_node)
     if result is not None:
