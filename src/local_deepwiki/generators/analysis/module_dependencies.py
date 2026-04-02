@@ -40,15 +40,14 @@ def _extract_full_imports(source: str) -> list[str]:
     return modules
 
 
-def _module_label(rel_path: Path) -> str:
+def _module_label(rel_path: Path, project_tops: set[str] | None = None) -> str:
     """Convert a relative file path to a dotted module label.
 
     ``src/local_deepwiki/core/indexer.py`` -> ``core.indexer``
 
-    We take up to the first two meaningful package parts (skipping ``src``
-    and single top-level project wrappers) so that siblings like
-    ``core/indexer.py`` and ``core/vectorstore/base.py`` both map to
-    ``core``.
+    Strips ``src/`` layout dirs and the top-level project package name
+    (e.g. ``local_deepwiki``) so that source labels match import-target
+    labels produced by :func:`_resolve_import_target`.
     """
     parts = list(rel_path.with_suffix("").parts)
     # Drop common wrapper dirs.
@@ -56,7 +55,14 @@ def _module_label(rel_path: Path) -> str:
         parts = parts[1:]
     if not parts:
         return "root"
-    return ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
+    # Strip the project top-level package (e.g. "local_deepwiki")
+    if project_tops and parts[0] in project_tops:
+        parts = parts[1:]
+    if not parts:
+        return "root"
+    # Collapse __init__ to parent
+    meaningful = [p for p in parts[:2] if p != "__init__"]
+    return ".".join(meaningful) if meaningful else parts[0]
 
 
 def _top_level(dotted: str) -> str:
@@ -155,7 +161,7 @@ def _build_module_graph(
     edge_imports: dict[tuple[str, str], list[str]] = defaultdict(list)
 
     for py_file, rel_path in iter_python_files(repo_path, exclude_tests=False):
-        src_module = _module_label(rel_path)
+        src_module = _module_label(rel_path, project_tops)
         if module_filter and not src_module.startswith(module_filter):
             continue
 

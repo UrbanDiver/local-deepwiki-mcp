@@ -211,14 +211,13 @@ def test_analyze_module_health_coupling_reflects_inbound_imports(module_repo):
     """
     from local_deepwiki.generators.analysis.module_health import analyze_module_health
 
-    # Ce: web imports from core — use source label "myapp.web"
-    web_result = analyze_module_health(module_repo, "myapp.web")
+    # Ce: web imports from core — project top "myapp" is stripped from labels
+    web_result = analyze_module_health(module_repo, "web")
     assert web_result["coupling"]["efferent_coupling"] > 0, (
         "web should show Ce > 0 since web/app.py imports from core, "
         f"got Ce={web_result['coupling']['efferent_coupling']}"
     )
-    # Ca: core is imported by web (this was the original bug — Ca was always 0)
-    # Uses target-style prefix "core" which matches "core.indexer" (Ca=1)
+    # Ca: core is imported by web
     core_result = analyze_module_health(module_repo, "core")
     assert core_result["coupling"]["afferent_coupling"] > 0, (
         "core should show Ca > 0 since web/app.py imports from core, "

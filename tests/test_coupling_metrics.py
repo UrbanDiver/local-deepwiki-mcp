@@ -162,10 +162,11 @@ async def test_coupling_metrics_models_has_abstractness(mock_access_control, tmp
         {"repo_path": str(tmp_path), "include_leaves": True}
     )
     data = json.loads(result[0].text)
-    # Find the module that maps to basepkg/abstract.py -> "basepkg.abstract".
-    abstract_metrics = [m for m in data["metrics"] if m["module"] == "basepkg.abstract"]
+    # Find the module that maps to basepkg/abstract.py -> "abstract"
+    # (project top "basepkg" is stripped from the label).
+    abstract_metrics = [m for m in data["metrics"] if m["module"] == "abstract"]
     assert len(abstract_metrics) > 0, (
-        f"Module 'basepkg.abstract' not found in: {[m['module'] for m in data['metrics']]}"
+        f"Module 'abstract' not found in: {[m['module'] for m in data['metrics']]}"
     )
     assert abstract_metrics[0]["abstractness"] > 0.0, (
         f"Expected abstractness > 0 for basepkg.abstract, got: {abstract_metrics[0]}"

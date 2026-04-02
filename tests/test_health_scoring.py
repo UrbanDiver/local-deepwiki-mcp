@@ -169,15 +169,22 @@ def test_score_coupling_perfect_zero_distance():
 
 
 def test_score_coupling_high_avg_distance():
-    # avg_distance = 0.8 → penalty = min(0.8*50, 40) = 40
+    # avg_distance = 0.8 → penalty = min(0.8*30, 25) = 24
     metrics = [{"distance": 0.8, "instability": 0.5, "efferent_coupling": 2}] * 3
     result = score_coupling(metrics)
-    assert result["score"] <= 65  # 100 - 40 = 60 approx
+    assert result["score"] <= 80  # 100 - 24 = 76 approx
 
 
 def test_score_coupling_many_unstable_modules():
-    # instability > 0.8 AND efferent_coupling > 5
-    metrics = [{"distance": 0.0, "instability": 0.9, "efferent_coupling": 6}] * 20
+    # instability > 0.8 AND efferent_coupling > 5 AND afferent_coupling == 0
+    metrics = [
+        {
+            "distance": 0.0,
+            "instability": 0.9,
+            "efferent_coupling": 6,
+            "afferent_coupling": 0,
+        }
+    ] * 20
     result = score_coupling(metrics)
     assert result["factors"]["highly_unstable_modules"] == 20
     # unstable_pct = 100%, penalty = min(100*2, 25) = 25

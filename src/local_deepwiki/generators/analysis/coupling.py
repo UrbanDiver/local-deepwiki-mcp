@@ -91,49 +91,24 @@ def _count_classes_in_file(full_path: Path) -> tuple[int, int]:
 
 
 def _candidate_labels(rel_path: Path, project_tops: set[str]) -> list[str]:
-    """Return candidate module labels for *rel_path* in order of specificity.
+    """Return candidate module labels for *rel_path*.
 
-    The dependency graph builds two kinds of node labels for the same file:
-
-    1. The **source label** (via :func:`_module_label`): takes the first two
-       parts of the path after stripping ``src/``, e.g.
-       ``src/local_deepwiki/providers/base.py`` → ``local_deepwiki.providers``.
-
-    2. The **import target label** (via :func:`_resolve_import_target`): strips
-       the project top-level package name from import paths, e.g.
-       ``from local_deepwiki.providers.base import X`` → ``providers.base``.
-
-    Both labels may appear in the graph.  We return the stripped label first
-    (most specific, e.g. ``providers.base``) followed by the unstripped label
-    (``local_deepwiki.providers``) so that abstractness is attributed to the
-    most precise module node that actually exists.
+    Now that :func:`_module_label` strips the project top-level package
+    (matching :func:`_resolve_import_target`), source labels and import
+    labels are consistent.  We return the single canonical label.
     """
     parts = list(rel_path.with_suffix("").parts)
-    # Drop common source-layout wrapper directories.
     while parts and parts[0] in ("src", "lib", "pkg"):
         parts = parts[1:]
     if not parts:
         return ["root"]
-
-    # Unstripped label (matches _module_label output).
-    def _take2(ps: list[str]) -> str:
-        meaningful = [p for p in ps[:2] if p != "__init__"]
-        return ".".join(meaningful) if meaningful else (ps[0] if ps else "root")
-
-    unstripped = _take2(parts)
-
-    # Stripped label (matches _resolve_import_target output for imports).
-    stripped: str | None = None
     if parts[0] in project_tops:
-        tail = parts[1:]
-        if tail:
-            stripped = _take2(tail)
-
-    candidates: list[str] = []
-    if stripped and stripped != unstripped:
-        candidates.append(stripped)
-    candidates.append(unstripped)
-    return candidates
+        parts = parts[1:]
+    if not parts:
+        return ["root"]
+    meaningful = [p for p in parts[:2] if p != "__init__"]
+    label = ".".join(meaningful) if meaningful else (parts[0] if parts else "root")
+    return [label]
 
 
 def _compute_abstractness(

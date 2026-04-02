@@ -81,26 +81,32 @@ def score_coupling(metrics: list[dict[str, Any]]) -> dict[str, Any]:
 
     Factors:
     - Average distance from main sequence (lower is better)
-    - Percentage of highly unstable modules (I>0.8 and Ce>5)
+    - Percentage of problematic unstable modules
 
-    Uses percentage-based thresholds so the score scales with project size
-    rather than penalizing large projects with many small modules.
+    Highly unstable modules are only flagged when they have Ca=0 (nothing
+    depends on them) AND high Ce — these are disconnected modules that
+    import a lot but provide no value to the rest of the system. Edge
+    modules with Ca>0 (handlers that are imported by __init__.py, services
+    used by handlers) are expected to be unstable and are not penalized.
     """
     if not metrics:
         return {"score": 100, "grade": "A", "factors": {}}
 
     distances = [m.get("distance", 0) for m in metrics]
     avg_distance = sum(distances) / len(distances) if distances else 0
+    # Only flag modules that are fully disconnected (Ca=0) with high outgoing deps
     highly_unstable = sum(
         1
         for m in metrics
-        if m.get("instability", 0) > 0.8 and m.get("efferent_coupling", 0) > 5
+        if m.get("instability", 0) > 0.8
+        and m.get("efferent_coupling", 0) > 5
+        and m.get("afferent_coupling", 0) == 0
     )
     unstable_pct = (highly_unstable / len(metrics)) * 100 if metrics else 0
 
     score = 100.0
-    score -= min(avg_distance * 50, 40)  # avg distance penalty, cap 40
-    score -= min(unstable_pct * 2, 25)  # unstable % penalty, cap 25
+    score -= min(avg_distance * 30, 25)  # avg distance penalty, cap 25
+    score -= min(unstable_pct * 2, 25)  # disconnected unstable % penalty, cap 25
 
     score = max(0.0, min(100.0, score))
     return {
