@@ -602,3 +602,7 @@ def _sanitize_id(name: str) -> str:
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`
+
+## See Also
+
+- [coupling](coupling.md) - uses this

@@ -2,76 +2,85 @@
 
 ## File Overview
 
-This module implements Robert C. Martin's package-level stability metrics for analyzing coupling and abstractness in Python projects. It computes key software architecture metrics such as afferent coupling (Ca), efferent coupling (Ce), instability (I), abstractness (A), and distance from the main sequence (D) for each module in a repository.
+This file implements **Robert C. Martin's coupling metrics** for analyzing package-level stability in Python projects. It computes several key metrics for each module in a repository, including afferent coupling (Ca), efferent coupling (Ce), instability (I), abstractness (A), and distance from the main sequence (D).
 
-The module performs static analysis of Python source code using AST parsing to identify class definitions and determine which ones are abstract. It integrates with the project's dependency analysis system to compute coupling counts between modules.
+The analysis is performed purely using filesystem traversal and AST parsing — no external services or LLMs are involved. The results are used to identify unstable modules, understand architectural dependencies, and support architectural analysis tasks like hotspot detection and design smell identification.
+
+This file integrates with other modules in the `local_deepwiki.generators.analysis` package to provide a complete analysis pipeline for project architecture.
 
 ## Key Concepts
 
-### Coupling Metrics
-The module implements Robert C. Martin's architectural metrics:
-- **Afferent Coupling (Ca)**: Number of external modules that depend on a module.
-- **Efferent Coupling (Ce)**: Number of external modules that a module depends on.
-- **Instability (I)**: `Ce / (Ca + Ce)`, where 0 = stable, 1 = unstable.
-- **Abstractness (A)**: Ratio of abstract classes to total classes in a module.
-- **Distance from Main Sequence (D)**: `|A + I - 1|`, used to identify modules that deviate from the ideal balance.
+### 1. **Coupling Metrics**
+The file implements the core metrics defined by Robert C. Martin for software architecture analysis:
+- **Afferent Coupling (Ca)**: Number of modules that depend on a given module.
+- **Efferent Coupling (Ce)**: Number of modules that a given module depends on.
+- **Instability (I)**: Ce / (Ca + Ce), where 0 = maximally stable, 1 = maximally unstable.
+- **Abstractness (A)**: Fraction of abstract classes in a module (defined as classes inheriting from `ABC`, `ABCMeta`, `Protocol`, or containing `@abstractmethod`).
+- **Distance from Main Sequence (D)**: |A + I - 1|, used to identify modules that deviate from the ideal balance of stability and abstractness.
 
-### Abstract Class Detection
-The module identifies abstract classes based on two criteria:
-1. Inheritance from `ABC`, `ABCMeta`, or `Protocol`.
-2. Presence of `@abstractmethod` decorators within the class body.
+### 2. **Abstractness Calculation**
+Abstractness is computed by:
+- Parsing each Python file to extract class definitions.
+- Identifying abstract classes based on inheritance from `ABC`, `ABCMeta`, `Protocol`, or presence of `@abstractmethod`.
+- Aggregating class counts per module and calculating the fraction of abstract classes.
 
-This approach leverages AST parsing with `tree-sitter` and [`CodeParser`](../../core/parser/code_parser.md) to extract class definitions and their properties without requiring runtime evaluation.
+### 3. **Module Labeling and Resolution**
+Modules are labeled in two ways:
+- **Source label**: Based on file path (e.g., `src/local_deepwiki/providers/base.py` → `local_deepwiki.providers`).
+- **Import target label**: Based on resolved import paths (e.g., `from local_deepwiki.providers.base import X` → `providers.base`).
 
-### Module Label Resolution
-To correctly attribute abstract class counts, the module resolves multiple possible labels for each file:
-- Unstripped label: Based on full file path (e.g., `local_deepwiki.providers`)
-- Stripped label: Based on import paths (e.g., `providers.base`)
+This dual labeling ensures that abstractness and coupling metrics are attributed to the most specific module node that exists in the dependency graph.
 
-It prefers the more specific stripped label when resolving where to assign class counts.
+### 4. **Test Module Filtering**
+Test modules (identified by labels like `test_`, `tests`, or `conftest`) are filtered out by default to avoid skewing architectural metrics.
 
 ## Integration
 
-This module is part of the analysis pipeline and integrates with several other components in the codebase:
+This file is part of the `local_deepwiki.generators.analysis` module and integrates with:
+- `module_dependencies`: Used for discovering project tops and analyzing cross-module dependencies.
+- `source_filter`: Used to iterate over Python source files in the repository.
+- [`CodeParser`](../../core/parser/code_parser.md): Used to parse Python files into ASTs for class and method analysis.
+- [`get_logger`](../../logging.md): Used for logging during analysis.
 
-- **Dependency Analysis**: Uses [`analyze_cross_module_dependencies`](module_dependencies.md) to get module and edge information.
-- **Source Filtering**: Relies on [`iter_python_files`](source_filter.md) to enumerate Python files in the repository.
-- **Parser**: Utilizes [`CodeParser`](../../core/parser/code_parser.md) from `local_deepwiki.core.parser` for AST parsing.
-- **Project Top Discovery**: Uses `_discover_project_tops` from `module_dependencies` to identify top-level package names.
+Functions in this file are called by:
+- `_walk` (used by `complexity`, `design_smells`, `hotspots`)
+- `_is_test_module` (used by `dependency_diagram`, `test_diagrams_misc`)
+- `analyze_coupling_metrics` (used by `coupling_page`, `analysis_architecture`, `test_analysis_architecture`)
 
-It is called by:
-- `complexity` via `_walk` function
-- `coupling_page` and `analysis_architecture` via `analyze_coupling_metrics`
-
-The module is designed to be a pure filesystem and AST-based analysis tool, avoiding any LLM or external service calls, making it suitable for automated analysis in CI/CD pipelines or static analysis tools.
+The `analyze_coupling_metrics` function is the primary entry point and is used to generate coupling reports for the documentation system.
 
 ## Design Notes
 
-### Parsing Strategy
-The module uses `tree-sitter` with [`CodeParser`](../../core/parser/code_parser.md) to parse Python files, allowing for accurate identification of class definitions and their attributes. This is more robust than regex-based parsing for complex Python constructs.
+### 1. **AST Parsing Strategy**
+The code uses `tree-sitter` to parse Python files and traverse the AST for class definitions. This approach is chosen for its performance and accuracy in parsing Python syntax, especially in complex codebases.
 
-### Abstract Class Identification
-The algorithm for detecting abstract classes is conservative:
-- It checks both inheritance and decorators.
-- It uses regex matching against class source text spans, which is efficient and accurate for the supported patterns.
+### 2. **Abstract Class Detection**
+Abstract classes are detected by:
+- Looking for inheritance from `ABC`, `ABCMeta`, or `Protocol`.
+- Scanning the class body for `@abstractmethod` decorators.
 
-### Module Labeling
-The labeling strategy ensures that abstractness is attributed to the most specific available module node:
-- If both stripped and unstripped labels exist, the stripped one is preferred.
-- This ensures that classes defined in `providers/base.py` contribute to the abstractness score of `providers.base` rather than `local_deepwiki.providers`.
+This dual-check ensures accurate detection of abstract classes even in edge cases.
 
-### Edge Case Handling
-- Unparseable files return `(0, 0)` for class counts.
-- Modules with no classes have an abstractness score of `0.0`.
-- Empty or invalid module names are skipped during aggregation.
-- The instability and distance metrics are carefully rounded to avoid floating-point precision issues.
+### 3. **Module Label Resolution**
+To ensure that metrics are attributed to the most precise module node, the code generates two candidate labels for each file:
+- A stripped label (e.g., `providers.base`) for import targets.
+- An unstripped label (e.g., `local_deepwiki.providers`) for source nodes.
 
-### Performance Considerations
-- The module re-walks the repository to map files to modules, which is acceptable for analysis tools but not for real-time applications.
-- Class counting is done per file to avoid excessive memory usage.
-- The use of `tree-sitter` and [`CodeParser`](../../core/parser/code_parser.md) provides fast and accurate parsing.
+The most specific label that exists in the dependency graph is used for attribution.
 
-This design ensures that the analysis is both accurate and performant while remaining fully self-contained and suitable for automated code quality checks.
+### 4. **Test Module Exclusion**
+Test modules are excluded by default to avoid skewing architectural metrics. This behavior is configurable via the `exclude_tests` parameter.
+
+### 5. **Performance Considerations**
+- The file re-walks the repository to map files to modules, which is a trade-off for not persisting this mapping.
+- AST parsing is reused from [`CodeParser`](../../core/parser/code_parser.md), which likely caches parsed results for performance.
+
+### 6. **Edge Cases**
+- Unparseable or unsupported files return `(0, 0)` for class counts.
+- Modules with zero total classes return an abstractness of `0.0`.
+- Empty dependency graphs are handled gracefully with safe defaults.
+
+This design ensures robustness and usability in a wide variety of project structures.
 
 ## API Reference
 
@@ -80,7 +89,7 @@ This design ensures that the analysis is both accurate and performant while rema
 #### `analyze_coupling_metrics`
 
 ```python
-def analyze_coupling_metrics(repo_path: Path, module_filter: str | None = None) -> dict[str, Any]
+def analyze_coupling_metrics(repo_path: Path, module_filter: str | None = None, exclude_tests: bool = True) -> dict[str, Any]
 ```
 
 Compute Robert C. Martin coupling metrics per module.
@@ -90,6 +99,7 @@ Compute Robert C. Martin coupling metrics per module.
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Root of the repository to analyze. |
 | `module_filter` | `str | None` | `None` | Optional prefix to restrict analysis to a sub-package. |
+| `exclude_tests` | `bool` | `True` | When True, exclude test modules from metrics. |
 
 **Returns:** `dict[str, Any]`
 
@@ -97,18 +107,20 @@ Compute Robert C. Martin coupling metrics per module.
 
 
 <details>
-<summary>View Source (lines 204-268) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L204-L268">GitHub</a></summary>
+<summary>View Source (lines 210-285) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L210-L285">GitHub</a></summary>
 
 ```python
 def analyze_coupling_metrics(
     repo_path: Path,
     module_filter: str | None = None,
+    exclude_tests: bool = True,
 ) -> dict[str, Any]:
     """Compute Robert C. Martin coupling metrics per module.
 
     Args:
         repo_path: Root of the repository to analyze.
         module_filter: Optional prefix to restrict analysis to a sub-package.
+        exclude_tests: When True, exclude test modules from metrics.
 
     Returns:
         A dict with ``status`` and ``metrics`` (list of per-module dicts).
@@ -121,6 +133,15 @@ def analyze_coupling_metrics(
     )
     modules = dep_result["modules"]
     edges = dep_result["edges"]
+
+    if exclude_tests:
+        test_names = {m["name"] for m in modules if _is_test_module(m["name"])}
+        modules = [m for m in modules if m["name"] not in test_names]
+        edges = [
+            e
+            for e in edges
+            if e["source"] not in test_names and e["target"] not in test_names
+        ]
 
     ca, ce = _compute_ca_ce(modules, edges)
     abstractness = _compute_abstractness(repo_path, modules)
@@ -180,39 +201,41 @@ flowchart TD
     N4[_count_classes_in_file]
     N5[_discover_project_tops]
     N6[_is_abstract_node]
-    N7[_take2]
-    N8[_walk]
-    N9[analyze_coupling_metrics]
-    N10[analyze_cross_module_depend...]
-    N11[decode]
-    N12[iter_python_files]
-    N13[parse_file]
-    N14[search]
-    N15[sort]
-    N16[splitlines]
-    N17[with_suffix]
+    N7[_is_test_module]
+    N8[_take2]
+    N9[_walk]
+    N10[analyze_coupling_metrics]
+    N11[analyze_cross_module_depend...]
+    N12[decode]
+    N13[iter_python_files]
+    N14[parse_file]
+    N15[search]
+    N16[sort]
+    N17[splitlines]
+    N18[with_suffix]
     N4 --> N0
-    N4 --> N13
-    N4 --> N11
-    N4 --> N16
     N4 --> N14
+    N4 --> N12
+    N4 --> N17
+    N4 --> N15
     N4 --> N6
-    N4 --> N8
-    N6 --> N14
-    N8 --> N6
-    N8 --> N8
-    N1 --> N17
-    N1 --> N7
+    N4 --> N9
+    N6 --> N15
+    N9 --> N6
+    N9 --> N9
+    N1 --> N18
+    N1 --> N8
     N2 --> N5
-    N2 --> N12
+    N2 --> N13
     N2 --> N1
     N2 --> N4
-    N9 --> N10
-    N9 --> N3
-    N9 --> N2
-    N9 --> N15
+    N10 --> N11
+    N10 --> N7
+    N10 --> N3
+    N10 --> N2
+    N10 --> N16
     classDef func fill:#e1f5fe
-    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17 func
+    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18 func
 ```
 
 ## Used By
@@ -226,6 +249,7 @@ Functions and methods in this file and their callers:
 - **`_count_classes_in_file`**: called by `_compute_abstractness`
 - **`_discover_project_tops`**: called by `_compute_abstractness`
 - **`_is_abstract_node`**: called by `_count_classes_in_file`, `_walk`
+- **`_is_test_module`**: called by `analyze_coupling_metrics`
 - **`_take2`**: called by `_candidate_labels`
 - **`_walk`**: called by `_count_classes_in_file`, `_walk`
 - **[`analyze_cross_module_dependencies`](module_dependencies.md)**: called by `analyze_coupling_metrics`
@@ -268,11 +292,12 @@ result = generate_coupling_page(_make_data())
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `_compute_ca_ce` | function | Brian Breidenbach | yesterday | `29ae780` refactor: decompose long me... |
-| `analyze_coupling_metrics` | function | Brian Breidenbach | yesterday | `29ae780` refactor: decompose long me... |
-| `_candidate_labels` | function | Brian Breidenbach | yesterday | `515ba66` refactor: improve coupling ... |
-| `_take2` | function | Brian Breidenbach | yesterday | `515ba66` refactor: improve coupling ... |
-| `_compute_abstractness` | function | Brian Breidenbach | yesterday | `515ba66` refactor: improve coupling ... |
+| `_is_test_module` | function | Brian Breidenbach | today | `56000bf` fix: improve analysis accur... |
+| `analyze_coupling_metrics` | function | Brian Breidenbach | today | `56000bf` fix: improve analysis accur... |
+| `_compute_ca_ce` | function | Brian Breidenbach | 3 days ago | `29ae780` refactor: decompose long me... |
+| `_candidate_labels` | function | Brian Breidenbach | 3 days ago | `515ba66` refactor: improve coupling ... |
+| `_take2` | function | Brian Breidenbach | 3 days ago | `515ba66` refactor: improve coupling ... |
+| `_compute_abstractness` | function | Brian Breidenbach | 3 days ago | `515ba66` refactor: improve coupling ... |
 | `_count_classes_in_file` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
 | `_is_abstract_node` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
 | `_walk` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
@@ -526,6 +551,26 @@ def _compute_ca_ce(
 
 </details>
 
+
+#### `_is_test_module`
+
+<details>
+<summary>View Source (lines 204-207) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/coupling.py#L204-L207">GitHub</a></summary>
+
+```python
+def _is_test_module(name: str) -> bool:
+    """Return True if *name* looks like a test module label."""
+    parts = name.split(".")
+    return any(p.startswith("test_") or p == "tests" or p == "conftest" for p in parts)
+```
+
+</details>
+
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/analysis/coupling.py:48-90`
+
+## See Also
+
+- [logging](../../logging.md) - dependency
+- [init_cli](../../cli/init_cli.md) - shares 2 dependencies

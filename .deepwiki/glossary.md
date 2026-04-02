@@ -4,14 +4,14 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 **Quick Navigation:** [#](##) | [A](#a) | [B](#b) | [C](#c) | [D](#d) | [E](#e) | [F](#f) | [G](#g) | [H](#h) | [I](#i) | [K](#k) | [L](#l) | [M](#m) | [N](#n) | [O](#o) | [P](#p) | [Q](#q) | [R](#r) | [S](#s) | [T](#t) | [U](#u) | [V](#v) | [W](#w)
 
-**Total:** 2528 entities (409 classes, 1295 functions, 824 methods)
+**Total:** 2529 entities (409 classes, 1296 functions, 824 methods)
 
 ---
 
 <p><a href="#" onclick="document.querySelectorAll('details').forEach(d=>d.open=true);return false">Expand All</a> | <a href="#" onclick="document.querySelectorAll('details').forEach(d=>d.open=false);return false">Collapse All</a></p>
 
 <details id="#" markdown="1">
-<summary><strong>#</strong> — 1114 entities</summary>
+<summary><strong>#</strong> — 1115 entities</summary>
 
 - ▪️ **[`PluginRegistry._`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: LanguageParserPlugin) → None` (`registry.py`)
 - ▪️ **[`PluginRegistry._`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: WikiGeneratorPlugin) → None` (`registry.py`)
@@ -764,6 +764,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_is_test_file`](files/src/local_deepwiki/handlers/_index_helpers.md)** `(file_path: str) → bool` (`_index_helpers.py`) - Check if a file path looks like a test file.
 - ▪️ **[`SecretDetector._is_test_file`](files/src/local_deepwiki/core/secret_detector.md)** `(file_path: str) → bool` (`secret_detector.py`) - Check if the file path indicates a test file.
 - 🔹 **[`_is_test_module`](files/src/local_deepwiki/generators/diagrams/dependency_diagram.md)** `(module: str, file_path: str) → bool` (`dependency_diagram.py`) - Check if a module is a test module.
+- 🔹 **[`_is_test_module`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(name: str) → bool` (`coupling.py`) - Return True if *name* looks like a test module label.
 - 🔹 **[`_is_test_path`](files/src/local_deepwiki/generators/analysis/dependency_graph_data.md)** `(file_path: str) → bool` (`dependency_graph_data.py`) - Check if a file path is a test file.
 - 🔹 **[`_is_test_path`](files/src/local_deepwiki/generators/codemap/generator.md)** `(file_path: str) → bool` (`generator.py`) - Return ``True`` if *file_path* looks like a test/fixture ...
 - ▪️ **[`LLMCache._is_valid_entry`](files/src/local_deepwiki/core/llm_cache.md)** `(entry: dict[str, Any]) → bool` (`llm_cache.py`) - Check if a cache entry is still valid (not expired).
@@ -1178,7 +1179,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`analyze_architecture_composite`](files/src/local_deepwiki/generators/analysis/architecture_composite.md)** `(repo_path: Path, project_name: str, detail_level: str, ...+1) → dict[str, Any]` (`architecture_composite.py`) - Run composite architecture analysis and return narrative ...
 - 🔹 **[`analyze_architecture_health`](files/src/local_deepwiki/generators/analysis/architecture_health.md)** `(repo_path: Path, project_name: str, top_findings: int) → dict[str, Any]` (`architecture_health.py`) - Run all architecture analyses and return a scored health ...
 - ▪️ **[`RelationshipAnalyzer.analyze_chunks`](files/src/local_deepwiki/generators/see_also.md)** `(chunks: list[[CodeChunk](files/src/local_deepwiki/models/chunks.md)]) → None` (`see_also.py`) - Analyze import chunks to build relationship graph.
-- 🔹 **[`analyze_coupling_metrics`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(repo_path: Path, module_filter: str | None) → dict[str, Any]` (`coupling.py`) - Compute Robert C. Martin coupling metrics per module.
+- 🔹 **[`analyze_coupling_metrics`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(repo_path: Path, module_filter: str | None, exclude_tests: bool) → dict[str, Any]` (`coupling.py`) - Compute Robert C. Martin coupling metrics per module.
 - 🔹 **[`analyze_cross_module_dependencies`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)** `(repo_path: Path, module_filter: str | None, include_external: bool, ...+1) → dict[str, Any]` (`module_dependencies.py`) - Build and return the inter-module import graph for *repo_...
 - 🔹 **[`analyze_design_smells`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(repo_path: Path, severity_threshold: str, exclude_tests: bool) → dict[str, Any]` (`design_smells.py`) - Scan *repo_path* for design smells.
 - 🔹⚡ **[`analyze_file_coverage`](files/src/local_deepwiki/generators/analysis/coverage.md)** `(file_path: str, vector_store: [VectorStore](files/src/local_deepwiki/core/vectorstore/store.md)) → [FileCoverage](files/src/local_deepwiki/generators/analysis/coverage.md)` (`coverage.py`) - Analyze documentation coverage for a single file.
@@ -2693,16 +2694,16 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/core/git_utils.py:28-31`](files/src/local_deepwiki/core/git_utils.md)
-- [`src/local_deepwiki/core/chunker.py:50-63`](files/src/local_deepwiki/core/chunker.md)
+- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
+- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
+- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
+- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
+- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
-- [`src/local_deepwiki/core/vectorstore/embedding.py:20-30`](files/src/local_deepwiki/core/vectorstore/embedding.md)
-- [`src/local_deepwiki/core/graph_rag/store.py:44-411`](files/src/local_deepwiki/core/graph_rag/store.md)
-- [`src/local_deepwiki/config/provider_models.py:10-20`](files/src/local_deepwiki/config/provider_models.md)
-- [`src/local_deepwiki/core/indexer.py:233-263`](files/src/local_deepwiki/core/indexer.md)
-- `src/local_deepwiki/providers/llm/__init__.py:16-19`
-- [`src/local_deepwiki/cli/init_cli.py:30-43`](files/src/local_deepwiki/cli/init_cli.md)
-- [`src/local_deepwiki/web/app.py:87-96`](files/src/local_deepwiki/web/app.md)
+- [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
+- [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
+- `src/local_deepwiki/__init__.py`
 
 
 *Showing 10 of 263 source files.*

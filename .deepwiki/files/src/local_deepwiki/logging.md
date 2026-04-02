@@ -303,3 +303,8 @@ assert logger.name == f"{PACKAGE_NAME}.{module_name}"
 ## See Also
 
 - [init_cli](cli/init_cli.md) - shares 3 dependencies
+
+## See Also
+
+- [coupling](generators/analysis/coupling.md) - uses this
+- [init_cli](cli/init_cli.md) - shares 3 dependencies

@@ -5,15 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP server enables private, local repository documentation with AI-powered querying and analysis. It supports multiple LLM providers including Anthropic, Ollama, and OpenAI, and offers both local and hybrid indexing strategies. The system provides architecture analysis, diff-aware querying, and agentic RAG capabilities for understanding codebases.
+Local DeepWiki MCP server enables private, local documentation generation and querying for code repositories using a modular, configurable architecture. It supports multiple LLM providers and offers tools for indexing, searching, and analyzing repository structure and content. The system is designed for use in development environments where privacy and local execution are priorities.
 
 ## Key Features
 
-- **Multi-provider LLM support** - Integrates with Anthropic, Ollama, and OpenAI through a unified provider abstraction layer
-- **AST-aware code chunking** - Splits code into semantic chunks at function and class boundaries using tree-sitter parsing
-- **Architecture analysis and reporting** - Provides comprehensive architecture health checks, trends analysis, and quality gate enforcement
-- **Diff-aware querying** - Enables querying about code changes and differences through specialized analysis functions
-- **Configurable indexing strategies** - Supports local, cloud, and hybrid indexing configurations through YAML-based configuration files
+- **Multi-provider LLM support** — Configurable integration with providers like Anthropic, OpenAI, and Ollama through a unified abstraction layer
+- **AST-aware code chunking** — Intelligent splitting of source code into semantic chunks at function and class boundaries using tree-sitter
+- **Configurable architecture analysis** — Built-in tools for architecture quality gates, trend analysis, and health reporting
+- **Async core architecture** — Full asynchronous implementation throughout for efficient handling of concurrent operations
+- **Modular CLI and MCP server** — Supports command-line tools for indexing, searching, and serving documentation via MCP protocol
 
 ## Technology Stack
 

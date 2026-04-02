@@ -94,7 +94,7 @@
                 },
                 {
                   "number": "8.1.1.8",
-                  "title": "server.py",
+                  "title": "Server",
                   "path": "files/src/local_deepwiki/server.md"
                 },
                 {
@@ -134,7 +134,7 @@
                     },
                     {
                       "number": "8.1.1.11.5",
-                      "title": "init_cli.py",
+                      "title": "Init Cli",
                       "path": "files/src/local_deepwiki/cli/init_cli.md"
                     },
                     {
@@ -216,7 +216,7 @@
                     },
                     {
                       "number": "8.1.1.12.9",
-                      "title": "provider_models.py",
+                      "title": "Provider Models",
                       "path": "files/src/local_deepwiki/config/provider_models.md"
                     }
                   ]
@@ -248,7 +248,7 @@
                     },
                     {
                       "number": "8.1.1.13.5",
-                      "title": "chunker.py",
+                      "title": "Chunker",
                       "path": "files/src/local_deepwiki/core/chunker.md"
                     },
                     {
@@ -263,7 +263,7 @@
                     },
                     {
                       "number": "8.1.1.13.8",
-                      "title": "git_utils.py",
+                      "title": "Git Utils",
                       "path": "files/src/local_deepwiki/core/git_utils.md"
                     },
                     {
@@ -278,7 +278,7 @@
                     },
                     {
                       "number": "8.1.1.13.11",
-                      "title": "indexer.py",
+                      "title": "Indexer",
                       "path": "files/src/local_deepwiki/core/indexer.md"
                     },
                     {
@@ -400,7 +400,7 @@
                         },
                         {
                           "number": "8.1.1.13.25.4",
-                          "title": "store.py",
+                          "title": "Store",
                           "path": "files/src/local_deepwiki/core/graph_rag/store.md"
                         }
                       ]
@@ -449,7 +449,7 @@
                         },
                         {
                           "number": "8.1.1.13.27.2",
-                          "title": "embedding.py",
+                          "title": "Embedding",
                           "path": "files/src/local_deepwiki/core/vectorstore/embedding.md"
                         },
                         {
@@ -657,7 +657,7 @@
                     },
                     {
                       "number": "8.1.1.15.14",
-                      "title": "search.py",
+                      "title": "Search",
                       "path": "files/src/local_deepwiki/generators/search.md"
                     },
                     {
@@ -682,7 +682,7 @@
                       "children": [
                         {
                           "number": "8.1.1.15.18.1",
-                          "title": "api_docs.py",
+                          "title": "Api Docs",
                           "path": "files/src/local_deepwiki/generators/analysis/api_docs.md"
                         },
                         {
@@ -707,7 +707,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.6",
-                          "title": "callgraph.py",
+                          "title": "Callgraph",
                           "path": "files/src/local_deepwiki/generators/analysis/callgraph.md"
                         },
                         {
@@ -717,7 +717,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.8",
-                          "title": "Coupling",
+                          "title": "coupling.py",
                           "path": "files/src/local_deepwiki/generators/analysis/coupling.md"
                         },
                         {
@@ -742,7 +742,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.13",
-                          "title": "Design Smells",
+                          "title": "design_smells.py",
                           "path": "files/src/local_deepwiki/generators/analysis/design_smells.md"
                         },
                         {
@@ -812,7 +812,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.27",
-                          "title": "stale_detection.py",
+                          "title": "Stale Detection",
                           "path": "files/src/local_deepwiki/generators/analysis/stale_detection.md"
                         },
                         {
@@ -923,12 +923,12 @@
                         },
                         {
                           "number": "8.1.1.15.21.4",
-                          "title": "orchestrator.py",
+                          "title": "Orchestrator",
                           "path": "files/src/local_deepwiki/generators/examples/orchestrator.md"
                         },
                         {
                           "number": "8.1.1.15.21.5",
-                          "title": "plugin.py",
+                          "title": "Plugin",
                           "path": "files/src/local_deepwiki/generators/examples/plugin.md"
                         }
                       ]
@@ -995,7 +995,7 @@
                         },
                         {
                           "number": "8.1.1.15.22.12",
-                          "title": "source_formatter.py",
+                          "title": "Source Formatter",
                           "path": "files/src/local_deepwiki/generators/wiki/source_formatter.md"
                         },
                         {
@@ -1049,7 +1049,7 @@
                     },
                     {
                       "number": "8.1.1.16.6",
-                      "title": "agentic.py",
+                      "title": "Agentic",
                       "path": "files/src/local_deepwiki/handlers/agentic.md"
                     },
                     {
@@ -1059,12 +1059,12 @@
                     },
                     {
                       "number": "8.1.1.16.8",
-                      "title": "agentic_workflows.py",
+                      "title": "Agentic Workflows",
                       "path": "files/src/local_deepwiki/handlers/agentic_workflows.md"
                     },
                     {
                       "number": "8.1.1.16.9",
-                      "title": "Analysis Architecture",
+                      "title": "analysis_architecture.py",
                       "path": "files/src/local_deepwiki/handlers/analysis_architecture.md"
                     },
                     {
@@ -1074,7 +1074,7 @@
                     },
                     {
                       "number": "8.1.1.16.11",
-                      "title": "analysis_entity.py",
+                      "title": "Analysis Entity",
                       "path": "files/src/local_deepwiki/handlers/analysis_entity.md"
                     },
                     {
@@ -1094,7 +1094,7 @@
                     },
                     {
                       "number": "8.1.1.16.15",
-                      "title": "core.py",
+                      "title": "Core",
                       "path": "files/src/local_deepwiki/handlers/core.md"
                     },
                     {
@@ -1166,7 +1166,7 @@
                     },
                     {
                       "number": "8.1.1.17.5",
-                      "title": "Tool Args",
+                      "title": "tool_args.py",
                       "path": "files/src/local_deepwiki/models/tool_args.md"
                     },
                     {
@@ -1262,7 +1262,7 @@
                         },
                         {
                           "number": "8.1.1.19.6.4",
-                          "title": "openai.py",
+                          "title": "Openai",
                           "path": "files/src/local_deepwiki/providers/llm/openai.md"
                         }
                       ]
@@ -1298,12 +1298,12 @@
                   "children": [
                     {
                       "number": "8.1.1.21.1",
-                      "title": "analysis_service.py",
+                      "title": "Analysis Service",
                       "path": "files/src/local_deepwiki/services/analysis_service.md"
                     },
                     {
                       "number": "8.1.1.21.2",
-                      "title": "generator_service.py",
+                      "title": "Generator Service",
                       "path": "files/src/local_deepwiki/services/generator_service.md"
                     },
                     {
@@ -1350,7 +1350,7 @@
                   "children": [
                     {
                       "number": "8.1.1.22.1",
-                      "title": "Analysis",
+                      "title": "analysis.py",
                       "path": "files/src/local_deepwiki/tool_defs/analysis.md"
                     },
                     {
@@ -1382,7 +1382,7 @@
                   "children": [
                     {
                       "number": "8.1.1.23.1",
-                      "title": "app.py",
+                      "title": "App",
                       "path": "files/src/local_deepwiki/web/app.md"
                     },
                     {
@@ -1430,7 +1430,7 @@
       "children": [
         {
           "number": "9.1",
-          "title": "Codemap: handle_impact_analysis",
+          "title": "Handle-Impact-Analysis",
           "path": "codemaps/handle-impact-analysis.md"
         }
       ]

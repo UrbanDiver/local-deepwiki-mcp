@@ -332,3 +332,7 @@ assert not any("test" in str(p) for p in rel_paths)
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/analysis/source_filter.py:47-52`
+
+## See Also
+
+- [coupling](coupling.md) - uses this

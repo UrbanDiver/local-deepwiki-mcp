@@ -2,90 +2,115 @@
 
 ## External Dependencies
 
-The following third-party libraries are required for the application to function:
-
-| Dependency              | Version        | Purpose                                                                 |
-|------------------------|----------------|-------------------------------------------------------------------------|
-| `anthropic`            | >=0.40,<1.0.0  | Provides access to Anthropic's AI models, such as Claude.              |
-| `flask`                | >=3.0,<4.0.0   | Web framework for building the application's API and UI.                |
-| `LanceDB`              | >=0.15,<1.0.0  | Vector database for storing and querying embeddings.                    |
-| `markdown`             | >=3.0,<4.0.0   | Library for parsing and rendering Markdown text.                        |
-| `mcp`                  | >=1.2.0,<2.0.0 | Multi-Client Protocol for communication with LLMs and other services.   |
-| `nh3`                  | >=0.2.14,<1.0.0| Sanitizes HTML content to prevent XSS attacks.                        |
-| `ollama`               | >=0.4,<1.0.0   | Interface for running and interacting with local LLMs via Ollama.       |
-| `openai`               | >=1.0,<2.0.0   | Official Python client for OpenAI's API.                                |
-| `pandas`               | >=2.0,<3.0.0   | Data manipulation and analysis library.                                 |
-| `psutil`               | >=5.0,<6.0.0   | System and process utilities for monitoring system resources.           |
-| `pydantic`             | >=2.0,<3.0.0   | Data validation and settings management using Python type annotations.  |
-| `pyyaml`               | >=6.0,<7.0.0   | YAML parser and emitter for configuration files.                        |
-| `rapidfuzz`            | >=3.0,<4.0.0   | Fast fuzzy string matching and similarity scoring.                      |
-| `rich`                 | >=13.0,<14.0.0 | Library for rich text and beautiful formatting in the terminal.         |
-| `sentence-transformers`| >=3.0,<4.0.0   | Provides state-of-the-art sentence embeddings.                          |
-| `tree-sitter`          | >=0.23         | Parser generator tool and API for parsing source code.                  |
-| `tree-sitter-c`        | >=0.23         | Tree-sitter grammar for C language.                                     |
-| `tree-sitter-c-sharp`  | >=0.23         | Tree-sitter grammar for C# language.                                    |
-| `tree-sitter-cpp`      | >=0.23         | Tree-sitter grammar for C++ language.                                   |
-| `tree-sitter-go`       | >=0.23         | Tree-sitter grammar for Go language.                                    |
-| `tree-sitter-java`     | >=0.23         | Tree-sitter grammar for Java language.                                  |
-| `tree-sitter-javascript`| >=0.23        | Tree-sitter grammar for JavaScript language.                            |
-| `tree-sitter-kotlin`   | >=0.23         | Tree-sitter grammar for Kotlin language.                                |
-| `tree-sitter-php`      | >=0.23         | Tree-sitter grammar for PHP language.                                   |
-| `tree-sitter-python`   | >=0.23         | Tree-sitter grammar for Python language.                                |
-| `tree-sitter-ruby`     | >=0.23         | Tree-sitter grammar for Ruby language.                                  |
-| `tree-sitter-rust`     | >=0.23         | Tree-sitter grammar for Rust language.                                  |
-| `tree-sitter-swift`    | >=0.0.1        | Tree-sitter grammar for Swift language.                                 |
-| `tree-sitter-typescript`| >=0.23        | Tree-sitter grammar for TypeScript language.                            |
-| `watchdog`             | >=4.0,<5.0.0   | File system event monitoring library.                                   |
+| Dependency                  | Purpose                                                                 |
+|-----------------------------|-------------------------------------------------------------------------|
+| `anthropic`                 | Provides access to Anthropic's AI models, such as Claude.              |
+| `flask`                     | Web framework for building the application's HTTP server.               |
+| `LanceDB`                   | Vector database for storing and querying embeddings.                    |
+| `markdown`                  | Library for parsing and rendering Markdown text.                        |
+| `mcp`                       | Model Control Protocol client for interacting with LLMs.                |
+| `nh3`                       | HTML sanitization library to clean user-provided HTML content.          |
+| `ollama`                    | Interface for running local LLMs via Ollama.                            |
+| `openai`                    | Client for interacting with OpenAI's API.                               |
+| `pandas`                    | Data manipulation and analysis library.                                 |
+| `psutil`                    | System and process utilities for monitoring system resources.           |
+| `pydantic`                  | Data validation and settings management using Python type annotations.  |
+| `pyyaml`                    | YAML parsing and serialization.                                         |
+| `rapidfuzz`                 | Fast fuzzy string matching and similarity scoring.                      |
+| `rich`                      | Library for rich text and beautiful formatting in the terminal.         |
+| `sentence-transformers`     | Provides pre-trained models for generating sentence embeddings.         |
+| `tree-sitter`               | General-purpose parsing library for code analysis.                      |
+| `tree-sitter-c`             | Tree-sitter grammar for C language parsing.                             |
+| `tree-sitter-c-sharp`       | Tree-sitter grammar for C# language parsing.                            |
+| `tree-sitter-cpp`           | Tree-sitter grammar for C++ language parsing.                           |
+| `tree-sitter-go`            | Tree-sitter grammar for Go language parsing.                            |
+| `tree-sitter-java`          | Tree-sitter grammar for Java language parsing.                          |
+| `tree-sitter-javascript`    | Tree-sitter grammar for JavaScript language parsing.                    |
+| `tree-sitter-kotlin`        | Tree-sitter grammar for Kotlin language parsing.                        |
+| `tree-sitter-php`           | Tree-sitter grammar for PHP language parsing.                           |
+| `tree-sitter-python`        | Tree-sitter grammar for Python language parsing.                        |
+| `tree-sitter-ruby`          | Tree-sitter grammar for Ruby language parsing.                          |
+| `tree-sitter-rust`          | Tree-sitter grammar for Rust language parsing.                          |
+| `tree-sitter-swift`         | Tree-sitter grammar for Swift language parsing.                         |
+| `tree-sitter-typescript`    | Tree-sitter grammar for TypeScript language parsing.                    |
+| `watchdog`                  | File system monitoring library for watching changes in directories.     |
 
 ## Dev Dependencies
 
-The following dependencies are used for development and testing:
-
-| Dependency            | Version       | Purpose                                                   |
-|----------------------|---------------|-----------------------------------------------------------|
-| `black`              | >=24.0        | Code formatter to enforce consistent style.               |
-| `isort`              | >=5.0         | Sorts and formats import statements.                      |
-| `local-deepwiki`     | [all]         | Internal package for local development.                   |
-| `mypy`               | >=1.0         | Static type checker for Python.                           |
-| `pip-audit`          | >=2.0         | Security audit tool for Python dependencies.              |
-| `pre-commit`         | >=3.0         | Framework for managing and maintaining pre-commit hooks.  |
-| `pypdf`              | >=6.6.1       | PDF parsing and manipulation library.                     |
-| `pytest`             | >=8.0         | Testing framework for Python.                             |
-| `pytest-asyncio`     | >=0.24,<1.0.0 | Plugin for testing async code with pytest.                |
-| `types-Markdown`     | >=3.0         | Type stubs for the `markdown` library.                    |
-| `types-PyYAML`       | >=6.0         | Type stubs for the `pyyaml` library.                      |
-| `weasyprint`         | >=68.0,<69.0.0| HTML/CSS to PDF converter.                                |
+| Dependency              | Purpose                                                                 |
+|-------------------------|-------------------------------------------------------------------------|
+| `black`                 | Code formatter to enforce consistent Python style.                      |
+| `isort`                 | Import sorter to organize and format import statements.                 |
+| `local-deepwiki`        | Development package for local development and testing.                  |
+| `mypy`                  | Static type checker for Python.                                         |
+| `pip-audit`             | Security audit tool for Python package dependencies.                    |
+| `pre-commit`            | Framework for managing and maintaining pre-commit hooks.                |
+| `pypdf`                 | PDF parsing and manipulation library.                                   |
+| `pytest`                | Testing framework for Python.                                           |
+| `pytest-asyncio`        | Plugin for pytest to support asynchronous tests.                        |
+| `types-Markdown`        | Type stubs for the `markdown` library.                                  |
+| `types-PyYAML`          | Type stubs for the `pyyaml` library.                                    |
+| `weasyprint`            | HTML to PDF converter.                                                  |
 
 ## Internal Module Dependencies
 
-Based on import statements, the following internal modules depend on each other:
-
-- `src/local_deepwiki/providers/credentials.py` imports `os`
-- `src/local_deepwiki/generators/wiki/term_validator.py` imports `re`
-- `src/local_deepwiki/__init__.py` imports `importlib.metadata.version`
-- `src/local_deepwiki/cli/main.py` imports `sys`, `rich.console.Console`, `rich.table.Table`, `importlib`
-- `src/local_deepwiki/models/provider_types.py` imports `enum.StrEnum`
-- `src/local_deepwiki/handlers/types.py` imports `typing.TypedDict`
-- `src/local_deepwiki/cli/init_cli.py` imports various standard and third-party libraries including `argparse`, `os`, `sys`, `urllib.request`, `collections.Counter`, `dataclasses.dataclass`, `pathlib.Path`, `typing.Literal`, `yaml`, `rich.console.Console`, `rich.panel.Panel`, `rich.prompt.Prompt`, `rich.table.Table`, [`local_deepwiki.config.Config`](files/src/local_deepwiki/config/models.md), [`local_deepwiki.config.models.ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
-- `src/local_deepwiki/core/vectorstore/mixins/search_types.py` imports `dataclasses.dataclass` and [`local_deepwiki.core.vectorstore.schema.SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md)
-- `src/local_deepwiki/security/access_control.py` imports `asyncio`, `collections.abc.Callable`, `contextvars.ContextVar`, `dataclasses.dataclass`, `enum.StrEnum`, `functools.wraps`, `typing.Any`, `typing.TypeVar`, `os`
-- `src/local_deepwiki/logging.py` imports `logging`, `os`, `sys`, `typing.Literal`
-- `src/local_deepwiki/core/protocols.py` imports `collections.abc.Iterator`, `pathlib.Path`, `typing.Protocol`, `typing.runtime_checkable`
-- `src/local_deepwiki/generators/wiki/source_formatter.py` imports `collections.abc.Callable`, `dataclasses.dataclass`, `operator.attrgetter`, `pathlib.Path`, [`local_deepwiki.core.git_blame.format_blame_date`](files/src/local_deepwiki/core/git_blame.md), [`local_deepwiki.core.git_blame.get_file_entity_blame`](files/src/local_deepwiki/core/git_blame.md), [`local_deepwiki.core.git_utils.GitRepoInfo`](files/src/local_deepwiki/core/git_utils.md), [`local_deepwiki.core.git_utils.build_source_url`](files/src/local_deepwiki/core/git_utils.md), [`local_deepwiki.logging.get_logger`](files/src/local_deepwiki/logging.md), [`local_deepwiki.models.ChunkType`](files/src/local_deepwiki/models/foundation.md), [`local_deepwiki.models.CodeChunk`](files/src/local_deepwiki/models/chunks.md)
-- `src/local_deepwiki/generators/dir_tree.py` imports `dataclasses.dataclass`, `dataclasses.field`, `pathlib.Path`, `subprocess`
-
-Additionally, several test files and helper modules import from internal modules:
-
-- `tests/wiki_output_helpers.py` imports `hashlib`, `re`, `struct`, `collections.abc.AsyncIterator`, `pathlib.Path`, `typing.Any`, [`local_deepwiki.providers.base.EmbeddingProvider`](files/src/local_deepwiki/providers/base.md), [`local_deepwiki.providers.base.LLMProvider`](files/src/local_deepwiki/providers/base.md)
-- `tests/fixtures/sample_repo/lib/external.py` imports `typing.Any`
-- `src/local_deepwiki/generators/analysis/health_scoring.py` imports `typing.Any`
-- `src/local_deepwiki/generators/analysis/architecture_report.py` imports `typing.Any`
-- `src/local_deepwiki/handlers/session_state.py` imports `typing.Any`
-- `src/local_deepwiki/generators/analysis/smells_page.py` imports `collections.defaultdict`
-- `tests/fixtures/sample_repo/src/parser.py` imports `typing.Any`, `src.models.User`, `json`, `pathlib.Path`
-- `tests/fixtures/sample_repo/src/sub/processor.py` imports `typing.Any`, `src.models.Order`, `src.models.User`
-- `tests/fixtures/sample_repo/src/utils.py` imports `hashlib`, `re`
-- `tests/fixtures/sample_repo/tests/test_parser.py` imports `pytest`, `src.models.User`, `src.parser.DataParser`
+- [`WikiGenerator`](files/src/local_deepwiki/generators/wiki/generator.md) depends on [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md)
+- [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md) depends on [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md)
+- [`LLMProvider`](files/src/local_deepwiki/providers/base.md) is used by various generators and handlers
+- [`Config`](files/src/local_deepwiki/config/models.md) is imported and used in `cli/init_cli.py`
+- [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md) is imported and used in `cli/init_cli.py`
+- `DataParser` is used in `tests/fixtures/sample_repo/tests/test_parser.py`
+- `User` is imported in `tests/fixtures/sample_repo/src/parser.py`, `tests/fixtures/sample_repo/src/sub/processor.py`, and `tests/fixtures/sample_repo/tests/test_parser.py`
+- `Order` is imported in `tests/fixtures/sample_repo/src/sub/processor.py`
+- [`ChunkType`](files/src/local_deepwiki/models/foundation.md) and [`CodeChunk`](files/src/local_deepwiki/models/chunks.md) are imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
+- [`GitRepoInfo`](files/src/local_deepwiki/core/git_utils.md) and [`build_source_url`](files/src/local_deepwiki/core/git_utils.md) are imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
+- [`format_blame_date`](files/src/local_deepwiki/core/git_blame.md) and [`get_file_entity_blame`](files/src/local_deepwiki/core/git_blame.md) are imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
+- [`get_logger`](files/src/local_deepwiki/logging.md) is imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
+- [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md) is imported in `src/local_deepwiki/core/vectorstore/mixins/search_types.py`
+- [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md) and [`LLMProvider`](files/src/local_deepwiki/providers/base.md) are imported in `tests/wiki_output_helpers.py`
+- `Console` is imported in `src/local_deepwiki/cli/main.py` and `src/local_deepwiki/cli/init_cli.py`
+- `Table` is imported in `src/local_deepwiki/cli/main.py` and `src/local_deepwiki/cli/init_cli.py`
+- `Panel` is imported in `src/local_deepwiki/cli/init_cli.py`
+- `Prompt` is imported in `src/local_deepwiki/cli/init_cli.py`
+- `argparse` is imported in `src/local_deepwiki/cli/init_cli.py`
+- `yaml` is imported in `src/local_deepwiki/cli/init_cli.py`
+- `Literal` is imported in `src/local_deepwiki/cli/init_cli.py`
+- `Path` is imported in `src/local_deepwiki/cli/init_cli.py`
+- `Counter` is imported in `src/local_deepwiki/cli/init_cli.py`
+- `dataclass` is imported in `src/local_deepwiki/cli/init_cli.py`
+- `os` is imported in `src/local_deepwiki/cli/init_cli.py`
+- `urllib.request` is imported in `src/local_deepwiki/cli/init_cli.py`
+- `sys` is imported in `src/local_deepwiki/cli/main.py` and `src/local_deepwiki/cli/init_cli.py`
+- `importlib` is imported in `src/local_deepwiki/cli/main.py`
+- `hashlib` is imported in `tests/fixtures/sample_repo/src/utils.py` and `tests/wiki_output_helpers.py`
+- `re` is imported in `src/local_deepwiki/generators/wiki/term_validator.py`, `tests/fixtures/sample_repo/src/utils.py`, and `tests/wiki_output_helpers.py`
+- `struct` is imported in `tests/wiki_output_helpers.py`
+- `AsyncIterator` is imported in `tests/wiki_output_helpers.py`
+- `Protocol` and `runtime_checkable` are imported in `src/local_deepwiki/core/protocols.py`
+- `Iterator` is imported in `src/local_deepwiki/core/protocols.py`
+- `Path` is imported in `src/local_deepwiki/core/protocols.py`
+- `StrEnum` is imported in `src/local_deepwiki/models/provider_types.py` and `src/local_deepwiki/security/access_control.py`
+- `TypedDict` is imported in `src/local_deepwiki/handlers/types.py`
+- `Literal` is imported in `src/local_deepwiki/handlers/types.py`
+- `TypeVar` is imported in `src/local_deepwiki/security/access_control.py`
+- `Callable` is imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
+- `attrgetter` is imported in `src/local_deepwiki/generators/wiki/source_formatter.py`
+- `ContextVar` is imported in `src/local_deepwiki/security/access_control.py`
+- `wraps` is imported in `src/local_deepwiki/security/access_control.py`
+- `asyncio` is imported in `src/local_deepwiki/security/access_control.py`
+- `logging` is imported in `src/local_deepwiki/logging.py`
+- `sys` is imported in `src/local_deepwiki/logging.py`
+- `os` is imported in `src/local_deepwiki/logging.py`
+- `Literal` is imported in `src/local_deepwiki/logging.py`
+- `dataclass` is imported in `src/local_deepwiki/core/vectorstore/mixins/search_types.py`
+- [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md) is imported in `src/local_deepwiki/core/vectorstore/mixins/search_types.py`
+- `json` is imported in `tests/fixtures/sample_repo/src/parser.py`
+- `Path` is imported in `tests/fixtures/sample_repo/src/parser.py`
+- `Any` is imported in `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/generators/analysis/architecture_report.py`, `src/local_deepwiki/handlers/session_state.py`, `tests/fixtures/sample_repo/lib/external.py`, `tests/fixtures/sample_repo/src/parser.py`, `tests/fixtures/sample_repo/src/sub/processor.py`, and `tests/fixtures/sample_repo/src/utils.py`
+- `defaultdict` is imported in `src/local_deepwiki/generators/analysis/smells_page.py`
+- `version` is imported in `src/local_deepwiki/__init__.py`
+- `os` is imported in `src/local_deepwiki/providers/credentials.py`
+- `importlib` is imported in `src/local_deepwiki/cli/main.py`
 
 ## Module Dependency Graph
 

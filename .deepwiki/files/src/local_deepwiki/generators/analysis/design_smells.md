@@ -2,89 +2,95 @@
 
 ## File Overview
 
-This module provides static analysis capabilities to detect common design smells in source code using Abstract Syntax Tree (AST) parsing. It performs heuristic-based detection of issues such as God Classes, Long Methods, Feature Envy, and others without relying on external services or LLMs. The detection is purely based on source code structure and line counts.
+This file implements a static analysis tool for detecting common design smells in source code using AST (Abstract Syntax Tree) parsing. It provides heuristics to identify code smells such as God Classes, Long Methods, Feature Envy, and more, based on line counts, cyclomatic complexity, nesting depth, and parameter usage patterns.
 
-The module is designed to be part of a larger static analysis pipeline, where it can be invoked to scan a repository and return structured results about design issues found.
+The module is designed to be a pure filesystem and AST-based analysis tool — it does not rely on external services or LLMs. It integrates with the broader `local_deepwiki` ecosystem by leveraging [`CodeParser`](../../core/parser/code_parser.md) for AST parsing and [`iter_source_files`](source_filter.md) for traversing source files.
 
 ## Key Concepts
 
-### Design Smell Detection Heuristics
+### Design Smells Detection
 
-The module implements several well-known design smell detection heuristics, each with threshold-based logic:
+The core abstraction is the detection of design smells using static analysis. Each smell is defined by a set of thresholds (e.g., line count, cyclomatic complexity) and heuristics that are applied to AST nodes.
 
-- **God Class**: A class with more than 15 methods and/or more than 500 lines.
-- **Long Method**: A function exceeding 80 lines or having cyclomatic complexity above 15.
-- **Long [Parameter](api_docs.md) List**: A function with more than 6 parameters.
-- **Feature Envy**: A function making more than 3 calls to methods of a single other class.
-- **Large File**: A file with more than 800 lines.
-- **Deep Nesting**: A function with nesting depth exceeding 4 levels.
-- **Data Clump**: More than 3 functions share the same 3 or more parameter names.
+- **God Class**: A class with too many methods and lines, indicating violation of the Single Responsibility Principle.
+- **Long Method**: A function that is too long or has high cyclomatic complexity, suggesting it should be split.
+- **Long [Parameter](api_docs.md) List**: A function with too many parameters, suggesting the use of a parameter object.
+- **Feature Envy**: A function that makes too many calls to methods of another class, suggesting it may belong there.
+- **Large File**: A file that is too long, suggesting it should be split into smaller modules.
+- **Deep Nesting**: Excessive nesting in a function, which reduces readability.
+- **Data Clump**: Multiple functions that share the same set of parameters, suggesting a shared data structure.
 
-These heuristics are chosen for their ability to identify structural issues that may impact maintainability and readability.
+### AST Traversal and Smell Detection
 
-### AST Walking and Node Analysis
+The system uses recursive AST traversal to identify relevant nodes (classes, functions) and then applies smell-specific detection functions. The traversal is implemented via `_walk_ast`, which dispatches to class or function-specific handlers (`_walk_class_node`, `_walk_function_node`).
 
-The module leverages the `tree-sitter` library to parse source code into ASTs. It uses recursive traversal (`_walk_ast`) to walk the AST and identify relevant nodes (classes, functions) and extract information such as:
+### Threshold-Based Heuristics
 
-- Function parameters (`_get_params`)
-- Nesting depth (`_max_nesting`)
-- Attribute calls (`_collect_attribute_calls`)
-- Cyclomatic complexity (`_estimate_cyclomatic`)
+All smell detection is based on configurable thresholds. These thresholds are defined as module-level constants, allowing for easy tuning or customization of sensitivity. The thresholds are designed to catch common anti-patterns that reduce code maintainability.
 
-This approach ensures that detection is based on actual code structure rather than simple text parsing.
+### Severity Levels
 
-### Threshold-Based Severity Filtering
-
-Detection is configurable by severity threshold (`low`, `medium`, `high`) to allow filtering out less critical issues. The `_SEVERITY_ORDER` mapping enables sorting and filtering of smells.
-
-### Data Clump Detection
-
-A unique aspect of this module is its ability to detect **data clumps**, which are shared parameters across multiple functions. This is a more advanced pattern that requires tracking function signatures across a file and identifying commonalities.
+Smells are categorized into severity levels: `low`, `medium`, and `high`. This allows filtering of results based on severity, which is useful for prioritizing refactoring efforts.
 
 ## Integration
 
-This module integrates with the broader codebase through:
+This file is part of the `local_deepwiki.generators.analysis` module and integrates with:
 
-- **[`CodeParser`](../../core/parser/code_parser.md)** from `local_deepwiki.core.parser`: Used to parse source files into ASTs.
-- **[`iter_source_files`](source_filter.md)** from `local_deepwiki.generators.analysis.source_filter`: Provides an iterator over source files in a repository.
-- **Logging**: Uses [`get_logger`](../../logging.md) from `local_deepwiki.logging` for logging analysis progress.
+- [`CodeParser`](../../core/parser/code_parser.md) from `local_deepwiki.core.parser` to parse source code into ASTs.
+- [`iter_source_files`](source_filter.md) from `local_deepwiki.generators.analysis.source_filter` to iterate over source files in a repository.
+- [`get_logger`](../../logging.md) from `local_deepwiki.logging` to log analysis progress and results.
 
 It is called by:
-- `analyze_design_smells` function, which is used by the `smells_page` generator.
-- Several internal helper functions (`_node_text`, `_estimate_cyclomatic`, etc.) are used by other analysis modules like `complexity`, `hotspots`, and `coupling`.
+- `analyze_design_smells` function, which is used by modules like `smells_page`, `analysis_architecture`, and tests.
 
-The module is a core component of the static analysis subsystem, supporting the generation of design smell reports in the documentation pipeline.
+The file is also used internally by:
+- `chunk_builders`, `chunk_extractors`, and other components that require helper functions like `_node_text`, `_estimate_cyclomatic`, and `_count`.
 
 ## Design Notes
 
-### Why AST-based Analysis?
+### Why Static Analysis?
 
-AST-based analysis is chosen over regex or string-based checks because it provides accurate, structured understanding of code semantics. It allows for precise identification of constructs like nesting, method calls, and class boundaries, which are essential for detecting smells like Feature Envy or Deep Nesting.
+This module uses static analysis (AST parsing) instead of runtime or dynamic analysis because:
+- It is faster and more deterministic.
+- It doesn't require running or instrumenting the code.
+- It allows for detecting design smells without modifying the codebase.
 
-### Thresholds and Configurability
+### Threshold Selection
 
-Thresholds are hardcoded for simplicity and consistency. While this limits configurability, it ensures that the detection is consistent and predictable across runs. In a future version, these could be made configurable via a settings file or CLI arguments.
+Thresholds were chosen based on widely accepted practices in software engineering:
+- For example, a God Class is flagged if it has more than 15 methods and 500 lines.
+- Long Method is flagged if it exceeds 80 lines or has cyclomatic complexity over 15.
+- Feature Envy is flagged if a function makes more than 3 calls to a single external object.
 
-### Handling Edge Cases
+These values are not arbitrary but are based on empirical thresholds used in literature and tooling (e.g., SonarQube, PMD).
 
-- **Unknown node types**: The code gracefully handles unknown or unexpected node types by skipping them.
-- **Missing identifiers**: Functions and classes without names are handled with fallbacks (`"<unnamed>"`, `"<anonymous>"`).
-- **Empty or malformed files**: Parsing failures are caught and return an empty list of smells.
+### Separation of Concerns
 
-### Performance Considerations
+The module is separated into:
+- Helper functions (`_node_text`, `_estimate_cyclomatic`, `_count`, etc.) for AST utilities.
+- Smell detection functions (`_detect_god_class`, `_detect_long_method`, etc.) for specific smell logic.
+- File-level analysis (`_analyze_file`, `_walk_ast`) for orchestrating the detection process.
+- Top-level function (`analyze_design_smells`) for integrating with the CLI or other consumers.
 
-- AST traversal is recursive and optimized for depth-first processing.
-- Use of `Counter` and `defaultdict` for efficient counting and grouping.
-- Smells are collected in a flat list and sorted at the end for consistent output.
+This structure promotes reusability and testability, as each function has a single, well-defined responsibility.
 
-### Why No LLM or External Services?
+### Filtering by Severity
 
-The module is intentionally kept free of LLMs or external APIs. This ensures:
-- Reproducibility of results.
-- Fast execution without network dependencies.
-- Compatibility with offline analysis environments.
+The `analyze_design_smells` function allows filtering by severity, enabling users to focus on the most critical smells. This is implemented by mapping severity strings to numerical values (`_SEVERITY_ORDER`) and comparing against them.
 
-This design aligns with the project's goal of providing lightweight, self-contained static analysis tools.
+### Handling of Edge Cases
+
+- **Empty or Invalid Files**: The `_analyze_file` function gracefully handles cases where parsing fails by returning an empty list of smells.
+- **Unnamed Entities**: Functions and classes without names (e.g., anonymous functions or unnamed classes) are given placeholder names (`<anonymous>`, `<unnamed>`).
+- **[Parameter](api_docs.md) Extraction**: The `_get_params` function filters out `self` and `cls` parameters to avoid skewing data clump detection.
+
+### Data Clump Detection
+
+Data clump detection is performed at the file level, after all functions have been analyzed. It identifies parameter sets that are shared across multiple functions, suggesting that those parameters should be grouped into a dedicated data structure. This is a more advanced detection that requires tracking function parameters across the entire file.
+
+### Sorting of Smells
+
+The final list of smells is sorted by severity (descending), then by file name, and then by line number. This makes it easier for users to prioritize fixes and navigate the results.
 
 ## API Reference
 
@@ -111,7 +117,7 @@ Scan *repo_path* for design smells.
 
 
 <details>
-<summary>View Source (lines 656-708) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L656-L708">GitHub</a></summary>
+<summary>View Source (lines 670-722) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L670-L722">GitHub</a></summary>
 
 ```python
 def analyze_design_smells(
@@ -341,21 +347,21 @@ def handle_status(code: int) -> str:
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `_check_large_file` | function | Brian Breidenbach | 2 days ago | `1a11306` refactor: decompose CC > 15... |
-| `_walk_class_node` | function | Brian Breidenbach | 2 days ago | `1a11306` refactor: decompose CC > 15... |
-| `_walk_function_node` | function | Brian Breidenbach | 2 days ago | `1a11306` refactor: decompose CC > 15... |
-| `_walk_ast` | function | Brian Breidenbach | 2 days ago | `1a11306` refactor: decompose CC > 15... |
-| `_analyze_file` | function | Brian Breidenbach | 2 days ago | `1a11306` refactor: decompose CC > 15... |
-| `_detect_dispatch_table_candidate` | function | Brian Breidenbach | 2 days ago | `d58bac7` feat: add data clump and di... |
+| `_detect_long_method` | function | Brian Breidenbach | today | `56000bf` fix: improve analysis accur... |
+| `_detect_feature_envy` | function | Brian Breidenbach | today | `56000bf` fix: improve analysis accur... |
+| `_check_large_file` | function | Brian Breidenbach | 3 days ago | `1a11306` refactor: decompose CC > 15... |
+| `_walk_class_node` | function | Brian Breidenbach | 3 days ago | `1a11306` refactor: decompose CC > 15... |
+| `_walk_function_node` | function | Brian Breidenbach | 3 days ago | `1a11306` refactor: decompose CC > 15... |
+| `_walk_ast` | function | Brian Breidenbach | 3 days ago | `1a11306` refactor: decompose CC > 15... |
+| `_analyze_file` | function | Brian Breidenbach | 3 days ago | `1a11306` refactor: decompose CC > 15... |
+| `_detect_dispatch_table_candidate` | function | Brian Breidenbach | 3 days ago | `d58bac7` feat: add data clump and di... |
 | `_collect_attribute_calls` | function | Brian Breidenbach | 1 week ago | `6dca476` fix: add allowlist to filte... |
 | `_walk` | function | Brian Breidenbach | 1 week ago | `6dca476` fix: add allowlist to filte... |
 | `_collect_class_methods` | function | Brian Breidenbach | 1 week ago | `f3faf1e` refactor: split generator a... |
 | `_detect_god_class` | function | Brian Breidenbach | 1 week ago | `f3faf1e` refactor: split generator a... |
-| `_detect_long_method` | function | Brian Breidenbach | 1 week ago | `f3faf1e` refactor: split generator a... |
 | `_detect_long_params` | function | Brian Breidenbach | 1 week ago | `f3faf1e` refactor: split generator a... |
 | `_detect_deep_nesting` | function | Brian Breidenbach | 1 week ago | `f3faf1e` refactor: split generator a... |
 | `_count_external_calls` | function | Brian Breidenbach | 1 week ago | `f3faf1e` refactor: split generator a... |
-| `_detect_feature_envy` | function | Brian Breidenbach | 1 week ago | `f3faf1e` refactor: split generator a... |
 | `_compute_smell_summary` | function | Brian Breidenbach | 1 week ago | `f3faf1e` refactor: split generator a... |
 | `analyze_design_smells` | function | Brian Breidenbach | 1 week ago | `f3faf1e` refactor: split generator a... |
 | `_node_text` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
@@ -372,7 +378,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_node_text`
 
 <details>
-<summary>View Source (lines 154-155) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L154-L155">GitHub</a></summary>
+<summary>View Source (lines 162-163) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L162-L163">GitHub</a></summary>
 
 ```python
 def _node_text(node: Node) -> str:
@@ -385,7 +391,7 @@ def _node_text(node: Node) -> str:
 #### `_estimate_cyclomatic`
 
 <details>
-<summary>View Source (lines 158-175) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L158-L175">GitHub</a></summary>
+<summary>View Source (lines 166-183) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L166-L183">GitHub</a></summary>
 
 ```python
 def _estimate_cyclomatic(node: Node) -> int:
@@ -414,7 +420,7 @@ def _estimate_cyclomatic(node: Node) -> int:
 #### `_count`
 
 <details>
-<summary>View Source (lines 162-172) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L162-L172">GitHub</a></summary>
+<summary>View Source (lines 170-180) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L170-L180">GitHub</a></summary>
 
 ```python
 def _count(n: Node) -> None:
@@ -436,7 +442,7 @@ def _count(n: Node) -> None:
 #### `_get_params`
 
 <details>
-<summary>View Source (lines 178-188) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L178-L188">GitHub</a></summary>
+<summary>View Source (lines 186-196) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L186-L196">GitHub</a></summary>
 
 ```python
 def _get_params(node: Node) -> list[str]:
@@ -458,7 +464,7 @@ def _get_params(node: Node) -> list[str]:
 #### `_max_nesting`
 
 <details>
-<summary>View Source (lines 191-197) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L191-L197">GitHub</a></summary>
+<summary>View Source (lines 199-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L199-L205">GitHub</a></summary>
 
 ```python
 def _max_nesting(node: Node, depth: int = 0) -> int:
@@ -476,7 +482,7 @@ def _max_nesting(node: Node, depth: int = 0) -> int:
 #### `_collect_attribute_calls`
 
 <details>
-<summary>View Source (lines 200-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L200-L232">GitHub</a></summary>
+<summary>View Source (lines 208-240) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L208-L240">GitHub</a></summary>
 
 ```python
 def _collect_attribute_calls(node: Node) -> list[str]:
@@ -520,7 +526,7 @@ def _collect_attribute_calls(node: Node) -> list[str]:
 #### `_walk`
 
 <details>
-<summary>View Source (lines 207-229) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L207-L229">GitHub</a></summary>
+<summary>View Source (lines 215-237) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L215-L237">GitHub</a></summary>
 
 ```python
 def _walk(n: Node) -> None:
@@ -554,7 +560,7 @@ def _walk(n: Node) -> None:
 #### `_collect_class_methods`
 
 <details>
-<summary>View Source (lines 240-244) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L240-L244">GitHub</a></summary>
+<summary>View Source (lines 248-252) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L248-L252">GitHub</a></summary>
 
 ```python
 def _collect_class_methods(node: Node, out: list[Any]) -> None:
@@ -570,7 +576,7 @@ def _collect_class_methods(node: Node, out: list[Any]) -> None:
 #### `_detect_god_class`
 
 <details>
-<summary>View Source (lines 247-283) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L247-L283">GitHub</a></summary>
+<summary>View Source (lines 255-291) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L255-L291">GitHub</a></summary>
 
 ```python
 def _detect_god_class(
@@ -618,7 +624,7 @@ def _detect_god_class(
 #### `_detect_long_method`
 
 <details>
-<summary>View Source (lines 286-313) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L286-L313">GitHub</a></summary>
+<summary>View Source (lines 294-325) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L294-L325">GitHub</a></summary>
 
 ```python
 def _detect_long_method(
@@ -630,9 +636,13 @@ def _detect_long_method(
     """Return a long-method smell dict or None."""
     func_lines = func_node.end_point[0] - func_node.start_point[0] + 1
     cyclomatic = _estimate_cyclomatic(func_node)
+    # Flag if: (long AND branchy) OR (very high CC regardless of length)
+    is_long_and_branchy = (
+        func_lines > _LONG_METHOD_LINE_THRESHOLD and cyclomatic > _LONG_METHOD_CC_FLOOR
+    )
+    is_high_cc = cyclomatic > _LONG_METHOD_CC_THRESHOLD
     if _SEVERITY_ORDER[SEVERITY_HIGH] >= threshold_level and (
-        func_lines > _LONG_METHOD_LINE_THRESHOLD
-        or cyclomatic > _LONG_METHOD_CC_THRESHOLD
+        is_long_and_branchy or is_high_cc
     ):
         return {
             "type": "long_method",
@@ -657,7 +667,7 @@ def _detect_long_method(
 #### `_detect_long_params`
 
 <details>
-<summary>View Source (lines 316-340) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L316-L340">GitHub</a></summary>
+<summary>View Source (lines 328-352) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L328-L352">GitHub</a></summary>
 
 ```python
 def _detect_long_params(
@@ -693,7 +703,7 @@ def _detect_long_params(
 #### `_detect_deep_nesting`
 
 <details>
-<summary>View Source (lines 343-367) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L343-L367">GitHub</a></summary>
+<summary>View Source (lines 355-379) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L355-L379">GitHub</a></summary>
 
 ```python
 def _detect_deep_nesting(
@@ -729,7 +739,7 @@ def _detect_deep_nesting(
 #### `_count_external_calls`
 
 <details>
-<summary>View Source (lines 370-379) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L370-L379">GitHub</a></summary>
+<summary>View Source (lines 382-391) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L382-L391">GitHub</a></summary>
 
 ```python
 def _count_external_calls(func_node: Any) -> tuple[str, int] | None:
@@ -750,7 +760,7 @@ def _count_external_calls(func_node: Any) -> tuple[str, int] | None:
 #### `_detect_feature_envy`
 
 <details>
-<summary>View Source (lines 382-412) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L382-L412">GitHub</a></summary>
+<summary>View Source (lines 394-426) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L394-L426">GitHub</a></summary>
 
 ```python
 def _detect_feature_envy(
@@ -762,6 +772,8 @@ def _detect_feature_envy(
     """Return feature-envy smell dicts (0 or 1) for *func_node*."""
     smells: list[dict[str, Any]] = []
     if _SEVERITY_ORDER[SEVERITY_MEDIUM] < threshold_level:
+        return smells
+    if func_name.startswith(_FEATURE_ENVY_IGNORED_PREFIXES):
         return smells
     result = _count_external_calls(func_node)
     if result is not None:
@@ -792,7 +804,7 @@ def _detect_feature_envy(
 #### `_detect_dispatch_table_candidate`
 
 <details>
-<summary>View Source (lines 415-445) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L415-L445">GitHub</a></summary>
+<summary>View Source (lines 429-459) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L429-L459">GitHub</a></summary>
 
 ```python
 def _detect_dispatch_table_candidate(
@@ -834,7 +846,7 @@ def _detect_dispatch_table_candidate(
 #### `_check_large_file`
 
 <details>
-<summary>View Source (lines 453-475) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L453-L475">GitHub</a></summary>
+<summary>View Source (lines 467-489) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L467-L489">GitHub</a></summary>
 
 ```python
 def _check_large_file(
@@ -868,7 +880,7 @@ def _check_large_file(
 #### `_walk_class_node`
 
 <details>
-<summary>View Source (lines 478-492) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L478-L492">GitHub</a></summary>
+<summary>View Source (lines 492-506) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L492-L506">GitHub</a></summary>
 
 ```python
 def _walk_class_node(
@@ -894,7 +906,7 @@ def _walk_class_node(
 #### `_walk_function_node`
 
 <details>
-<summary>View Source (lines 495-528) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L495-L528">GitHub</a></summary>
+<summary>View Source (lines 509-542) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L509-L542">GitHub</a></summary>
 
 ```python
 def _walk_function_node(
@@ -939,7 +951,7 @@ def _walk_function_node(
 #### `_walk_ast`
 
 <details>
-<summary>View Source (lines 531-544) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L531-L544">GitHub</a></summary>
+<summary>View Source (lines 545-558) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L545-L558">GitHub</a></summary>
 
 ```python
 def _walk_ast(
@@ -964,7 +976,7 @@ def _walk_ast(
 #### `_analyze_file`
 
 <details>
-<summary>View Source (lines 547-580) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L547-L580">GitHub</a></summary>
+<summary>View Source (lines 561-594) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L561-L594">GitHub</a></summary>
 
 ```python
 def _analyze_file(
@@ -1009,7 +1021,7 @@ def _analyze_file(
 #### `_detect_data_clumps`
 
 <details>
-<summary>View Source (lines 583-621) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L583-L621">GitHub</a></summary>
+<summary>View Source (lines 597-635) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L597-L635">GitHub</a></summary>
 
 ```python
 def _detect_data_clumps(
@@ -1059,7 +1071,7 @@ def _detect_data_clumps(
 #### `_compute_smell_summary`
 
 <details>
-<summary>View Source (lines 629-653) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L629-L653">GitHub</a></summary>
+<summary>View Source (lines 643-667) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/design_smells.py#L643-L667">GitHub</a></summary>
 
 ```python
 def _compute_smell_summary(all_smells: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1093,4 +1105,4 @@ def _compute_smell_summary(all_smells: list[dict[str, Any]]) -> dict[str, Any]:
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/generators/analysis/design_smells.py:154-155`
+- `src/local_deepwiki/generators/analysis/design_smells.py:162-163`

@@ -16,4 +16,4 @@ To refresh stale documentation:
 3. **Manual review** may be needed for pages where only comments or docstrings changed
 
 ---
-*Report generated: 2026-03-31 21:39:48*
+*Report generated: 2026-04-01 21:35:07*

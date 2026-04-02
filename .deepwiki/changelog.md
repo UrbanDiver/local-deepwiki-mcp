@@ -4,7 +4,18 @@ Recent changes to this repository.
 
 ## Recent Commits
 
+### April 01, 2026
+
+- [`56000bf`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/56000bf) fix: improve analysis accuracy for coupling, feature envy, and long_method
+  - Files: `src/local_deepwiki/generators/analysis/coupling.py`, `src/local_deepwiki/generators/analysis/design_smells.py`, `src/local_deepwiki/handlers/analysis_architecture.py`, `src/local_deepwiki/models/tool_args.py`, `src/local_deepwiki/tool_defs/analysis.py` (+1 more)
+
 ### March 31, 2026
+
+- [`c80b757`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c80b757) build: exclude .deepwiki and tests from sdist
+  - Files: `pyproject.toml`
+
+- [`d3607fa`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d3607fa) feat: include pre-built wiki for instant demo experience
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/codemaps/5a5ebac46ed2321c.json`, `.deepwiki/codemaps/ab03c302df6cf212.json`, `.deepwiki/codemaps/handle-impact-analysis.md` (+871 more)
 
 - [`71f7287`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/71f7287) chore: clean up project presentation
   - Files: `CHANGELOG.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `src/local_deepwiki/tools/__init__.py`
@@ -88,37 +99,26 @@ Recent changes to this repository.
 - [`1eef062`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1eef062) refactor: complete Grade A architecture improvements (B 80.6 → A 91.2)
   - Files: `src/local_deepwiki/cli/init_cli.py`, `src/local_deepwiki/cli/update_cli.py`, `src/local_deepwiki/core/__init__.py`, `src/local_deepwiki/core/audit.py`, `src/local_deepwiki/core/chunk_builders.py` (+57 more)
 
-- [`ca3ccca`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ca3ccca) refactor: flatten deep nesting and deduplicate impact analysis helpers
-  - Files: `src/local_deepwiki/config/loader.py`, `src/local_deepwiki/core/chunk_extractors.py`, `src/local_deepwiki/generators/analysis/callgraph.py`, `src/local_deepwiki/generators/diagrams/class_diagram.py`, `src/local_deepwiki/handlers/analysis_entity.py` (+1 more)
-
-- [`c585f63`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c585f63) refactor: decompose long_method smells in [run_search](files/src/local_deepwiki/cli/interactive_search.md) and [run_generation_pipeline](files/src/local_deepwiki/generators/wiki/pipeline.md)
-  - Files: `src/local_deepwiki/cli/interactive_search.py`, `src/local_deepwiki/generators/wiki/pipeline.py`
-
-### March 29, 2026
-
-- [`db2e827`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/db2e827) fix: add [IndexStatus](files/src/local_deepwiki/models/wiki.md) narrowing assertions in wiki phases
-  - Files: `src/local_deepwiki/generators/wiki/phases.py`
-
 ## Statistics
 
 - **Commits shown**: 30
 - **Contributors**: 1
-- **Latest commit**: 2026-03-31
+- **Latest commit**: 2026-04-01
 
 ## Relevant Source Files
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/core/git_utils.py:28-31`](files/src/local_deepwiki/core/git_utils.md)
-- [`src/local_deepwiki/core/chunker.py:50-63`](files/src/local_deepwiki/core/chunker.md)
+- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
+- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
+- [`src/local_deepwiki/handlers/analysis_architecture.py:43-94`](files/src/local_deepwiki/handlers/analysis_architecture.md)
+- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
+- [`src/local_deepwiki/generators/analysis/design_smells.py:162-163`](files/src/local_deepwiki/generators/analysis/design_smells.md)
+- [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
-- [`src/local_deepwiki/core/vectorstore/embedding.py:20-30`](files/src/local_deepwiki/core/vectorstore/embedding.md)
-- [`src/local_deepwiki/core/graph_rag/store.py:44-411`](files/src/local_deepwiki/core/graph_rag/store.md)
-- [`src/local_deepwiki/config/provider_models.py:10-20`](files/src/local_deepwiki/config/provider_models.md)
-- [`src/local_deepwiki/core/indexer.py:233-263`](files/src/local_deepwiki/core/indexer.md)
-- `src/local_deepwiki/providers/llm/__init__.py:16-19`
-- [`src/local_deepwiki/cli/init_cli.py:30-43`](files/src/local_deepwiki/cli/init_cli.md)
-- [`src/local_deepwiki/web/app.py:87-96`](files/src/local_deepwiki/web/app.md)
+- [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
+- [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
+- `src/local_deepwiki/__init__.py`
 
 
 *Showing 10 of 263 source files.*

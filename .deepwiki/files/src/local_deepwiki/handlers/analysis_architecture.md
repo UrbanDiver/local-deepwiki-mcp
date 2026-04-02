@@ -2,91 +2,105 @@
 
 ## File Overview
 
-This file implements a suite of handler functions for performing architecture analysis on Python repositories. It provides tools to assess structural health, detect design smells, analyze module dependencies, and generate onboarding guides. These handlers are designed to be invoked as part of a larger tooling system, likely through a command-line interface or API, and are responsible for orchestrating various static analysis and metrics generation tasks.
+This file implements a suite of handler functions for architecture analysis tools. These functions are responsible for processing user requests to analyze the structure, health, and dependencies of a Python codebase. Each handler corresponds to a specific analysis task, such as detecting design smells, computing coupling metrics, or generating onboarding guides.
 
-The handlers are primarily structured around the `get_*` naming convention, each corresponding to a specific architectural insight or diagnostic. They validate input arguments using pydantic models, enforce access control, and delegate the actual analysis to dedicated generator modules. The results are formatted into structured output suitable for further processing or presentation.
+The handlers validate input arguments using pydantic models, perform permission checks, and delegate the actual analysis to specialized generator modules. They return structured results wrapped in `TextContent` objects for consumption by the tool calling system.
 
 ## Key Concepts
 
-### Architecture Analysis Abstractions
+### 1. **Tool Handler Pattern**
+Each public function in this module (`handle_*`) follows a consistent pattern:
+- Validates incoming arguments using pydantic models
+- Performs permission checks
+- Resolves the repository path and ensures it exists
+- Delegates to a corresponding generator function
+- Applies filtering or summarization based on flags like `summary_only`
+- Wraps results in `TextContent` for output
 
-The file introduces a collection of tools for analyzing codebase architecture, including:
-- **Layer Dependency Analysis**: Detects violations of architectural layering by analyzing import relationships.
-- **Hotspot Detection**: Identifies functions with high complexity or other metrics.
-- **Cross-Module Dependencies**: Builds a graph of inter-module imports and computes edge weights.
-- **Coupling Metrics**: Computes Robert C. Martin's coupling metrics (Ca, Ce, I, A, D) for modules.
-- **Design Smells Detection**: Identifies common design smells like God Class, Long Method, etc.
-- **Architecture Health**: Provides a score and summary of overall codebase health.
-- **Architecture Trends**: Tracks historical health scores over time.
-- **Onboarding Guide Generation**: Creates guides for new developers.
-- **Recommendations**: Offers actionable improvement suggestions.
+This pattern promotes consistency, reduces boilerplate, and centralizes validation logic.
 
-These abstractions are chosen to provide a comprehensive view of architectural quality, supporting both static analysis and dynamic insights.
+### 2. **Modular Architecture Analysis**
+The module integrates with various generator modules to perform different types of analysis:
+- Layer dependency analysis (`layer_analysis`)
+- Hotspot detection (`hotspots`)
+- Cross-module dependency graphs (`module_dependencies`)
+- Coupling metrics (`coupling`)
+- Design smell detection (`design_smells`)
+- Architecture health (`architecture_health`)
+- Architecture comparison (`architecture_compare`)
+- Composite architecture analysis (`architecture_composite`)
+- Onboarding guide generation (`onboarding`)
+- Recommendations (`recommendations`)
+- Module health (`module_health`)
+- Trends analysis (`tours`)
 
-### Handler Pattern
+Each generator encapsulates its own domain-specific logic, promoting separation of concerns and reusability.
 
-Each handler function follows a consistent pattern:
-1. **[Permission](../security/access_control.md) Check**: Ensures the caller has the necessary permissions.
-2. **Input Validation**: Uses pydantic models to validate and parse input arguments.
-3. **Path Resolution**: Resolves and validates the repository path.
-4. **Delegation**: Invokes a corresponding generator function to perform the analysis.
-5. **Result Formatting**: Packages the result using [`make_tool_text_content`](_response.md) for consistent output.
-6. **Logging**: Logs key information for observability.
+### 3. **Result Filtering and Overflow Prevention**
+Several handlers apply filters to prevent overwhelming output:
+- For cross-module dependencies, it sorts modules by edge count and limits the number returned.
+- For coupling metrics, it sorts by distance and limits the number returned.
+- For design smells, it limits the number of results returned or groups by type.
 
-This pattern promotes code reuse, error handling, and maintainability by centralizing common operations.
+These measures ensure that responses remain manageable and useful for end users.
 
-### Filtering and Overflow Prevention
+### 4. **Fallback Mechanisms**
+Some handlers implement fallbacks:
+- The `get_onboarding_guide` handler attempts to generate a rich version using vector stores and LLMs, falling back to a basic version if those are unavailable.
+- The `get_recommendations` handler uses template-only recommendations if LLM enrichment fails.
 
-Several handlers include logic to prevent excessive output:
-- **Summary-only Mode**: Returns only high-level statistics.
-- **Top-N Limiting**: Limits the number of results (e.g., top N modules or smells).
-- **Module Filtering**: Filters out leaf modules or applies edge weight thresholds.
-
-These features are crucial for performance and usability when dealing with large codebases.
+This design ensures robustness even when optional dependencies are missing.
 
 ## Integration
 
-This file integrates deeply with the local_deepwiki codebase by:
-- **Using Core Modules**: Accessing [`get_config`](../config/loader.md), [`get_cached_manifest`](../generators/manifest.md), [`get_access_controller`](../security/access_control.md), and `get_llm_provider` to interact with configuration, caching, security, and LLMs.
-- **Connecting to Generators**: Delegates analysis to dedicated modules such as `layer_analysis`, `hotspots`, `module_dependencies`, `coupling`, `design_smells`, `architecture_health`, `architecture_compare`, `architecture_composite`, `onboarding`, `recommendations`, `module_health`, `tours`, and `toc`.
-- **Leveraging Shared Components**: Utilizes [`make_tool_text_content`](_response.md) for consistent output formatting, [`handle_tool_errors`](_error_handling.md) for error management, and [`path_not_found_error`](../error_factories.md) for standard error handling.
+### External Usage
+This file is the core of the architecture analysis functionality and is used by:
+- The main server for processing tool calls
+- Various test modules (`test_analysis_architecture`, `test_architecture_health`, etc.) for validating behavior
 
-The functions are called by other parts of the system, such as test files (`test_hotspots`, `test_module_dependencies`, etc.), indicating that they are part of the public API for architectural analysis tools.
+Handlers are invoked by the tool calling system via the `tool_call` interface, which routes calls to these functions based on the tool name.
+
+### Dependencies
+This file depends on:
+- Core utilities like [`get_logger`](../logging.md), [`get_access_controller`](../security/access_control.md), and [`make_tool_text_content`](_response.md)
+- Generator modules from `local_deepwiki.generators.analysis.*` and related submodules
+- Configuration and model definitions from `local_deepwiki.config` and `local_deepwiki.models`
+- File system operations via `pathlib.Path`
+- LLM and vector store helpers for rich onboarding and recommendation enrichment
+
+It integrates tightly with the indexing and manifest system ([`get_cached_manifest`](../generators/manifest.md)) to ensure accurate analysis and caching behavior.
 
 ## Design Notes
 
-### Permission Enforcement
+### 1. **Permission Enforcement**
+All handlers enforce `INDEX_READ` permissions using the access controller. This ensures that architecture analysis is only performed when appropriate access is granted, aligning with the system's security model.
 
-Access control is enforced via `get_access_controller().require_permission(Permission.INDEX_READ)`. This ensures that architecture analysis tools can only be executed by authorized users, enhancing security in multi-user environments.
+### 2. **Path Resolution and Validation**
+Repository paths are resolved using `Path(...).resolve()` to normalize them and prevent path traversal issues. Additionally, a check ensures the path exists before proceeding, raising a specific error if not found.
 
-### Error Handling
+### 3. **Immutability in Filtering**
+When applying filters (e.g., limiting results or sorting), the handlers create new dictionaries instead of mutating existing ones. This preserves the original data and avoids side effects.
 
-The file uses [`handle_tool_errors`](_error_handling.md) for centralized error handling and pydantic validation errors are converted into `ValueError` for consistent error propagation.
+### 4. **Summary vs Full Output**
+Many handlers support a `summary_only` flag that returns a minimal version of the result. This allows callers to quickly get an overview without full details, optimizing performance and reducing data transfer.
 
-### Output Consistency
+### 5. **Error Handling**
+All handlers use [`handle_tool_errors`](_error_handling.md) for consistent error wrapping and logging. Validation errors are caught and re-raised as `ValueError` to propagate meaningful messages to the caller.
 
-All handlers return a list of `TextContent` objects, ensuring a uniform interface for tool outputs. This enables downstream systems to process results in a predictable manner.
+### 6. **Logging**
+Each handler logs key information about the operation performed, including the repository path, counts of findings, and grades/scores where applicable. This provides visibility into tool usage and helps with debugging.
 
-### Fallbacks for Rich Features
+### 7. **Onboarding Guide TOC Entry**
+The `_ensure_toc_entry` function ensures that the generated onboarding guide is listed in the table of contents. It inserts the entry at position 1 (after the first item) and renumbers all subsequent entries, maintaining a clean and consistent structure.
 
-In `handle_get_onboarding_guide`, a rich onboarding guide is generated using vector stores and LLMs if available. If those are not accessible, a basic guide is generated as a fallback, ensuring that the tool remains functional under various conditions.
+### 8. **Rich vs Basic Onboarding**
+The `get_onboarding_guide` handler tries to generate a rich version using LLMs and vector stores. If unavailable, it falls back to a basic version, ensuring functionality regardless of environment capabilities.
 
-### Historical Tracking
+### 9. **Recommendation Enrichment**
+Recommendations can be enriched using an LLM provider if enabled. If enrichment fails, the handler continues with template-based results, ensuring no failure in the tool call chain.
 
-The `handle_get_architecture_trends` function accesses historical data via [`load_snapshots`](../core/health_history.md), allowing for trend analysis over time. This is essential for understanding how architectural health evolves.
-
-### Modular Design
-
-The handlers are modular and rely on small, focused generator functions. This design promotes maintainability and testability, as each generator can be developed, tested, and debugged independently.
-
-### Performance Considerations
-
-The code avoids unnecessary computation:
-- File metrics are collected only when needed.
-- Large result sets are truncated early.
-- Redundant computations (like reading the same manifest multiple times) are avoided by caching.
-
-These choices ensure that the analysis tools remain efficient even on large repositories.
+### 10. **Architecture Trends Snapshot Loading**
+The `get_architecture_trends` handler loads historical snapshots from `.deepwiki/health_history.json`. It defaults to a 30-day lookback if no `since` date is provided, making trend analysis accessible by default.
 
 ## API Reference
 
@@ -382,7 +396,7 @@ Handle get_coupling_metrics tool call.  Computes Robert C. Martin coupling metri
 
 
 <details>
-<summary>View Source (lines 295-355) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L295-L355">GitHub</a></summary>
+<summary>View Source (lines 295-356) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L295-L356">GitHub</a></summary>
 
 ```python
 async def handle_get_coupling_metrics(
@@ -410,6 +424,7 @@ async def handle_get_coupling_metrics(
     result = analyze_coupling_metrics(
         repo_path=repo_path,
         module_filter=validated.module_filter,
+        exclude_tests=validated.exclude_tests,
     )
 
     # Filter out pure leaf modules (Ce == 0) unless explicitly requested.
@@ -470,7 +485,7 @@ Handle get_design_smells tool call.  Detects design smells (God Class, Long Meth
 
 
 <details>
-<summary>View Source (lines 359-405) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L359-L405">GitHub</a></summary>
+<summary>View Source (lines 360-406) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L360-L406">GitHub</a></summary>
 
 ```python
 async def handle_get_design_smells(
@@ -544,7 +559,7 @@ Handle get_architecture_health tool call.
 
 
 <details>
-<summary>View Source (lines 409-463) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L409-L463">GitHub</a></summary>
+<summary>View Source (lines 410-464) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L410-L464">GitHub</a></summary>
 
 ```python
 async def handle_get_architecture_health(
@@ -626,7 +641,7 @@ Handle [compare_architecture](../generators/analysis/architecture_compare.md) to
 
 
 <details>
-<summary>View Source (lines 467-503) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L467-L503">GitHub</a></summary>
+<summary>View Source (lines 468-504) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L468-L504">GitHub</a></summary>
 
 ```python
 async def handle_compare_architecture(
@@ -690,7 +705,7 @@ Handle analyze_architecture composite tool call.
 
 
 <details>
-<summary>View Source (lines 507-542) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L507-L542">GitHub</a></summary>
+<summary>View Source (lines 508-543) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L508-L543">GitHub</a></summary>
 
 ```python
 async def handle_analyze_architecture(
@@ -753,7 +768,7 @@ Handle get_onboarding_guide tool call.
 
 
 <details>
-<summary>View Source (lines 580-657) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L580-L657">GitHub</a></summary>
+<summary>View Source (lines 581-658) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L581-L658">GitHub</a></summary>
 
 ```python
 async def handle_get_onboarding_guide(
@@ -858,7 +873,7 @@ Handle get_recommendations tool call.
 
 
 <details>
-<summary>View Source (lines 661-708) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L661-L708">GitHub</a></summary>
+<summary>View Source (lines 662-709) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L662-L709">GitHub</a></summary>
 
 ```python
 async def handle_get_recommendations(
@@ -933,7 +948,7 @@ Handle get_module_health tool call.
 
 
 <details>
-<summary>View Source (lines 712-737) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L712-L737">GitHub</a></summary>
+<summary>View Source (lines 713-738) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L713-L738">GitHub</a></summary>
 
 ```python
 async def handle_get_module_health(
@@ -986,7 +1001,7 @@ Handle get_architecture_trends tool call.
 
 
 <details>
-<summary>View Source (lines 741-794) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L741-L794">GitHub</a></summary>
+<summary>View Source (lines 742-795) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L742-L795">GitHub</a></summary>
 
 ```python
 async def handle_get_architecture_trends(
@@ -1068,7 +1083,7 @@ Handle get_guided_tour tool call.
 
 
 <details>
-<summary>View Source (lines 798-829) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L798-L829">GitHub</a></summary>
+<summary>View Source (lines 799-830) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L799-L830">GitHub</a></summary>
 
 ```python
 async def handle_get_guided_tour(
@@ -1387,19 +1402,19 @@ assert len(data["smells"]) == 5
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `_ensure_toc_entry` | function | Brian Breidenbach | 3 days ago | `d570a08` fix: eliminate list mutatio... |
-| `handle_get_onboarding_guide` | function | Brian Breidenbach | 3 days ago | `4cccc8d` feat: update onboarding han... |
-| `handle_get_guided_tour` | function | Brian Breidenbach | 3 days ago | `d2cd819` feat: add get_guided_tour M... |
-| `handle_compare_architecture` | function | Brian Breidenbach | 3 days ago | `37320f0` feat: add detail_level to c... |
-| `handle_get_architecture_trends` | function | Brian Breidenbach | 3 days ago | `fc85c34` feat: add deepwiki check CL... |
-| `handle_get_recommendations` | function | Brian Breidenbach | 4 days ago | `caa4c66` feat: add get_recommendatio... |
-| `handle_analyze_architecture` | function | Brian Breidenbach | 4 days ago | `133094f` feat: add analyze_architect... |
-| `handle_get_architecture_summary` | function | Brian Breidenbach | 4 days ago | `8c05f89` refactor: deprecate get_arc... |
-| `handle_get_architecture_health` | function | Brian Breidenbach | 4 days ago | `951a981` feat: add detail_level para... |
-| `handle_get_coupling_metrics` | function | Brian Breidenbach | 4 days ago | `3e14214` feat: filter leaf modules f... |
-| `handle_get_layer_dependencies` | function | Brian Breidenbach | 4 days ago | `38ffb40` feat: add summary_only para... |
-| `handle_get_hotspots` | function | Brian Breidenbach | 4 days ago | `38ffb40` feat: add summary_only para... |
-| `handle_get_cross_module_dependencies` | function | Brian Breidenbach | 4 days ago | `38ffb40` feat: add summary_only para... |
+| `handle_get_coupling_metrics` | function | Brian Breidenbach | today | `56000bf` fix: improve analysis accur... |
+| `_ensure_toc_entry` | function | Brian Breidenbach | 4 days ago | `d570a08` fix: eliminate list mutatio... |
+| `handle_get_onboarding_guide` | function | Brian Breidenbach | 4 days ago | `4cccc8d` feat: update onboarding han... |
+| `handle_get_guided_tour` | function | Brian Breidenbach | 5 days ago | `d2cd819` feat: add get_guided_tour M... |
+| `handle_compare_architecture` | function | Brian Breidenbach | 5 days ago | `37320f0` feat: add detail_level to c... |
+| `handle_get_architecture_trends` | function | Brian Breidenbach | 5 days ago | `fc85c34` feat: add deepwiki check CL... |
+| `handle_get_recommendations` | function | Brian Breidenbach | 5 days ago | `caa4c66` feat: add get_recommendatio... |
+| `handle_analyze_architecture` | function | Brian Breidenbach | 5 days ago | `133094f` feat: add analyze_architect... |
+| `handle_get_architecture_summary` | function | Brian Breidenbach | 5 days ago | `8c05f89` refactor: deprecate get_arc... |
+| `handle_get_architecture_health` | function | Brian Breidenbach | 5 days ago | `951a981` feat: add detail_level para... |
+| `handle_get_layer_dependencies` | function | Brian Breidenbach | 5 days ago | `38ffb40` feat: add summary_only para... |
+| `handle_get_hotspots` | function | Brian Breidenbach | 5 days ago | `38ffb40` feat: add summary_only para... |
+| `handle_get_cross_module_dependencies` | function | Brian Breidenbach | 5 days ago | `38ffb40` feat: add summary_only para... |
 | `_count_smells_by_type` | function | Brian Breidenbach | 1 week ago | `2b6636a` feat: add top_n and summary... |
 | `_count_module_edges` | function | Brian Breidenbach | 1 week ago | `2b6636a` feat: add top_n and summary... |
 | `handle_get_design_smells` | function | Brian Breidenbach | 1 week ago | `2b6636a` feat: add top_n and summary... |
@@ -1518,7 +1533,7 @@ def _count_module_edges(edges: list[dict[str, Any]]) -> dict[str, int]:
 #### `_ensure_toc_entry`
 
 <details>
-<summary>View Source (lines 545-576) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L545-L576">GitHub</a></summary>
+<summary>View Source (lines 546-577) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L546-L577">GitHub</a></summary>
 
 ```python
 def _ensure_toc_entry(wiki_path: Path) -> None:

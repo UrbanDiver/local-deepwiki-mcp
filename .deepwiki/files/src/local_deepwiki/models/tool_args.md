@@ -2,72 +2,74 @@
 
 ## File Overview
 
-This file defines pydantic `BaseModel` classes for arguments passed to various tools in the local_deepwiki system. Each class corresponds to a specific tool and encapsulates the expected input parameters, including validation rules and descriptions.
+This file defines pydantic BaseModel classes for arguments used by various tools in the DeepWiki system. Each class corresponds to a specific tool and encapsulates the expected input parameters for that tool. The purpose of this file is to provide a standardized, validated, and documented interface for all tool invocations, ensuring consistent argument handling across the system.
 
-The purpose of this file is to standardize and validate inputs to tools across the system, ensuring that tools receive consistent, well-defined arguments. It centralizes the definition of tool interfaces, making the system more maintainable and reducing errors from incorrect parameter usage.
+The design rationale behind using pydantic models is to leverage its built-in validation, serialization, and documentation generation capabilities. This approach enforces type safety and provides clear, self-documenting interfaces for each tool, improving both developer experience and runtime reliability.
 
 ## Key Concepts
 
-### Standardized Input Validation
+### Tool Argument Validation and Documentation
 
-Each tool argument class inherits from pydantic's `BaseModel`, leveraging its built-in validation capabilities. This ensures that all tool inputs are strictly validated at runtime, preventing invalid or malformed data from propagating through the system. For example, `AskQuestionArgs` uses `min_length=1` to enforce that questions are not empty.
+Each tool argument class inherits from `BaseModel` and uses pydantic's `Field` for parameter definition. This pattern centralizes validation logic and automatically generates documentation from the field definitions. It also ensures that all tool invocations adhere to expected data types and constraints.
 
-### Tool-Specific Argument Structures
+### Consistent Argument Patterns
 
-The file contains argument models tailored to each tool's requirements. This includes:
-- Simple scalar parameters like `repo_path` or `question`
-- Complex structures like [`CodemapFocusType`](provider_types.md) and [`DiagramType`](provider_types.md) enums for specific choices
-- Optional parameters with default values
-- Constraints like `ge`/`le` for numeric ranges, `max_length` for string limits, and `description` fields for documentation
+Several tools share common argument patterns, such as `repo_path` or `file_path`, which are defined with consistent descriptions and validation rules. This promotes a unified user experience across tools and reduces cognitive load for developers interacting with the system.
 
-### Enum Integration
+### Integration with Provider Types
 
-This file integrates with `local_deepwiki.models.provider_types` to use enums like [`CodemapFocusType`](provider_types.md) and [`DiagramType`](provider_types.md). This design choice ensures that tools use consistent, predefined values for specific parameters, reducing ambiguity and improving type safety.
+The file imports and utilizes several enum types from `local_deepwiki.models.provider_types`:
+- [`EmbeddingProviderType`](provider_types.md)
+- [`LLMProviderType`](provider_types.md)
+- [`CodemapFocusType`](provider_types.md)
+- [`DiagramType`](provider_types.md)
+
+These types are used to define tool arguments that accept specific provider or mode values, ensuring that tool inputs are constrained to valid options and providing better type safety and documentation.
 
 ## Integration
 
 ### External Usage
 
-This file is used by multiple components in the system:
-- Core components like `ReadWikiStructureArgs` and `ExportWikiPdfArgs` are consumed by the core engine
-- Generators utilize `GetGlossaryArgs`, `GetDiagramsArgs`, and `GetApiDocsArgs`
-- Test modules use `AnalyzeDiffArgs`, `GenerateCodemapArgs`, and `SuggestCodemapTopicsArgs`
-- Agentic workflows and agents rely on `SuggestNextActionsArgs` and `RunWorkflowArgs`
-
-The usage patterns indicate that this file serves as the central contract for tool arguments, making it a critical part of the system's API layer.
+This file is used by the core system and various components:
+- Core tools like `ReadWikiStructureArgs`, `ReadWikiPageArgs`, `SearchCodeArgs` are directly used by core functionality
+- Generator tools like `GetGlossaryArgs` are used by generators
+- Test and analysis tools like `ExplainEntityArgs`, `ImpactAnalysisArgs`, `AnalyzeDiffArgs` are used by test_explain_entity, analysis_entity, and test_analyze_diff respectively
+- Codemap tools like `GenerateCodemapArgs`, `SuggestCodemapTopicsArgs` are used by test_codemap
+- Agentic tools like `SuggestNextActionsArgs` are used by agentic components
 
 ### Related Files
 
-This file is closely related to:
-- `src/local_deepwiki/cli/config_validator.py` and `src/local_deepwiki/cli/main.py` — likely use these models for CLI argument parsing and validation
-- `src/local_deepwiki/config/models_llm.py` and `src/local_deepwiki/config/prompts.py` — may use these models to determine tool configurations or prompt templates
-- `src/local_deepwiki/plugins/__init__.py` — could be used by plugins that define or consume tools
+This file integrates with several other modules in the project:
+- `src/local_deepwiki/cli/init_cli.py` - likely uses these models to define CLI argument parsers
+- `src/local_deepwiki/config/models_embedding.py` and `src/local_deepwiki/config/models_llm.py` - provide configuration models that may be referenced by these argument models
+- `src/local_deepwiki/config/processing_models.py` - may contain shared processing logic used by these tools
+- `src/local_deepwiki/config/prompts.py` - may provide prompt templates that these tools use
 
 ## Design Notes
 
-### Choice of pydantic
+### Validation and Constraints
 
-pydantic was chosen for its robust validation, serialization, and documentation capabilities. It allows for automatic generation of schema information and provides clear error messages when validation fails, which is essential for a tool system where inputs are varied and complex.
+The design includes various constraints on fields to ensure data integrity:
+- `min_length`, `max_length` constraints on string fields
+- `ge` (greater than or equal) and `le` (less than or equal) for numeric fields
+- `default` values for optional parameters
+- `description` fields that serve as documentation for each argument
 
-### Field Descriptions and Documentation
+### Consistent Field Definitions
 
-Each field includes a `description` parameter, which serves as inline documentation. This improves usability for developers and tool consumers, as it provides context directly in the argument model.
+Fields like `repo_path` and `wiki_path` consistently use descriptive field descriptions and maximum length constraints (e.g., `max_length=4096` for repository paths), which helps with both validation and error messaging.
 
-### Optional Parameters and Defaults
+### Tool-Specific Patterns
 
-Many arguments have `None` or specific default values, indicating that these tools are designed to be flexible and usable without specifying every parameter. This design balances ease of use with the ability to override defaults when needed.
+Different tools follow distinct argument patterns based on their functionality:
+- Repository-level tools (e.g., `IndexRepositoryArgs`, `AskQuestionArgs`) typically require `repo_path`
+- Wiki-specific tools (e.g., `ReadWikiStructureArgs`, `ExportWikiHtmlArgs`) require `wiki_path`
+- Code analysis tools (e.g., `GetInheritanceArgs`, `GetCallGraphArgs`) often include filtering and pagination options
+- Diff-related tools (e.g., `AnalyzeDiffArgs`, `AskAboutDiffArgs`) include git reference parameters (`base_ref`, `head_ref`)
 
-### Validation Constraints
+### Enum Usage for Mode Selection
 
-Constraints like `ge`/`le` for numeric fields and `min_length`/`max_length` for strings enforce reasonable limits on inputs. This prevents issues like excessive memory usage or invalid operations due to overly large or small inputs.
-
-### Enum Usage for Consistency
-
-By using [`CodemapFocusType`](provider_types.md) and [`DiagramType`](provider_types.md) enums, the system ensures that tool parameters that represent specific choices are consistent and well-defined. This prevents typos and allows for easier refactoring or extension of these choices in the future.
-
-### Tool-Specific Arguments
-
-The argument models are tailored to each tool's unique requirements. For example, `AnalyzeDiffArgs` includes git ref parameters, while `GetGlossaryArgs` includes pagination fields. This approach ensures that each tool receives only the arguments it needs, avoiding overly generic argument structures.
+The use of enum types like [`CodemapFocusType`](provider_types.md) and [`DiagramType`](provider_types.md) ensures that tools receive only valid mode or type arguments, preventing runtime errors from invalid mode selections and providing better autocomplete and documentation support.
 
 ## API Reference
 
@@ -1237,7 +1239,7 @@ Arguments for the get_coupling_metrics tool.
 
 
 <details>
-<summary>View Source (lines 653-674) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L653-L674">GitHub</a></summary>
+<summary>View Source (lines 653-678) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L653-L678">GitHub</a></summary>
 
 ```python
 class GetCouplingMetricsArgs(BaseModel):
@@ -1262,6 +1264,10 @@ class GetCouplingMetricsArgs(BaseModel):
         default=False,
         description="Return only stats without individual module metrics",
     )
+    exclude_tests: bool = Field(
+        default=True,
+        description="Exclude test modules from metrics",
+    )
 ```
 
 </details>
@@ -1274,7 +1280,7 @@ Arguments for the get_design_smells tool.
 
 
 <details>
-<summary>View Source (lines 677-697) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L677-L697">GitHub</a></summary>
+<summary>View Source (lines 681-701) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L681-L701">GitHub</a></summary>
 
 ```python
 class GetDesignSmellsArgs(BaseModel):
@@ -1310,7 +1316,7 @@ Arguments for the get_architecture_health tool.
 
 
 <details>
-<summary>View Source (lines 700-713) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L700-L713">GitHub</a></summary>
+<summary>View Source (lines 704-717) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L704-L717">GitHub</a></summary>
 
 ```python
 class GetArchitectureHealthArgs(BaseModel):
@@ -1339,7 +1345,7 @@ Arguments for the analyze_architecture composite tool.
 
 
 <details>
-<summary>View Source (lines 716-727) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L716-L727">GitHub</a></summary>
+<summary>View Source (lines 720-731) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L720-L731">GitHub</a></summary>
 
 ```python
 class AnalyzeArchitectureArgs(BaseModel):
@@ -1366,7 +1372,7 @@ Arguments for the get_onboarding_guide tool.
 
 
 <details>
-<summary>View Source (lines 730-737) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L730-L737">GitHub</a></summary>
+<summary>View Source (lines 734-741) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L734-L741">GitHub</a></summary>
 
 ```python
 class GetOnboardingGuideArgs(BaseModel):
@@ -1389,7 +1395,7 @@ Arguments for the get_recommendations tool.
 
 
 <details>
-<summary>View Source (lines 740-757) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L740-L757">GitHub</a></summary>
+<summary>View Source (lines 744-761) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L744-L761">GitHub</a></summary>
 
 ```python
 class GetRecommendationsArgs(BaseModel):
@@ -1422,7 +1428,7 @@ Arguments for the get_architecture_trends tool.
 
 
 <details>
-<summary>View Source (lines 760-767) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L760-L767">GitHub</a></summary>
+<summary>View Source (lines 764-771) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L764-L771">GitHub</a></summary>
 
 ```python
 class GetArchitectureTrendsArgs(BaseModel):
@@ -1445,7 +1451,7 @@ Arguments for the [compare_architecture](../generators/analysis/architecture_com
 
 
 <details>
-<summary>View Source (lines 770-790) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L770-L790">GitHub</a></summary>
+<summary>View Source (lines 774-794) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L774-L794">GitHub</a></summary>
 
 ```python
 class CompareArchitectureArgs(BaseModel):
@@ -1481,7 +1487,7 @@ Arguments for the get_module_health tool.
 
 
 <details>
-<summary>View Source (lines 793-801) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L793-L801">GitHub</a></summary>
+<summary>View Source (lines 797-805) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L797-L805">GitHub</a></summary>
 
 ```python
 class GetModuleHealthArgs(BaseModel):
@@ -1505,7 +1511,7 @@ Arguments for the get_guided_tour tool.
 
 
 <details>
-<summary>View Source (lines 804-821) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L804-L821">GitHub</a></summary>
+<summary>View Source (lines 808-825) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L808-L825">GitHub</a></summary>
 
 ```python
 class GetGuidedTourArgs(BaseModel):
@@ -1538,7 +1544,7 @@ Arguments for the serve_wiki tool.
 
 
 <details>
-<summary>View Source (lines 824-844) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L824-L844">GitHub</a></summary>
+<summary>View Source (lines 828-848) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L828-L848">GitHub</a></summary>
 
 ```python
 class ServeWikiArgs(BaseModel):
@@ -1575,7 +1581,7 @@ Arguments for the stop_wiki_server tool.
 
 
 <details>
-<summary>View Source (lines 847-859) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L847-L859">GitHub</a></summary>
+<summary>View Source (lines 851-863) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L851-L863">GitHub</a></summary>
 
 ```python
 class StopWikiServerArgs(BaseModel):
@@ -1741,6 +1747,7 @@ classDiagram
         +top_n: int
         +include_leaves: bool
         +summary_only: bool
+        +exclude_tests: bool
     }
     class GetCoverageArgs {
         <<dataclass>>
@@ -1993,18 +2000,18 @@ classDiagram
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `GetGuidedTourArgs` | class | Brian Breidenbach | 3 days ago | `d2cd819` feat: add get_guided_tour M... |
-| `CompareArchitectureArgs` | class | Brian Breidenbach | 3 days ago | `37320f0` feat: add detail_level to c... |
-| `GetFileContextArgs` | class | Brian Breidenbach | 3 days ago | `71bd7d7` feat: add detail_level to g... |
-| `GetArchitectureTrendsArgs` | class | Brian Breidenbach | 3 days ago | `fc85c34` feat: add deepwiki check CL... |
-| `GetRecommendationsArgs` | class | Brian Breidenbach | 4 days ago | `caa4c66` feat: add get_recommendatio... |
-| `GetOnboardingGuideArgs` | class | Brian Breidenbach | 4 days ago | `0fd6383` feat: add get_onboarding_gu... |
-| `AnalyzeArchitectureArgs` | class | Brian Breidenbach | 4 days ago | `133094f` feat: add analyze_architect... |
-| `GetArchitectureHealthArgs` | class | Brian Breidenbach | 4 days ago | `951a981` feat: add detail_level para... |
-| `GetCouplingMetricsArgs` | class | Brian Breidenbach | 4 days ago | `3e14214` feat: filter leaf modules f... |
-| `GetLayerDependenciesArgs` | class | Brian Breidenbach | 4 days ago | `38ffb40` feat: add summary_only para... |
-| `GetHotspotsArgs` | class | Brian Breidenbach | 4 days ago | `38ffb40` feat: add summary_only para... |
-| `GetCrossModuleDependenciesArgs` | class | Brian Breidenbach | 4 days ago | `38ffb40` feat: add summary_only para... |
+| `GetCouplingMetricsArgs` | class | Brian Breidenbach | today | `56000bf` fix: improve analysis accur... |
+| `GetGuidedTourArgs` | class | Brian Breidenbach | 5 days ago | `d2cd819` feat: add get_guided_tour M... |
+| `CompareArchitectureArgs` | class | Brian Breidenbach | 5 days ago | `37320f0` feat: add detail_level to c... |
+| `GetFileContextArgs` | class | Brian Breidenbach | 5 days ago | `71bd7d7` feat: add detail_level to g... |
+| `GetArchitectureTrendsArgs` | class | Brian Breidenbach | 5 days ago | `fc85c34` feat: add deepwiki check CL... |
+| `GetRecommendationsArgs` | class | Brian Breidenbach | 5 days ago | `caa4c66` feat: add get_recommendatio... |
+| `GetOnboardingGuideArgs` | class | Brian Breidenbach | 5 days ago | `0fd6383` feat: add get_onboarding_gu... |
+| `AnalyzeArchitectureArgs` | class | Brian Breidenbach | 5 days ago | `133094f` feat: add analyze_architect... |
+| `GetArchitectureHealthArgs` | class | Brian Breidenbach | 5 days ago | `951a981` feat: add detail_level para... |
+| `GetLayerDependenciesArgs` | class | Brian Breidenbach | 5 days ago | `38ffb40` feat: add summary_only para... |
+| `GetHotspotsArgs` | class | Brian Breidenbach | 5 days ago | `38ffb40` feat: add summary_only para... |
+| `GetCrossModuleDependenciesArgs` | class | Brian Breidenbach | 5 days ago | `38ffb40` feat: add summary_only para... |
 | `GetDesignSmellsArgs` | class | Brian Breidenbach | 1 week ago | `2b6636a` feat: add top_n and summary... |
 | `GetModuleHealthArgs` | class | Brian Breidenbach | 1 week ago | `38d706a` feat: add architecture_heal... |
 | `GetArchitectureSummaryArgs` | class | Brian Breidenbach | 2 weeks ago | `3d14562` feat: add get_layer_depende... |
