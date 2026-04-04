@@ -19,13 +19,14 @@ _GRADE_THRESHOLDS: tuple[tuple[str, int], ...] = (
 
 # Weights for overall score
 _DIMENSION_WEIGHTS: dict[str, float] = {
-    "complexity": 0.18,
-    "coupling": 0.16,
-    "smells": 0.16,
-    "layers": 0.12,
-    "churn": 0.13,
-    "cohesion": 0.13,
-    "duplication": 0.12,
+    "complexity": 0.16,
+    "coupling": 0.14,
+    "smells": 0.14,
+    "layers": 0.10,
+    "churn": 0.12,
+    "cohesion": 0.12,
+    "duplication": 0.10,
+    "testability": 0.12,
 }
 
 
@@ -138,7 +139,9 @@ def score_smells(
         return {"score": 100, "grade": "A", "factors": {}}
 
     severity_weights = {"high": 3, "medium": 1, "low": 0.5}
-    weighted_count = sum(severity_weights.get(s.get("severity", "medium"), 1) for s in smells)
+    weighted_count = sum(
+        severity_weights.get(s.get("severity", "medium"), 1) for s in smells
+    )
     density = (weighted_count / total_lines) * 1000
     god_classes = sum(1 for s in smells if s.get("type") == "god_class")
 
@@ -270,7 +273,9 @@ def score_duplication(
         return {"score": 100, "grade": "A", "factors": {}}
 
     ratio = stats.get("duplication_ratio", 0.0)
-    clone_groups = stats.get("type1_clone_groups", 0) + stats.get("type2_clone_groups", 0)
+    clone_groups = stats.get("type1_clone_groups", 0) + stats.get(
+        "type2_clone_groups", 0
+    )
     largest = stats.get("largest_clone_lines", 0)
 
     score = 100.0
@@ -299,6 +304,63 @@ def score_duplication(
             "duplication_ratio": round(ratio, 4),
             "clone_groups": clone_groups,
             "largest_clone_lines": largest,
+        },
+    }
+
+
+def score_testability(
+    stats: dict[str, Any],
+) -> dict[str, Any]:
+    """Score testability dimension (0-100).
+
+    Factors:
+    - Test-to-code ratio (higher is better)
+    - Percentage of untested source files (lower is better)
+    - Average assertions per test file (higher is better)
+    """
+    if not stats:
+        return {"score": 100, "grade": "A", "factors": {}}
+
+    # No source files means nothing to test — perfect score
+    total_source = stats.get("total_source_files", 0)
+    if total_source == 0:
+        return {"score": 100, "grade": "A", "factors": {}}
+
+    ratio = stats.get("test_to_code_ratio", 0.0)
+    untested_pct = stats.get("untested_file_pct", 0.0)
+    avg_assertions = stats.get("avg_assertions_per_test", 0.0)
+
+    score = 100.0
+
+    # Test-to-code ratio penalty: ideal is >= 0.8
+    if ratio < 0.1:
+        score -= 40
+    elif ratio < 0.3:
+        score -= 25
+    elif ratio < 0.5:
+        score -= 15
+    elif ratio < 0.8:
+        score -= 5
+
+    # Untested file percentage: up to 35 point deduction
+    score -= min(untested_pct * 0.35, 35)
+
+    # Low assertion density: up to 15 point deduction
+    if avg_assertions < 1.0:
+        score -= 15
+    elif avg_assertions < 3.0:
+        score -= 10
+    elif avg_assertions < 5.0:
+        score -= 5
+
+    score = max(0.0, min(100.0, score))
+    return {
+        "score": round(score, 1),
+        "grade": letter_grade(score),
+        "factors": {
+            "test_to_code_ratio": round(ratio, 4),
+            "untested_file_pct": round(untested_pct, 1),
+            "avg_assertions_per_test": round(avg_assertions, 2),
         },
     }
 

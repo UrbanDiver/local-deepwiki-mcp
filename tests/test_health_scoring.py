@@ -14,6 +14,7 @@ from local_deepwiki.generators.analysis.health_scoring import (
     score_duplication,
     score_layers,
     score_smells,
+    score_testability,
 )
 
 
@@ -403,7 +404,8 @@ def test_score_churn_no_high_churn_complex_files():
 
 def test_score_churn_many_high_churn_complex_files():
     composite = [
-        {"file": f"f{i}.py", "churn": 20, "complexity": 30, "composite": 0.8} for i in range(10)
+        {"file": f"f{i}.py", "churn": 20, "complexity": 30, "composite": 0.8}
+        for i in range(10)
     ]
     stats = {"gini_coefficient": 0.5, "total_files": 20}
     result = score_churn(composite, stats=stats)
@@ -572,6 +574,87 @@ def test_score_duplication_returns_factors():
 
 
 # ---------------------------------------------------------------------------
+# score_testability
+# ---------------------------------------------------------------------------
+
+
+def test_score_testability_empty_stats():
+    result = score_testability(stats={})
+    assert result["score"] == 100
+    assert result["grade"] == "A"
+
+
+def test_score_testability_excellent():
+    stats = {
+        "total_source_files": 10,
+        "test_to_code_ratio": 1.0,
+        "untested_file_pct": 0.0,
+        "avg_assertions_per_test": 8.0,
+    }
+    result = score_testability(stats=stats)
+    assert result["score"] == 100.0
+    assert result["grade"] == "A"
+
+
+def test_score_testability_no_tests():
+    stats = {
+        "total_source_files": 10,
+        "test_to_code_ratio": 0.0,
+        "untested_file_pct": 100.0,
+        "avg_assertions_per_test": 0.0,
+    }
+    result = score_testability(stats=stats)
+    assert result["score"] < 30
+
+
+def test_score_testability_low_ratio():
+    stats = {
+        "total_source_files": 10,
+        "test_to_code_ratio": 0.2,
+        "untested_file_pct": 30.0,
+        "avg_assertions_per_test": 4.0,
+    }
+    result = score_testability(stats=stats)
+    assert result["score"] < 75
+
+
+def test_score_testability_score_clamped():
+    stats = {
+        "total_source_files": 10,
+        "test_to_code_ratio": 0.0,
+        "untested_file_pct": 100.0,
+        "avg_assertions_per_test": 0.0,
+    }
+    result = score_testability(stats=stats)
+    assert 0.0 <= result["score"] <= 100.0
+
+
+def test_score_testability_returns_factors():
+    stats = {
+        "total_source_files": 10,
+        "test_to_code_ratio": 0.5,
+        "untested_file_pct": 20.0,
+        "avg_assertions_per_test": 5.0,
+    }
+    result = score_testability(stats=stats)
+    assert "test_to_code_ratio" in result["factors"]
+    assert "untested_file_pct" in result["factors"]
+    assert "avg_assertions_per_test" in result["factors"]
+
+
+def test_score_testability_zero_source_files():
+    stats = {
+        "total_source_files": 0,
+        "test_to_code_ratio": 0.0,
+        "untested_file_pct": 0.0,
+        "avg_assertions_per_test": 0.0,
+    }
+    result = score_testability(stats=stats)
+    assert result["score"] == 100
+    assert result["grade"] == "A"
+
+
+# ---------------------------------------------------------------------------
 # compute_overall
 # ---------------------------------------------------------------------------
 
@@ -585,6 +668,7 @@ def test_compute_overall_all_perfect():
         "churn": {"score": 100},
         "cohesion": {"score": 100},
         "duplication": {"score": 100},
+        "testability": {"score": 100},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 100.0
@@ -600,6 +684,7 @@ def test_compute_overall_all_zero():
         "churn": {"score": 0},
         "cohesion": {"score": 0},
         "duplication": {"score": 0},
+        "testability": {"score": 0},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 0.0
@@ -608,9 +693,9 @@ def test_compute_overall_all_zero():
 
 def test_compute_overall_weighted_average():
     # All 100 except smells=0. New weights:
-    # complexity=0.18, coupling=0.16, smells=0.16, layers=0.12,
-    # churn=0.13, cohesion=0.13, duplication=0.12
-    # expected = 100*(0.18+0.16+0.12+0.13+0.13+0.12) + 0*0.16 = 84.0
+    # complexity=0.16, coupling=0.14, smells=0.14, layers=0.10,
+    # churn=0.12, cohesion=0.12, duplication=0.10, testability=0.12
+    # expected = 100*(1 - 0.14) = 86.0
     dimensions = {
         "complexity": {"score": 100},
         "coupling": {"score": 100},
@@ -619,9 +704,10 @@ def test_compute_overall_weighted_average():
         "churn": {"score": 100},
         "cohesion": {"score": 100},
         "duplication": {"score": 100},
+        "testability": {"score": 100},
     }
     result = compute_overall(dimensions)
-    assert result["score"] == pytest.approx(84.0, rel=0.01)
+    assert result["score"] == pytest.approx(86.0, rel=0.01)
     assert result["grade"] == "B"
 
 
@@ -629,11 +715,11 @@ def test_compute_overall_missing_dimension_defaults_100():
     # If a dimension is missing, it defaults to 100
     dimensions = {
         "complexity": {"score": 0},
-        # all others missing → default 100
+        # all others missing -> default 100
     }
     result = compute_overall(dimensions)
-    # 0*0.18 + 100*(0.16+0.16+0.12+0.13+0.13+0.12) = 82.0
-    assert result["score"] == pytest.approx(82.0, rel=0.01)
+    # 0*0.16 + 100*(0.14+0.14+0.10+0.12+0.12+0.10+0.12) = 84.0
+    assert result["score"] == pytest.approx(84.0, rel=0.01)
 
 
 def test_compute_overall_dimensions_included_in_result():
@@ -645,6 +731,7 @@ def test_compute_overall_dimensions_included_in_result():
         "churn": {"score": 85},
         "cohesion": {"score": 75},
         "duplication": {"score": 80},
+        "testability": {"score": 90},
     }
     result = compute_overall(dimensions)
     assert result["dimensions"] is dimensions
@@ -661,12 +748,13 @@ def test_compute_overall_weights_included_in_result():
     assert "churn" in weights
     assert "cohesion" in weights
     assert "duplication" in weights
+    assert "testability" in weights
     # Weights should sum to approximately 1.0
     assert sum(weights.values()) == pytest.approx(1.0, rel=0.001)
 
 
 def test_compute_overall_grade_b_boundary():
-    # Score of exactly 75.0 → B
+    # Score of exactly 75.0 -> B
     dimensions = {
         "complexity": {"score": 75},
         "coupling": {"score": 75},
@@ -675,6 +763,7 @@ def test_compute_overall_grade_b_boundary():
         "churn": {"score": 75},
         "cohesion": {"score": 75},
         "duplication": {"score": 75},
+        "testability": {"score": 75},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 75.0
