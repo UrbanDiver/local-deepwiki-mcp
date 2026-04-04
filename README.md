@@ -37,6 +37,7 @@ deepwiki serve /path/to/repo/.deepwiki
 - **Configurable embeddings** - local (sentence-transformers) or OpenAI
 - **Incremental indexing** - only re-process changed files
 - **RAG-based Q&A** - ask questions about your codebase
+- **Architecture health** - 9-dimension scoring (complexity, coupling, smells, layers, churn, cohesion, duplication, testability, maintainability)
 - **Deep Research mode** - multi-step reasoning for complex architectural questions
 - **Web UI** - browse generated wiki in your browser
 - **Export to HTML** - generate static HTML site for sharing
@@ -241,9 +242,9 @@ local-deepwiki
 
 **Note:** Replace `/path/to/local-deepwiki-mcp` with the actual path where you cloned the repository. Add `ANTHROPIC_API_KEY` to the `env` block if using Anthropic instead of OpenAI.
 
-## MCP Tools (43 tools)
+## MCP Tools (64 tools)
 
-The server exposes **43 MCP tools** across 8 categories. Below are the most commonly used tools with examples, followed by the full tool reference.
+The server exposes **64 MCP tools** across 8 categories. Below are the most commonly used tools with examples, followed by the full tool reference.
 
 ### Core Tools
 
@@ -326,6 +327,28 @@ Multi-step reasoning for complex architectural questions. Performs query decompo
 | `ask_about_diff` | RAG-based Q&A about code changes |
 | `get_project_manifest` | Parsed metadata from pyproject.toml, package.json, etc. |
 | `get_wiki_stats` | Wiki health dashboard: index, pages, coverage, status |
+
+### Architecture Health Tools (17)
+
+| Tool | Description |
+|------|-------------|
+| `get_architecture_health` | Composite health grade (A-F) across 9 dimensions |
+| `get_hotspots` | Rank functions by complexity, params, length, or nesting |
+| `get_coupling_metrics` | Robert C. Martin coupling metrics (Ca, Ce, I, A, D) |
+| `get_design_smells` | Detect god classes, feature envy, long methods, etc. |
+| `get_layer_dependencies` | Layer violation detection (handlers→services→core) |
+| `get_churn_metrics` | File change frequency with churn×complexity composite |
+| `get_co_change` | Co-change coupling via Jaccard similarity |
+| `get_cohesion_metrics` | LCOM4 class cohesion and module import cohesion |
+| `get_duplication_metrics` | Type 1 (exact) and Type 2 (structural) clone detection |
+| `get_testability_metrics` | Test-to-code ratio, coverage mapping, assertion density |
+| `get_maintainability_metrics` | Per-function Maintainability Index (Halstead + CC + LOC) |
+| `get_recommendations` | Prioritized refactoring suggestions with effort/impact |
+| `compare_architecture` | Compare health between two git refs |
+| `get_architecture_trends` | Historical health score snapshots |
+| `get_module_health` | Module-scoped complexity, smells, coupling, risk |
+| `get_onboarding_guide` | New developer onboarding guide |
+| `get_guided_tour` | Interactive guided tours of the codebase |
 
 ### Codemap Tools (2)
 
