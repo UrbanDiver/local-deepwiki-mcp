@@ -1000,4 +1000,33 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         },
         annotations=_READ_ONLY,
     ),
+    Tool(
+        name="get_maintainability_metrics",
+        description=(
+            "Compute Maintainability Index (MI) per function across a Python "
+            "repository. MI combines Halstead Volume, cyclomatic complexity, "
+            "and lines of code into a 0-100 score. Returns the worst-scoring "
+            "functions first. Functions with MI < 20 are hard to maintain."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "top_n": {
+                    "type": "integer",
+                    "description": "Number of top results to return (1-100, default: 20)",
+                },
+                "exclude_tests": {
+                    "type": "boolean",
+                    "description": "Exclude test files from analysis (default: true)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
 )

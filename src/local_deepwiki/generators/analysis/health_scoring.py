@@ -19,14 +19,15 @@ _GRADE_THRESHOLDS: tuple[tuple[str, int], ...] = (
 
 # Weights for overall score
 _DIMENSION_WEIGHTS: dict[str, float] = {
-    "complexity": 0.16,
-    "coupling": 0.14,
-    "smells": 0.14,
-    "layers": 0.10,
+    "complexity": 0.15,
+    "coupling": 0.12,
+    "smells": 0.12,
+    "layers": 0.09,
     "churn": 0.12,
     "cohesion": 0.12,
     "duplication": 0.10,
-    "testability": 0.12,
+    "testability": 0.10,
+    "maintainability": 0.08,
 }
 
 
@@ -357,6 +358,44 @@ def score_testability(
             "test_to_code_ratio": round(ratio, 4),
             "untested_file_pct": round(untested_pct, 1),
             "avg_assertions_per_test": round(avg_assertions, 2),
+        },
+    }
+
+
+def score_maintainability(
+    stats: dict[str, Any],
+) -> dict[str, Any]:
+    """Score maintainability dimension (0-100).
+
+    Factors:
+    - Average Maintainability Index across all functions
+    - Percentage of functions with MI < 20 (hard to maintain)
+    - Minimum MI (worst-case function)
+    """
+    if not stats:
+        return {"score": 100, "grade": "A", "factors": {}}
+
+    avg_mi = stats.get("avg_mi", 100.0)
+    low_mi_pct = stats.get("low_mi_pct", 0.0)
+    min_mi = stats.get("min_mi", 100.0)
+
+    score = 100.0
+    if avg_mi < 40:
+        score -= min((40 - avg_mi) * 1.0, 40)
+    low_mi_deduction = min(low_mi_pct * 0.7, 35)
+    score -= low_mi_deduction
+    if min_mi < 10:
+        score -= min((10 - min_mi) * 1.5, 15)
+
+    score = max(0.0, min(100.0, score))
+    return {
+        "score": round(score, 1),
+        "grade": letter_grade(score),
+        "factors": {
+            "avg_mi": round(avg_mi, 1),
+            "low_mi_functions": stats.get("low_mi_functions", 0),
+            "low_mi_pct": round(low_mi_pct, 1),
+            "min_mi": round(min_mi, 1),
         },
     }
 

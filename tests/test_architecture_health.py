@@ -81,6 +81,7 @@ def test_analyze_architecture_health_dimension_scores(simple_repo: Path) -> None
         "cohesion",
         "duplication",
         "testability",
+        "maintainability",
     ):
         assert dim in dimensions, f"Missing dimension: {dim}"
         score = dimensions[dim]["score"]
@@ -247,7 +248,7 @@ async def test_architecture_health_summary_detail(tmp_path):
     assert "grade" in data["overall"]
     assert "dimensions" in data["overall"]
     assert "stats" not in data
-    assert len(result[0].text) < 2500
+    assert len(result[0].text) < 3000
 
 
 def test_analyze_architecture_health_includes_next_steps(simple_repo):
