@@ -138,7 +138,9 @@ def _detect_mutable_defaults(node: Node, src_bytes: bytes) -> list[BugFinding]:
             # Fallback: pick the child after the `=` sign
             for i, c in enumerate(child.children):
                 if c.type == "=":
-                    value = child.children[i + 1] if i + 1 < len(child.children) else None
+                    value = (
+                        child.children[i + 1] if i + 1 < len(child.children) else None
+                    )
                     break
         if value is None:
             continue
@@ -148,7 +150,10 @@ def _detect_mutable_defaults(node: Node, src_bytes: bytes) -> list[BugFinding]:
             is_mutable = True
         elif value.type == "call":
             func_node = value.children[0] if value.children else None
-            if func_node is not None and _node_text(func_node, src_bytes) in _MUTABLE_CALL_NAMES:
+            if (
+                func_node is not None
+                and _node_text(func_node, src_bytes) in _MUTABLE_CALL_NAMES
+            ):
                 is_mutable = True
 
         if is_mutable:
@@ -404,7 +409,9 @@ def _detect_exception_not_used(node: Node, src_bytes: bytes) -> list[BugFinding]
 
         # Check if the bound name appears in the block body
         block_identifiers = [
-            _node_text(n, src_bytes) for n in _walk(block_node) if n.type == "identifier"
+            _node_text(n, src_bytes)
+            for n in _walk(block_node)
+            if n.type == "identifier"
         ]
 
         if bound_name not in block_identifiers:
@@ -571,6 +578,268 @@ def _detect_shadowed_variable(node: Node, src_bytes: bytes) -> list[BugFinding]:
 
 
 # ---------------------------------------------------------------------------
+# Detector: empty catch block (cross-language)
+# ---------------------------------------------------------------------------
+def _detect_empty_catch(node: Node, src_bytes: bytes) -> list[BugFinding]:
+    """Detect empty catch blocks in JS/TS/Java/C#/Kotlin.
+
+    A ``catch`` clause whose body (``statement_block``) contains no
+    statement children silently swallows exceptions — almost always a bug.
+    """
+    findings: list[BugFinding] = []
+    for child in _walk(node):
+        if child.type != "catch_clause":
+            continue
+        # Find the body block (statement_block or block)
+        body = None
+        for c in child.children:
+            if c.type in ("statement_block", "block"):
+                body = c
+                break
+        if body is None:
+            continue
+        # Empty if no named children (only braces)
+        if len(body.named_children) == 0:
+            findings.append(
+                BugFinding(
+                    pattern="empty-catch-block",
+                    file="",
+                    line=child.start_point[0] + 1,
+                    confidence=BugConfidence.HIGH.value,
+                    message="Empty catch block silently swallows exceptions",
+                    snippet=_snippet(child, src_bytes),
+                )
+            )
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# Detector: missing break in switch (cross-language)
+# ---------------------------------------------------------------------------
+_SWITCH_TERMINAL_TYPES = frozenset(
+    {
+        "break_statement",
+        "return_statement",
+        "continue_statement",
+        "throw_statement",
+        "goto_statement",
+    }
+)
+
+
+def _detect_missing_break_in_switch(node: Node, src_bytes: bytes) -> list[BugFinding]:
+    """Detect switch case clauses that fall through without break/return.
+
+    Iterates ``case_statement`` nodes inside ``switch_statement`` bodies.
+    A case "falls through" when it has statements but does not end with
+    ``break``, ``return``, ``continue``, ``throw``, or ``goto``.  The
+    last case in the switch is skipped (fall-through at end is harmless),
+    and cases with no statements are skipped (intentional grouping).
+    """
+    findings: list[BugFinding] = []
+    for child in _walk(node):
+        if child.type != "switch_statement":
+            continue
+        # Collect case_statement children from the switch body
+        body = None
+        for c in child.children:
+            if c.type in ("compound_statement", "switch_body"):
+                body = c
+                break
+        if body is None:
+            continue
+
+        cases = [
+            c for c in body.children if c.type in ("case_statement", "switch_case")
+        ]
+        if len(cases) <= 1:
+            continue
+
+        # Check all cases except the last
+        for case in cases[:-1]:
+            # Collect statement children (skip case/default keyword, value, colon)
+            stmts = [
+                c
+                for c in case.named_children
+                if c.type
+                not in (
+                    "case",
+                    "default",
+                    "number_literal",
+                    "char_literal",
+                    "string_literal",
+                    "identifier",
+                    "qualified_identifier",
+                    "scope_resolution",
+                    "field_expression",
+                )
+            ]
+            if not stmts:
+                # No statements — intentional grouping (case 1: case 2: ...)
+                continue
+            # Check if last statement is a terminal
+            last_stmt = stmts[-1]
+            if last_stmt.type in _SWITCH_TERMINAL_TYPES:
+                continue
+            # Also check recursively — the terminal might be nested (e.g. in a block)
+            last_descendants = _walk(last_stmt)
+            has_terminal = any(
+                n.type in _SWITCH_TERMINAL_TYPES for n in last_descendants
+            )
+            if has_terminal:
+                continue
+
+            findings.append(
+                BugFinding(
+                    pattern="missing-break-in-switch",
+                    file="",
+                    line=case.start_point[0] + 1,
+                    confidence=BugConfidence.HIGH.value,
+                    message="Switch case falls through without break/return",
+                    snippet=_snippet(case, src_bytes),
+                )
+            )
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# Detector: redundant condition (cross-language)
+# ---------------------------------------------------------------------------
+def _get_condition_text(if_node: Node, src_bytes: bytes) -> str:
+    """Extract the condition text from an if_statement node.
+
+    Handles both Python-style (``condition`` field) and C/JS-style
+    (``parenthesized_expression`` child) ASTs.
+    """
+    cond = if_node.child_by_field_name("condition")
+    if cond is not None:
+        # JS/C: condition is a parenthesized_expression — unwrap it
+        if cond.type == "parenthesized_expression" and cond.named_children:
+            return _node_text(cond.named_children[0], src_bytes)
+        return _node_text(cond, src_bytes)
+    # Fallback: second child (after 'if' keyword) for Python
+    children = if_node.children
+    if len(children) >= 2:
+        return _node_text(children[1], src_bytes)
+    return ""
+
+
+def _detect_redundant_condition(node: Node, src_bytes: bytes) -> list[BugFinding]:
+    """Detect nested ``if`` statements that check the exact same condition.
+
+    When an inner ``if`` duplicates the condition of an outer ``if``,
+    the inner check is redundant (the condition is already known to be
+    truthy at that point).
+    """
+    findings: list[BugFinding] = []
+
+    def _check_nested(outer: Node, outer_cond_text: str) -> None:
+        """Recurse into *outer*'s body looking for redundant inner ifs."""
+        for descendant in _walk(outer):
+            if descendant is outer:
+                continue
+            if descendant.type != "if_statement":
+                continue
+            inner_cond_text = _get_condition_text(descendant, src_bytes)
+            if inner_cond_text and inner_cond_text == outer_cond_text:
+                findings.append(
+                    BugFinding(
+                        pattern="redundant-condition",
+                        file="",
+                        line=descendant.start_point[0] + 1,
+                        confidence=BugConfidence.MEDIUM.value,
+                        message=f"Redundant condition '{inner_cond_text}' already checked by outer if",
+                        snippet=_snippet(descendant, src_bytes),
+                    )
+                )
+
+    for child in _walk(node):
+        if child.type == "if_statement":
+            cond_text = _get_condition_text(child, src_bytes)
+            if cond_text:
+                _check_nested(child, cond_text)
+
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# Detector: reraised without chain (Python)
+# ---------------------------------------------------------------------------
+def _detect_reraised_without_chain(node: Node, src_bytes: bytes) -> list[BugFinding]:
+    """Detect ``raise NewException(...)`` without ``from`` inside except blocks.
+
+    When catching one exception and raising another, PEP 3134 requires
+    chaining via ``raise X from Y`` to preserve the original traceback.
+    Bare ``raise`` (re-raise) is fine — only new exception instantiations
+    without ``from`` are flagged.
+    """
+    findings: list[BugFinding] = []
+    for child in _walk(node):
+        if child.type != "except_clause":
+            continue
+        # Walk inside the except clause for raise_statement nodes
+        for descendant in _walk(child):
+            if descendant.type != "raise_statement":
+                continue
+            children = descendant.children
+            # Bare raise (just `raise`) has only the keyword — skip
+            has_argument = any(c.is_named for c in children)
+            if not has_argument:
+                continue
+            # Check for `from` keyword child
+            has_from = any(c.type == "from" for c in children)
+            if not has_from:
+                findings.append(
+                    BugFinding(
+                        pattern="reraised-without-chain",
+                        file="",
+                        line=descendant.start_point[0] + 1,
+                        confidence=BugConfidence.MEDIUM.value,
+                        message="Exception raised without 'from' — original traceback will be lost",
+                        snippet=_snippet(descendant, src_bytes),
+                    )
+                )
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# Detector: assignment in condition (cross-language)
+# ---------------------------------------------------------------------------
+def _detect_assignment_in_condition(node: Node, src_bytes: bytes) -> list[BugFinding]:
+    """Detect ``=`` assignment inside ``if``/``while`` conditions (C/C++/JS).
+
+    In C-family languages ``if (x = 5)`` is valid but almost always a
+    typo for ``if (x == 5)``.  The tree-sitter AST represents this as
+    an ``assignment_expression`` inside a ``parenthesized_expression``.
+    """
+    findings: list[BugFinding] = []
+    _COND_STMT_TYPES = frozenset({"if_statement", "while_statement"})
+
+    for child in _walk(node):
+        if child.type not in _COND_STMT_TYPES:
+            continue
+        # Get the condition node (parenthesized_expression in C/JS)
+        cond = child.child_by_field_name("condition")
+        if cond is None:
+            continue
+        # Look for assignment_expression inside the condition
+        for cond_child in _walk(cond):
+            if cond_child.type == "assignment_expression":
+                findings.append(
+                    BugFinding(
+                        pattern="assignment-in-condition",
+                        file="",
+                        line=cond_child.start_point[0] + 1,
+                        confidence=BugConfidence.MEDIUM.value,
+                        message=f"Assignment '{_node_text(cond_child, src_bytes)}' in condition — did you mean '=='?",
+                        snippet=_snippet(child, src_bytes),
+                    )
+                )
+                break  # One finding per statement
+    return findings
+
+
+# ---------------------------------------------------------------------------
 # Pattern registry
 # ---------------------------------------------------------------------------
 PATTERNS: list[BugPattern] = [
@@ -636,5 +905,41 @@ PATTERNS: list[BugPattern] = [
         languages=frozenset({"python"}),
         confidence=BugConfidence.MEDIUM,
         detect=_detect_shadowed_variable,
+    ),
+    # --- Cross-language detectors ---
+    BugPattern(
+        name="empty-catch-block",
+        description="Empty catch block silently swallows exceptions",
+        languages=frozenset({"javascript", "typescript", "java", "c_sharp", "kotlin"}),
+        confidence=BugConfidence.HIGH,
+        detect=_detect_empty_catch,
+    ),
+    BugPattern(
+        name="missing-break-in-switch",
+        description="Switch case falls through without break or return",
+        languages=frozenset({"c", "cpp", "c_sharp", "java"}),
+        confidence=BugConfidence.HIGH,
+        detect=_detect_missing_break_in_switch,
+    ),
+    BugPattern(
+        name="redundant-condition",
+        description="Nested if checks the exact same condition as outer if",
+        languages=frozenset({"python", "javascript", "typescript"}),
+        confidence=BugConfidence.MEDIUM,
+        detect=_detect_redundant_condition,
+    ),
+    BugPattern(
+        name="reraised-without-chain",
+        description="Exception raised without 'from' loses original traceback",
+        languages=frozenset({"python"}),
+        confidence=BugConfidence.MEDIUM,
+        detect=_detect_reraised_without_chain,
+    ),
+    BugPattern(
+        name="assignment-in-condition",
+        description="Assignment in if/while condition — likely meant ==",
+        languages=frozenset({"c", "cpp", "javascript"}),
+        confidence=BugConfidence.MEDIUM,
+        detect=_detect_assignment_in_condition,
     ),
 ]

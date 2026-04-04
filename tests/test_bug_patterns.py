@@ -366,3 +366,172 @@ def test_detect_shadowed_variable():
     funcs = _find_functions(root)
     findings = detector.detect(funcs[0], src)
     assert len(findings) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Cross-language helpers
+# ---------------------------------------------------------------------------
+def _parse_source(source: str, language):
+    """Parse source in any language, return (root_node, src_bytes)."""
+    parser = CodeParser()
+    src_bytes = textwrap.dedent(source).encode()
+    tree = parser._get_parser(language).parse(src_bytes)
+    return tree.root_node, src_bytes
+
+
+def _find_nodes_by_type(root_node, type_name: str):
+    """Find all nodes of a given type."""
+    results: list = []
+
+    def _walk(node):
+        if node.type == type_name:
+            results.append(node)
+        for child in node.children:
+            _walk(child)
+
+    _walk(root_node)
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Empty catch block
+# ---------------------------------------------------------------------------
+def test_detect_empty_catch_js():
+    """Detect empty catch block in JavaScript."""
+    root, src = _parse_source(
+        """
+    function f() {
+        try {
+            doStuff();
+        } catch (e) {
+        }
+    }
+    """,
+        Language.JAVASCRIPT,
+    )
+    detector = next(p for p in PATTERNS if p.name == "empty-catch-block")
+    funcs = _find_nodes_by_type(root, "function_declaration")
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) == 1
+
+
+def test_catch_with_body_no_finding():
+    """No finding when catch block has statements."""
+    root, src = _parse_source(
+        """
+    function f() {
+        try {
+            doStuff();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    """,
+        Language.JAVASCRIPT,
+    )
+    detector = next(p for p in PATTERNS if p.name == "empty-catch-block")
+    funcs = _find_nodes_by_type(root, "function_declaration")
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# Missing break in switch
+# ---------------------------------------------------------------------------
+def test_detect_missing_break_in_switch():
+    """Detect case fall-through without break in C."""
+    root, src = _parse_source(
+        """
+    void f(int x) {
+        switch (x) {
+            case 1:
+                printf("one");
+            case 2:
+                printf("two");
+                break;
+        }
+    }
+    """,
+        Language.C,
+    )
+    detector = next(p for p in PATTERNS if p.name == "missing-break-in-switch")
+    funcs = _find_nodes_by_type(root, "function_definition")
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Redundant condition
+# ---------------------------------------------------------------------------
+def test_detect_redundant_condition():
+    """Detect nested if with same condition as outer if."""
+    root, src = _parse_python(
+        """\
+        def f(x):
+            if x:
+                if x:
+                    pass
+        """
+    )
+    detector = next(p for p in PATTERNS if p.name == "redundant-condition")
+    funcs = _find_functions(root)
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Reraised without chain
+# ---------------------------------------------------------------------------
+def test_detect_reraised_without_chain():
+    """Detect raise without 'from' inside except block."""
+    root, src = _parse_python(
+        """\
+        def f():
+            try:
+                pass
+            except ValueError:
+                raise TypeError("bad")
+        """
+    )
+    detector = next(p for p in PATTERNS if p.name == "reraised-without-chain")
+    funcs = _find_functions(root)
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) == 1
+
+
+def test_reraised_with_from_no_finding():
+    """No finding when raise uses 'from' for exception chaining."""
+    root, src = _parse_python(
+        """\
+        def f():
+            try:
+                pass
+            except ValueError as e:
+                raise TypeError("bad") from e
+        """
+    )
+    detector = next(p for p in PATTERNS if p.name == "reraised-without-chain")
+    funcs = _find_functions(root)
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# Assignment in condition
+# ---------------------------------------------------------------------------
+def test_detect_assignment_in_condition_c():
+    """Detect assignment in if condition in C."""
+    root, src = _parse_source(
+        """
+    void f(int x) {
+        if (x = 5) {
+            printf("oops");
+        }
+    }
+    """,
+        Language.C,
+    )
+    detector = next(p for p in PATTERNS if p.name == "assignment-in-condition")
+    funcs = _find_nodes_by_type(root, "function_definition")
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) >= 1
