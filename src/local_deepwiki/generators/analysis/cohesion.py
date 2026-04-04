@@ -147,9 +147,7 @@ def analyze_class_cohesion(
     parser = CodeParser()
     results: list[dict[str, Any]] = []
 
-    for full_path, rel_path in iter_python_files(
-        repo_path, exclude_tests=exclude_tests
-    ):
+    for full_path, rel_path in iter_python_files(repo_path, exclude_tests=exclude_tests):
         parsed = parser.parse_file(full_path)
         if parsed is None:
             continue
@@ -327,11 +325,7 @@ def analyze_cohesion(
 
     total_classes = len(all_classes)
     classes_gt_2 = sum(1 for c in all_classes if c["lcom4"] > 2)
-    avg_lcom = (
-        sum(c["lcom4"] for c in all_classes) / total_classes
-        if total_classes > 0
-        else 0.0
-    )
+    avg_lcom = sum(c["lcom4"] for c in all_classes) / total_classes if total_classes > 0 else 0.0
     low_cohesion_modules = sum(1 for m in module_results if m["cohesion_ratio"] < 0.3)
 
     return {

@@ -252,9 +252,7 @@ def test_compute_module_cohesion_sorted_ascending(tmp_path):
 
     pkg_b = tmp_path / "src" / "beta"
     _write_py(pkg_b / "__init__.py", "")
-    _write_py(
-        pkg_b / "mod.py", "from beta.other import x\n"
-    )  # 1 internal / 1 total = 1.0
+    _write_py(pkg_b / "mod.py", "from beta.other import x\n")  # 1 internal / 1 total = 1.0
     _write_py(pkg_b / "other.py", "x = 1\n")
 
     results = compute_module_cohesion(tmp_path)
