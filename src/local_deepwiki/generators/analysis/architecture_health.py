@@ -103,9 +103,7 @@ def _generate_next_steps(
             {
                 "tool": "get_recommendations",
                 "args": {"enrich": True},
-                "reason": (
-                    f"{total_smells} design smells found — get prioritized action items"
-                ),
+                "reason": (f"{total_smells} design smells found — get prioritized action items"),
             }
         )
 
@@ -200,11 +198,7 @@ def analyze_architecture_health(
     duplication_result = analyze_duplication(repo_path)
 
     # Filter smells to source-only (exclude test/generated)
-    src_smells = [
-        s
-        for s in smell_result.get("smells", [])
-        if s.get("file", "").startswith("src/")
-    ]
+    src_smells = [s for s in smell_result.get("smells", []) if s.get("file", "").startswith("src/")]
 
     dimensions = _score_all_dimensions(
         hotspot_result,
@@ -220,9 +214,7 @@ def analyze_architecture_health(
 
     # Build top findings
     top_hotspots = hotspot_result.get("hotspots", [])[:top_findings]
-    top_smells_high = [s for s in src_smells if s.get("severity") == "high"][
-        :top_findings
-    ]
+    top_smells_high = [s for s in src_smells if s.get("severity") == "high"][:top_findings]
     god_classes = [s for s in src_smells if s.get("type") == "god_class"]
 
     logger.info(

@@ -233,9 +233,7 @@ def analyze_duplication(
             continue
 
     # Run both detectors
-    type1_clones = detect_type1_clones(
-        repo_path, min_lines=min_lines, exclude_tests=exclude_tests
-    )
+    type1_clones = detect_type1_clones(repo_path, min_lines=min_lines, exclude_tests=exclude_tests)
     type2_clones = detect_type2_clones(repo_path, exclude_tests=exclude_tests)
 
     # Compute duplicated lines:
@@ -244,9 +242,7 @@ def analyze_duplication(
         group["line_count"] * (len(group["instances"]) - 1) for group in type1_clones
     )
 
-    largest_clone_lines = max(
-        (group["line_count"] for group in type1_clones), default=0
-    )
+    largest_clone_lines = max((group["line_count"] for group in type1_clones), default=0)
 
     duplication_ratio = duplicated_lines / total_lines if total_lines > 0 else 0.0
 

@@ -403,8 +403,7 @@ def test_score_churn_no_high_churn_complex_files():
 
 def test_score_churn_many_high_churn_complex_files():
     composite = [
-        {"file": f"f{i}.py", "churn": 20, "complexity": 30, "composite": 0.8}
-        for i in range(10)
+        {"file": f"f{i}.py", "churn": 20, "complexity": 30, "composite": 0.8} for i in range(10)
     ]
     stats = {"gini_coefficient": 0.5, "total_files": 20}
     result = score_churn(composite, stats=stats)
