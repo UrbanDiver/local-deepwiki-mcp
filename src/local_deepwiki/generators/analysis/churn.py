@@ -261,9 +261,7 @@ def analyze_churn(
     gini = _compute_gini(list(file_churn.values()))
 
     # Build file_churn list (top_n)
-    file_churn_list = [
-        {"file": f, "commits": c} for f, c in list(file_churn.items())[:top_n]
-    ]
+    file_churn_list = [{"file": f, "commits": c} for f, c in list(file_churn.items())[:top_n]]
 
     return {
         "status": "success",

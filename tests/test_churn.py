@@ -10,7 +10,6 @@ from local_deepwiki.generators.analysis.churn import (
     parse_git_log_numstat,
 )
 
-
 # ---------------------------------------------------------------------------
 # Task 1: parse_git_log_numstat
 # ---------------------------------------------------------------------------
@@ -226,12 +225,8 @@ async def test_handle_get_churn_metrics(tmp_path):
     from local_deepwiki.handlers.analysis_architecture import handle_get_churn_metrics
 
     subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
-    subprocess.run(
-        ["git", "config", "user.email", "t@t.com"], cwd=tmp_path, capture_output=True
-    )
-    subprocess.run(
-        ["git", "config", "user.name", "T"], cwd=tmp_path, capture_output=True
-    )
+    subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, capture_output=True)
     (tmp_path / "a.py").write_text("x = 1\n")
     subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=tmp_path, capture_output=True)
@@ -242,9 +237,7 @@ async def test_handle_get_churn_metrics(tmp_path):
         "local_deepwiki.handlers.analysis_architecture.get_access_controller",
         return_value=mock_controller,
     ):
-        result = await handle_get_churn_metrics(
-            {"repo_path": str(tmp_path), "window_days": 90}
-        )
+        result = await handle_get_churn_metrics({"repo_path": str(tmp_path), "window_days": 90})
     assert len(result) == 1
     data = json.loads(result[0].text)
     assert data["status"] == "success"
@@ -261,12 +254,8 @@ async def test_handle_get_co_change(tmp_path):
     from local_deepwiki.handlers.analysis_architecture import handle_get_co_change
 
     subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
-    subprocess.run(
-        ["git", "config", "user.email", "t@t.com"], cwd=tmp_path, capture_output=True
-    )
-    subprocess.run(
-        ["git", "config", "user.name", "T"], cwd=tmp_path, capture_output=True
-    )
+    subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, capture_output=True)
     (tmp_path / "a.py").write_text("x = 1\n")
     subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=tmp_path, capture_output=True)

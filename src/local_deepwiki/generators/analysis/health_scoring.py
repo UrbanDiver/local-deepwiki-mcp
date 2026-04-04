@@ -136,9 +136,7 @@ def score_smells(
         return {"score": 100, "grade": "A", "factors": {}}
 
     severity_weights = {"high": 3, "medium": 1, "low": 0.5}
-    weighted_count = sum(
-        severity_weights.get(s.get("severity", "medium"), 1) for s in smells
-    )
+    weighted_count = sum(severity_weights.get(s.get("severity", "medium"), 1) for s in smells)
     density = (weighted_count / total_lines) * 1000
     god_classes = sum(1 for s in smells if s.get("type") == "god_class")
 
