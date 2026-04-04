@@ -535,3 +535,198 @@ def test_detect_assignment_in_condition_c():
     funcs = _find_nodes_by_type(root, "function_definition")
     findings = detector.detect(funcs[0], src)
     assert len(findings) >= 1
+
+
+# ---------------------------------------------------------------------------
+# sizeof-pointer
+# ---------------------------------------------------------------------------
+def test_detect_sizeof_pointer():
+    """Detect sizeof applied to a pointer parameter."""
+    root, src = _parse_source(
+        """\
+    void f(int* ptr) {
+        int size = sizeof(ptr);
+    }
+    """,
+        Language.C,
+    )
+    detector = next(p for p in PATTERNS if p.name == "sizeof-pointer")
+    funcs = _find_nodes_by_type(root, "function_definition")
+    assert len(funcs) >= 1
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) >= 1
+
+
+def test_sizeof_deref_no_finding():
+    """No finding when sizeof dereferences the pointer."""
+    root, src = _parse_source(
+        """\
+    void f(int* ptr) {
+        int size = sizeof(*ptr);
+    }
+    """,
+        Language.C,
+    )
+    detector = next(p for p in PATTERNS if p.name == "sizeof-pointer")
+    funcs = _find_nodes_by_type(root, "function_definition")
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# null-deref-after-check
+# ---------------------------------------------------------------------------
+def test_detect_null_deref_after_check():
+    """Detect pointer dereference inside null-true branch."""
+    root, src = _parse_source(
+        """\
+    void f(int* ptr) {
+        if (ptr == 0) {
+            int x = *ptr;
+        }
+    }
+    """,
+        Language.C,
+    )
+    detector = next(p for p in PATTERNS if p.name == "null-deref-after-check")
+    funcs = _find_nodes_by_type(root, "function_definition")
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) >= 1
+
+
+def test_null_check_no_deref_no_finding():
+    """No finding when null branch doesn't dereference."""
+    root, src = _parse_source(
+        """\
+    void f(int* ptr) {
+        if (ptr == 0) {
+            return;
+        }
+    }
+    """,
+        Language.C,
+    )
+    detector = next(p for p in PATTERNS if p.name == "null-deref-after-check")
+    funcs = _find_nodes_by_type(root, "function_definition")
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# string-format-mismatch
+# ---------------------------------------------------------------------------
+def test_detect_string_format_mismatch():
+    """Detect printf with mismatched specifier/argument count."""
+    root, src = _parse_source(
+        """\
+    void f() {
+        printf("%d %s", 42);
+    }
+    """,
+        Language.C,
+    )
+    detector = next(p for p in PATTERNS if p.name == "string-format-mismatch")
+    funcs = _find_nodes_by_type(root, "function_definition")
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) >= 1
+
+
+def test_string_format_match_no_finding():
+    """No finding when specifier count matches arguments."""
+    root, src = _parse_source(
+        """\
+    void f() {
+        printf("%d %s", 42, "hello");
+    }
+    """,
+        Language.C,
+    )
+    detector = next(p for p in PATTERNS if p.name == "string-format-mismatch")
+    funcs = _find_nodes_by_type(root, "function_definition")
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# async-void (C#)
+# ---------------------------------------------------------------------------
+def test_detect_async_void_csharp():
+    """Detect async void method in C#."""
+    root, src = _parse_source(
+        """\
+    class Foo {
+        async void Bar() {
+        }
+    }
+    """,
+        Language.CSHARP,
+    )
+    detector = next(p for p in PATTERNS if p.name == "async-void")
+    methods = _find_nodes_by_type(root, "method_declaration")
+    findings = []
+    for m in methods:
+        findings.extend(detector.detect(m, src))
+    assert len(findings) >= 1
+
+
+def test_async_task_no_finding():
+    """No finding for async Task method."""
+    root, src = _parse_source(
+        """\
+    class Foo {
+        async Task Bar() {
+        }
+    }
+    """,
+        Language.CSHARP,
+    )
+    detector = next(p for p in PATTERNS if p.name == "async-void")
+    methods = _find_nodes_by_type(root, "method_declaration")
+    findings = []
+    for m in methods:
+        findings.extend(detector.detect(m, src))
+    assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# dangling-else
+# ---------------------------------------------------------------------------
+def test_detect_dangling_else():
+    """Detect ambiguous else binding without braces."""
+    root, src = _parse_source(
+        """\
+    void f(int a, int b) {
+        if (a)
+            if (b)
+                x();
+            else
+                y();
+    }
+    """,
+        Language.C,
+    )
+    detector = next(p for p in PATTERNS if p.name == "dangling-else")
+    funcs = _find_nodes_by_type(root, "function_definition")
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) >= 1
+
+
+def test_braced_if_no_dangling_else():
+    """No finding when outer if uses braces."""
+    root, src = _parse_source(
+        """\
+    void f(int a, int b) {
+        if (a) {
+            if (b)
+                x();
+            else
+                y();
+        }
+    }
+    """,
+        Language.C,
+    )
+    detector = next(p for p in PATTERNS if p.name == "dangling-else")
+    funcs = _find_nodes_by_type(root, "function_definition")
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) == 0

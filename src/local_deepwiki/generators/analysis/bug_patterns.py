@@ -853,6 +853,386 @@ def _detect_assignment_in_condition(node: Node, src_bytes: bytes) -> list[BugFin
 
 
 # ---------------------------------------------------------------------------
+# Detector: sizeof on pointer parameter (C/C++)
+# ---------------------------------------------------------------------------
+def _detect_sizeof_pointer(node: Node, src_bytes: bytes) -> list[BugFinding]:
+    """Detect ``sizeof(ptr)`` where *ptr* is a pointer parameter.
+
+    ``sizeof`` on a pointer returns the size of the pointer itself (typically
+    4 or 8 bytes), not the size of the pointed-to data.  This is almost always
+    a bug when the programmer intended to get the size of the underlying type
+    or buffer.
+    """
+    findings: list[BugFinding] = []
+
+    # Collect pointer parameter names from the enclosing function.
+    pointer_params: set[str] = set()
+    for child in _walk(node):
+        if child.type == "parameter_declaration":
+            for sub in child.children:
+                if sub.type == "pointer_declarator":
+                    for leaf in sub.children:
+                        if leaf.type == "identifier":
+                            pointer_params.add(_node_text(leaf, src_bytes))
+
+    if not pointer_params:
+        return findings
+
+    # Scan for sizeof_expression nodes whose argument is one of those params.
+    for child in _walk(node):
+        if child.type != "sizeof_expression":
+            continue
+        # sizeof(expr) -> children: sizeof, parenthesized_expression
+        for sub in child.children:
+            if sub.type != "parenthesized_expression":
+                continue
+            # Inside the parens, look for a bare identifier (not pointer_expression).
+            inner_children = [c for c in sub.children if c.type not in {"(", ")"}]
+            if len(inner_children) == 1 and inner_children[0].type == "identifier":
+                name = _node_text(inner_children[0], src_bytes)
+                if name in pointer_params:
+                    findings.append(
+                        BugFinding(
+                            pattern="sizeof-pointer",
+                            file="",
+                            line=child.start_point[0] + 1,
+                            confidence=BugConfidence.HIGH.value,
+                            message=(
+                                f"sizeof({name}) returns pointer size, "
+                                f"not the size of the pointed-to data"
+                            ),
+                            snippet=_snippet(child, src_bytes),
+                        )
+                    )
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# Detector: null dereference after null check (C/C++)
+# ---------------------------------------------------------------------------
+def _detect_null_deref_after_check(node: Node, src_bytes: bytes) -> list[BugFinding]:
+    """Detect dereferencing a pointer inside a branch that checks it is null.
+
+    Patterns caught:
+    - ``if (ptr == NULL) { ptr->field; }``
+    - ``if (ptr == 0)    { *ptr; }``
+    - ``if (!ptr)        { ptr[i]; }``
+    """
+    findings: list[BugFinding] = []
+
+    for child in _walk(node):
+        if child.type != "if_statement":
+            continue
+
+        cond = child.child_by_field_name("condition")
+        consequence = child.child_by_field_name("consequence")
+        if cond is None or consequence is None:
+            continue
+
+        # Extract the pointer name from the null-check condition.
+        null_checked_name = _extract_null_checked_name(cond, src_bytes)
+        if null_checked_name is None:
+            continue
+
+        # Search the true-branch for dereferences of that pointer.
+        for desc in _walk(consequence):
+            if _is_deref_of(desc, null_checked_name, src_bytes):
+                findings.append(
+                    BugFinding(
+                        pattern="null-deref-after-check",
+                        file="",
+                        line=desc.start_point[0] + 1,
+                        confidence=BugConfidence.HIGH.value,
+                        message=(
+                            f"Pointer '{null_checked_name}' is dereferenced "
+                            f"inside a branch that checks it is null"
+                        ),
+                        snippet=_snippet(child, src_bytes, context_lines=3),
+                    )
+                )
+                break  # One finding per if-statement
+
+    return findings
+
+
+def _extract_null_checked_name(cond: Node, src_bytes: bytes) -> str | None:
+    """Return the identifier name checked for null, or *None*."""
+    # Unwrap parenthesized_expression
+    inner = cond
+    while inner.type == "parenthesized_expression":
+        children = [c for c in inner.children if c.type not in {"(", ")"}]
+        if len(children) == 1:
+            inner = children[0]
+        else:
+            break
+
+    # Pattern: !ptr  ->  unary_expression with '!' and identifier
+    if inner.type == "unary_expression":
+        ops = [c for c in inner.children if c.type == "!"]
+        ids = [c for c in inner.children if c.type == "identifier"]
+        if ops and ids:
+            return _node_text(ids[0], src_bytes)
+
+    # Pattern: ptr == NULL / ptr == 0
+    if inner.type == "binary_expression":
+        children = inner.children
+        ops = [c for c in children if _node_text(c, src_bytes) == "=="]
+        if not ops:
+            return None
+        ids = [c for c in children if c.type == "identifier"]
+        nulls = [
+            c
+            for c in children
+            if c.type in {"null", "number_literal"}
+            and _node_text(c, src_bytes) in {"NULL", "0", "nullptr"}
+        ]
+        if ids and nulls:
+            return _node_text(ids[0], src_bytes)
+
+    return None
+
+
+def _is_deref_of(node: Node, name: str, src_bytes: bytes) -> bool:
+    """Return True if *node* dereferences *name* (``*name``, ``name->``, ``name[``)."""
+    # *ptr  ->  pointer_expression with '*' and identifier
+    if node.type == "pointer_expression":
+        children = node.children
+        if any(c.type == "*" for c in children):
+            ids = [c for c in children if c.type == "identifier"]
+            if ids and _node_text(ids[0], src_bytes) == name:
+                return True
+
+    # ptr->field  ->  field_expression with identifier, '->', field_identifier
+    if node.type == "field_expression":
+        first_child = node.children[0] if node.children else None
+        if first_child and first_child.type == "identifier":
+            if _node_text(first_child, src_bytes) == name:
+                # Ensure it's -> (not .)
+                if any(_node_text(c, src_bytes) == "->" for c in node.children):
+                    return True
+
+    # ptr[i]  ->  subscript_expression with identifier as argument
+    if node.type == "subscript_expression":
+        first_child = node.children[0] if node.children else None
+        if first_child and first_child.type == "identifier":
+            if _node_text(first_child, src_bytes) == name:
+                return True
+
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Detector: printf/scanf format specifier mismatch (C/C++)
+# ---------------------------------------------------------------------------
+import re as _re
+
+_FORMAT_SPEC_RE = _re.compile(
+    r"%(?!%)"  # '%' not followed by another '%'
+    r"[-+ #0]*"  # optional flags
+    r"(?:\*|\d+)?"  # optional width
+    r"(?:\.(?:\*|\d+))?"  # optional precision
+    r"(?:[hlLqjzt]{0,2})"  # optional length modifier
+    r"[diouxXeEfFgGaAcspn%]"  # conversion specifier
+)
+
+# Function name -> 0-based index of the format string argument
+_FORMAT_FUNCS: dict[str, int] = {
+    "printf": 0,
+    "scanf": 0,
+    "sprintf": 1,
+    "sscanf": 1,
+    "fprintf": 1,
+    "fscanf": 1,
+    "snprintf": 2,
+}
+
+
+def _detect_string_format_mismatch(node: Node, src_bytes: bytes) -> list[BugFinding]:
+    """Detect printf/scanf calls where format specifier count != argument count.
+
+    Counts ``%d``, ``%s``, etc. in the format string (skipping ``%%``) and
+    compares against the number of remaining arguments.
+    """
+    findings: list[BugFinding] = []
+
+    for child in _walk(node):
+        if child.type != "call_expression":
+            continue
+
+        # Get the function name.
+        func_node = child.child_by_field_name("function")
+        if func_node is None or func_node.type != "identifier":
+            continue
+        func_name = _node_text(func_node, src_bytes)
+        if func_name not in _FORMAT_FUNCS:
+            continue
+
+        fmt_idx = _FORMAT_FUNCS[func_name]
+
+        # Get the argument list.
+        args_node = child.child_by_field_name("arguments")
+        if args_node is None:
+            continue
+
+        # Collect non-punctuation children as the actual arguments.
+        args = [c for c in args_node.children if c.type not in {"(", ")", ","}]
+
+        if len(args) <= fmt_idx:
+            continue  # Not enough args to even have a format string
+
+        fmt_arg = args[fmt_idx]
+        # The format string should be a string_literal.
+        if fmt_arg.type != "string_literal":
+            continue
+
+        fmt_text = _node_text(fmt_arg, src_bytes)
+        # Strip quotes
+        if fmt_text.startswith('"') and fmt_text.endswith('"'):
+            fmt_text = fmt_text[1:-1]
+
+        specifiers = _FORMAT_SPEC_RE.findall(fmt_text)
+        spec_count = len(specifiers)
+        # Arguments after the format string
+        value_args = args[fmt_idx + 1 :]
+        arg_count = len(value_args)
+
+        if spec_count != arg_count:
+            findings.append(
+                BugFinding(
+                    pattern="string-format-mismatch",
+                    file="",
+                    line=child.start_point[0] + 1,
+                    confidence=BugConfidence.MEDIUM.value,
+                    message=(
+                        f"{func_name}() has {spec_count} format specifier(s) "
+                        f"but {arg_count} value argument(s)"
+                    ),
+                    snippet=_snippet(child, src_bytes),
+                )
+            )
+
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# Detector: async void methods (C#)
+# ---------------------------------------------------------------------------
+_ASYNC_VOID_SKIP_NAMES = frozenset({"Main"})
+_ASYNC_VOID_HANDLER_SUFFIXES = ("Handler", "EventHandler")
+
+
+def _detect_async_void(node: Node, src_bytes: bytes) -> list[BugFinding]:
+    """Detect ``async void`` methods in C#.
+
+    ``async void`` methods cannot be awaited and any unhandled exception
+    inside them crashes the process.  Event handlers (``OnFoo``,
+    ``FooHandler``) and ``Main`` are excluded.
+    """
+    findings: list[BugFinding] = []
+
+    if node.type != "method_declaration":
+        return findings
+
+    # Check for async modifier.
+    has_async = False
+    for child in node.children:
+        if child.type == "modifier" and _node_text(child, src_bytes) == "async":
+            has_async = True
+            break
+
+    if not has_async:
+        return findings
+
+    # Check for void return type.
+    has_void = False
+    for child in node.children:
+        if child.type == "predefined_type" and _node_text(child, src_bytes) == "void":
+            has_void = True
+            break
+
+    if not has_void:
+        return findings
+
+    # Get method name.
+    method_name = ""
+    for child in node.children:
+        if child.type == "identifier":
+            method_name = _node_text(child, src_bytes)
+            break
+
+    # Skip known exceptions.
+    if method_name in _ASYNC_VOID_SKIP_NAMES:
+        return findings
+    if method_name.startswith("On"):
+        return findings
+    if method_name.endswith(_ASYNC_VOID_HANDLER_SUFFIXES):
+        return findings
+
+    findings.append(
+        BugFinding(
+            pattern="async-void",
+            file="",
+            line=node.start_point[0] + 1,
+            confidence=BugConfidence.MEDIUM.value,
+            message=(
+                f"async void method '{method_name}' cannot be awaited — "
+                f"unhandled exceptions will crash the process"
+            ),
+            snippet=_snippet(node, src_bytes),
+        )
+    )
+
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# Detector: dangling else (C/C++)
+# ---------------------------------------------------------------------------
+def _detect_dangling_else(node: Node, src_bytes: bytes) -> list[BugFinding]:
+    """Detect dangling ``else`` in un-braced nested ``if`` statements.
+
+    Pattern: ``if (a) if (b) x; else y;`` — the ``else`` binds to the
+    inner ``if`` which may not match the programmer's intent.  Flagged
+    when the outer ``if``'s consequence is a bare ``if_statement`` (not
+    wrapped in ``compound_statement``) that has an ``else`` clause.
+    """
+    findings: list[BugFinding] = []
+
+    for child in _walk(node):
+        if child.type != "if_statement":
+            continue
+
+        consequence = child.child_by_field_name("consequence")
+        if consequence is None:
+            continue
+
+        # The consequence must be a bare if_statement (no braces).
+        if consequence.type != "if_statement":
+            continue
+
+        # The inner if must have an else clause.
+        inner_alt = consequence.child_by_field_name("alternative")
+        if inner_alt is None:
+            continue
+
+        findings.append(
+            BugFinding(
+                pattern="dangling-else",
+                file="",
+                line=child.start_point[0] + 1,
+                confidence=BugConfidence.MEDIUM.value,
+                message=(
+                    "Dangling else — the else clause binds to the inner if, "
+                    "which may not be the intended behavior; consider adding braces"
+                ),
+                snippet=_snippet(child, src_bytes, context_lines=3),
+            )
+        )
+
+    return findings
+
+
+# ---------------------------------------------------------------------------
 # Pattern registry
 # ---------------------------------------------------------------------------
 PATTERNS: list[BugPattern] = [
@@ -954,5 +1334,41 @@ PATTERNS: list[BugPattern] = [
         languages=frozenset({"c", "cpp", "javascript"}),
         confidence=BugConfidence.MEDIUM,
         detect=_detect_assignment_in_condition,
+    ),
+    # --- C/C++/C# specific detectors ---
+    BugPattern(
+        name="sizeof-pointer",
+        description="sizeof on pointer parameter returns pointer size, not data size",
+        languages=frozenset({"c", "cpp"}),
+        confidence=BugConfidence.HIGH,
+        detect=_detect_sizeof_pointer,
+    ),
+    BugPattern(
+        name="null-deref-after-check",
+        description="Pointer dereferenced inside branch that checks it is null",
+        languages=frozenset({"c", "cpp"}),
+        confidence=BugConfidence.HIGH,
+        detect=_detect_null_deref_after_check,
+    ),
+    BugPattern(
+        name="string-format-mismatch",
+        description="printf/scanf format specifier count does not match argument count",
+        languages=frozenset({"c", "cpp"}),
+        confidence=BugConfidence.MEDIUM,
+        detect=_detect_string_format_mismatch,
+    ),
+    BugPattern(
+        name="async-void",
+        description="async void method cannot be awaited and crashes on unhandled exceptions",
+        languages=frozenset({"c_sharp"}),
+        confidence=BugConfidence.MEDIUM,
+        detect=_detect_async_void,
+    ),
+    BugPattern(
+        name="dangling-else",
+        description="Dangling else binds to inner if in un-braced nested if statement",
+        languages=frozenset({"c", "cpp"}),
+        confidence=BugConfidence.MEDIUM,
+        detect=_detect_dangling_else,
     ),
 ]
