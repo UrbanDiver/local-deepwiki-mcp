@@ -15,9 +15,9 @@ from local_deepwiki.logging import get_logger
 logger = get_logger(__name__)
 
 try:
-    from coverage import CoverageData  # type: ignore[import-untyped]
+    from coverage import Coverage as _Coverage  # type: ignore[import-untyped]
 except ImportError:
-    CoverageData = None  # type: ignore[assignment,misc]
+    _Coverage = None  # type: ignore[assignment,misc]
 
 _TEST_FILE_RE = re.compile(r"(^test_.*\.py$|.*_test\.py$|.*_spec\.py$)")
 _TEST_DIR_RE = re.compile(r"(^|/)(__tests__|tests?)/")
@@ -172,12 +172,18 @@ def _process_test_files(
     return test_files, test_lines, total_assertions
 
 
+_UNTESTED_THRESHOLD = 50.0  # files below this % coverage are "poorly tested"
+
+
 def _read_coverage_db(
     coverage_path: Path,
     repo_path: Path,
     source_files_set: set[str],
 ) -> tuple[set[str], float] | None:
     """Read a ``.coverage`` database and return covered source files.
+
+    A file is considered "untested" if its line coverage is below
+    ``_UNTESTED_THRESHOLD`` (50%).
 
     Args:
         coverage_path: Path to the ``.coverage`` SQLite database.
@@ -188,7 +194,7 @@ def _read_coverage_db(
         Tuple of (covered_files_set, avg_coverage_pct) or ``None`` if the
         database cannot be read.
     """
-    if CoverageData is None:
+    if _Coverage is None:
         logger.debug("coverage package not available, skipping coverage DB")
         return None
 
@@ -196,31 +202,34 @@ def _read_coverage_db(
         return None
 
     try:
-        cd = CoverageData(str(coverage_path))
-        cd.read()
+        cov = _Coverage(data_file=str(coverage_path))
+        cov.load()
     except Exception:
         logger.debug("Failed to read coverage database at %s", coverage_path)
         return None
 
-    measured = cd.measured_files()
+    measured = cov.get_data().measured_files()
     if not measured:
         return None
-
-    # Build absolute -> relative lookup for source files
-    abs_to_rel: dict[str, str] = {}
-    for rel in source_files_set:
-        abs_path = str((repo_path / rel).resolve())
-        abs_to_rel[abs_path] = rel
 
     covered: set[str] = set()
     coverage_pcts: list[float] = []
 
-    for abs_path, rel_path in abs_to_rel.items():
-        lines = cd.lines(abs_path)
-        if lines:
-            covered.add(rel_path)
-            coverage_pcts.append(100.0)  # Has coverage (> 0 lines)
-        else:
+    for rel in source_files_set:
+        abs_path = str((repo_path / rel).resolve())
+        try:
+            analysis = cov.analysis2(abs_path)
+            stmts = len(analysis[1])
+            missing = len(analysis[3])
+            if stmts == 0:
+                coverage_pcts.append(100.0)
+                covered.add(rel)
+                continue
+            pct = ((stmts - missing) / stmts) * 100
+            coverage_pcts.append(pct)
+            if pct >= _UNTESTED_THRESHOLD:
+                covered.add(rel)
+        except Exception:
             coverage_pcts.append(0.0)
 
     avg_cov = sum(coverage_pcts) / len(coverage_pcts) if coverage_pcts else 0.0
