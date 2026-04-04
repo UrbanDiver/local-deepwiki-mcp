@@ -35,4 +35,4 @@ uv run deepwiki check                      # Architecture quality gate
 
 ## Supported Languages
 
-Python, TypeScript/TSX, JavaScript, Go, Rust, Java, C, C++, Swift, Ruby, PHP, Kotlin, C#
+Python, TypeScript/TSX, JavaScript, Go, Rust, Java, C, C++, Objective-C, Swift, Ruby, PHP, Kotlin, C#

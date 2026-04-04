@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **MCP Server** with 43 tools for repository documentation and code intelligence
-- **Multi-language parsing** via tree-sitter (Python, TypeScript, JavaScript, Go, Rust, Java, C/C++, Swift, Ruby, PHP, Kotlin, C#)
+- **Multi-language parsing** via tree-sitter (Python, TypeScript, JavaScript, Go, Rust, Java, C/C++, Objective-C, Swift, Ruby, PHP, Kotlin, C#)
 - **AST-based chunking** that respects code structure (functions, classes, methods)
 - **Semantic search** using LanceDB vector database
 - **LLM-powered wiki generation** with support for Ollama (local), Anthropic, and OpenAI

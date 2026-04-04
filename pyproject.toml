@@ -32,6 +32,7 @@ dependencies = [
     "tree-sitter-php>=0.23",
     "tree-sitter-kotlin>=0.23",
     "tree-sitter-c-sharp>=0.23",
+    "tree-sitter-objc>=3.0",
     "lancedb>=0.15,<1.0.0",  # Pinned: Vector store API stability
     "sentence-transformers>=3.0,<4.0.0",  # Pinned: Embedding model compatibility
     "pydantic>=2.0,<3.0.0",  # Pinned: Core validation library

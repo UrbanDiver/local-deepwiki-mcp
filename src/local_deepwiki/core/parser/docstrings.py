@@ -166,6 +166,7 @@ _DOCSTRING_EXTRACTORS: dict[LangEnum, Any] = {
     LangEnum.PHP: partial(_get_block_comment, comment_type="comment"),
     LangEnum.KOTLIN: partial(_get_block_comment, comment_type="multiline_comment"),
     LangEnum.CSHARP: partial(_get_line_comments, comment_type="comment", prefix="///"),
+    LangEnum.OBJC: _get_javadoc_or_doxygen,
 }
 
 

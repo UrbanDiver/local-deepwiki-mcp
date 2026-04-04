@@ -101,6 +101,7 @@ class Language(StrEnum):
     PHP = "php"
     KOTLIN = "kotlin"
     CSHARP = "csharp"
+    OBJC = "objective_c"
 
 
 class ChunkType(StrEnum):

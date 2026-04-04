@@ -25,6 +25,7 @@ _GRAMMAR_CONFIG: list[tuple[str, list[LangEnum]]] = [
     ("tree_sitter_php", [LangEnum.PHP]),
     ("tree_sitter_kotlin", [LangEnum.KOTLIN]),
     ("tree_sitter_c_sharp", [LangEnum.CSHARP]),
+    ("tree_sitter_objc", [LangEnum.OBJC]),
 ]
 
 # Build LANGUAGE_MODULES dynamically, skipping grammars that aren't installed
@@ -74,6 +75,8 @@ _ALL_EXTENSIONS: dict[str, LangEnum] = {
     ".kt": LangEnum.KOTLIN,
     ".kts": LangEnum.KOTLIN,
     ".cs": LangEnum.CSHARP,
+    ".m": LangEnum.OBJC,
+    ".mm": LangEnum.OBJC,
 }
 
 # Only map extensions for languages with available grammars
