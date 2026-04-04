@@ -2,89 +2,375 @@
 
 ## External Dependencies
 
-| Dependency                | Purpose |
-|---------------------------|---------|
-| `anthropic`               | Provides access to Anthropic's AI models, such as Claude, for natural language processing tasks. |
-| `flask`                   | A lightweight WSGI web application framework used for building web interfaces or APIs. |
-| `LanceDB`                 | A vector database for building AI-powered applications, used for storing and querying embeddings. |
-| `markdown`                | Library for parsing and rendering Markdown text into HTML. |
-| `mcp`                     | Used for managing model communication protocol (MCP) in AI applications. |
-| `nh3`                     | A fast, safe HTML sanitization library to prevent XSS attacks. |
-| `ollama`                  | Provides access to locally hosted large language models via Ollama API. |
-| `openai`                  | Official Python client for OpenAI's API, used for interacting with GPT models. |
-| `pandas`                  | Data manipulation and analysis library, used for handling structured data. |
-| `psutil`                  | System and process utilities for monitoring system resources and performance. |
-| `pydantic`                | Data validation and settings management using Python type annotations. |
-| `pyyaml`                  | YAML parser and emitter for configuration files and data serialization. |
-| `rapidfuzz`               | Fast fuzzy string matching library for similarity comparisons. |
-| `rich`                    | Library for rich text and beautiful formatting in the terminal. |
-| `sentence-transformers`   | Provides pre-trained models for generating sentence embeddings. |
-| `tree-sitter`             | A parser generator tool and an incremental parsing library for syntax tree construction. |
-| `tree-sitter-c`           | Tree-sitter grammar for C language. |
-| `tree-sitter-c-sharp`     | Tree-sitter grammar for C# language. |
-| `tree-sitter-cpp`         | Tree-sitter grammar for C++ language. |
-| `tree-sitter-go`          | Tree-sitter grammar for Go language. |
-| `tree-sitter-java`        | Tree-sitter grammar for Java language. |
-| `tree-sitter-javascript`  | Tree-sitter grammar for JavaScript language. |
-| `tree-sitter-kotlin`      | Tree-sitter grammar for Kotlin language. |
-| `tree-sitter-php`         | Tree-sitter grammar for PHP language. |
-| `tree-sitter-python`      | Tree-sitter grammar for Python language. |
-| `tree-sitter-ruby`        | Tree-sitter grammar for Ruby language. |
-| `tree-sitter-rust`        | Tree-sitter grammar for Rust language. |
-| `tree-sitter-swift`       | Tree-sitter grammar for Swift language. |
-| `tree-sitter-typescript`  | Tree-sitter grammar for TypeScript language. |
-| `watchdog`                | File system event monitoring library for watching file changes. |
+The following third-party libraries are required for the project:
+
+- **anthropic** (>=0.40,<1.0.0)  
+  Provides access to Anthropic's AI models, particularly Claude, for natural language processing tasks.
+
+- **flask** (>=3.0,<4.0.0)  
+  A lightweight web framework for building web applications and APIs.
+
+- **LanceDB** (>=0.15,<1.0.0)  
+  A vector database for storing and querying embeddings, used for semantic search and similarity retrieval.
+
+- **markdown** (>=3.0,<4.0.0)  
+  Library for parsing and rendering Markdown text into HTML.
+
+- **mcp** (>=1.2.0,<2.0.0)  
+  Likely used for managing model configuration or communication protocols, possibly related to LLM interactions.
+
+- **nh3** (>=0.2.14,<1.0.0)  
+  A fast, safe HTML sanitizer for cleaning and validating HTML content.
+
+- **ollama** (>=0.4,<1.0.0)  
+  Provides access to locally hosted LLMs via the Ollama API.
+
+- **openai** (>=1.0,<2.0.0)  
+  Official Python client for OpenAI's API, used for interacting with OpenAI models.
+
+- **pandas** (>=2.0,<3.0.0)  
+  Data manipulation and analysis library, used for handling structured data.
+
+- **psutil** (>=5.0,<6.0.0)  
+  Cross-platform library for retrieving system and process information.
+
+- **pydantic** (>=2.0,<3.0.0)  
+  Data validation and settings management using Python type annotations.
+
+- **pyyaml** (>=6.0,<7.0.0)  
+  YAML parser and emitter for configuration files and data serialization.
+
+- **rapidfuzz** (>=3.0,<4.0.0)  
+  Fast fuzzy string matching library, used for similarity and search operations.
+
+- **rich** (>=13.0,<14.0.0)  
+  Library for rich text and beautiful formatting in the terminal.
+
+- **sentence-transformers** (>=3.0,<4.0.0)  
+  Library for generating sentence embeddings for semantic similarity tasks.
+
+- **tree-sitter** (>=0.23)  
+  A parser for programming languages, used for code analysis and syntax parsing.
+
+- **tree-sitter-c** (>=0.23)  
+  Tree-sitter parser for C language.
+
+- **tree-sitter-c-sharp** (>=0.23)  
+  Tree-sitter parser for C# language.
+
+- **tree-sitter-cpp** (>=0.23)  
+  Tree-sitter parser for C++ language.
+
+- **tree-sitter-go** (>=0.23)  
+  Tree-sitter parser for Go language.
+
+- **tree-sitter-java** (>=0.23)  
+  Tree-sitter parser for Java language.
+
+- **tree-sitter-javascript** (>=0.23)  
+  Tree-sitter parser for JavaScript language.
+
+- **tree-sitter-kotlin** (>=0.23)  
+  Tree-sitter parser for Kotlin language.
+
+- **tree-sitter-objc** (>=3.0)  
+  Tree-sitter parser for Objective-C language.
+
+- **tree-sitter-php** (>=0.23)  
+  Tree-sitter parser for PHP language.
+
+- **tree-sitter-python** (>=0.23)  
+  Tree-sitter parser for Python language.
+
+- **tree-sitter-ruby** (>=0.23)  
+  Tree-sitter parser for Ruby language.
+
+- **tree-sitter-rust** (>=0.23)  
+  Tree-sitter parser for Rust language.
+
+- **tree-sitter-swift** (>=0.0.1)  
+  Tree-sitter parser for Swift language.
+
+- **tree-sitter-typescript** (>=0.23)  
+  Tree-sitter parser for TypeScript language.
 
 ## Dev Dependencies
 
-| Dependency                | Purpose |
-|---------------------------|---------|
-| `black`                   | Code formatter to enforce consistent Python code style. |
-| `isort`                   | Tool to sort and organize import statements. |
-| `local-deepwiki ([all])`  | Development package for local deepwiki with all optional dependencies. |
-| `mypy`                    | Static type checker for Python to catch type-related errors. |
-| `pip-audit`               | Security audit tool for Python package dependencies. |
-| `pre-commit`              | Framework for managing and maintaining pre-commit hooks. |
-| `pypdf`                   | Library for working with PDF files. |
-| `pytest`                  | Testing framework for Python. |
-| `pytest-asyncio`          | Plugin for pytest to support asynchronous tests. |
-| `types-Markdown`          | Type stubs for the `markdown` library. |
-| `types-PyYAML`            | Type stubs for the `pyyaml` library. |
-| `weasyprint`              | HTML to PDF converter used for report generation. |
+The following dependencies are used for development and testing:
+
+- **black** (>=24.0)  
+  Code formatter for Python.
+
+- **isort** (>=5.0)  
+  Tool for sorting and organizing Python imports.
+
+- **local-deepwiki ([all])**  
+  Development package for the project itself, likely including all features.
+
+- **mypy** (>=1.0)  
+  Static type checker for Python.
+
+- **pip-audit** (>=2.0)  
+  Tool for auditing Python dependencies for security vulnerabilities.
+
+- **pre-commit** (>=3.0)  
+  Framework for managing pre-commit hooks.
+
+- **pypdf** (>=6.6.1)  
+  Library for working with PDF files.
+
+- **pytest** (>=8.0)  
+  Testing framework for Python.
+
+- **pytest-asyncio** (>=0.24,<1.0.0)  
+  [Plugin](files/src/local_deepwiki/plugins/base.md) for pytest to support asynchronous tests.
+
+- **types-Markdown** (>=3.0)  
+  Type stubs for the `markdown` library.
+
+- **types-PyYAML** (>=6.0)  
+  Type stubs for the `pyyaml` library.
+
+- **weasyprint** (>=68.0,<69.0.0)  
+  Library for rendering HTML and CSS to PDF.
 
 ## Internal Module Dependencies
 
-- [`WikiGenerator`](files/src/local_deepwiki/generators/wiki/generator.md) depends on [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md)
-- [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md) depends on [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md)
-- `SourceFormatter` depends on [`GitRepoInfo`](files/src/local_deepwiki/core/git_utils.md), [`ChunkType`](files/src/local_deepwiki/models/foundation.md), [`CodeChunk`](files/src/local_deepwiki/models/chunks.md)
-- `SecurityAccessControl` depends on `ContextVar`, `Callable`, `StrEnum`, `TypeVar`, `asyncio`
-- `CLI` depends on `Console`, `Table`, `argparse`, `yaml`, [`Config`](files/src/local_deepwiki/config/models.md), [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
-- `InitCLI` depends on `Console`, `Panel`, `Prompt`, `Table`, [`Config`](files/src/local_deepwiki/config/models.md), [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
-- `Analysis` modules depend on `Any`, `defaultdict`
-- `DataParser` depends on `User`, `json`, `Path`
-- `Processor` depends on `Order`, `User`
-- `TestParser` depends on `User`, `DataParser`
-- `WikiOutputHelpers` depends on `AsyncIterator`, `Path`, [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md), [`LLMProvider`](files/src/local_deepwiki/providers/base.md)
-- `Logging` depends on `logging`, `os`, `sys`
-- `Protocols` depends on `Iterator`, `Path`, `Protocol`, `runtime_checkable`
-- `SessionState` depends on `Any`
-- `HealthScoring` depends on `Any`
-- `SmellsPage` depends on `Any`
-- `TermValidator` depends on `re`
-- `Credentials` depends on `os`
-- `MainCLI` depends on `Console`, `Table`, `importlib`, `sys`
-- `DirTree` depends on `Path`, `subprocess`
-- `ProviderTypes` depends on `StrEnum`
-- `Types` depends on `TypedDict`
-- `GitBlame` depends on [`format_blame_date`](files/src/local_deepwiki/core/git_blame.md), [`get_file_entity_blame`](files/src/local_deepwiki/core/git_blame.md)
-- `GitUtils` depends on [`build_source_url`](files/src/local_deepwiki/core/git_utils.md)
-- `SearchTypes` depends on `dataclass`, [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md)
-- `Models` depends on `version` (from `importlib.metadata`)
-- `External` depends on `Any`
-- `Utils` depends on `hashlib`, `re`
-- [`Config`](files/src/local_deepwiki/config/models.md) depends on `yaml`
-- `ConfigModels` depends on [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
-- `BaseProvider` depends on [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md), [`LLMProvider`](files/src/local_deepwiki/providers/base.md)
+Based on import statements, the following internal module dependencies exist:
+
+- **CLI modules** (`src/local_deepwiki/cli/`) depend on:
+  - `rich` for rich terminal output.
+  - `yaml` for configuration file parsing.
+  - `local_deepwiki.config` for configuration handling.
+  - `local_deepwiki.config.models` for parsing configuration models.
+
+- **Security modules** (`src/local_deepwiki/security/`) depend on:
+  - `asyncio` for asynchronous operations.
+  - `contextvars` for managing context.
+  - `dataclasses` for structured data handling.
+  - `enum` for defining string enums.
+  - `typing` for type hints.
+
+- **Logging module** (`src/local_deepwiki/logging.py`) depends on:
+  - `logging` for logging utilities.
+  - `os` and `sys` for system-level operations.
+
+- **Core protocols** (`src/local_deepwiki/core/protocols.py`) depend on:
+  - `pathlib` for path handling.
+  - `typing` for type hints.
+
+- **Generators** (`src/local_deepwiki/generators/`) depend on:
+  - `collections.abc` for abstract base classes.
+  - `dataclasses` for structured data.
+  - `typing` for type hints.
+  - `local_deepwiki.core.git_blame` and `local_deepwiki.core.git_utils` for Git-related utilities.
+  - `local_deepwiki.logging` for logging.
+  - `local_deepwiki.models` for data models.
+
+- **Handlers** (`src/local_deepwiki/handlers/`) depend on:
+  - `typing` for type hints.
+  - `local_deepwiki.core.vectorstore` for vector store interactions.
+  - `local_deepwiki.generators` for content generation.
+
+- **Models** (`src/local_deepwiki/models/`) depend on:
+  - `pydantic` for data validation.
+  - `typing` for type hints.
+  - `enum` for enum definitions.
+
+- **Providers** (`src/local_deepwiki/providers/`) depend on:
+  - `typing` for type hints.
+  - `local_deepwiki.core.vectorstore` for vector store interactions.
+  - `local_deepwiki.generators` for content generation.
+
+- **Test helpers** (`tests/wiki_output_helpers.py`) depend on:
+  - `collections.abc` for abstract base classes.
+  - `pathlib` for path handling.
+  - `typing` for type hints.
+  - `local_deepwiki.providers.base` for base provider classes.
+
+- **Test fixtures** (`tests/fixtures/sample_repo/`) depend on:
+  - `json` for JSON handling.
+  - `pathlib` for path handling.
+  - `src.models` for data models.
+  - `typing` for type hints.
+
+- **Vector store modules** (`src/local_deepwiki/core/vectorstore/`) depend on:
+  - `dataclasses` for structured data.
+  - `typing` for type hints.
+  - `local_deepwiki.core.vectorstore.schema` for schema definitions.
+
+- **Configuration** (`src/local_deepwiki/config/`) depends on:
+  - `yaml` for configuration file parsing.
+  - `local_deepwiki.config.models` for configuration models.
+
+- **Initialization CLI** (`src/local_deepwiki/cli/init_cli.py`) depends on:
+  - `argparse` for command-line argument parsing.
+  - `os` and `sys` for system-level operations.
+  - `urllib.request` for URL handling.
+  - `collections.Counter` for counting.
+  - `dataclasses` for structured data.
+  - `pathlib` for path handling.
+  - `typing` for type hints.
+  - `yaml` for configuration file parsing.
+  - `rich` for rich terminal output.
+  - `local_deepwiki.config` for configuration handling.
+  - `local_deepwiki.config.models` for parsing configuration models.
+
+- **Wiki generators** (`src/local_deepwiki/generators/wiki/`) depend on:
+  - `collections` for data structures.
+  - `re` for regular expressions.
+  - `typing` for type hints.
+  - `local_deepwiki.core.vectorstore` for vector store interactions.
+  - `local_deepwiki.generators.analysis` for analysis generators.
+  - `local_deepwiki.generators.dir_tree` for directory tree generation.
+  - `local_deepwiki.generators.scm` for SCM-related generators.
+  - `local_deepwiki.generators.utils` for utility functions.
+  - `local_deepwiki.logging` for logging.
+  - `local_deepwiki.models` for data models.
+
+- **Analysis generators** (`src/local_deepwiki/generators/analysis/`) depend on:
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **SCM generators** (`src/local_deepwiki/generators/scm/`) depend on:
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Utils** (`src/local_deepwiki/generators/utils/`) depend on:
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Session state handler** (`src/local_deepwiki/handlers/session_state.py`) depends on:
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Term validator** (`src/local_deepwiki/generators/wiki/term_validator.py`) depends on:
+  - `re` for regular expressions.
+  - `local_deepwiki.generators` for generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Source formatter** (`src/local_deepwiki/generators/wiki/source_formatter.py`) depends on:
+  - `collections.abc` for abstract base classes.
+  - `dataclasses` for structured data.
+  - `operator` for attribute access.
+  - `pathlib` for path handling.
+  - `local_deepwiki.core.git_blame` for Git blame utilities.
+  - `local_deepwiki.core.git_utils` for Git utilities.
+  - `local_deepwiki.logging` for logging.
+  - `local_deepwiki.models` for data models.
+
+- **Directory tree generator** (`src/local_deepwiki/generators/dir_tree.py`) depends on:
+  - `dataclasses` for structured data.
+  - `pathlib` for path handling.
+  - `subprocess` for executing shell commands.
+  - `local_deepwiki.generators` for generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Search types** (`src/local_deepwiki/core/vectorstore/mixins/search_types.py`) depend on:
+  - `dataclasses` for structured data.
+  - `local_deepwiki.core.vectorstore.schema` for schema definitions.
+
+- **Git blame utilities** (`src/local_deepwiki/core/git_blame.py`) depend on:
+  - `datetime` for date handling.
+  - `pathlib` for path handling.
+  - `subprocess` for executing shell commands.
+  - `local_deepwiki.core.git_utils` for Git utilities.
+
+- **Git utilities** (`src/local_deepwiki/core/git_utils.py`) depend on:
+  - `pathlib` for path handling.
+  - `subprocess` for executing shell commands.
+  - `local_deepwiki.core.git_blame` for Git blame utilities.
+
+- **Init CLI** (`src/local_deepwiki/cli/init_cli.py`) depends on:
+  - `argparse` for command-line argument parsing.
+  - `os` and `sys` for system-level operations.
+  - `urllib.request` for URL handling.
+  - `collections.Counter` for counting.
+  - `dataclasses` for structured data.
+  - `pathlib` for path handling.
+  - `typing` for type hints.
+  - `yaml` for configuration file parsing.
+  - `rich` for rich terminal output.
+  - `local_deepwiki.config` for configuration handling.
+  - `local_deepwiki.config.models` for parsing configuration models.
+
+- **Wiki generator** (`src/local_deepwiki/generators/wiki/wiki_generator.py`) depends on:
+  - `collections` for data structures.
+  - `dataclasses` for structured data.
+  - `pathlib` for path handling.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.generators.dir_tree` for directory tree generation.
+  - `local_deepwiki.generators.scm` for SCM-related generators.
+  - `local_deepwiki.generators.utils` for utility functions.
+  - `local_deepwiki.generators.wiki` for wiki-specific generators.
+  - `local_deepwiki.logging` for logging.
+  - `local_deepwiki.models` for data models.
+
+- **Base provider** (`src/local_deepwiki/providers/base.py`) depends on:
+  - `typing` for type hints.
+  - `local_deepwiki.models` for data models.
+
+- **Credentials provider** (`src/local_deepwiki/providers/credentials.py`) depends on:
+  - `os` for environment variables.
+
+- **LLM provider** (`src/local_deepwiki/providers/llm.py`) depends on:
+  - `local_deepwiki.providers.base` for base provider functionality.
+  - `local_deepwiki.providers.credentials` for credential handling.
+  - `local_deepwiki.models` for data models.
+
+- **Embedding provider** (`src/local_deepwiki/providers/embedding.py`) depends on:
+  - `local_deepwiki.providers.base` for base provider functionality.
+  - `local_deepwiki.providers.credentials` for credential handling.
+  - `local_deepwiki.models` for data models.
+
+- **Vector store** (`src/local_deepwiki/core/vectorstore/vectorstore.py`) depends on:
+  - `dataclasses` for structured data.
+  - `typing` for type hints.
+  - `local_deepwiki.core.vectorstore.mixins` for mixins.
+  - `local_deepwiki.core.vectorstore.schema` for schema definitions.
+  - `local_deepwiki.generators` for generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Search profile** (`src/local_deepwiki/core/vectorstore/schema.py`) depends on:
+  - `dataclasses` for structured data.
+  - `typing` for type hints.
+  - `local_deepwiki.models` for data models.
+
+- **Code chunk model** (`src/local_deepwiki/models/code_chunk.py`) depends on:
+  - `dataclasses` for structured data.
+  - `typing` for type hints.
+  - `local_deepwiki.models` for data models.
+
+- **Chunk type enum** (`src/local_deepwiki/models/chunk_type.py`) depends on:
+  - `enum` for enum definitions.
+  - `typing` for type hints.
+
+- **Provider types** (`src/local_deepwiki/models/provider_types.py`) depends on:
+  - `enum` for enum definitions.
+  - `typing` for type hints.
+
+- **Types** (`src/local_deepwiki/handlers/types.py`) depends on:
+  - `typing` for type hints.
+
+- **Health scoring generator** (`src/local_deepwiki/generators/analysis/health_scoring.py`) depends on:
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Architecture report generator** (`src/local_deepwiki/generators/analysis/architecture_report.py`) depends on:
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Smells page generator** (`src/local_deepwiki/generators/analysis/smells_page.py`) depends on:
+  - `collections` for data structures.
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.models` for data models.
 
 ## Module Dependency Graph
 

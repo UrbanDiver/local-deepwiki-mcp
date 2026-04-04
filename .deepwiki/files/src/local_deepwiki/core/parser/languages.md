@@ -2,46 +2,45 @@
 
 ## File Overview
 
-This file defines language detection configuration and mappings for Tree-sitter parser modules. It serves as a core configuration layer that enables the system to dynamically load language-specific parsers based on detected or specified input languages.
+This file defines the language detection configuration and mappings for Tree-sitter parser modules used within the `local_deepwiki` project. It serves as a configuration layer that maps language identifiers to their respective Tree-sitter modules, enabling dynamic loading of language-specific parsers.
 
-The file imports necessary dependencies to support dynamic module loading and logging, and integrates with the project's language enumeration ([`Language`](../../models/foundation.md)) to ensure consistent language handling across components.
+The primary responsibility of this file is to provide a centralized and extensible way to manage language-specific parser modules. It leverages Python's import mechanisms to dynamically load Tree-sitter modules at runtime, based on language identifiers defined in the [`Language`](../../models/foundation.md) enum.
 
 ## Key Concepts
 
-### Language Configuration and Dynamic Loading
-The file is designed to support dynamic language detection and parser loading. This is a key abstraction because it allows the system to scale to new languages without hardcoding parser logic for each one. By mapping language identifiers to Tree-sitter modules, it supports a modular and extensible architecture.
+### Language Enum Integration
+The file imports [`Language`](../../models/foundation.md) from `local_deepwiki.models`, which likely defines a set of supported languages. This enum is used as a key to map to Tree-sitter modules, ensuring type safety and consistency across the parser system.
 
-### Tree-sitter Integration
-Tree-sitter is a parsing library that generates parsers from grammar definitions. This file is responsible for mapping language identifiers (from [`Language`](../../models/foundation.md)) to the appropriate Tree-sitter modules, which are dynamically imported using `importlib`. This enables the system to parse content in multiple languages using a consistent interface.
+### Dynamic Module Loading
+The file uses `importlib` to dynamically load Tree-sitter modules for each supported language. This approach enables flexibility in parser selection and allows for easy extension of supported languages without hardcoding module paths.
 
-### Logging and Type Safety
-The use of [`get_logger`](../../logging.md) ensures that logging is consistent with the rest of the application, and the import of [`Language`](../../models/foundation.md) as `LangEnum` ensures type safety and clarity in language handling.
+### Tree-sitter Module Mappings
+The design rationale behind mapping languages to Tree-sitter modules is to abstract the parser implementation. This abstraction allows the core parser logic to remain language-agnostic while delegating language-specific parsing tasks to Tree-sitter, which provides efficient and accurate parsing for various programming and markup languages.
 
 ## Integration
 
-This file is part of the parser core and integrates with:
+This file is part of the core parsing infrastructure and integrates with:
+- `local_deepwiki/__init__.py`: Likely initializes or configures the parser system.
+- `local_deepwiki/cli/init_cli.py`: May use this file to determine supported languages during CLI initialization.
+- `local_deepwiki/core/chunk_extractors.py`: Could utilize language-specific parsers for content extraction.
+- `local_deepwiki/generators/context_builder.py`: Might require language detection to build context appropriately.
+- `local_deepwiki/generators/wiki/term_validator.py`: Could use language-specific parsers for term validation.
 
-- `src/local_deepwiki/__init__.py`: Likely used to initialize language-specific parsers or configurations.
-- `src/local_deepwiki/cli/config_validator.py`: May use this file to validate language configurations.
-- `src/local_deepwiki/cli/main.py`: Could reference this module when initializing parsers or handling language detection.
-- `src/local_deepwiki/core/chunk_extractors.py`: Possibly leverages language mappings when extracting or processing chunks in specific languages.
-- `src/local_deepwiki/core/graph_rag/models.py`: Might rely on language-specific parsers for graph-based retrieval-augmented generation.
-
-The file's imports are minimal and focused, ensuring it can be used in various contexts without pulling in unnecessary dependencies. It is tightly coupled with [`local_deepwiki.models.Language`](../../models/foundation.md) and `local_deepwiki.logging`, which suggests it's part of a larger configuration or utility system.
+The [`get_logger`](../../logging.md) import suggests this module is part of a logging-aware system, likely to track parser loading or language detection events. The [`Language`](../../models/foundation.md) enum integration implies this module is used in conjunction with other components that require language-aware processing.
 
 ## Design Notes
 
-### Dynamic Import Strategy
-The use of `importlib` for loading Tree-sitter modules is a design choice that allows for runtime flexibility. It avoids the need to pre-import all possible language parsers, which would increase startup time and memory usage. This is especially important in a system that supports multiple languages and may scale to support new ones without code changes.
-
-### Logger Integration
-The inclusion of [`get_logger`](../../logging.md) aligns with the project's logging strategy, ensuring consistent logging behavior across modules. This supports debugging and monitoring of language-specific parser loading or usage.
-
 ### Extensibility
-The file's structure implies that new languages can be added by extending the [`Language`](../../models/foundation.md) enum and ensuring corresponding Tree-sitter modules are available. This design supports a clean separation of concerns and allows for easy extension without modifying core logic.
+The use of `importlib` and a mapping approach makes this module highly extensible. Adding support for a new language only requires adding a new entry in the mapping, assuming the Tree-sitter module is available.
 
-### Minimalist Approach
-The file only defines imports and does not contain any functions or classes. This is intentional, as the actual language mappings or parser loading logic is likely defined elsewhere (e.g., in a configuration dictionary or a dedicated parser manager), and this file serves as a foundational import module for that logic.
+### Runtime Loading
+Tree-sitter modules are loaded at runtime rather than compile time. This approach allows for more flexible deployments where only necessary language modules are loaded, reducing memory footprint and startup time.
+
+### Error Handling
+While not shown in the provided code, the dynamic loading pattern implies that this module likely includes error handling for cases where a Tree-sitter module for a given language is not available or cannot be imported.
+
+### Type Safety
+By using the [`Language`](../../models/foundation.md) enum as a key, the design ensures that only valid language identifiers are used, preventing runtime errors from invalid language strings.
 
 ## Relevant Source Files
 

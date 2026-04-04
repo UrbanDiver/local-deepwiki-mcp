@@ -1,6 +1,6 @@
 {
   "repo_path": "/Users/brian/Projects/local-deepwiki-mcp",
-  "indexed_at": 1775098214.186978,
+  "indexed_at": 1775135458.862723,
   "total_files": 496,
   "total_chunks": 8889,
   "languages": {
@@ -8,52 +8,28 @@
   },
   "files": [
     {
-      "path": "tests/test_module_health.py",
+      "path": "src/local_deepwiki/core/parser/docstrings.py",
       "language": "python",
-      "size_bytes": 10951,
-      "last_modified": 1775097664.930876,
-      "hash": "225c5b8fb5b05b9c920c645e6f826fcacb142e2823037d8c7773e58cb7c4d29f",
-      "chunk_count": 22
+      "size_bytes": 6318,
+      "last_modified": 1775135169.6100178,
+      "hash": "28f288bc37a11b4c13eca684bbd34d0b78502f96312483c7734eb97014140eaf",
+      "chunk_count": 12
     },
     {
-      "path": "tests/test_coupling_metrics.py",
+      "path": "src/local_deepwiki/core/parser/languages.py",
       "language": "python",
-      "size_bytes": 10943,
-      "last_modified": 1775097664.9306383,
-      "hash": "355372320e1996ba5deaf62479a83f178bfbd4a461b0fe76236beafceb580c0a",
-      "chunk_count": 22
+      "size_bytes": 2752,
+      "last_modified": 1775135125.1388755,
+      "hash": "aa9ad5821cb99a08a9bec47ec52179c1f3de66e7db34d75639feae7882930c77",
+      "chunk_count": 3
     },
     {
-      "path": "tests/test_health_scoring.py",
+      "path": "src/local_deepwiki/models/foundation.py",
       "language": "python",
-      "size_bytes": 15157,
-      "last_modified": 1775097664.930756,
-      "hash": "d7c10fd4de801b3f0d8866fcc330d1c82cf828b3adcb78de7cfadef6d79771bb",
-      "chunk_count": 58
-    },
-    {
-      "path": "src/local_deepwiki/generators/analysis/coupling.py",
-      "language": "python",
-      "size_bytes": 9105,
-      "last_modified": 1775097664.930239,
-      "hash": "80491f68941f1c913c12b5a26d1368696bd82c9daabffd5d897bea09943bfd9d",
+      "size_bytes": 2777,
+      "last_modified": 1775135124.5036247,
+      "hash": "9335d362b13ab3796523b04c766ddcbb0e17eb6b30748dd1bec7ecd7f9ce5b1b",
       "chunk_count": 11
-    },
-    {
-      "path": "src/local_deepwiki/generators/analysis/module_dependencies.py",
-      "language": "python",
-      "size_bytes": 9828,
-      "last_modified": 1775097664.930501,
-      "hash": "2f140c6e8be768a94215e4466f77978856df7412271159c10c49644968226cd1",
-      "chunk_count": 13
-    },
-    {
-      "path": "src/local_deepwiki/generators/analysis/health_scoring.py",
-      "language": "python",
-      "size_bytes": 5787,
-      "last_modified": 1775097664.9303734,
-      "hash": "9c2a1225fcb2155998726fc9396da8615385b66c5c66356c32b8ef8f37f8452e",
-      "chunk_count": 9
     },
     {
       "path": "tests/test_provider_factories.py",
@@ -142,6 +118,14 @@
       "last_modified": 1771830896.9427955,
       "hash": "f05c77877d6117b2784a54d85a29f4ee7dacc12df87857820a3f5cb9c977f192",
       "chunk_count": 11
+    },
+    {
+      "path": "tests/test_module_health.py",
+      "language": "python",
+      "size_bytes": 10951,
+      "last_modified": 1775097664.930876,
+      "hash": "225c5b8fb5b05b9c920c645e6f826fcacb142e2823037d8c7773e58cb7c4d29f",
+      "chunk_count": 22
     },
     {
       "path": "tests/test_export_progress.py",
@@ -1344,6 +1328,14 @@
       "chunk_count": 19
     },
     {
+      "path": "tests/test_health_scoring.py",
+      "language": "python",
+      "size_bytes": 15157,
+      "last_modified": 1775097664.930756,
+      "hash": "d7c10fd4de801b3f0d8866fcc330d1c82cf828b3adcb78de7cfadef6d79771bb",
+      "chunk_count": 58
+    },
+    {
       "path": "tests/test_github_action.py",
       "language": "python",
       "size_bytes": 12490,
@@ -1478,6 +1470,14 @@
       "last_modified": 1773955612.320858,
       "hash": "b71dbdb7fcfa2ed4b2c0950fdecd5ef6fc82d51e4cc913395dc5220a4688df6c",
       "chunk_count": 14
+    },
+    {
+      "path": "tests/test_coupling_metrics.py",
+      "language": "python",
+      "size_bytes": 10943,
+      "last_modified": 1775097664.9306383,
+      "hash": "355372320e1996ba5deaf62479a83f178bfbd4a461b0fe76236beafceb580c0a",
+      "chunk_count": 22
     },
     {
       "path": "tests/test_wiki_codemaps.py",
@@ -2232,14 +2232,6 @@
       "chunk_count": 4
     },
     {
-      "path": "src/local_deepwiki/core/parser/docstrings.py",
-      "language": "python",
-      "size_bytes": 6274,
-      "last_modified": 1771828171.7126236,
-      "hash": "58f827083451870bbeaf8803b74d2c2a81af888902ca1f9be835cc6f937a91cf",
-      "chunk_count": 12
-    },
-    {
       "path": "src/local_deepwiki/core/parser/ast_utils.py",
       "language": "python",
       "size_bytes": 1885,
@@ -2254,14 +2246,6 @@
       "last_modified": 1774828586.069395,
       "hash": "46235c8b6d19c01cfb1b18c97a02f8c2af1bdcb0c2d243f79aee82aa22274907",
       "chunk_count": 15
-    },
-    {
-      "path": "src/local_deepwiki/core/parser/languages.py",
-      "language": "python",
-      "size_bytes": 2658,
-      "last_modified": 1771828171.714138,
-      "hash": "0bd2e1dc289aea4735ac15e11fa6269d2ab2ce8925ba5aeef3c03f559074e351",
-      "chunk_count": 3
     },
     {
       "path": "src/local_deepwiki/core/deep_research/steps.py",
@@ -2856,14 +2840,6 @@
       "chunk_count": 4
     },
     {
-      "path": "src/local_deepwiki/models/foundation.py",
-      "language": "python",
-      "size_bytes": 2752,
-      "last_modified": 1773606679.8143246,
-      "hash": "25d00000bfdf6a28b87256c1f5a2923a80eba0d0a8588b4c7f6201588e897e3d",
-      "chunk_count": 11
-    },
-    {
       "path": "src/local_deepwiki/models/tool_args.py",
       "language": "python",
       "size_bytes": 27496,
@@ -3144,6 +3120,14 @@
       "chunk_count": 7
     },
     {
+      "path": "src/local_deepwiki/generators/analysis/health_scoring.py",
+      "language": "python",
+      "size_bytes": 5787,
+      "last_modified": 1775097664.9303734,
+      "hash": "9c2a1225fcb2155998726fc9396da8615385b66c5c66356c32b8ef8f37f8452e",
+      "chunk_count": 9
+    },
+    {
       "path": "src/local_deepwiki/generators/analysis/stale_detection.py",
       "language": "python",
       "size_bytes": 7712,
@@ -3205,6 +3189,14 @@
       "size_bytes": 8149,
       "last_modified": 1773968666.8667336,
       "hash": "8c9cef08372d8c742de64bed10e5af5bac02ce8a5007b2695d3d2f20be3c5542",
+      "chunk_count": 11
+    },
+    {
+      "path": "src/local_deepwiki/generators/analysis/coupling.py",
+      "language": "python",
+      "size_bytes": 9105,
+      "last_modified": 1775097664.930239,
+      "hash": "80491f68941f1c913c12b5a26d1368696bd82c9daabffd5d897bea09943bfd9d",
       "chunk_count": 11
     },
     {
@@ -3294,6 +3286,14 @@
       "last_modified": 1775002662.0793004,
       "hash": "387d58ebde542d0cf42c15ea1342db074ad06e636918533845caeb30c2d9b6c5",
       "chunk_count": 34
+    },
+    {
+      "path": "src/local_deepwiki/generators/analysis/module_dependencies.py",
+      "language": "python",
+      "size_bytes": 9828,
+      "last_modified": 1775097664.930501,
+      "hash": "2f140c6e8be768a94215e4466f77978856df7412271159c10c49644968226cd1",
+      "chunk_count": 13
     },
     {
       "path": "src/local_deepwiki/generators/analysis/health_page.py",

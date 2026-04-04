@@ -2,7 +2,7 @@
 
 ---
 
-## Overview
+## Index
 
 # local-deepwiki-mcp
 
@@ -187,9 +187,9 @@ For a detailed view of module interdependencies including circular dependency de
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
@@ -203,7 +203,7 @@ The following source files were used to generate this documentation:
 
 ---
 
-## Modules
+## Index
 
 # Modules
 
@@ -215,113 +215,120 @@ This section contains documentation for each module.
 
 ## Module: src
 
-# Module: health_scoring
+# Module: local_deepwiki.core.parser.docstrings
 
 ## Module Purpose
 
-The `health_scoring` module provides functions for computing architectural health scores for a codebase. It implements a scoring system that evaluates code quality based on multiple dimensions including complexity, coupling, code smells, and architectural layers. The module is designed to work with the output of other analysis modules like coupling metrics and complexity analysis to produce a comprehensive health assessment.
+The `local_deepwiki.core.parser.docstrings` module provides language-specific functionality for extracting docstrings from tree-sitter AST nodes. It handles various documentation formats across multiple programming languages including Python, JavaScript, Java, Swift, and others, enabling the extraction of rich documentation content from code during the parsing and indexing process.
 
 ## Key Classes and Functions
 
-### Function: `letter_grade`
-```python
-def letter_grade(score: float) -> str
-```
-Converts a numerical score (0.0-1.0) into a letter grade (A-F).
+### Functions
 
-### Function: `score_complexity`
-```python
-def score_complexity(complexity: float) -> float
-```
-Computes a health score based on code complexity metrics. Takes a complexity value and returns a normalized score between 0.0 and 1.0.
+- **_collect_preceding_comments**
+  - Collects all consecutive preceding comment lines before a given tree-sitter node
+  - Parameters:
+    - `node`: The tree-sitter node to look before
+    - `source`: The original source bytes
+    - `comment_types`: Set of comment node type names
+    - `prefix`: Optional prefix that comments must start with
+  - Returns: List of comment text lines in order (first comment first)
 
-### Function: `score_coupling`
-```python
-def score_coupling(coupling: dict[str, Any]) -> float
-```
-Computes a health score based on coupling metrics. Takes a dictionary containing coupling data and returns a normalized score between 0.0 and 1.0.
+- **_strip_line_comment_prefix**
+  - Strips prefix from comment lines and joins them
+  - Parameters:
+    - `lines`: List of comment lines
+    - `prefix`: The prefix to strip (e.g., "//", "///", "#")
+  - Returns: Joined docstring with prefixes removed
 
-### Function: `score_smells`
-```python
-def score_smells(smells: list[dict[str, Any]]) -> float
-```
-Computes a health score based on code smell detection results. Takes a list of smell dictionaries and returns a normalized score between 0.0 and 1.0.
+- **_get_python_docstring**
+  - Extracts Python docstring from function/class body
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+  - Returns: The docstring or None if not found
 
-### Function: `score_layers`
-```python
-def score_layers(layers: dict[str, Any]) -> float
-```
-Computes a health score based on architectural layer analysis. Takes a dictionary containing layer data and returns a normalized score between 0.0 and 1.0.
+- **_get_jsdoc_or_line_comments**
+  - Extracts JSDoc (/** */) or multi-line // comments
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+  - Returns: The docstring or None if not found
 
-### Function: `compute_overall`
-```python
-def compute_overall(
-    complexity: float,
-    coupling: dict[str, Any],
-    smells: list[dict[str, Any]],
-    layers: dict[str, Any],
-) -> dict[str, Any]
-```
-Computes the overall health score by combining scores from all dimensions. Takes complexity, coupling, smells, and layers data and returns a dictionary containing the overall score and individual component scores.
+- **_get_line_comments**
+  - Extracts multi-line comments with a specific prefix
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+    - `comment_type`: The type of comment node
+    - `prefix`: The prefix to strip
+  - Returns: The docstring or None if not found
+
+- **_get_javadoc_or_doxygen**
+  - Extracts Javadoc/Doxygen (/** */) or /// comments
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+  - Returns: The docstring or None if not found
+
+- **_get_swift_docstring**
+  - Extracts Swift /// comments or /** */ block
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+  - Returns: The docstring or None if not found
+
+- **_get_block_comment**
+  - Extracts /** */ block comment of specified type
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+    - `comment_type`: The type of comment node
+  - Returns: The docstring or None if not found
+
+- **[get_docstring](../files/src/local_deepwiki/core/parser/docstrings.md)**
+  - Extracts docstring from a function/class node
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+    - `language`: The programming language
+  - Returns: The docstring or None if not found
 
 ## How Components Interact
 
-The components in this module work together to provide a comprehensive architectural health assessment:
-
-1. Individual scoring functions ([`score_complexity`](../files/src/local_deepwiki/generators/analysis/health_scoring.md), [`score_coupling`](../files/src/local_deepwiki/generators/analysis/health_scoring.md), [`score_smells`](../files/src/local_deepwiki/generators/analysis/health_scoring.md), [`score_layers`](../files/src/local_deepwiki/generators/analysis/health_scoring.md)) process specific aspects of code quality
-2. Each function normalizes its input data to a 0.0-1.0 range
-3. The [`compute_overall`](../files/src/local_deepwiki/generators/analysis/health_scoring.md) function aggregates these normalized scores into a final health assessment
-4. The [`letter_grade`](../files/src/local_deepwiki/generators/analysis/health_scoring.md) function converts the final numerical score into a readable letter grade
-
-The module is designed to accept output from other analysis modules (like the coupling analysis and complexity analysis) and transform them into meaningful health metrics.
+The module works by using language-specific extractor functions that are mapped to each supported programming language. The [`get_docstring`](../files/src/local_deepwiki/core/parser/docstrings.md) function serves as the main entry point, which dispatches to the appropriate language-specific extractor based on the provided language parameter. The helper functions like `_collect_preceding_comments` and `_strip_line_comment_prefix` are used by the language-specific extractors to gather and process comment text from the AST.
 
 ## Usage Examples
 
 ```python
-from local_deepwiki.generators.analysis.health_scoring import compute_overall, letter_grade
+from local_deepwiki.core.parser.docstrings import get_docstring
+from local_deepwiki.models import Language as LangEnum
+from tree_sitter import Node
 
-# Example usage with sample data
-complexity_score = 0.75
-coupling_data = {
-    "total_modules": 10,
-    "avg_instability": 0.45,
-    "avg_abstractness": 0.30
-}
-smells = [
-    {"type": "cyclomatic_complexity", "count": 2},
-    {"type": "long_function", "count": 1}
-]
-layers = {
-    "layer_count": 3,
-    "cross_layer_deps": 5
-}
+# Extract docstring from a Python function node
+docstring = get_docstring(node, source_bytes, LangEnum.PYTHON)
 
-# Compute overall health score
-health_result = compute_overall(
-    complexity=complexity_score,
-    coupling=coupling_data,
-    smells=smells,
-    layers=layers
-)
-
-print(f"Overall score: {health_result['overall']}")
-print(f"Letter grade: {letter_grade(health_result['overall'])}")
+# Extract docstring from a JavaScript function node
+docstring = get_docstring(node, source_bytes, LangEnum.JAVASCRIPT)
 ```
 
 ## Dependencies
 
-This module depends on:
-- `typing` (for type hints)
-
-The module is designed to work with data structures produced by other analysis modules in the `generators.analysis` package, particularly those related to complexity, coupling, code smells, and architectural layers. It does not directly depend on any other modules from the `local_deepwiki` package beyond standard typing functionality.
+- `collections.deque`
+- `functools.partial`
+- `typing.Any`
+- `typing.cast`
+- `tree-sitter.Node`
+- [`local_deepwiki.core.parser.ast_utils.get_node_text`](../files/src/local_deepwiki/core/parser/ast_utils.md)
+- [`local_deepwiki.models.Language`](../files/src/local_deepwiki/models/foundation.md)
 
 ## Relevant Source Files
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](../files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](../files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](../files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](../files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](../files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](../files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](../files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](../files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](../files/src/local_deepwiki/cli_progress.md)
@@ -401,6 +408,7 @@ Detailed documentation for individual source files.
 - [Context Builder](src/local_deepwiki/generators/context_builder.md)
 - [Core](src/local_deepwiki/tool_defs/core.md)
 - [Core](src/local_deepwiki/handlers/core.md)
+- [Coupling](src/local_deepwiki/generators/analysis/coupling.md)
 - [Coupling Page](src/local_deepwiki/generators/analysis/coupling_page.md)
 - [Coverage](src/local_deepwiki/generators/analysis/coverage.md)
 - [Credentials](src/local_deepwiki/providers/credentials.md)
@@ -412,7 +420,6 @@ Detailed documentation for individual source files.
 - [Dir Tree](src/local_deepwiki/generators/dir_tree.md)
 - [Discovery](src/local_deepwiki/generators/examples/discovery.md)
 - [Docstring](src/local_deepwiki/generators/examples/docstring.md)
-- [Docstrings](src/local_deepwiki/core/parser/docstrings.md)
 - [Embedding](src/local_deepwiki/core/vectorstore/embedding.md)
 - [Error Factories](src/local_deepwiki/error_factories.md)
 - [Errors](src/local_deepwiki/errors.md)
@@ -421,7 +428,6 @@ Detailed documentation for individual source files.
 - [Extractor](src/local_deepwiki/core/graph_rag/extractor.md)
 - [Extractor](src/local_deepwiki/generators/examples/extractor.md)
 - [Files](src/local_deepwiki/generators/wiki/files.md)
-- [Foundation](src/local_deepwiki/models/foundation.md)
 - [Fuzzy Search](src/local_deepwiki/core/fuzzy_search.md)
 - [Generator](src/local_deepwiki/generators/wiki/generator.md)
 - [Generator](src/local_deepwiki/generators/codemap/generator.md)
@@ -435,6 +441,7 @@ Detailed documentation for individual source files.
 - [Graph Expansion](src/local_deepwiki/services/graph_expansion.md)
 - [Health History](src/local_deepwiki/core/health_history.md)
 - [Health Page](src/local_deepwiki/generators/analysis/health_page.md)
+- [Health Scoring](src/local_deepwiki/generators/analysis/health_scoring.md)
 - [Hotspots](src/local_deepwiki/generators/analysis/hotspots.md)
 - [Hotspots Page](src/local_deepwiki/generators/analysis/hotspots_page.md)
 - [Html](src/local_deepwiki/export/html.md)
@@ -452,7 +459,6 @@ Detailed documentation for individual source files.
 - [Interactive Search](src/local_deepwiki/cli/interactive_search.md)
 - [Iterators](src/local_deepwiki/core/vectorstore/iterators.md)
 - [Language Pie](src/local_deepwiki/generators/diagrams/language_pie.md)
-- [Languages](src/local_deepwiki/core/parser/languages.md)
 - [Layer Analysis](src/local_deepwiki/generators/analysis/layer_analysis.md)
 - [Lazy Cache](src/local_deepwiki/generators/lazy_cache.md)
 - [Lazy Generator](src/local_deepwiki/generators/lazy_generator.md)
@@ -476,6 +482,7 @@ Detailed documentation for individual source files.
 - [Models Llm](src/local_deepwiki/config/models_llm.md)
 - [Models Search](src/local_deepwiki/config/models_search.md)
 - [Models Wiki](src/local_deepwiki/config/models_wiki.md)
+- [Module Dependencies](src/local_deepwiki/generators/analysis/module_dependencies.md)
 - [Module Diagram](src/local_deepwiki/generators/diagrams/module_diagram.md)
 - [Module Health](src/local_deepwiki/generators/analysis/module_health.md)
 - [Modules](src/local_deepwiki/generators/wiki/modules.md)
@@ -578,9 +585,9 @@ Detailed documentation for individual source files.
 - [Wiki](src/local_deepwiki/models/wiki.md)
 - [Wiki Service](src/local_deepwiki/services/wiki_service.md)
 - [Workflow](src/local_deepwiki/tool_defs/workflow.md)
-- [coupling.py](src/local_deepwiki/generators/analysis/coupling.md)
-- [health_scoring.py](src/local_deepwiki/generators/analysis/health_scoring.md)
-- [module_dependencies.py](src/local_deepwiki/generators/analysis/module_dependencies.md)
+- [docstrings.py](src/local_deepwiki/core/parser/docstrings.md)
+- [foundation.py](src/local_deepwiki/models/foundation.md)
+- [languages.py](src/local_deepwiki/core/parser/languages.md)
 
 ---
 
@@ -5010,6 +5017,11 @@ def _prompt_wiki_config(
 - [main](main.md) - shares 3 dependencies
 - [logging](../logging.md) - shares 3 dependencies
 
+## See Also
+
+- [main](main.md) - shares 3 dependencies
+- [logging](../logging.md) - shares 3 dependencies
+
 ---
 
 ## Interactive Search
@@ -6650,6 +6662,10 @@ Functions and methods in this file and their callers:
 ## See Also
 
 - [cli_progress](../cli_progress.md) - shares 2 dependencies
+
+## See Also
+
+- [init_cli](init_cli.md) - shares 3 dependencies
 
 ## See Also
 
@@ -12529,6 +12545,10 @@ assert json.loads(record["metadata"]) == {"key": "value", "count": 42}
 ## Relevant Source Files
 
 - `src/local_deepwiki/config/models.py:70-92`
+
+## See Also
+
+- [init_cli](../cli/init_cli.md) - uses this
 
 ## See Also
 
@@ -36172,60 +36192,66 @@ def _get_parser(self, language: LangEnum) -> Parser:
 
 ---
 
-## Docstrings
+## docstrings.py
 
 # File: `src/local_deepwiki/core/parser/docstrings.py`
 
 ## File Overview
 
-This file provides language-specific logic for extracting docstrings from tree-sitter AST nodes. It is part of the core parsing infrastructure for the `local_deepwiki` project, enabling extraction of documentation comments and docstrings from various programming languages.
+This file provides language-specific logic for extracting docstrings from tree-sitter AST nodes. It serves as a core utility for parsing documentation comments and string literals that represent docstrings in various programming languages, such as Python, JavaScript, Java, Swift, and others.
 
-The design allows for extensibility by language, supporting Python, JavaScript, Java, Swift, and others through a unified interface. Each language has its own extraction strategy tailored to its comment syntax and documentation conventions.
+The design rationale centers on supporting multiple programming languages with distinct comment syntaxes and docstring formats. It uses a modular approach where each language has its own extractor function, and a dispatcher (`get_docstring`) routes to the appropriate one based on the language.
 
 ## Key Concepts
 
-### Language-Agnostic Comment Collection
-The `_collect_preceding_comments` function provides a reusable abstraction for gathering consecutive comment nodes that appear before a given AST node. This function is critical for handling multi-line comments and ensures comments are collected in the correct order, stopping at the first non-matching comment type or prefix.
-
-### Prefix Stripping
-The `_strip_line_comment_prefix` utility function removes language-specific prefixes (e.g., `//`, `///`, `#`) from comment lines and joins them into a single docstring. This ensures consistent formatting across languages.
-
-### Docstring Extraction Strategies
-Each supported language has a dedicated extraction function:
-- Python: Extracts docstrings from the first statement in a function or class body.
+### Language-Specific Extractors
+The module implements specialized functions to extract docstrings from different languages:
+- Python: Extracts docstrings from string literals in the first statement of a function or class body.
 - JavaScript: Supports both JSDoc (`/** */`) and multi-line `//` comments.
-- Java: Supports Javadoc (`/** */`) and Doxygen-style `///` comments.
-- Swift: Supports both `///` comments and `/** */` block comments.
-- Generic block comment extraction for languages that use `/** */` syntax.
+- Java/Javadoc/Doxygen: Supports both block comments (`/** */`) and line comments (`///`).
+- Swift: Supports both `///` line comments and `/** */` block comments.
 
-These strategies reflect the idioms and conventions of each language, making the extraction robust and accurate.
+These extractors are designed to handle common patterns in each language's documentation style, ensuring accurate extraction of meaningful documentation.
+
+### Comment Collection and Processing
+A key abstraction is `_collect_preceding_comments`, which traverses AST nodes backwards to [collect](../../web/routes_chat.md) consecutive comment lines. This function respects comment type and optional prefix filtering, allowing for precise selection of relevant documentation.
+
+The `_strip_line_comment_prefix` function then normalizes these comments by removing prefixes and joining them into a single string, preparing them for use as docstrings.
+
+### Dispatch Pattern
+The `get_docstring` function implements a simple dispatcher pattern, using a dictionary mapping language enums to extractor functions. This pattern allows for easy extension with new languages by adding new entries to `_DOCSTRING_EXTRACTORS`.
 
 ## Integration
 
-This file integrates with the broader parsing pipeline in `local_deepwiki` by providing language-specific docstring extraction capabilities. It is used by:
-- `test_parser_node_utils` and `test_parser_docstrings` for testing purposes.
-- The main parser logic, which calls `get_docstring` with a language enum to determine which extractor to use.
+This file integrates closely with:
+- `local_deepwiki.core.parser.ast_utils`: Uses [`get_node_text`](ast_utils.md) to extract text from tree-sitter nodes.
+- [`local_deepwiki.models.Language`](../../models/foundation.md): Provides language identifiers for dispatching to the correct extractor.
+- The parser and discovery modules: Called by `discovery` to extract documentation during code analysis.
 
-The [`get_node_text`](ast_utils.md) utility from `ast_utils` is used to extract text from tree-sitter nodes, and [`Language`](../../models/foundation.md) enum from `models` provides the language context for dispatching to the correct extraction logic.
+It is also directly tested by:
+- `test_parser_docstrings`
+- `test_parser_node_utils`
+- `test_test_examples`
+
+These test files validate that docstrings are correctly extracted across various languages and node types.
 
 ## Design Notes
 
-### Extensibility and Dispatch
-The `get_docstring` function uses a dictionary mapping `LangEnum` values to extractor functions (`_DOCSTRING_EXTRACTORS`). This design allows for easy addition of new language support without modifying the core dispatch logic.
+### Handling of Comment Prefixes
+The module handles comment prefixes explicitly in functions like `_get_javadoc_or_doxygen` and `_get_swift_docstring`. This ensures that only relevant comments (e.g., doc comments) are collected, avoiding noise from regular comments.
 
-### Handling of Multi-line Comments
-The `_collect_preceding_comments` function stops collecting comments when it encounters a comment that does not match the expected prefix. This prevents mixing regular comments with doc comments, which is crucial for accurate extraction.
+### Extraction Order and Node Traversal
+Functions like `_get_python_docstring` rely on the structure of the AST (e.g., function/class bodies) to locate docstrings. For example, it checks the first child of a function body to find a string literal representing the docstring.
 
-### Edge Case Handling
-- For Python docstrings, the function checks for both triple-quoted and single-quoted strings.
-- The code handles cases where the node has no body, no children, or where the first statement is not a string.
-- For languages that support both block and line comments, the logic prioritizes block comments and falls back to line comments if needed.
+### Extensibility
+The use of a dictionary (`_DOCSTRING_EXTRACTORS`) makes it easy to add new language support. Each new language can be added with a dedicated extractor function, and the dispatcher will route to it automatically.
 
-### Efficiency
-The use of `deque` for collecting comments ensures efficient prepending of elements, which is necessary for maintaining the correct order of comments as they are traversed backwards from the node.
+### Edge Cases
+- The module gracefully handles missing nodes or unexpected node types by returning `None`.
+- It strips leading and trailing whitespace from extracted docstrings for consistency.
+- It ensures that only comments that match a given prefix are considered, allowing for mixed comment types in source code.
 
-### Tree-Sitter Dependency
-This file relies on tree-sitter nodes and their structure. It assumes that comments appear as siblings before the target node and that the AST is correctly structured for the language being parsed. This dependency ensures accurate and fast comment extraction but requires the underlying tree-sitter parsing to be robust.
+This design ensures robustness in parsing across different languages and codebases.
 
 ## API Reference
 
@@ -36252,7 +36278,7 @@ Extract docstring from a function/class node.
 
 
 <details>
-<summary>View Source (lines 172-185) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser/docstrings.py#L172-L185">GitHub</a></summary>
+<summary>View Source (lines 173-186) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser/docstrings.py#L173-L186">GitHub</a></summary>
 
 ```python
 def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
@@ -36559,52 +36585,51 @@ def _get_block_comment(node: Node, source: bytes, comment_type: str) -> str | No
 
 ---
 
-## Languages
+## languages.py
 
 # File: `src/local_deepwiki/core/parser/languages.py`
 
 ## File Overview
 
-This file defines language detection configuration and mappings for Tree-sitter parser modules. It serves as a core configuration layer that enables the system to dynamically load language-specific parsers based on detected or specified input languages.
+This file defines the language detection configuration and mappings for Tree-sitter parser modules used within the `local_deepwiki` project. It serves as a configuration layer that maps language identifiers to their respective Tree-sitter modules, enabling dynamic loading of language-specific parsers.
 
-The file imports necessary dependencies to support dynamic module loading and logging, and integrates with the project's language enumeration ([`Language`](../../models/foundation.md)) to ensure consistent language handling across components.
+The primary responsibility of this file is to provide a centralized and extensible way to manage language-specific parser modules. It leverages Python's import mechanisms to dynamically load Tree-sitter modules at runtime, based on language identifiers defined in the [`Language`](../../models/foundation.md) enum.
 
 ## Key Concepts
 
-### Language Configuration and Dynamic Loading
-The file is designed to support dynamic language detection and parser loading. This is a key abstraction because it allows the system to scale to new languages without hardcoding parser logic for each one. By mapping language identifiers to Tree-sitter modules, it supports a modular and extensible architecture.
+### Language Enum Integration
+The file imports [`Language`](../../models/foundation.md) from `local_deepwiki.models`, which likely defines a set of supported languages. This enum is used as a key to map to Tree-sitter modules, ensuring type safety and consistency across the parser system.
 
-### Tree-sitter Integration
-Tree-sitter is a parsing library that generates parsers from grammar definitions. This file is responsible for mapping language identifiers (from [`Language`](../../models/foundation.md)) to the appropriate Tree-sitter modules, which are dynamically imported using `importlib`. This enables the system to parse content in multiple languages using a consistent interface.
+### Dynamic Module Loading
+The file uses `importlib` to dynamically load Tree-sitter modules for each supported language. This approach enables flexibility in parser selection and allows for easy extension of supported languages without hardcoding module paths.
 
-### Logging and Type Safety
-The use of [`get_logger`](../../logging.md) ensures that logging is consistent with the rest of the application, and the import of [`Language`](../../models/foundation.md) as `LangEnum` ensures type safety and clarity in language handling.
+### Tree-sitter Module Mappings
+The design rationale behind mapping languages to Tree-sitter modules is to abstract the parser implementation. This abstraction allows the core parser logic to remain language-agnostic while delegating language-specific parsing tasks to Tree-sitter, which provides efficient and accurate parsing for various programming and markup languages.
 
 ## Integration
 
-This file is part of the parser core and integrates with:
+This file is part of the core parsing infrastructure and integrates with:
+- `local_deepwiki/__init__.py`: Likely initializes or configures the parser system.
+- `local_deepwiki/cli/init_cli.py`: May use this file to determine supported languages during CLI initialization.
+- `local_deepwiki/core/chunk_extractors.py`: Could utilize language-specific parsers for content extraction.
+- `local_deepwiki/generators/context_builder.py`: Might require language detection to build context appropriately.
+- `local_deepwiki/generators/wiki/term_validator.py`: Could use language-specific parsers for term validation.
 
-- `src/local_deepwiki/__init__.py`: Likely used to initialize language-specific parsers or configurations.
-- `src/local_deepwiki/cli/config_validator.py`: May use this file to validate language configurations.
-- `src/local_deepwiki/cli/main.py`: Could reference this module when initializing parsers or handling language detection.
-- `src/local_deepwiki/core/chunk_extractors.py`: Possibly leverages language mappings when extracting or processing chunks in specific languages.
-- `src/local_deepwiki/core/graph_rag/models.py`: Might rely on language-specific parsers for graph-based retrieval-augmented generation.
-
-The file's imports are minimal and focused, ensuring it can be used in various contexts without pulling in unnecessary dependencies. It is tightly coupled with [`local_deepwiki.models.Language`](../../models/foundation.md) and `local_deepwiki.logging`, which suggests it's part of a larger configuration or utility system.
+The [`get_logger`](../../logging.md) import suggests this module is part of a logging-aware system, likely to track parser loading or language detection events. The [`Language`](../../models/foundation.md) enum integration implies this module is used in conjunction with other components that require language-aware processing.
 
 ## Design Notes
 
-### Dynamic Import Strategy
-The use of `importlib` for loading Tree-sitter modules is a design choice that allows for runtime flexibility. It avoids the need to pre-import all possible language parsers, which would increase startup time and memory usage. This is especially important in a system that supports multiple languages and may scale to support new ones without code changes.
-
-### Logger Integration
-The inclusion of [`get_logger`](../../logging.md) aligns with the project's logging strategy, ensuring consistent logging behavior across modules. This supports debugging and monitoring of language-specific parser loading or usage.
-
 ### Extensibility
-The file's structure implies that new languages can be added by extending the [`Language`](../../models/foundation.md) enum and ensuring corresponding Tree-sitter modules are available. This design supports a clean separation of concerns and allows for easy extension without modifying core logic.
+The use of `importlib` and a mapping approach makes this module highly extensible. Adding support for a new language only requires adding a new entry in the mapping, assuming the Tree-sitter module is available.
 
-### Minimalist Approach
-The file only defines imports and does not contain any functions or classes. This is intentional, as the actual language mappings or parser loading logic is likely defined elsewhere (e.g., in a configuration dictionary or a dedicated parser manager), and this file serves as a foundational import module for that logic.
+### Runtime Loading
+Tree-sitter modules are loaded at runtime rather than compile time. This approach allows for more flexible deployments where only necessary language modules are loaded, reducing memory footprint and startup time.
+
+### Error Handling
+While not shown in the provided code, the dynamic loading pattern implies that this module likely includes error handling for cases where a Tree-sitter module for a given language is not available or cannot be imported.
+
+### Type Safety
+By using the [`Language`](../../models/foundation.md) enum as a key, the design ensures that only valid language identifiers are used, preventing runtime errors from invalid language strings.
 
 ## Relevant Source Files
 
@@ -68600,7 +68625,7 @@ def _compute_aggregate_metrics(
 
 ---
 
-## coupling.py
+## Coupling
 
 # File: `src/local_deepwiki/generators/analysis/coupling.py`
 
@@ -69104,6 +69129,11 @@ def _is_test_module(name: str) -> bool:
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/analysis/coupling.py:48-90`
+
+## See Also
+
+- [logging](../../logging.md) - dependency
+- [init_cli](../../cli/init_cli.md) - shares 2 dependencies
 
 ## See Also
 
@@ -74828,7 +74858,7 @@ def _render_layer_section(lines: list[str], violations: list) -> None:
 
 ---
 
-## health_scoring.py
+## Health Scoring
 
 # File: `src/local_deepwiki/generators/analysis/health_scoring.py`
 
@@ -77038,7 +77068,7 @@ def _resolve_import_layer(module_name: str) -> str | None:
 
 ---
 
-## module_dependencies.py
+## Module Dependencies
 
 # File: `src/local_deepwiki/generators/analysis/module_dependencies.py`
 
@@ -77650,6 +77680,10 @@ def _sanitize_id(name: str) -> str:
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`
+
+## See Also
+
+- [coupling](coupling.md) - uses this
 
 ## See Also
 
@@ -80612,6 +80646,10 @@ assert not any("test" in str(p) for p in rel_paths)
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/analysis/source_filter.py:47-52`
+
+## See Also
+
+- [coupling](coupling.md) - uses this
 
 ## See Also
 
@@ -130018,6 +130056,11 @@ assert logger.name == f"{PACKAGE_NAME}.{module_name}"
 - [coupling](generators/analysis/coupling.md) - uses this
 - [init_cli](cli/init_cli.md) - shares 3 dependencies
 
+## See Also
+
+- [coupling](generators/analysis/coupling.md) - uses this
+- [init_cli](cli/init_cli.md) - shares 3 dependencies
+
 ---
 
 ## Chunks
@@ -130364,64 +130407,59 @@ Functions and methods in this file and their callers:
 
 ---
 
-## Foundation
+## foundation.py
 
 # File: `src/local_deepwiki/models/foundation.py`
 
 ## File Overview
 
-This file defines foundational types used throughout the `local_deepwiki` project. It provides core abstractions in the form of protocols and enumerations that are widely used across the codebase for modeling progress reporting, code language support, and chunk types. These types ensure consistent interfaces and data modeling across various components, from CLI tools to research pipelines and code analysis generators.
+This file defines foundational types and protocols used throughout the `local_deepwiki` project. It serves as a central location for shared abstractions that enable consistent communication between different components of the system, particularly in areas like progress reporting, asynchronous operations, and language-specific code handling.
+
+The core purpose of this file is to establish a common interface for interacting with long-running operations, such as indexing, research pipelines, and wiki generation. It also defines core enumerations for supported programming languages and code chunk types, which are used across various modules to maintain consistency and type safety.
 
 ## Key Concepts
 
-### Protocols for Callbacks and Generators
+### Protocols for Asynchronous and Callback Patterns
+The file introduces several `Protocol` classes that define expected interfaces for callbacks and asynchronous operations:
+- `ProgressCallback`: Used for reporting step-by-step progress during long-running tasks.
+- `CancellationChecker`: Allows operations to be cancelled gracefully.
+- `ProgressReporter`: Designed for reporting detailed research progress using [`ResearchProgress`](research.md) objects.
+- `LogCallback`: A simple string-based logging mechanism for lightweight messages.
+- `PageGenerator`: Enables on-demand generation of [`WikiPage`](../export/streaming.md) objects.
+- `RowMapper`: Converts raw dictionary rows (e.g., from a database) into typed [`CodeChunk`](chunks.md) objects.
 
-The file defines several protocols that serve as interfaces for asynchronous and synchronous operations:
+These protocols support a decoupled architecture where different parts of the system can interact without tight coupling, allowing for easier testing and extension.
 
-- `ProgressCallback`: A protocol for reporting progress during long-running operations. It accepts a message, current step, and total steps.
-- `CancellationChecker`: A protocol for checking if an operation should be cancelled.
-- `ProgressReporter`: A protocol for reporting detailed research progress using a [`ResearchProgress`](research.md) object. It's asynchronous and returns an `Awaitable[None]`.
-- `LogCallback`: A simple protocol for logging human-readable messages.
-- `PageGenerator`: A protocol for generating [`WikiPage`](../export/streaming.md) objects asynchronously.
-- `RowMapper`: A protocol for mapping raw dictionary rows (from vector stores) into [`CodeChunk`](chunks.md) objects.
+### Enumerations for Language and Chunk Types
+Two `StrEnum` classes define fixed sets of values:
+- `Language`: Lists all supported programming languages for code analysis and processing.
+- `ChunkType`: Defines the types of code chunks that can be identified and stored, such as functions, classes, and comments.
 
-These protocols are essential for decoupling components, allowing for flexible and testable implementations across different parts of the system.
-
-### Enumerations for Languages and Code Chunks
-
-- `Language`: An enumeration of supported programming languages. It uses `StrEnum` to ensure that language identifiers are strings and can be used in string contexts, such as file extensions or parser configurations.
-- `ChunkType`: An enumeration of types of code chunks that can be analyzed or indexed. These types are used to categorize and structure code for semantic analysis and retrieval.
-
-These enums provide a centralized and type-safe way to define and use language and chunk type identifiers, ensuring consistency and reducing errors.
+Using `StrEnum` ensures that these values are both strongly typed and string-compatible, making them suitable for configuration, storage, and user-facing interfaces.
 
 ## Integration
 
-This file is imported and used by multiple modules across the project:
+This file is imported and used by multiple modules within the project:
+- The `ProgressCallback` protocol is used by `cli_progress` to provide feedback during CLI operations.
+- The `PageGenerator` protocol is consumed by `lazy_generator` and `test_lazy_generator`, enabling dynamic wiki page creation.
+- The `Language` enum is referenced by `init_cli`, `languages`, and `source_formatter`, ensuring consistent handling of language-specific features.
+- The `ChunkType` enum is used in `fuzzy_search`, `source_formatter`, and `test_chunker`, supporting code chunk classification and retrieval.
 
-- **`ProgressCallback`** is used by `cli_progress`, which is part of the CLI tooling for reporting progress.
-- **`PageGenerator`** is used by `lazy_generator`, which is responsible for generating wiki pages on demand.
-- **`Language`** is used by `languages` and `source_formatter`, which are responsible for language-specific processing.
-- **`ChunkType`** is used by `fuzzy_search`, `crosslinks`, `test_inheritance`, and potentially more, to categorize and analyze code chunks.
-
-The file's protocols and enums are foundational to the system's architecture, enabling a modular design where components like the research pipeline, CLI, and code analyzers can operate independently while still adhering to shared interfaces.
+These integrations highlight the role of this file as a shared foundation that enables cross-cutting concerns like language support, progress tracking, and chunking strategies to be implemented consistently across the codebase.
 
 ## Design Notes
 
-### Use of Protocols and `StrEnum`
+### Use of Protocols Over Concrete Classes
+Protocols are preferred over concrete classes to allow flexibility in implementation. This design choice supports dependency injection and makes it easier to mock components during testing. For example, `ProgressCallback` can be implemented by any function matching its signature, enabling both simple print statements and complex UI updates.
 
-The use of `Protocol` classes ensures that components can be easily mocked or extended without tight coupling. This is particularly useful in test environments or when integrating with different backend systems.
-
-`StrEnum` is used for `Language` and `ChunkType` to provide both type safety and string interoperability. This is a pragmatic choice that allows for easy serialization and consumption by external systems while maintaining type safety within Python.
+### StrEnum for Type Safety and Readability
+Using `StrEnum` for `Language` and `ChunkType` provides compile-time checks and runtime safety while maintaining string compatibility. This is especially important when these values are used in configuration files or external APIs, where string representations are expected.
 
 ### Asynchronous Support
+Several protocols involve `Awaitable` types, indicating that the system supports asynchronous workflows. This reflects modern Python practices and aligns with the need to handle I/O-bound operations like file reading, network requests, or database queries efficiently.
 
-Several protocols in this file, such as `ProgressReporter` and `PageGenerator`, are designed with asynchronous support in mind. This reflects the need for non-blocking operations in a system that may be processing large codebases or interacting with remote services.
-
-### Lightweight Progress Reporting
-
-The `LogCallback` protocol offers a lightweight way to report progress or status messages. This is useful for logging or UI updates where detailed progress tracking is not necessary, and a simple string message suffices.
-
-By centralizing these types, the system avoids code duplication and ensures that all components that require progress reporting or language-specific handling adhere to a consistent interface.
+### Lightweight Logging vs. Full Progress Reporting
+The distinction between `LogCallback` and `ProgressReporter` shows a thoughtful separation of concerns. `LogCallback` is for simple status messages, while `ProgressReporter` is for detailed, structured progress updates involving [`ResearchProgress`](research.md). This allows developers to choose the appropriate level of detail depending on the context.
 
 ## API Reference
 
@@ -130763,7 +130801,7 @@ Supported programming languages.
 
 
 <details>
-<summary>View Source (lines 87-103) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/foundation.py#L87-L103">GitHub</a></summary>
+<summary>View Source (lines 87-104) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/foundation.py#L87-L104">GitHub</a></summary>
 
 ```python
 class Language(StrEnum):
@@ -130783,6 +130821,7 @@ class Language(StrEnum):
     PHP = "php"
     KOTLIN = "kotlin"
     CSHARP = "csharp"
+    OBJC = "objective_c"
 ```
 
 </details>
@@ -130796,7 +130835,7 @@ Types of code chunks.
 
 
 <details>
-<summary>View Source (lines 106-117) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/foundation.py#L106-L117">GitHub</a></summary>
+<summary>View Source (lines 107-118) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/foundation.py#L107-L118">GitHub</a></summary>
 
 ```python
 class ChunkType(StrEnum):
@@ -130849,6 +130888,7 @@ classDiagram
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
+| `Language` | class | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
 | `ChunkType` | class | Brian Breidenbach | 2 weeks ago | `9cf0e15` feat: add FILE_SUMMARY and ... |
 | `ProgressCallback` | class | Brian Breidenbach | Feb 21, 2026 | `e45a53a` refactor: apply Pythonic id... |
 | `CancellationChecker` | class | Brian Breidenbach | Feb 21, 2026 | `e45a53a` refactor: apply Pythonic id... |
@@ -130856,7 +130896,6 @@ classDiagram
 | `LogCallback` | class | Brian Breidenbach | Feb 21, 2026 | `e45a53a` refactor: apply Pythonic id... |
 | `PageGenerator` | class | Brian Breidenbach | Feb 21, 2026 | `e45a53a` refactor: apply Pythonic id... |
 | `RowMapper` | class | Brian Breidenbach | Feb 21, 2026 | `e45a53a` refactor: apply Pythonic id... |
-| `Language` | class | Brian Breidenbach | Feb 20, 2026 | `b807417` refactor: high-priority Pyt... |
 
 ## Relevant Source Files
 
@@ -165096,9 +165135,9 @@ Recent changes to this repository.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
@@ -165261,7 +165300,7 @@ Auto-generated execution-flow diagrams for key entry points.
 
 ---
 
-## Coupling Metrics
+## Coupling
 
 # Coupling Metrics
 
@@ -165506,9 +165545,9 @@ The following 48 module(s) have D > 0.7, indicating they may be either too concr
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
@@ -165522,7 +165561,7 @@ The following source files were used to generate this documentation:
 
 ---
 
-## Documentation Coverage
+## Coverage
 
 # Documentation Coverage
 
@@ -165824,9 +165863,9 @@ Undocumented:
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
@@ -165846,89 +165885,375 @@ The following source files were used to generate this documentation:
 
 ## External Dependencies
 
-| Dependency                | Purpose |
-|---------------------------|---------|
-| `anthropic`               | Provides access to Anthropic's AI models, such as Claude, for natural language processing tasks. |
-| `flask`                   | A lightweight WSGI web application framework used for building web interfaces or APIs. |
-| `LanceDB`                 | A vector database for building AI-powered applications, used for storing and querying embeddings. |
-| `markdown`                | Library for parsing and rendering Markdown text into HTML. |
-| `mcp`                     | Used for managing model communication protocol (MCP) in AI applications. |
-| `nh3`                     | A fast, safe HTML sanitization library to prevent XSS attacks. |
-| `ollama`                  | Provides access to locally hosted large language models via Ollama API. |
-| `openai`                  | Official Python client for OpenAI's API, used for interacting with GPT models. |
-| `pandas`                  | Data manipulation and analysis library, used for handling structured data. |
-| `psutil`                  | System and process utilities for monitoring system resources and performance. |
-| `pydantic`                | Data validation and settings management using Python type annotations. |
-| `pyyaml`                  | YAML parser and emitter for configuration files and data serialization. |
-| `rapidfuzz`               | Fast fuzzy string matching library for similarity comparisons. |
-| `rich`                    | Library for rich text and beautiful formatting in the terminal. |
-| `sentence-transformers`   | Provides pre-trained models for generating sentence embeddings. |
-| `tree-sitter`             | A parser generator tool and an incremental parsing library for syntax tree construction. |
-| `tree-sitter-c`           | Tree-sitter grammar for C language. |
-| `tree-sitter-c-sharp`     | Tree-sitter grammar for C# language. |
-| `tree-sitter-cpp`         | Tree-sitter grammar for C++ language. |
-| `tree-sitter-go`          | Tree-sitter grammar for Go language. |
-| `tree-sitter-java`        | Tree-sitter grammar for Java language. |
-| `tree-sitter-javascript`  | Tree-sitter grammar for JavaScript language. |
-| `tree-sitter-kotlin`      | Tree-sitter grammar for Kotlin language. |
-| `tree-sitter-php`         | Tree-sitter grammar for PHP language. |
-| `tree-sitter-python`      | Tree-sitter grammar for Python language. |
-| `tree-sitter-ruby`        | Tree-sitter grammar for Ruby language. |
-| `tree-sitter-rust`        | Tree-sitter grammar for Rust language. |
-| `tree-sitter-swift`       | Tree-sitter grammar for Swift language. |
-| `tree-sitter-typescript`  | Tree-sitter grammar for TypeScript language. |
-| `watchdog`                | File system event monitoring library for watching file changes. |
+The following third-party libraries are required for the project:
+
+- **anthropic** (>=0.40,<1.0.0)  
+  Provides access to Anthropic's AI models, particularly Claude, for natural language processing tasks.
+
+- **flask** (>=3.0,<4.0.0)  
+  A lightweight web framework for building web applications and APIs.
+
+- **LanceDB** (>=0.15,<1.0.0)  
+  A vector database for storing and querying embeddings, used for semantic search and similarity retrieval.
+
+- **markdown** (>=3.0,<4.0.0)  
+  Library for parsing and rendering Markdown text into HTML.
+
+- **mcp** (>=1.2.0,<2.0.0)  
+  Likely used for managing model configuration or communication protocols, possibly related to LLM interactions.
+
+- **nh3** (>=0.2.14,<1.0.0)  
+  A fast, safe HTML sanitizer for cleaning and validating HTML content.
+
+- **ollama** (>=0.4,<1.0.0)  
+  Provides access to locally hosted LLMs via the Ollama API.
+
+- **openai** (>=1.0,<2.0.0)  
+  Official Python client for OpenAI's API, used for interacting with OpenAI models.
+
+- **pandas** (>=2.0,<3.0.0)  
+  Data manipulation and analysis library, used for handling structured data.
+
+- **psutil** (>=5.0,<6.0.0)  
+  Cross-platform library for retrieving system and process information.
+
+- **pydantic** (>=2.0,<3.0.0)  
+  Data validation and settings management using Python type annotations.
+
+- **pyyaml** (>=6.0,<7.0.0)  
+  YAML parser and emitter for configuration files and data serialization.
+
+- **rapidfuzz** (>=3.0,<4.0.0)  
+  Fast fuzzy string matching library, used for similarity and search operations.
+
+- **rich** (>=13.0,<14.0.0)  
+  Library for rich text and beautiful formatting in the terminal.
+
+- **sentence-transformers** (>=3.0,<4.0.0)  
+  Library for generating sentence embeddings for semantic similarity tasks.
+
+- **tree-sitter** (>=0.23)  
+  A parser for programming languages, used for code analysis and syntax parsing.
+
+- **tree-sitter-c** (>=0.23)  
+  Tree-sitter parser for C language.
+
+- **tree-sitter-c-sharp** (>=0.23)  
+  Tree-sitter parser for C# language.
+
+- **tree-sitter-cpp** (>=0.23)  
+  Tree-sitter parser for C++ language.
+
+- **tree-sitter-go** (>=0.23)  
+  Tree-sitter parser for Go language.
+
+- **tree-sitter-java** (>=0.23)  
+  Tree-sitter parser for Java language.
+
+- **tree-sitter-javascript** (>=0.23)  
+  Tree-sitter parser for JavaScript language.
+
+- **tree-sitter-kotlin** (>=0.23)  
+  Tree-sitter parser for Kotlin language.
+
+- **tree-sitter-objc** (>=3.0)  
+  Tree-sitter parser for Objective-C language.
+
+- **tree-sitter-php** (>=0.23)  
+  Tree-sitter parser for PHP language.
+
+- **tree-sitter-python** (>=0.23)  
+  Tree-sitter parser for Python language.
+
+- **tree-sitter-ruby** (>=0.23)  
+  Tree-sitter parser for Ruby language.
+
+- **tree-sitter-rust** (>=0.23)  
+  Tree-sitter parser for Rust language.
+
+- **tree-sitter-swift** (>=0.0.1)  
+  Tree-sitter parser for Swift language.
+
+- **tree-sitter-typescript** (>=0.23)  
+  Tree-sitter parser for TypeScript language.
 
 ## Dev Dependencies
 
-| Dependency                | Purpose |
-|---------------------------|---------|
-| `black`                   | Code formatter to enforce consistent Python code style. |
-| `isort`                   | Tool to sort and organize import statements. |
-| `local-deepwiki ([all])`  | Development package for local deepwiki with all optional dependencies. |
-| `mypy`                    | Static type checker for Python to catch type-related errors. |
-| `pip-audit`               | Security audit tool for Python package dependencies. |
-| `pre-commit`              | Framework for managing and maintaining pre-commit hooks. |
-| `pypdf`                   | Library for working with PDF files. |
-| `pytest`                  | Testing framework for Python. |
-| `pytest-asyncio`          | Plugin for pytest to support asynchronous tests. |
-| `types-Markdown`          | Type stubs for the `markdown` library. |
-| `types-PyYAML`            | Type stubs for the `pyyaml` library. |
-| `weasyprint`              | HTML to PDF converter used for report generation. |
+The following dependencies are used for development and testing:
+
+- **black** (>=24.0)  
+  Code formatter for Python.
+
+- **isort** (>=5.0)  
+  Tool for sorting and organizing Python imports.
+
+- **local-deepwiki ([all])**  
+  Development package for the project itself, likely including all features.
+
+- **mypy** (>=1.0)  
+  Static type checker for Python.
+
+- **pip-audit** (>=2.0)  
+  Tool for auditing Python dependencies for security vulnerabilities.
+
+- **pre-commit** (>=3.0)  
+  Framework for managing pre-commit hooks.
+
+- **pypdf** (>=6.6.1)  
+  Library for working with PDF files.
+
+- **pytest** (>=8.0)  
+  Testing framework for Python.
+
+- **pytest-asyncio** (>=0.24,<1.0.0)  
+  [Plugin](files/src/local_deepwiki/plugins/base.md) for pytest to support asynchronous tests.
+
+- **types-Markdown** (>=3.0)  
+  Type stubs for the `markdown` library.
+
+- **types-PyYAML** (>=6.0)  
+  Type stubs for the `pyyaml` library.
+
+- **weasyprint** (>=68.0,<69.0.0)  
+  Library for rendering HTML and CSS to PDF.
 
 ## Internal Module Dependencies
 
-- [`WikiGenerator`](files/src/local_deepwiki/generators/wiki/generator.md) depends on [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md)
-- [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md) depends on [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md)
-- `SourceFormatter` depends on [`GitRepoInfo`](files/src/local_deepwiki/core/git_utils.md), [`ChunkType`](files/src/local_deepwiki/models/foundation.md), [`CodeChunk`](files/src/local_deepwiki/models/chunks.md)
-- `SecurityAccessControl` depends on `ContextVar`, `Callable`, `StrEnum`, `TypeVar`, `asyncio`
-- `CLI` depends on `Console`, `Table`, `argparse`, `yaml`, [`Config`](files/src/local_deepwiki/config/models.md), [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
-- `InitCLI` depends on `Console`, `Panel`, `Prompt`, `Table`, [`Config`](files/src/local_deepwiki/config/models.md), [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
-- `Analysis` modules depend on `Any`, `defaultdict`
-- `DataParser` depends on `User`, `json`, `Path`
-- `Processor` depends on `Order`, `User`
-- `TestParser` depends on `User`, `DataParser`
-- `WikiOutputHelpers` depends on `AsyncIterator`, `Path`, [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md), [`LLMProvider`](files/src/local_deepwiki/providers/base.md)
-- `Logging` depends on `logging`, `os`, `sys`
-- `Protocols` depends on `Iterator`, `Path`, `Protocol`, `runtime_checkable`
-- `SessionState` depends on `Any`
-- `HealthScoring` depends on `Any`
-- `SmellsPage` depends on `Any`
-- `TermValidator` depends on `re`
-- `Credentials` depends on `os`
-- `MainCLI` depends on `Console`, `Table`, `importlib`, `sys`
-- `DirTree` depends on `Path`, `subprocess`
-- `ProviderTypes` depends on `StrEnum`
-- `Types` depends on `TypedDict`
-- `GitBlame` depends on [`format_blame_date`](files/src/local_deepwiki/core/git_blame.md), [`get_file_entity_blame`](files/src/local_deepwiki/core/git_blame.md)
-- `GitUtils` depends on [`build_source_url`](files/src/local_deepwiki/core/git_utils.md)
-- `SearchTypes` depends on `dataclass`, [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md)
-- `Models` depends on `version` (from `importlib.metadata`)
-- `External` depends on `Any`
-- `Utils` depends on `hashlib`, `re`
-- [`Config`](files/src/local_deepwiki/config/models.md) depends on `yaml`
-- `ConfigModels` depends on [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
-- `BaseProvider` depends on [`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md), [`LLMProvider`](files/src/local_deepwiki/providers/base.md)
+Based on import statements, the following internal module dependencies exist:
+
+- **CLI modules** (`src/local_deepwiki/cli/`) depend on:
+  - `rich` for rich terminal output.
+  - `yaml` for configuration file parsing.
+  - `local_deepwiki.config` for configuration handling.
+  - `local_deepwiki.config.models` for parsing configuration models.
+
+- **Security modules** (`src/local_deepwiki/security/`) depend on:
+  - `asyncio` for asynchronous operations.
+  - `contextvars` for managing context.
+  - `dataclasses` for structured data handling.
+  - `enum` for defining string enums.
+  - `typing` for type hints.
+
+- **Logging module** (`src/local_deepwiki/logging.py`) depends on:
+  - `logging` for logging utilities.
+  - `os` and `sys` for system-level operations.
+
+- **Core protocols** (`src/local_deepwiki/core/protocols.py`) depend on:
+  - `pathlib` for path handling.
+  - `typing` for type hints.
+
+- **Generators** (`src/local_deepwiki/generators/`) depend on:
+  - `collections.abc` for abstract base classes.
+  - `dataclasses` for structured data.
+  - `typing` for type hints.
+  - `local_deepwiki.core.git_blame` and `local_deepwiki.core.git_utils` for Git-related utilities.
+  - `local_deepwiki.logging` for logging.
+  - `local_deepwiki.models` for data models.
+
+- **Handlers** (`src/local_deepwiki/handlers/`) depend on:
+  - `typing` for type hints.
+  - `local_deepwiki.core.vectorstore` for vector store interactions.
+  - `local_deepwiki.generators` for content generation.
+
+- **Models** (`src/local_deepwiki/models/`) depend on:
+  - `pydantic` for data validation.
+  - `typing` for type hints.
+  - `enum` for enum definitions.
+
+- **Providers** (`src/local_deepwiki/providers/`) depend on:
+  - `typing` for type hints.
+  - `local_deepwiki.core.vectorstore` for vector store interactions.
+  - `local_deepwiki.generators` for content generation.
+
+- **Test helpers** (`tests/wiki_output_helpers.py`) depend on:
+  - `collections.abc` for abstract base classes.
+  - `pathlib` for path handling.
+  - `typing` for type hints.
+  - `local_deepwiki.providers.base` for base provider classes.
+
+- **Test fixtures** (`tests/fixtures/sample_repo/`) depend on:
+  - `json` for JSON handling.
+  - `pathlib` for path handling.
+  - `src.models` for data models.
+  - `typing` for type hints.
+
+- **Vector store modules** (`src/local_deepwiki/core/vectorstore/`) depend on:
+  - `dataclasses` for structured data.
+  - `typing` for type hints.
+  - `local_deepwiki.core.vectorstore.schema` for schema definitions.
+
+- **Configuration** (`src/local_deepwiki/config/`) depends on:
+  - `yaml` for configuration file parsing.
+  - `local_deepwiki.config.models` for configuration models.
+
+- **Initialization CLI** (`src/local_deepwiki/cli/init_cli.py`) depends on:
+  - `argparse` for command-line argument parsing.
+  - `os` and `sys` for system-level operations.
+  - `urllib.request` for URL handling.
+  - `collections.Counter` for counting.
+  - `dataclasses` for structured data.
+  - `pathlib` for path handling.
+  - `typing` for type hints.
+  - `yaml` for configuration file parsing.
+  - `rich` for rich terminal output.
+  - `local_deepwiki.config` for configuration handling.
+  - `local_deepwiki.config.models` for parsing configuration models.
+
+- **Wiki generators** (`src/local_deepwiki/generators/wiki/`) depend on:
+  - `collections` for data structures.
+  - `re` for regular expressions.
+  - `typing` for type hints.
+  - `local_deepwiki.core.vectorstore` for vector store interactions.
+  - `local_deepwiki.generators.analysis` for analysis generators.
+  - `local_deepwiki.generators.dir_tree` for directory tree generation.
+  - `local_deepwiki.generators.scm` for SCM-related generators.
+  - `local_deepwiki.generators.utils` for utility functions.
+  - `local_deepwiki.logging` for logging.
+  - `local_deepwiki.models` for data models.
+
+- **Analysis generators** (`src/local_deepwiki/generators/analysis/`) depend on:
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **SCM generators** (`src/local_deepwiki/generators/scm/`) depend on:
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Utils** (`src/local_deepwiki/generators/utils/`) depend on:
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Session state handler** (`src/local_deepwiki/handlers/session_state.py`) depends on:
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Term validator** (`src/local_deepwiki/generators/wiki/term_validator.py`) depends on:
+  - `re` for regular expressions.
+  - `local_deepwiki.generators` for generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Source formatter** (`src/local_deepwiki/generators/wiki/source_formatter.py`) depends on:
+  - `collections.abc` for abstract base classes.
+  - `dataclasses` for structured data.
+  - `operator` for attribute access.
+  - `pathlib` for path handling.
+  - `local_deepwiki.core.git_blame` for Git blame utilities.
+  - `local_deepwiki.core.git_utils` for Git utilities.
+  - `local_deepwiki.logging` for logging.
+  - `local_deepwiki.models` for data models.
+
+- **Directory tree generator** (`src/local_deepwiki/generators/dir_tree.py`) depends on:
+  - `dataclasses` for structured data.
+  - `pathlib` for path handling.
+  - `subprocess` for executing shell commands.
+  - `local_deepwiki.generators` for generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Search types** (`src/local_deepwiki/core/vectorstore/mixins/search_types.py`) depend on:
+  - `dataclasses` for structured data.
+  - `local_deepwiki.core.vectorstore.schema` for schema definitions.
+
+- **Git blame utilities** (`src/local_deepwiki/core/git_blame.py`) depend on:
+  - `datetime` for date handling.
+  - `pathlib` for path handling.
+  - `subprocess` for executing shell commands.
+  - `local_deepwiki.core.git_utils` for Git utilities.
+
+- **Git utilities** (`src/local_deepwiki/core/git_utils.py`) depend on:
+  - `pathlib` for path handling.
+  - `subprocess` for executing shell commands.
+  - `local_deepwiki.core.git_blame` for Git blame utilities.
+
+- **Init CLI** (`src/local_deepwiki/cli/init_cli.py`) depends on:
+  - `argparse` for command-line argument parsing.
+  - `os` and `sys` for system-level operations.
+  - `urllib.request` for URL handling.
+  - `collections.Counter` for counting.
+  - `dataclasses` for structured data.
+  - `pathlib` for path handling.
+  - `typing` for type hints.
+  - `yaml` for configuration file parsing.
+  - `rich` for rich terminal output.
+  - `local_deepwiki.config` for configuration handling.
+  - `local_deepwiki.config.models` for parsing configuration models.
+
+- **Wiki generator** (`src/local_deepwiki/generators/wiki/wiki_generator.py`) depends on:
+  - `collections` for data structures.
+  - `dataclasses` for structured data.
+  - `pathlib` for path handling.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.generators.dir_tree` for directory tree generation.
+  - `local_deepwiki.generators.scm` for SCM-related generators.
+  - `local_deepwiki.generators.utils` for utility functions.
+  - `local_deepwiki.generators.wiki` for wiki-specific generators.
+  - `local_deepwiki.logging` for logging.
+  - `local_deepwiki.models` for data models.
+
+- **Base provider** (`src/local_deepwiki/providers/base.py`) depends on:
+  - `typing` for type hints.
+  - `local_deepwiki.models` for data models.
+
+- **Credentials provider** (`src/local_deepwiki/providers/credentials.py`) depends on:
+  - `os` for environment variables.
+
+- **LLM provider** (`src/local_deepwiki/providers/llm.py`) depends on:
+  - `local_deepwiki.providers.base` for base provider functionality.
+  - `local_deepwiki.providers.credentials` for credential handling.
+  - `local_deepwiki.models` for data models.
+
+- **Embedding provider** (`src/local_deepwiki/providers/embedding.py`) depends on:
+  - `local_deepwiki.providers.base` for base provider functionality.
+  - `local_deepwiki.providers.credentials` for credential handling.
+  - `local_deepwiki.models` for data models.
+
+- **Vector store** (`src/local_deepwiki/core/vectorstore/vectorstore.py`) depends on:
+  - `dataclasses` for structured data.
+  - `typing` for type hints.
+  - `local_deepwiki.core.vectorstore.mixins` for mixins.
+  - `local_deepwiki.core.vectorstore.schema` for schema definitions.
+  - `local_deepwiki.generators` for generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Search profile** (`src/local_deepwiki/core/vectorstore/schema.py`) depends on:
+  - `dataclasses` for structured data.
+  - `typing` for type hints.
+  - `local_deepwiki.models` for data models.
+
+- **Code chunk model** (`src/local_deepwiki/models/code_chunk.py`) depends on:
+  - `dataclasses` for structured data.
+  - `typing` for type hints.
+  - `local_deepwiki.models` for data models.
+
+- **Chunk type enum** (`src/local_deepwiki/models/chunk_type.py`) depends on:
+  - `enum` for enum definitions.
+  - `typing` for type hints.
+
+- **Provider types** (`src/local_deepwiki/models/provider_types.py`) depends on:
+  - `enum` for enum definitions.
+  - `typing` for type hints.
+
+- **Types** (`src/local_deepwiki/handlers/types.py`) depends on:
+  - `typing` for type hints.
+
+- **Health scoring generator** (`src/local_deepwiki/generators/analysis/health_scoring.py`) depends on:
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Architecture report generator** (`src/local_deepwiki/generators/analysis/architecture_report.py`) depends on:
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.models` for data models.
+
+- **Smells page generator** (`src/local_deepwiki/generators/analysis/smells_page.py`) depends on:
+  - `collections` for data structures.
+  - `typing` for type hints.
+  - `local_deepwiki.generators` for base generator functionality.
+  - `local_deepwiki.models` for data models.
 
 ## Module Dependency Graph
 
@@ -166076,7 +166401,7 @@ The following source files were used to generate this documentation:
 
 ---
 
-## Dependency Graph
+## Dependency-Graph
 
 # Dependency Graph
 
@@ -166682,9 +167007,9 @@ flowchart TD
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
@@ -169395,9 +169720,9 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
@@ -169411,7 +169736,7 @@ The following source files were used to generate this documentation:
 
 ---
 
-## Architecture Health
+## Health
 
 # Architecture Health
 
@@ -169450,9 +169775,9 @@ No layer violations detected.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
@@ -169466,7 +169791,7 @@ The following source files were used to generate this documentation:
 
 ---
 
-## Complexity Hotspots
+## Hotspots
 
 # Complexity Hotspots
 
@@ -169505,9 +169830,9 @@ The following source files were used to generate this documentation:
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
@@ -169521,7 +169846,7 @@ The following source files were used to generate this documentation:
 
 ---
 
-## Class Inheritance
+## Inheritance
 
 # Class Inheritance
 
@@ -169724,9 +170049,9 @@ classDiagram
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
@@ -169740,7 +170065,7 @@ The following source files were used to generate this documentation:
 
 ---
 
-## Developer Onboarding Guide
+## Onboarding
 
 # Developer Onboarding Guide
 
@@ -170001,9 +170326,9 @@ The project uses pre-commit hooks for automatic formatting and linting. Make sur
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
@@ -170017,7 +170342,7 @@ The following source files were used to generate this documentation:
 
 ---
 
-## Design Smells
+## Smells
 
 # Design Smells
 
@@ -170090,9 +170415,9 @@ The following source files were used to generate this documentation:
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)

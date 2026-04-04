@@ -1,110 +1,117 @@
-# Module: health_scoring
+# Module: local_deepwiki.core.parser.docstrings
 
 ## Module Purpose
 
-The `health_scoring` module provides functions for computing architectural health scores for a codebase. It implements a scoring system that evaluates code quality based on multiple dimensions including complexity, coupling, code smells, and architectural layers. The module is designed to work with the output of other analysis modules like coupling metrics and complexity analysis to produce a comprehensive health assessment.
+The `local_deepwiki.core.parser.docstrings` module provides language-specific functionality for extracting docstrings from tree-sitter AST nodes. It handles various documentation formats across multiple programming languages including Python, JavaScript, Java, Swift, and others, enabling the extraction of rich documentation content from code during the parsing and indexing process.
 
 ## Key Classes and Functions
 
-### Function: `letter_grade`
-```python
-def letter_grade(score: float) -> str
-```
-Converts a numerical score (0.0-1.0) into a letter grade (A-F).
+### Functions
 
-### Function: `score_complexity`
-```python
-def score_complexity(complexity: float) -> float
-```
-Computes a health score based on code complexity metrics. Takes a complexity value and returns a normalized score between 0.0 and 1.0.
+- **_collect_preceding_comments**
+  - Collects all consecutive preceding comment lines before a given tree-sitter node
+  - Parameters:
+    - `node`: The tree-sitter node to look before
+    - `source`: The original source bytes
+    - `comment_types`: Set of comment node type names
+    - `prefix`: Optional prefix that comments must start with
+  - Returns: List of comment text lines in order (first comment first)
 
-### Function: `score_coupling`
-```python
-def score_coupling(coupling: dict[str, Any]) -> float
-```
-Computes a health score based on coupling metrics. Takes a dictionary containing coupling data and returns a normalized score between 0.0 and 1.0.
+- **_strip_line_comment_prefix**
+  - Strips prefix from comment lines and joins them
+  - Parameters:
+    - `lines`: List of comment lines
+    - `prefix`: The prefix to strip (e.g., "//", "///", "#")
+  - Returns: Joined docstring with prefixes removed
 
-### Function: `score_smells`
-```python
-def score_smells(smells: list[dict[str, Any]]) -> float
-```
-Computes a health score based on code smell detection results. Takes a list of smell dictionaries and returns a normalized score between 0.0 and 1.0.
+- **_get_python_docstring**
+  - Extracts Python docstring from function/class body
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+  - Returns: The docstring or None if not found
 
-### Function: `score_layers`
-```python
-def score_layers(layers: dict[str, Any]) -> float
-```
-Computes a health score based on architectural layer analysis. Takes a dictionary containing layer data and returns a normalized score between 0.0 and 1.0.
+- **_get_jsdoc_or_line_comments**
+  - Extracts JSDoc (/** */) or multi-line // comments
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+  - Returns: The docstring or None if not found
 
-### Function: `compute_overall`
-```python
-def compute_overall(
-    complexity: float,
-    coupling: dict[str, Any],
-    smells: list[dict[str, Any]],
-    layers: dict[str, Any],
-) -> dict[str, Any]
-```
-Computes the overall health score by combining scores from all dimensions. Takes complexity, coupling, smells, and layers data and returns a dictionary containing the overall score and individual component scores.
+- **_get_line_comments**
+  - Extracts multi-line comments with a specific prefix
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+    - `comment_type`: The type of comment node
+    - `prefix`: The prefix to strip
+  - Returns: The docstring or None if not found
+
+- **_get_javadoc_or_doxygen**
+  - Extracts Javadoc/Doxygen (/** */) or /// comments
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+  - Returns: The docstring or None if not found
+
+- **_get_swift_docstring**
+  - Extracts Swift /// comments or /** */ block
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+  - Returns: The docstring or None if not found
+
+- **_get_block_comment**
+  - Extracts /** */ block comment of specified type
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+    - `comment_type`: The type of comment node
+  - Returns: The docstring or None if not found
+
+- **[get_docstring](../files/src/local_deepwiki/core/parser/docstrings.md)**
+  - Extracts docstring from a function/class node
+  - Parameters:
+    - `node`: The tree-sitter node
+    - `source`: The original source bytes
+    - `language`: The programming language
+  - Returns: The docstring or None if not found
 
 ## How Components Interact
 
-The components in this module work together to provide a comprehensive architectural health assessment:
-
-1. Individual scoring functions ([`score_complexity`](../files/src/local_deepwiki/generators/analysis/health_scoring.md), [`score_coupling`](../files/src/local_deepwiki/generators/analysis/health_scoring.md), [`score_smells`](../files/src/local_deepwiki/generators/analysis/health_scoring.md), [`score_layers`](../files/src/local_deepwiki/generators/analysis/health_scoring.md)) process specific aspects of code quality
-2. Each function normalizes its input data to a 0.0-1.0 range
-3. The [`compute_overall`](../files/src/local_deepwiki/generators/analysis/health_scoring.md) function aggregates these normalized scores into a final health assessment
-4. The [`letter_grade`](../files/src/local_deepwiki/generators/analysis/health_scoring.md) function converts the final numerical score into a readable letter grade
-
-The module is designed to accept output from other analysis modules (like the coupling analysis and complexity analysis) and transform them into meaningful health metrics.
+The module works by using language-specific extractor functions that are mapped to each supported programming language. The [`get_docstring`](../files/src/local_deepwiki/core/parser/docstrings.md) function serves as the main entry point, which dispatches to the appropriate language-specific extractor based on the provided language parameter. The helper functions like `_collect_preceding_comments` and `_strip_line_comment_prefix` are used by the language-specific extractors to gather and process comment text from the AST.
 
 ## Usage Examples
 
 ```python
-from local_deepwiki.generators.analysis.health_scoring import compute_overall, letter_grade
+from local_deepwiki.core.parser.docstrings import get_docstring
+from local_deepwiki.models import Language as LangEnum
+from tree_sitter import Node
 
-# Example usage with sample data
-complexity_score = 0.75
-coupling_data = {
-    "total_modules": 10,
-    "avg_instability": 0.45,
-    "avg_abstractness": 0.30
-}
-smells = [
-    {"type": "cyclomatic_complexity", "count": 2},
-    {"type": "long_function", "count": 1}
-]
-layers = {
-    "layer_count": 3,
-    "cross_layer_deps": 5
-}
+# Extract docstring from a Python function node
+docstring = get_docstring(node, source_bytes, LangEnum.PYTHON)
 
-# Compute overall health score
-health_result = compute_overall(
-    complexity=complexity_score,
-    coupling=coupling_data,
-    smells=smells,
-    layers=layers
-)
-
-print(f"Overall score: {health_result['overall']}")
-print(f"Letter grade: {letter_grade(health_result['overall'])}")
+# Extract docstring from a JavaScript function node
+docstring = get_docstring(node, source_bytes, LangEnum.JAVASCRIPT)
 ```
 
 ## Dependencies
 
-This module depends on:
-- `typing` (for type hints)
-
-The module is designed to work with data structures produced by other analysis modules in the `generators.analysis` package, particularly those related to complexity, coupling, code smells, and architectural layers. It does not directly depend on any other modules from the `local_deepwiki` package beyond standard typing functionality.
+- `collections.deque`
+- `functools.partial`
+- `typing.Any`
+- `typing.cast`
+- `tree-sitter.Node`
+- [`local_deepwiki.core.parser.ast_utils.get_node_text`](../files/src/local_deepwiki/core/parser/ast_utils.md)
+- [`local_deepwiki.models.Language`](../files/src/local_deepwiki/models/foundation.md)
 
 ## Relevant Source Files
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/generators/analysis/coupling.py:48-90`](../files/src/local_deepwiki/generators/analysis/coupling.md)
-- [`src/local_deepwiki/generators/analysis/module_dependencies.py:30-40`](../files/src/local_deepwiki/generators/analysis/module_dependencies.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:29-34`](../files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](../files/src/local_deepwiki/core/parser/docstrings.md)
+- [`src/local_deepwiki/core/parser/languages.py`](../files/src/local_deepwiki/core/parser/languages.md)
+- [`src/local_deepwiki/models/foundation.py:16-31`](../files/src/local_deepwiki/models/foundation.md)
 - [`src/local_deepwiki/logging.py:28-83`](../files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:92-94`](../files/src/local_deepwiki/server.md)
 - [`src/local_deepwiki/cli_progress.py:147-199`](../files/src/local_deepwiki/cli_progress.md)

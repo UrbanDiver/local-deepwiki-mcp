@@ -2,7 +2,7 @@
   "entries": [
     {
       "number": "1",
-      "title": "Overview",
+      "title": "Index",
       "path": "index.md"
     },
     {
@@ -22,7 +22,7 @@
     },
     {
       "number": "5",
-      "title": "Class Inheritance",
+      "title": "Inheritance",
       "path": "inheritance.md"
     },
     {
@@ -427,12 +427,12 @@
                         },
                         {
                           "number": "8.1.1.13.26.4",
-                          "title": "Docstrings",
+                          "title": "docstrings.py",
                           "path": "files/src/local_deepwiki/core/parser/docstrings.md"
                         },
                         {
                           "number": "8.1.1.13.26.5",
-                          "title": "Languages",
+                          "title": "languages.py",
                           "path": "files/src/local_deepwiki/core/parser/languages.md"
                         }
                       ]
@@ -717,7 +717,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.8",
-                          "title": "coupling.py",
+                          "title": "Coupling",
                           "path": "files/src/local_deepwiki/generators/analysis/coupling.md"
                         },
                         {
@@ -757,7 +757,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.16",
-                          "title": "health_scoring.py",
+                          "title": "Health Scoring",
                           "path": "files/src/local_deepwiki/generators/analysis/health_scoring.md"
                         },
                         {
@@ -782,7 +782,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.21",
-                          "title": "module_dependencies.py",
+                          "title": "Module Dependencies",
                           "path": "files/src/local_deepwiki/generators/analysis/module_dependencies.md"
                         },
                         {
@@ -1151,7 +1151,7 @@
                     },
                     {
                       "number": "8.1.1.17.2",
-                      "title": "Foundation",
+                      "title": "foundation.py",
                       "path": "files/src/local_deepwiki/models/foundation.md"
                     },
                     {

@@ -2,54 +2,60 @@
 
 ## File Overview
 
-This file provides language-specific logic for extracting docstrings from tree-sitter AST nodes. It is part of the core parsing infrastructure for the `local_deepwiki` project, enabling extraction of documentation comments and docstrings from various programming languages.
+This file provides language-specific logic for extracting docstrings from tree-sitter AST nodes. It serves as a core utility for parsing documentation comments and string literals that represent docstrings in various programming languages, such as Python, JavaScript, Java, Swift, and others.
 
-The design allows for extensibility by language, supporting Python, JavaScript, Java, Swift, and others through a unified interface. Each language has its own extraction strategy tailored to its comment syntax and documentation conventions.
+The design rationale centers on supporting multiple programming languages with distinct comment syntaxes and docstring formats. It uses a modular approach where each language has its own extractor function, and a dispatcher (`get_docstring`) routes to the appropriate one based on the language.
 
 ## Key Concepts
 
-### Language-Agnostic Comment Collection
-The `_collect_preceding_comments` function provides a reusable abstraction for gathering consecutive comment nodes that appear before a given AST node. This function is critical for handling multi-line comments and ensures comments are collected in the correct order, stopping at the first non-matching comment type or prefix.
-
-### Prefix Stripping
-The `_strip_line_comment_prefix` utility function removes language-specific prefixes (e.g., `//`, `///`, `#`) from comment lines and joins them into a single docstring. This ensures consistent formatting across languages.
-
-### Docstring Extraction Strategies
-Each supported language has a dedicated extraction function:
-- Python: Extracts docstrings from the first statement in a function or class body.
+### Language-Specific Extractors
+The module implements specialized functions to extract docstrings from different languages:
+- Python: Extracts docstrings from string literals in the first statement of a function or class body.
 - JavaScript: Supports both JSDoc (`/** */`) and multi-line `//` comments.
-- Java: Supports Javadoc (`/** */`) and Doxygen-style `///` comments.
-- Swift: Supports both `///` comments and `/** */` block comments.
-- Generic block comment extraction for languages that use `/** */` syntax.
+- Java/Javadoc/Doxygen: Supports both block comments (`/** */`) and line comments (`///`).
+- Swift: Supports both `///` line comments and `/** */` block comments.
 
-These strategies reflect the idioms and conventions of each language, making the extraction robust and accurate.
+These extractors are designed to handle common patterns in each language's documentation style, ensuring accurate extraction of meaningful documentation.
+
+### Comment Collection and Processing
+A key abstraction is `_collect_preceding_comments`, which traverses AST nodes backwards to [collect](../../web/routes_chat.md) consecutive comment lines. This function respects comment type and optional prefix filtering, allowing for precise selection of relevant documentation.
+
+The `_strip_line_comment_prefix` function then normalizes these comments by removing prefixes and joining them into a single string, preparing them for use as docstrings.
+
+### Dispatch Pattern
+The `get_docstring` function implements a simple dispatcher pattern, using a dictionary mapping language enums to extractor functions. This pattern allows for easy extension with new languages by adding new entries to `_DOCSTRING_EXTRACTORS`.
 
 ## Integration
 
-This file integrates with the broader parsing pipeline in `local_deepwiki` by providing language-specific docstring extraction capabilities. It is used by:
-- `test_parser_node_utils` and `test_parser_docstrings` for testing purposes.
-- The main parser logic, which calls `get_docstring` with a language enum to determine which extractor to use.
+This file integrates closely with:
+- `local_deepwiki.core.parser.ast_utils`: Uses [`get_node_text`](ast_utils.md) to extract text from tree-sitter nodes.
+- [`local_deepwiki.models.Language`](../../models/foundation.md): Provides language identifiers for dispatching to the correct extractor.
+- The parser and discovery modules: Called by `discovery` to extract documentation during code analysis.
 
-The [`get_node_text`](ast_utils.md) utility from `ast_utils` is used to extract text from tree-sitter nodes, and [`Language`](../../models/foundation.md) enum from `models` provides the language context for dispatching to the correct extraction logic.
+It is also directly tested by:
+- `test_parser_docstrings`
+- `test_parser_node_utils`
+- `test_test_examples`
+
+These test files validate that docstrings are correctly extracted across various languages and node types.
 
 ## Design Notes
 
-### Extensibility and Dispatch
-The `get_docstring` function uses a dictionary mapping `LangEnum` values to extractor functions (`_DOCSTRING_EXTRACTORS`). This design allows for easy addition of new language support without modifying the core dispatch logic.
+### Handling of Comment Prefixes
+The module handles comment prefixes explicitly in functions like `_get_javadoc_or_doxygen` and `_get_swift_docstring`. This ensures that only relevant comments (e.g., doc comments) are collected, avoiding noise from regular comments.
 
-### Handling of Multi-line Comments
-The `_collect_preceding_comments` function stops collecting comments when it encounters a comment that does not match the expected prefix. This prevents mixing regular comments with doc comments, which is crucial for accurate extraction.
+### Extraction Order and Node Traversal
+Functions like `_get_python_docstring` rely on the structure of the AST (e.g., function/class bodies) to locate docstrings. For example, it checks the first child of a function body to find a string literal representing the docstring.
 
-### Edge Case Handling
-- For Python docstrings, the function checks for both triple-quoted and single-quoted strings.
-- The code handles cases where the node has no body, no children, or where the first statement is not a string.
-- For languages that support both block and line comments, the logic prioritizes block comments and falls back to line comments if needed.
+### Extensibility
+The use of a dictionary (`_DOCSTRING_EXTRACTORS`) makes it easy to add new language support. Each new language can be added with a dedicated extractor function, and the dispatcher will route to it automatically.
 
-### Efficiency
-The use of `deque` for collecting comments ensures efficient prepending of elements, which is necessary for maintaining the correct order of comments as they are traversed backwards from the node.
+### Edge Cases
+- The module gracefully handles missing nodes or unexpected node types by returning `None`.
+- It strips leading and trailing whitespace from extracted docstrings for consistency.
+- It ensures that only comments that match a given prefix are considered, allowing for mixed comment types in source code.
 
-### Tree-Sitter Dependency
-This file relies on tree-sitter nodes and their structure. It assumes that comments appear as siblings before the target node and that the AST is correctly structured for the language being parsed. This dependency ensures accurate and fast comment extraction but requires the underlying tree-sitter parsing to be robust.
+This design ensures robustness in parsing across different languages and codebases.
 
 ## API Reference
 
@@ -76,7 +82,7 @@ Extract docstring from a function/class node.
 
 
 <details>
-<summary>View Source (lines 172-185) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser/docstrings.py#L172-L185">GitHub</a></summary>
+<summary>View Source (lines 173-186) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser/docstrings.py#L173-L186">GitHub</a></summary>
 
 ```python
 def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:

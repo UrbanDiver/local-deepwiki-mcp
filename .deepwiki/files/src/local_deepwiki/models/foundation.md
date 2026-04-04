@@ -2,58 +2,53 @@
 
 ## File Overview
 
-This file defines foundational types used throughout the `local_deepwiki` project. It provides core abstractions in the form of protocols and enumerations that are widely used across the codebase for modeling progress reporting, code language support, and chunk types. These types ensure consistent interfaces and data modeling across various components, from CLI tools to research pipelines and code analysis generators.
+This file defines foundational types and protocols used throughout the `local_deepwiki` project. It serves as a central location for shared abstractions that enable consistent communication between different components of the system, particularly in areas like progress reporting, asynchronous operations, and language-specific code handling.
+
+The core purpose of this file is to establish a common interface for interacting with long-running operations, such as indexing, research pipelines, and wiki generation. It also defines core enumerations for supported programming languages and code chunk types, which are used across various modules to maintain consistency and type safety.
 
 ## Key Concepts
 
-### Protocols for Callbacks and Generators
+### Protocols for Asynchronous and Callback Patterns
+The file introduces several `Protocol` classes that define expected interfaces for callbacks and asynchronous operations:
+- `ProgressCallback`: Used for reporting step-by-step progress during long-running tasks.
+- `CancellationChecker`: Allows operations to be cancelled gracefully.
+- `ProgressReporter`: Designed for reporting detailed research progress using [`ResearchProgress`](research.md) objects.
+- `LogCallback`: A simple string-based logging mechanism for lightweight messages.
+- `PageGenerator`: Enables on-demand generation of [`WikiPage`](../export/streaming.md) objects.
+- `RowMapper`: Converts raw dictionary rows (e.g., from a database) into typed [`CodeChunk`](chunks.md) objects.
 
-The file defines several protocols that serve as interfaces for asynchronous and synchronous operations:
+These protocols support a decoupled architecture where different parts of the system can interact without tight coupling, allowing for easier testing and extension.
 
-- `ProgressCallback`: A protocol for reporting progress during long-running operations. It accepts a message, current step, and total steps.
-- `CancellationChecker`: A protocol for checking if an operation should be cancelled.
-- `ProgressReporter`: A protocol for reporting detailed research progress using a [`ResearchProgress`](research.md) object. It's asynchronous and returns an `Awaitable[None]`.
-- `LogCallback`: A simple protocol for logging human-readable messages.
-- `PageGenerator`: A protocol for generating [`WikiPage`](../export/streaming.md) objects asynchronously.
-- `RowMapper`: A protocol for mapping raw dictionary rows (from vector stores) into [`CodeChunk`](chunks.md) objects.
+### Enumerations for Language and Chunk Types
+Two `StrEnum` classes define fixed sets of values:
+- `Language`: Lists all supported programming languages for code analysis and processing.
+- `ChunkType`: Defines the types of code chunks that can be identified and stored, such as functions, classes, and comments.
 
-These protocols are essential for decoupling components, allowing for flexible and testable implementations across different parts of the system.
-
-### Enumerations for Languages and Code Chunks
-
-- `Language`: An enumeration of supported programming languages. It uses `StrEnum` to ensure that language identifiers are strings and can be used in string contexts, such as file extensions or parser configurations.
-- `ChunkType`: An enumeration of types of code chunks that can be analyzed or indexed. These types are used to categorize and structure code for semantic analysis and retrieval.
-
-These enums provide a centralized and type-safe way to define and use language and chunk type identifiers, ensuring consistency and reducing errors.
+Using `StrEnum` ensures that these values are both strongly typed and string-compatible, making them suitable for configuration, storage, and user-facing interfaces.
 
 ## Integration
 
-This file is imported and used by multiple modules across the project:
+This file is imported and used by multiple modules within the project:
+- The `ProgressCallback` protocol is used by `cli_progress` to provide feedback during CLI operations.
+- The `PageGenerator` protocol is consumed by `lazy_generator` and `test_lazy_generator`, enabling dynamic wiki page creation.
+- The `Language` enum is referenced by `init_cli`, `languages`, and `source_formatter`, ensuring consistent handling of language-specific features.
+- The `ChunkType` enum is used in `fuzzy_search`, `source_formatter`, and `test_chunker`, supporting code chunk classification and retrieval.
 
-- **`ProgressCallback`** is used by `cli_progress`, which is part of the CLI tooling for reporting progress.
-- **`PageGenerator`** is used by `lazy_generator`, which is responsible for generating wiki pages on demand.
-- **`Language`** is used by `languages` and `source_formatter`, which are responsible for language-specific processing.
-- **`ChunkType`** is used by `fuzzy_search`, `crosslinks`, `test_inheritance`, and potentially more, to categorize and analyze code chunks.
-
-The file's protocols and enums are foundational to the system's architecture, enabling a modular design where components like the research pipeline, CLI, and code analyzers can operate independently while still adhering to shared interfaces.
+These integrations highlight the role of this file as a shared foundation that enables cross-cutting concerns like language support, progress tracking, and chunking strategies to be implemented consistently across the codebase.
 
 ## Design Notes
 
-### Use of Protocols and `StrEnum`
+### Use of Protocols Over Concrete Classes
+Protocols are preferred over concrete classes to allow flexibility in implementation. This design choice supports dependency injection and makes it easier to mock components during testing. For example, `ProgressCallback` can be implemented by any function matching its signature, enabling both simple print statements and complex UI updates.
 
-The use of `Protocol` classes ensures that components can be easily mocked or extended without tight coupling. This is particularly useful in test environments or when integrating with different backend systems.
-
-`StrEnum` is used for `Language` and `ChunkType` to provide both type safety and string interoperability. This is a pragmatic choice that allows for easy serialization and consumption by external systems while maintaining type safety within Python.
+### StrEnum for Type Safety and Readability
+Using `StrEnum` for `Language` and `ChunkType` provides compile-time checks and runtime safety while maintaining string compatibility. This is especially important when these values are used in configuration files or external APIs, where string representations are expected.
 
 ### Asynchronous Support
+Several protocols involve `Awaitable` types, indicating that the system supports asynchronous workflows. This reflects modern Python practices and aligns with the need to handle I/O-bound operations like file reading, network requests, or database queries efficiently.
 
-Several protocols in this file, such as `ProgressReporter` and `PageGenerator`, are designed with asynchronous support in mind. This reflects the need for non-blocking operations in a system that may be processing large codebases or interacting with remote services.
-
-### Lightweight Progress Reporting
-
-The `LogCallback` protocol offers a lightweight way to report progress or status messages. This is useful for logging or UI updates where detailed progress tracking is not necessary, and a simple string message suffices.
-
-By centralizing these types, the system avoids code duplication and ensures that all components that require progress reporting or language-specific handling adhere to a consistent interface.
+### Lightweight Logging vs. Full Progress Reporting
+The distinction between `LogCallback` and `ProgressReporter` shows a thoughtful separation of concerns. `LogCallback` is for simple status messages, while `ProgressReporter` is for detailed, structured progress updates involving [`ResearchProgress`](research.md). This allows developers to choose the appropriate level of detail depending on the context.
 
 ## API Reference
 
@@ -395,7 +390,7 @@ Supported programming languages.
 
 
 <details>
-<summary>View Source (lines 87-103) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/foundation.py#L87-L103">GitHub</a></summary>
+<summary>View Source (lines 87-104) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/foundation.py#L87-L104">GitHub</a></summary>
 
 ```python
 class Language(StrEnum):
@@ -415,6 +410,7 @@ class Language(StrEnum):
     PHP = "php"
     KOTLIN = "kotlin"
     CSHARP = "csharp"
+    OBJC = "objective_c"
 ```
 
 </details>
@@ -428,7 +424,7 @@ Types of code chunks.
 
 
 <details>
-<summary>View Source (lines 106-117) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/foundation.py#L106-L117">GitHub</a></summary>
+<summary>View Source (lines 107-118) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/foundation.py#L107-L118">GitHub</a></summary>
 
 ```python
 class ChunkType(StrEnum):
@@ -481,6 +477,7 @@ classDiagram
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
+| `Language` | class | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
 | `ChunkType` | class | Brian Breidenbach | 2 weeks ago | `9cf0e15` feat: add FILE_SUMMARY and ... |
 | `ProgressCallback` | class | Brian Breidenbach | Feb 21, 2026 | `e45a53a` refactor: apply Pythonic id... |
 | `CancellationChecker` | class | Brian Breidenbach | Feb 21, 2026 | `e45a53a` refactor: apply Pythonic id... |
@@ -488,7 +485,6 @@ classDiagram
 | `LogCallback` | class | Brian Breidenbach | Feb 21, 2026 | `e45a53a` refactor: apply Pythonic id... |
 | `PageGenerator` | class | Brian Breidenbach | Feb 21, 2026 | `e45a53a` refactor: apply Pythonic id... |
 | `RowMapper` | class | Brian Breidenbach | Feb 21, 2026 | `e45a53a` refactor: apply Pythonic id... |
-| `Language` | class | Brian Breidenbach | Feb 20, 2026 | `b807417` refactor: high-priority Pyt... |
 
 ## Relevant Source Files
 
