@@ -1,61 +1,63 @@
 # Developer Onboarding Guide
 
-The **local-deepwiki** project is a local, AI-powered documentation server that enables developers to explore and interact with repository documentation in a DeepWiki-style environment. It supports private documentation repositories and integrates with various AI models via the Model Context Protocol (MCP), allowing for rich, contextual search and analysis. Designed for teams seeking to enhance their internal knowledge management, this tool bridges the gap between raw code documentation and intelligent, interactive exploration. It's particularly useful for developers working in environments where security and control over data are paramount, as it operates entirely locally without relying on external cloud services.
+Welcome to the **local-deepwiki** project — a powerful, local, and private documentation server that enables developers to explore and query their repository documentation using an AI-enhanced Model Context Protocol (MCP) interface. This tool is designed for teams or individuals who want to maintain rich, searchable documentation of their codebase without relying on external services, and it leverages the latest in AI and vector database technologies to provide intelligent search and context-aware responses.
 
-The system is built using a Python-based Flask web framework, which serves as the core HTTP server, and leverages **LanceDB** for vector-based document storage and retrieval. AI/ML capabilities are powered by a range of providers including **Anthropic**, **OpenAI**, and **Ollama**, enabling natural language understanding and generation. Additionally, it uses **sentence-transformers** for semantic search, **markdown** for parsing documentation, and **nh3** for safe HTML sanitization. The architecture is modular and extensible, supporting both command-line and web-based interfaces, and is designed to be integrated into development workflows to improve code understanding and documentation accessibility.
+The project is built with Python 3.11+, using Flask as the web framework, and integrates with various AI/ML models such as OpenAI, Anthropic, and Ollama, alongside `sentence-transformers` for embedding generation. It uses `LanceDB` as its vector database for fast, semantic search over documentation, and supports Markdown-based documentation input. This system is particularly useful for developers working in environments where data privacy is paramount and where rich, contextual documentation is essential for code understanding and collaboration.
+
+This guide will walk you through the project's architecture, how it works, how to set it up, and how to contribute effectively. Whether you're a new team member or an external contributor, this document will help you get up and running quickly.
+
+---
 
 ## Architecture at a Glance
 
+This diagram illustrates the core architecture of the local-deepwiki system, showing how its main subsystems interact to deliver documentation and MCP services.
+
 ```mermaid
-  componentDiagram
-    direction LR
-    classDef entry fill:#2d6a4f,color:#fff
-    classDef crossfile fill:#1d3557,color:#fff
-    classDef leaf fill:#6c757d,color:#fff
+%%{init: {"theme": "default"}}%%
+    componentDiagram
+        component "CLI Layer" as CLI
+        component "Web Server" as WebServer
+        component "MCP Handler" as MCPHandler
+        component "Documentation Processor" as DocProcessor
+        component "Vector DB" as VectorDB
+        component "LLM Interface" as LLMInterface
 
-    subgraph "CLI Layer"
-      CLI["cli/main.py"]
-    end
-
-    subgraph "Web Layer"
-      Web["web/app.py"]
-    end
-
-    subgraph "Core Logic"
-      Server["server.py"]
-      Config["config/loader.py"]
-      Models["config/models.py"]
-    end
-
-    subgraph "Data Layer"
-      DB["lancedb"]
-      Embedding["sentence-transformers"]
-    end
-
-    CLI --> Web
-    Web --> Server
-    Server --> Config
-    Server --> Models
-    Models --> DB
-    Models --> Embedding
+        CLI --> WebServer
+        WebServer --> MCPHandler
+        WebServer --> DocProcessor
+        MCPHandler --> DocProcessor
+        DocProcessor --> VectorDB
+        DocProcessor --> LLMInterface
+        LLMInterface --> VectorDB
 ```
 
-### Component Descriptions
+### Subsystem Descriptions
 
-- **[cli/main.py](files/src/local_deepwiki/cli/main.md)**: The primary command-line interface entry point that routes user commands to appropriate CLI modules.
-- **[web/app.py](files/src/local_deepwiki/web/app.py)**: The Flask web application that handles HTTP requests and serves the web UI for documentation exploration.
-- **[server.py](files/src/local_deepwiki/server.py)**: The core server logic that orchestrates the processing of repository documentation and MCP interactions.
-- **[config/loader.py](files/src/local_deepwiki/config/loader.md)**: Responsible for loading and validating configuration settings from various sources.
-- **[config/models.py](files/src/local_deepwiki/config/models.md)**: Defines and manages the configuration of LLM, embedding, and search models used in the system.
-- **LanceDB**: Vector database for storing and retrieving document embeddings.
-- **sentence-transformers**: Used for generating semantic embeddings for search and retrieval.
+- **[CLI Layer](files/src/local_deepwiki/cli/main.md)**  
+  The command-line interface that allows users to initialize, configure, and manage the local documentation server. It includes commands for updating, checking, and profiling the repository.
+
+- **[Web Server](files/src/local_deepwiki/web/app.md)**  
+  The Flask-based web server that hosts the API and MCP endpoints, handling HTTP requests and routing them to appropriate handlers.
+
+- **[MCP Handler](files/src/local_deepwiki/server.py)**  
+  The core logic for handling Model Context Protocol (MCP) requests, enabling interaction with AI models for documentation queries.
+
+- **[Documentation Processor](files/src/local_deepwiki/config/loader.md)**  
+  Responsible for parsing, indexing, and embedding documentation files into the vector database for semantic search.
+
+- **[Vector DB](https://LanceDB.com/)**  
+  The vector database (LanceDB) used to store and retrieve embeddings for fast, semantic search over documentation.
+
+- **[LLM Interface](files/src/local_deepwiki/config/models_llm.md)**  
+  The abstraction layer that integrates with various LLM providers (OpenAI, Anthropic, Ollama) to process natural language queries and generate responses.
+
+---
 
 ## How It Works
 
 ### Flow: Core Server Logic
 
-Question: How does the core server process repository documentation and respond to MCP requests?
-Files: src/local_deepwiki/web/app.py
+This flow shows how the core server initializes and starts up to process repository documentation and respond to MCP requests.
 
 ```mermaid
 flowchart TD
@@ -76,76 +78,108 @@ flowchart TD
 
 #### Narrative Walkthrough
 
-The core server logic begins with the [`run_server`](files/src/local_deepwiki/web/app.md) function, which is the main entry point for starting the Flask web server. This function is located in [src/local_deepwiki/web/app.py](files/src/local_deepwiki/web/app.py) and is responsible for initializing the Flask application with appropriate parameters, including the path to the documentation repository.
+1. **[run_server](files/src/local_deepwiki/web/app.md)** at `src/local_deepwiki/web/app.py:567-584`  
+   This function is the main entry point for starting the wiki web server. It sets up the Flask application by calling [`create_app`](files/src/local_deepwiki/web/app.md), initializing the server with the configured wiki path and ensuring all necessary components are ready to handle incoming requests.
 
-Once [`run_server`](files/src/local_deepwiki/web/app.md) is called, it invokes [`create_app`](files/src/local_deepwiki/web/app.md), which is defined in the same file. The [`create_app`](files/src/local_deepwiki/web/app.md) function sets up the Flask application instance, configures the global `WIKI_PATH` variable, and returns the configured Flask app. This app is then used to handle incoming HTTP requests, routing them to appropriate handlers that process repository documentation and respond to MCP requests.
+2. **[create_app](files/src/local_deepwiki/web/app.md)** at `src/local_deepwiki/web/app.py:552-564`  
+   This function creates and configures the Flask application instance. It initializes the global `WIKI_PATH` variable and returns the configured Flask app, which is responsible for handling HTTP requests and routing them to the appropriate endpoints.
 
-The separation of concerns between [`run_server`](files/src/local_deepwiki/web/app.md) and [`create_app`](files/src/local_deepwiki/web/app.md) allows for a clean, testable architecture where server initialization is decoupled from application configuration. This design supports easy testing and modular configuration, ensuring that the system can be extended or modified without disrupting core functionality.
+This flow highlights a clean separation of concerns, where [`run_server`](files/src/local_deepwiki/web/app.md) handles server initialization and [`create_app`](files/src/local_deepwiki/web/app.md) handles Flask application configuration. The use of a factory pattern for [`create_app`](files/src/local_deepwiki/web/app.md) allows for easier testing and configuration management, while the global `WIKI_PATH` ensures that the application maintains state for processing documentation across different request handlers.
+
+---
 
 ## Getting Started
 
-To begin working with the **local-deepwiki** project, you'll need to ensure your environment meets the following prerequisites:
+### Prerequisites
 
-- **Python >= 3.11**
-- **pip** or **Poetry** for package management
+- Python 3.11 or higher
+- pip (Python package manager)
+- A local clone of the repository
 
-Install the project in development mode using:
+### Installation
+
+To install and set up the project locally:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-org/local-deepwiki.git
+   cd local-deepwiki
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -e .
+   ```
+
+3. Install pre-commit hooks for linting and formatting:
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
+
+### Running the Server
+
+To start the local DeepWiki server:
 
 ```bash
-pip install -e .
+local-deepwiki --wiki-path /path/to/your/docs
 ```
 
-To run the web server, use:
+This command will start the Flask web server and make the documentation available via MCP.
 
-```bash
-local-deepwiki serve
-```
-
-This command will start the Flask web server, typically on `http://localhost:5000`. For CLI usage, refer to the help system:
-
-```bash
-local-deepwiki --help
-```
-
-Configuration can be managed via the `.toml` files or environment variables, as defined in [pyproject.toml](pyproject.toml) and [config/loader.py](files/src/local_deepwiki/config/loader.md).
+---
 
 ## Key Concepts
 
 | Concept | What It Means |
-|--------|---------------|
-| **MCP** | Model Context Protocol, used to enable communication between the server and various AI/ML models. |
-| **Wiki Path** | The directory path where the documentation repository is located; used to determine the source of documentation to be processed. |
-| **Embedding Model** | A model that converts text into numerical vectors for semantic search and retrieval using tools like `sentence-transformers`. |
-| **Flask App** | The core web framework instance that handles HTTP requests and routes them to appropriate handlers. |
-| **LanceDB** | A vector database used for storing and querying document embeddings, enabling fast and semantic search. |
-| **CLI** | Command-line interface, used for tasks like initialization, updates, and configuration management. |
+|--------|----------------|
+| **MCP** | Model Context Protocol, a standardized way for AI models to interact with documentation and codebases |
+| **Wiki Path** | The directory where documentation files (Markdown, etc.) are stored and processed |
+| **Vector Database** | A database optimized for storing and retrieving vector embeddings for semantic search |
+| **LLM Interface** | The abstraction layer that allows integration with various language models like OpenAI, Anthropic, or Ollama |
+| **CLI Layer** | The command-line interface for initializing, updating, and managing the documentation server |
+| **Documentation Processor** | The module responsible for parsing, embedding, and indexing documentation for search |
+
+---
 
 ## Development Workflow
 
-To run tests, use:
+### Running Tests
+
+Tests are located in the `tests` directory and can be run using:
 
 ```bash
-pytest tests/
+pytest
 ```
 
-For linting and code formatting, the project uses:
+To run tests with coverage:
 
 ```bash
-pre-commit run --all-files
+pytest --cov=src
 ```
 
-To ensure consistent development practices, install the pre-commit hooks:
+### Linting and Formatting
+
+This project uses `pre-commit` hooks for linting and formatting. Ensure you have installed them:
 
 ```bash
 pre-commit install
 ```
 
-Common development tasks include:
+You can manually run the hooks with:
 
-- Adding new CLI commands in [cli/main.py](files/src/local_deepwiki/cli/main.md)
-- Extending web endpoints in [web/app.py](files/src/local_deepwiki/web/app.py)
-- Modifying configuration models in [config/models.py](files/src/local_deepwiki/config/models.md)
-- Updating documentation in the `docs/` directory
+```bash
+pre-commit run --all-files
+```
+
+### Common Development Tasks
+
+- Add a new CLI command: Create a new file in `src/local_deepwiki/cli/` and register it in `main.py`
+- Extend documentation processing: Modify logic in `src/local_deepwiki/config/loader.py`
+- Add new LLM provider support: Update `src/local_deepwiki/config/models_llm.py`
+- Improve MCP responses: Edit handlers in `src/local_deepwiki/server.py`
+
+---
 
 ## Further Reading
 
@@ -158,16 +192,16 @@ Common development tasks include:
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/plugins/registry.py:25-361`](files/src/local_deepwiki/plugins/registry.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
-- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
-- [`src/local_deepwiki/generators/analysis/testability.py:26-37`](files/src/local_deepwiki/generators/analysis/testability.md)
-- [`src/local_deepwiki/export/toc_renderer.py:8-17`](files/src/local_deepwiki/export/toc_renderer.md)
-- [`src/local_deepwiki/export/pdf.py:129-534`](files/src/local_deepwiki/export/pdf.md)
 - [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
-- [`src/local_deepwiki/generators/analysis/hotspots.py:69-89`](files/src/local_deepwiki/generators/analysis/hotspots.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
+- [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
+- [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
+- `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
+- [`src/local_deepwiki/errors.py:53-118`](files/src/local_deepwiki/errors.md)
+- [`src/local_deepwiki/watcher.py:40-46`](files/src/local_deepwiki/watcher.md)
 
 
 *Showing 10 of 269 source files.*

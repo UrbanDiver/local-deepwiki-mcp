@@ -2,90 +2,286 @@
 
 ## External Dependencies
 
-| Dependency | Purpose |
-|------------|---------|
-| `anthropic` (>=0.40,<1.0.0) | Provides access to Anthropic's AI models, likely used for natural language processing and generation tasks. |
-| `flask` (>=3.0,<4.0.0) | Web framework for building the application's HTTP API and web interface. |
-| `LanceDB` (>=0.15,<1.0.0) | Vector database for storing and querying embeddings, used for semantic search capabilities. |
-| `markdown` (>=3.0,<4.0.0) | Library for parsing and rendering Markdown text into HTML. |
-| `mcp` (>=1.2.0,<2.0.0) | Likely used for managing model configuration or communication with language models. |
-| `nh3` (>=0.2.14,<1.0.0) | HTML sanitization library to clean and validate HTML content. |
-| `ollama` (>=0.4,<1.0.0) | Interface to Ollama's local LLM inference engine for running models locally. |
-| `openai` (>=1.0,<2.0.0) | Client library for interacting with OpenAI's API for language model access. |
-| `pandas` (>=2.0,<3.0.0) | Data manipulation and analysis library, used for handling structured data. |
-| `psutil` (>=5.0,<6.0.0) | System and process utilities for monitoring system resources. |
-| `pydantic` (>=2.0,<3.0.0) | Data validation and settings management using Python type annotations. |
-| `pyyaml` (>=6.0,<7.0.0) | YAML parser and emitter for configuration files and data serialization. |
-| `rapidfuzz` (>=3.0,<4.0.0) | Fast fuzzy string matching and similarity scoring library. |
-| `rich` (>=13.0,<14.0.0) | Library for rich text and beautiful formatting in the terminal. |
-| `sentence-transformers` (>=3.0,<4.0.0) | Library for computing sentence embeddings for semantic similarity. |
-| `tree-sitter` (>=0.23) | General-purpose parsing library for parsing source code into syntax trees. |
-| `tree-sitter-c` (>=0.23) | Tree-sitter parser for C language. |
-| `tree-sitter-c-sharp` (>=0.23) | Tree-sitter parser for C# language. |
-| `tree-sitter-cpp` (>=0.23) | Tree-sitter parser for C++ language. |
-| `tree-sitter-go` (>=0.23) | Tree-sitter parser for Go language. |
-| `tree-sitter-java` (>=0.23) | Tree-sitter parser for Java language. |
-| `tree-sitter-javascript` (>=0.23) | Tree-sitter parser for JavaScript language. |
-| `tree-sitter-kotlin` (>=0.23) | Tree-sitter parser for Kotlin language. |
-| `tree-sitter-objc` (>=3.0) | Tree-sitter parser for Objective-C language. |
-| `tree-sitter-php` (>=0.23) | Tree-sitter parser for PHP language. |
-| `tree-sitter-python` (>=0.23) | Tree-sitter parser for Python language. |
-| `tree-sitter-ruby` (>=0.23) | Tree-sitter parser for Ruby language. |
-| `tree-sitter-rust` (>=0.23) | Tree-sitter parser for Rust language. |
-| `tree-sitter-swift` (>=0.0.1) | Tree-sitter parser for Swift language. |
-| `tree-sitter-typescript` (>=0.23) | Tree-sitter parser for TypeScript language. |
+The following external libraries are required for the project:
+
+- **anthropic** (>=0.40,<1.0.0)  
+  Provides access to Anthropic's AI models, particularly Claude, for natural language processing tasks.
+
+- **flask** (>=3.0,<4.0.0)  
+  A lightweight web framework used for building web applications and APIs.
+
+- **LanceDB** (>=0.15,<1.0.0)  
+  A vector database for storing and querying embeddings, used for semantic search capabilities.
+
+- **markdown** (>=3.0,<4.0.0)  
+  Library for parsing and rendering Markdown text into HTML.
+
+- **mcp** (>=1.2.0,<2.0.0)  
+  Likely used for managing model communication protocols, possibly in LLM interactions.
+
+- **nh3** (>=0.2.14,<1.0.0)  
+  A fast HTML sanitization library used to clean and validate HTML content.
+
+- **ollama** (>=0.4,<1.0.0)  
+  Provides access to local AI models via the Ollama API for on-device inference.
+
+- **openai** (>=1.0,<2.0.0)  
+  Official Python client for OpenAI's API, used for integrating with OpenAI's language models.
+
+- **pandas** (>=2.0,<3.0.0)  
+  Data manipulation and analysis library, used for handling structured data.
+
+- **psutil** (>=5.0,<6.0.0)  
+  Cross-platform library for retrieving system and process information.
+
+- **pydantic** (>=2.0,<3.0.0)  
+  Data validation and settings management using Python type annotations.
+
+- **pyyaml** (>=6.0,<7.0.0)  
+  YAML parser and emitter for configuration files and data serialization.
+
+- **rapidfuzz** (>=3.0,<4.0.0)  
+  Fast fuzzy string matching library for similarity comparisons.
+
+- **rich** (>=13.0,<14.0.0)  
+  Library for rich text and beautiful formatting in the terminal.
+
+- **sentence-transformers** (>=3.0,<4.0.0)  
+  Provides pre-trained models for generating sentence embeddings.
+
+- **tree-sitter** (>=0.23)  
+  A parser for programming languages used for syntax analysis.
+
+- **tree-sitter-c** (>=0.23)  
+  Tree-sitter parser for the C programming language.
+
+- **tree-sitter-c-sharp** (>=0.23)  
+  Tree-sitter parser for C#.
+
+- **tree-sitter-cpp** (>=0.23)  
+  Tree-sitter parser for C++.
+
+- **tree-sitter-go** (>=0.23)  
+  Tree-sitter parser for Go.
+
+- **tree-sitter-java** (>=0.23)  
+  Tree-sitter parser for Java.
+
+- **tree-sitter-javascript** (>=0.23)  
+  Tree-sitter parser for JavaScript.
+
+- **tree-sitter-kotlin** (>=0.23)  
+  Tree-sitter parser for Kotlin.
+
+- **tree-sitter-objc** (>=3.0)  
+  Tree-sitter parser for Objective-C.
+
+- **tree-sitter-php** (>=0.23)  
+  Tree-sitter parser for PHP.
+
+- **tree-sitter-python** (>=0.23)  
+  Tree-sitter parser for Python.
+
+- **tree-sitter-ruby** (>=0.23)  
+  Tree-sitter parser for Ruby.
+
+- **tree-sitter-rust** (>=0.23)  
+  Tree-sitter parser for Rust.
+
+- **tree-sitter-swift** (>=0.0.1)  
+  Tree-sitter parser for Swift.
+
+- **tree-sitter-typescript** (>=0.23)  
+  Tree-sitter parser for TypeScript.
 
 ## Dev Dependencies
 
-| Dependency | Purpose |
-|------------|---------|
-| `black` (>=24.0) | Code formatter to enforce consistent Python style. |
-| `isort` (>=5.0) | Tool to sort and organize import statements. |
-| `local-deepwiki ([all])` | Development package for local installation of the project. |
-| `mypy` (>=1.0) | Static type checker for Python. |
-| `pip-audit` (>=2.0) | Security audit tool for Python dependencies. |
-| `pre-commit` (>=3.0) | Framework for managing and maintaining pre-commit hooks. |
-| `pypdf` (>=6.6.1) | Library for working with PDF files. |
-| `pytest` (>=8.0) | Testing framework for Python. |
-| `pytest-asyncio` (>=0.24,<1.0.0) | Plugin for pytest to support asynchronous tests. |
-| `types-Markdown` (>=3.0) | Type stubs for the `markdown` library. |
-| `types-PyYAML` (>=6.0) | Type stubs for the `pyyaml` library. |
-| `weasyprint` (>=68.0,<69.0.0) | Library for converting HTML to PDF. |
+The following development dependencies are used for development and testing:
+
+- **black** (>=24.0)  
+  Code formatter for Python to enforce consistent code style.
+
+- **isort** (>=5.0)  
+  Tool for sorting and organizing imports in Python files.
+
+- **local-deepwiki ([all])**  
+  Development package for local development of the `local_deepwiki` module.
+
+- **mypy** (>=1.0)  
+  Static type checker for Python.
+
+- **pip-audit** (>=2.0)  
+  Security audit tool for Python package dependencies.
+
+- **pre-commit** (>=3.0)  
+  Framework for managing pre-commit hooks to automate code quality checks.
+
+- **pypdf** (>=6.6.1)  
+  Library for working with PDF files.
+
+- **pytest** (>=8.0)  
+  Testing framework for Python.
+
+- **pytest-asyncio** (>=0.24,<1.0.0)  
+  [Plugin](files/src/local_deepwiki/plugins/base.md) for pytest to support asynchronous testing.
+
+- **types-Markdown** (>=3.0)  
+  Type stubs for the `markdown` library.
+
+- **types-PyYAML** (>=6.0)  
+  Type stubs for the `pyyaml` library.
+
+- **weasyprint** (>=68.0,<69.0.0)  
+  Library for converting HTML to PDF.
 
 ## Internal Module Dependencies
 
-- `src/local_deepwiki/providers/credentials.py` imports `os`
-- `src/local_deepwiki/generators/wiki/term_validator.py` imports `re`
-- `src/local_deepwiki/__init__.py` imports `importlib.metadata.version`
-- `src/local_deepwiki/cli/main.py` imports `sys`, `rich.console.Console`, `rich.table.Table`, `importlib`
-- `src/local_deepwiki/models/provider_types.py` imports `enum.StrEnum`
-- `src/local_deepwiki/handlers/types.py` imports `typing.TypedDict`
-- `src/local_deepwiki/cli/init_cli.py` imports `argparse`, `os`, `sys`, `urllib.request`, `collections.Counter`, `dataclasses.dataclass`, `pathlib.Path`, `typing.Literal`, `yaml`, `rich.console.Console`, `rich.panel.Panel`, `rich.prompt.Prompt`, `rich.table.Table`, [`local_deepwiki.config.Config`](files/src/local_deepwiki/config/models.md), [`local_deepwiki.config.models.ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md)
-- `src/local_deepwiki/core/vectorstore/mixins/search_types.py` imports `dataclasses.dataclass`, [`local_deepwiki.core.vectorstore.schema.SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md)
-- `src/local_deepwiki/security/access_control.py` imports `asyncio`, `collections.abc.Callable`, `contextvars.ContextVar`, `dataclasses.dataclass`, `enum.StrEnum`, `functools.wraps`, `typing.Any`, `typing.TypeVar`, `os`
-- `src/local_deepwiki/logging.py` imports `logging`, `os`, `sys`, `typing.Literal`
-- `src/local_deepwiki/core/protocols.py` imports `collections.abc.Iterator`, `pathlib.Path`, `typing.Protocol`, `typing.runtime_checkable`
-- `src/local_deepwiki/generators/wiki/source_formatter.py` imports `collections.abc.Callable`, `dataclasses.dataclass`, `operator.attrgetter`, `pathlib.Path`, [`local_deepwiki.core.git_blame.format_blame_date`](files/src/local_deepwiki/core/git_blame.md), [`local_deepwiki.core.git_blame.get_file_entity_blame`](files/src/local_deepwiki/core/git_blame.md), [`local_deepwiki.core.git_utils.GitRepoInfo`](files/src/local_deepwiki/core/git_utils.md), [`local_deepwiki.core.git_utils.build_source_url`](files/src/local_deepwiki/core/git_utils.md), [`local_deepwiki.logging.get_logger`](files/src/local_deepwiki/logging.md), [`local_deepwiki.models.ChunkType`](files/src/local_deepwiki/models/foundation.md), [`local_deepwiki.models.CodeChunk`](files/src/local_deepwiki/models/chunks.md)
-- `src/local_deepwiki/generators/dir_tree.py` imports `dataclasses.dataclass`, `dataclasses.field`, `pathlib.Path`, `subprocess`
+Based on the import statements, the following internal module dependencies exist:
 
-### Cross-Module Dependencies
+- **CLI modules** depend on:
+  - `rich` for rich terminal output
+  - `importlib` for dynamic imports
+  - `local_deepwiki.config` and `local_deepwiki.config.models` for configuration handling
 
-- [`WikiGenerator`](files/src/local_deepwiki/generators/wiki/generator.md) depends on [`VectorStore`](files/src/local_deepwiki/core/vectorstore/store.md)
-- `SourceFormatter` depends on [`GitRepoInfo`](files/src/local_deepwiki/core/git_utils.md), [`build_source_url`](files/src/local_deepwiki/core/git_utils.md), [`format_blame_date`](files/src/local_deepwiki/core/git_blame.md), [`get_file_entity_blame`](files/src/local_deepwiki/core/git_blame.md)
-- `AccessControl` depends on `ContextVar`, `Callable`, `StrEnum`, `TypeVar`
-- `CLI` depends on [`Config`](files/src/local_deepwiki/config/models.md), [`ParsingConfig`](files/src/local_deepwiki/config/models_wiki.md), `Console`, `Panel`, `Prompt`, `Table`
-- [`SearchProfile`](files/src/local_deepwiki/core/vectorstore/schema.md) is used by `SearchTypesMixin`
-- `Logging` is used by `SourceFormatter`
-- `Protocols` are used by modules requiring protocol-based interfaces
-- `ProviderTypes` is used by modules that need to define provider types
-- `Types` is used by `Handlers` and other modules for type definitions
-- `Credentials` is used by modules requiring access to credentials
-- `TermValidator` is used by wiki generation modules
-- `InitCLI` is used by main CLI entry point
-- `DirTree` is used by modules requiring directory tree generation
-- `Security` is used by modules requiring access control logic
+- **Security modules** depend on:
+  - `asyncio` for asynchronous operations
+  - `collections.abc` for abstract base classes
+  - `contextvars` for context management
+  - `dataclasses` for data class definitions
+  - `enum` for `StrEnum`
+  - `functools` for `wraps`
+  - `typing` for type hints
 
-Note: Some dependencies are inferred from import statements and are not explicitly declared in the manifest. The internal module dependencies are limited to what is visible in the import statements provided.
+- **Logging module** depends on:
+  - `logging` for logging functionality
+  - `os` and `sys` for system-level operations
+
+- **Core protocols** depend on:
+  - `collections.abc` for abstract base classes
+  - `pathlib` for path handling
+  - `typing` for type hints and `Protocol`
+
+- **Generator modules** depend on:
+  - `dataclasses` for data class definitions
+  - `pathlib` for path handling
+  - `local_deepwiki.core.git_blame`, `local_deepwiki.core.git_utils`, `local_deepwiki.logging`, `local_deepwiki.models` for code analysis and formatting
+
+- **Vector store mixins** depend on:
+  - `dataclasses` for data class definitions
+  - `local_deepwiki.core.vectorstore.schema` for schema definitions
+
+- **Handlers** depend on:
+  - `typing` for type hints
+  - `local_deepwiki.models.provider_types` for provider types
+
+- **Models** depend on:
+  - `enum` for `StrEnum`
+  - `typing` for type hints
+
+- **Providers** depend on:
+  - `typing` for type hints
+  - `local_deepwiki.providers.base` for base provider types
+
+- **Export modules** depend on:
+  - `typing` for type hints
+
+- **Test helpers** depend on:
+  - `collections.abc` for `AsyncIterator`
+  - `pathlib` for path handling
+  - `typing` for type hints
+  - `local_deepwiki.providers.base` for base provider types
+
+- **Fixtures** depend on:
+  - `typing` for type hints
+  - `src.models` for model definitions
+  - `json` and `pathlib` for file handling
+
+- **Test files** depend on:
+  - `pytest` for testing
+  - `src.models` for model definitions
+  - `src.parser` for parsing logic
+
+- **Wiki generators** depend on:
+  - `typing` for type hints
+  - `collections.defaultdict` for default dictionary behavior
+
+- **Analysis generators** depend on:
+  - `typing` for type hints
+
+- **Session state handlers** depend on:
+  - `typing` for type hints
+
+- **Architecture report generators** depend on:
+  - `typing` for type hints
+
+- **Health scoring generators** depend on:
+  - `typing` for type hints
+
+- **Smells page generators** depend on:
+  - `collections.defaultdict` for default dictionary behavior
+  - `typing` for type hints
+
+- **TOC renderer** depends on:
+  - `typing` for type hints
+
+- **Init CLI** depends on:
+  - `argparse` for command-line argument parsing
+  - `os` and `sys` for system-level operations
+  - `urllib.request` for URL handling
+  - `collections.Counter` for counting
+  - `dataclasses` for data class definitions
+  - `pathlib` for path handling
+  - `typing` for type hints
+  - `yaml` for YAML handling
+  - `rich` for rich terminal output
+  - `local_deepwiki.config` and `local_deepwiki.config.models` for configuration handling
+
+- **Source formatter** depends on:
+  - `collections.abc` for `Callable`
+  - `dataclasses` for data class definitions
+  - `operator` for `attrgetter`
+  - `pathlib` for path handling
+  - `local_deepwiki.core.git_blame`, `local_deepwiki.core.git_utils`, `local_deepwiki.logging`, `local_deepwiki.models` for code analysis and formatting
+
+- **Directory tree generator** depends on:
+  - `dataclasses` for data class definitions
+  - `pathlib` for path handling
+  - `subprocess` for running system commands
+
+- **Term validator** depends on:
+  - `re` for regular expressions
+
+- **Credentials provider** depends on:
+  - `os` for environment variable handling
+
+- **Version provider** depends on:
+  - `importlib.metadata` for version information
+
+- **CLI main** depends on:
+  - `sys` for system-level operations
+  - `rich.console` and `rich.table` for rich terminal output
+  - `importlib` for dynamic imports
+
+- **Type definitions** depend on:
+  - `typing` for `TypedDict` and type hints
+
+- **Configuration models** depend on:
+  - `dataclasses` for data class definitions
+  - `typing` for type hints
+
+- **Git blame utilities** depend on:
+  - `local_deepwiki.logging` for logging
+  - `local_deepwiki.models` for model definitions
+
+- **Git utilities** depend on:
+  - `local_deepwiki.models` for model definitions
+
+- **Git repo info** depends on:
+  - `local_deepwiki.models` for model definitions
+
+- **Search types** depend on:
+  - `dataclasses` for data class definitions
+  - `local_deepwiki.core.vectorstore.schema` for schema definitions
 
 ## Module Dependency Graph
 

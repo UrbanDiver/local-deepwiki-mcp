@@ -593,3 +593,7 @@ assert json.loads(record["metadata"]) == {"key": "value", "count": 42}
 ## See Also
 
 - [init_cli](../cli/init_cli.md) - uses this
+
+## See Also
+
+- [init_cli](../cli/init_cli.md) - uses this

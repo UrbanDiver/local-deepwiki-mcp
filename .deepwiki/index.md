@@ -5,20 +5,20 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP server enables private, local documentation generation and management for software repositories. It provides an intelligent, AI-powered wiki system that indexes codebases and generates contextual documentation. The project supports both local and hybrid deployment models with flexible configuration options.
+Local DeepWiki MCP server enables private, local documentation generation and management for code repositories. It supports agentic workflows, RAG-based search, and multi-provider LLM integration to create and maintain up-to-date wiki content. The system is designed for both local and hybrid deployment models with support for various programming languages.
 
 ## Key Features
 
-- **AI-powered documentation generation** - Creates contextual wiki content using LLM providers (Anthropic, OpenAI, Ollama) with support for multiple programming languages including Python, TypeScript, JavaScript, Go, Rust, and more
-- **Async architecture with provider abstraction** - All core operations use asyncio and implement provider abstraction for LLM and embedding services through base classes in `providers/base.py`
-- **AST-aware code chunking** - Splits code into meaningful chunks at function and class boundaries using tree-sitter for more accurate documentation generation
-- **Multi-model configuration support** - Supports configuration hierarchy with CLI args > env vars > config file > defaults, plus multiple example configs for local, cloud, and hybrid deployment
-- **Comprehensive testing framework** - Includes pytest-based tests with async support, mocking of LLM/embedding providers, and shared test fixtures for consistent development workflows
+- **Multi-Provider LLM Support**: Integrates with Claude, Ollama, and OpenAI through a unified provider abstraction layer
+- **AST-Aware Code Chunking**: Splits code into meaningful chunks at function and class boundaries using tree-sitter for better context retention
+- **Agentic RAG Workflows**: Supports automated documentation generation and updates through agentic workflows and Retrieval-Augmented Generation
+- **Configurable Deployment Models**: Offers local, cloud, and hybrid deployment configurations via YAML-based configuration files
+- **[Language](files/src/local_deepwiki/models/foundation.md)-Agnostic Processing**: Supports documentation generation for Python, TypeScript/TSX, JavaScript, Go, Rust, Java, and 15+ other programming languages
 
 ## Technology Stack
 
 - **Python >=3.11**
-- **Dependencies**: anthropic, flask, lancedb, markdown, mcp, nh3, ollama, openai, pandas, psutil, pydantic, pyyaml
+- **Dependencies**: anthropic, flask, LanceDB, markdown, mcp, nh3, ollama, openai, pandas, psutil, pydantic, pyyaml
   - Plus 19 more...
 
 ## Directory Structure

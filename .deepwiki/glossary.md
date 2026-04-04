@@ -4,14 +4,14 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 **Quick Navigation:** [#](##) | [A](#a) | [B](#b) | [C](#c) | [D](#d) | [E](#e) | [F](#f) | [G](#g) | [H](#h) | [I](#i) | [K](#k) | [L](#l) | [M](#m) | [N](#n) | [O](#o) | [P](#p) | [Q](#q) | [R](#r) | [S](#s) | [T](#t) | [U](#u) | [V](#v) | [W](#w)
 
-**Total:** 2595 entities (416 classes, 1354 functions, 825 methods)
+**Total:** 2598 entities (416 classes, 1357 functions, 825 methods)
 
 ---
 
 <p><a href="#" onclick="document.querySelectorAll('details').forEach(d=>d.open=true);return false">Expand All</a> | <a href="#" onclick="document.querySelectorAll('details').forEach(d=>d.open=false);return false">Collapse All</a></p>
 
 <details id="#" markdown="1">
-<summary><strong>#</strong> — 1148 entities</summary>
+<summary><strong>#</strong> — 1151 entities</summary>
 
 - ▪️ **[`PluginRegistry._`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: LanguageParserPlugin) → None` (`registry.py`)
 - ▪️ **[`PluginRegistry._`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: WikiGeneratorPlugin) → None` (`registry.py`)
@@ -514,6 +514,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_extract_java_import`](files/src/local_deepwiki/core/graph_rag/extractor.md)** `(node: Any, source_bytes: bytes) → str | None` (`extractor.py`) - Handle Java ``import`` declarations.
 - 🔹 **[`_extract_js_call`](files/src/local_deepwiki/generators/analysis/callgraph.md)** `(call_node: Node, source: bytes) → str | None` (`callgraph.py`) - Extract call name from a JS/TS call expression node.
 - 🔹 **[`_extract_js_import`](files/src/local_deepwiki/core/graph_rag/extractor.md)** `(node: Any, source_bytes: bytes) → str | None` (`extractor.py`) - Handle JS/TS import statements.
+- 🔹 **[`_extract_keyword_base`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(kw_node: Any, source: bytes) → str` (`cohesion.py`) - Extract the base name from a keyword argument like ``meta...
 - 🔹 **[`_extract_method_signature`](files/src/local_deepwiki/generators/diagrams/class_diagram.md)** `(content: str) → str | None` (`class_diagram.py`) - Extract method signature with types from content.
 - 🔹 **[`_extract_methods_from_class_content`](files/src/local_deepwiki/generators/diagrams/class_diagram.md)** `(chunks: list, classes: dict[str, [ClassInfo](files/src/local_deepwiki/generators/diagrams/_utils.md)], methods_by_class: dict[str, list[tuple[str, str | None]]], ...+1) → None` (`class_diagram.py`) - Extract methods from class content for classes without ME...
 - 🔹 **[`_extract_module_docstring`](files/src/local_deepwiki/core/chunk_builders.md)** `(root: Node, source: bytes, language: [Language](files/src/local_deepwiki/models/foundation.md)) → str | None` (`chunk_builders.py`) - Extract the module-level docstring from a Python AST root.
@@ -552,6 +553,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`StreamingPdfExporter._finalize_pdf`](files/src/local_deepwiki/export/pdf.md)** `(temp_pdfs: list[Path], output_file: Path, pages_processed: int, ...+2) → None` (`pdf.py`) - Merge batch PDFs into the final output file and report co...
 - 🔹⚡ **[`_finalize_pipeline`](files/src/local_deepwiki/generators/wiki/pipeline.md)** `(generator: [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md), ctx: _GenerationContext) → None` (`pipeline.py`) - Cross-link, build search/TOC, freshness report, and emit ...
 - ▪️⚡ **[`DeepResearchPipeline._finalize_research`](files/src/local_deepwiki/core/deep_research/pipeline.md)** `(result: [SynthesisResult](files/src/local_deepwiki/core/deep_research/config.md), synthesis_duration_ms: int) → [DeepResearchResult](files/src/local_deepwiki/models/research.md)` (`pipeline.py`) - Finalize the research by saving checkpoint and emitting c...
+- 🔹 **[`_find_base_class_pattern`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(class_node: Any, source: bytes) → str | None` (`cohesion.py`) - Check base classes for ABC or Protocol inheritance.
 - 🔹 **[`_find_circular_dependencies`](files/src/local_deepwiki/generators/diagrams/dependency_diagram.md)** `(deps: dict[str, set[str]]) → set[tuple[str, str]]` (`dependency_diagram.py`) - Find circular dependencies in a dependency graph.
 - 🔹 **[`_find_class_api_entry`](files/src/local_deepwiki/handlers/analysis_entity.md)** `(classes_sigs: list[Any], entity_name: str) → dict[str, Any] | None` (`analysis_entity.py`) - Find API doc entry for a class entity.
 - 🔹 **[`_find_class_api_entry`](files/src/local_deepwiki/services/analysis_service.md)** `(classes_sigs: list[Any], entity_name: str) → dict[str, Any] | None` (`analysis_service.py`) - Find API doc entry for a class entity.
@@ -779,6 +781,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`DependencyGraphGenerator._is_internal_import`](files/src/local_deepwiki/generators/analysis/dependency_graph.md)** `(import_name: str, internal_modules: set[str]) → bool` (`dependency_graph.py`) - Check if an import refers to an internal module.
 - ▪️ **[`StatsMixin._is_local_provider`](files/src/local_deepwiki/core/vectorstore/mixins/stats.md)** `(...) → bool` (`stats.py`)
 - 🔹 **[`_is_mock_heavy`](files/src/local_deepwiki/generators/examples/discovery.md)** `(body: str) → bool` (`discovery.py`) - Check if a test body uses mocking extensively.
+- 🔹 **[`_is_mostly_abstract`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(class_node: Any, source: bytes) → bool` (`cohesion.py`) - Return True if at least half of the class methods are abs...
 - 🔹 **[`_is_noise`](files/src/local_deepwiki/generators/codemap/graph.md)** `(name: str) → bool` (`graph.py`) - Return ``True`` if *name* should be skipped during traver...
 - 🔹 **[`_is_port_in_use`](files/src/local_deepwiki/handlers/web_server.md)** `(host: str, port: int) → bool` (`web_server.py`) - Check if a port is already bound on the given host.
 - 🔹 **[`_is_retryable_error`](files/src/local_deepwiki/core/vectorstore/embedding.md)** `(e: Exception) → bool` (`embedding.py`) - Determine if an embedding error is retryable.
@@ -2760,16 +2763,16 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/plugins/registry.py:25-361`](files/src/local_deepwiki/plugins/registry.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
-- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
-- [`src/local_deepwiki/generators/analysis/testability.py:26-37`](files/src/local_deepwiki/generators/analysis/testability.md)
-- [`src/local_deepwiki/export/toc_renderer.py:8-17`](files/src/local_deepwiki/export/toc_renderer.md)
-- [`src/local_deepwiki/export/pdf.py:129-534`](files/src/local_deepwiki/export/pdf.md)
 - [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
-- [`src/local_deepwiki/generators/analysis/hotspots.py:69-89`](files/src/local_deepwiki/generators/analysis/hotspots.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
+- [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
+- [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
+- `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
+- [`src/local_deepwiki/errors.py:53-118`](files/src/local_deepwiki/errors.md)
+- [`src/local_deepwiki/watcher.py:40-46`](files/src/local_deepwiki/watcher.md)
 
 
 *Showing 10 of 269 source files.*

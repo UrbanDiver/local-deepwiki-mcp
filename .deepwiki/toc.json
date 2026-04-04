@@ -560,7 +560,7 @@
                     },
                     {
                       "number": "8.1.1.14.4",
-                      "title": "pdf.py",
+                      "title": "Pdf",
                       "path": "files/src/local_deepwiki/export/pdf.md"
                     },
                     {
@@ -585,7 +585,7 @@
                     },
                     {
                       "number": "8.1.1.14.9",
-                      "title": "toc_renderer.py",
+                      "title": "Toc Renderer",
                       "path": "files/src/local_deepwiki/export/toc_renderer.md"
                     }
                   ]
@@ -762,7 +762,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.16",
-                          "title": "duplication.py",
+                          "title": "Duplication",
                           "path": "files/src/local_deepwiki/generators/analysis/duplication.md"
                         },
                         {
@@ -777,12 +777,12 @@
                         },
                         {
                           "number": "8.1.1.15.18.19",
-                          "title": "health_scoring.py",
+                          "title": "Health Scoring",
                           "path": "files/src/local_deepwiki/generators/analysis/health_scoring.md"
                         },
                         {
                           "number": "8.1.1.15.18.20",
-                          "title": "hotspots.py",
+                          "title": "Hotspots",
                           "path": "files/src/local_deepwiki/generators/analysis/hotspots.md"
                         },
                         {
@@ -842,7 +842,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.32",
-                          "title": "testability.py",
+                          "title": "Testability",
                           "path": "files/src/local_deepwiki/generators/analysis/testability.md"
                         },
                         {
@@ -1218,7 +1218,7 @@
                     },
                     {
                       "number": "8.1.1.18.2",
-                      "title": "registry.py",
+                      "title": "Registry",
                       "path": "files/src/local_deepwiki/plugins/registry.md"
                     }
                   ]

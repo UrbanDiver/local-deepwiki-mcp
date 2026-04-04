@@ -18,9 +18,9 @@ The following pages may need review. Source files were modified after documentat
 
 | Page | Days Stale | Last Doc Update | Source Modified |
 |------|------------|-----------------|-----------------|
-| [docstrings](files/src/local_deepwiki/core/parser/docstrings.md) | 1 | yesterday | today |
-| [languages](files/src/local_deepwiki/core/parser/languages.md) | 1 | yesterday | today |
-| [foundation](files/src/local_deepwiki/models/foundation.md) | 1 | yesterday | today |
+| [docstrings](files/src/local_deepwiki/core/parser/docstrings.md) | 1 | 2 days ago | today |
+| [languages](files/src/local_deepwiki/core/parser/languages.md) | 1 | 2 days ago | today |
+| [foundation](files/src/local_deepwiki/models/foundation.md) | 1 | 2 days ago | today |
 
 ## Recommendations
 
@@ -31,4 +31,4 @@ To refresh stale documentation:
 3. **Manual review** may be needed for pages where only comments or docstrings changed
 
 ---
-*Report generated: 2026-04-04 01:59:43*
+*Report generated: 2026-04-04 08:53:51*

@@ -6,31 +6,31 @@
   "current_file": null,
   "rate_per_minute": null,
   "eta_minutes": 0.0,
-  "elapsed_phase_seconds": 41.6,
-  "elapsed_total_seconds": 591.0,
-  "started_at_iso": "2026-04-04T01:49:52",
+  "elapsed_phase_seconds": 40.1,
+  "elapsed_total_seconds": 344.4,
+  "started_at_iso": "2026-04-04T08:48:06",
   "success": true,
-  "completed_at_iso": "2026-04-04T01:59:43",
+  "completed_at_iso": "2026-04-04T08:53:51",
   "phases": {
     "initializing": {
-      "duration_seconds": 71.3,
+      "duration_seconds": 63.9,
       "items_completed": 0,
       "rate_per_minute": null
     },
     "modules": {
       "duration_seconds": 0.0,
       "items_completed": 2,
-      "rate_per_minute": 7710.12
+      "rate_per_minute": 12310.24
     },
     "file_docs": {
-      "duration_seconds": 478.0,
+      "duration_seconds": 240.4,
       "items_completed": 243,
-      "rate_per_minute": 30.5
+      "rate_per_minute": 60.65
     },
     "codemaps": {
-      "duration_seconds": 41.6,
+      "duration_seconds": 40.1,
       "items_completed": 2,
-      "rate_per_minute": 2.88
+      "rate_per_minute": 2.99
     }
   }
 }

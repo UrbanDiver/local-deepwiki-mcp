@@ -8,7 +8,7 @@
 |-----------|-------|-------|
 | Complexity | 89.6 | B |
 | Coupling | 79.1 | B |
-| Smells | 95.1 | A |
+| Smells | 95.2 | A |
 | Layers | 100.0 | A |
 | Churn | 100.0 | A |
 | Cohesion | 66.7 | C |
@@ -18,8 +18,8 @@
 
 ## Codebase Stats
 
-- **Total lines:** 80,835
-- **Total functions:** 2,386
+- **Total lines:** 80,853
+- **Total functions:** 2,389
 - **Files scanned:** 269
 
 ## Complexity Hotspots
@@ -45,16 +45,16 @@ No layer violations detected.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/plugins/registry.py:25-361`](files/src/local_deepwiki/plugins/registry.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
-- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
-- [`src/local_deepwiki/generators/analysis/testability.py:26-37`](files/src/local_deepwiki/generators/analysis/testability.md)
-- [`src/local_deepwiki/export/toc_renderer.py:8-17`](files/src/local_deepwiki/export/toc_renderer.md)
-- [`src/local_deepwiki/export/pdf.py:129-534`](files/src/local_deepwiki/export/pdf.md)
 - [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
-- [`src/local_deepwiki/generators/analysis/hotspots.py:69-89`](files/src/local_deepwiki/generators/analysis/hotspots.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
+- [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
+- [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
+- `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
+- [`src/local_deepwiki/errors.py:53-118`](files/src/local_deepwiki/errors.md)
+- [`src/local_deepwiki/watcher.py:40-46`](files/src/local_deepwiki/watcher.md)
 
 
 *Showing 10 of 269 source files.*

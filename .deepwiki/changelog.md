@@ -6,6 +6,12 @@ Recent changes to this repository.
 
 ### April 04, 2026
 
+- [`cb56fa2`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/cb56fa2) refactor: reduce cognitive complexity of _classify_class_pattern (34 -> 4)
+  - Files: `src/local_deepwiki/generators/analysis/cohesion.py`
+
+- [`c9a342c`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c9a342c) chore: regenerate pre-built wiki with pattern-aware scoring and cognitive com...
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coupling.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md` (+216 more)
+
 - [`7bbb5c7`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/7bbb5c7) docs: add cognitive complexity to get_hotspots description
   - Files: `README.md`
 
@@ -89,11 +95,6 @@ Recent changes to this repository.
 - [`d7e2187`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d7e2187) feat(duplication): add [score_duplication](files/src/local_deepwiki/generators/analysis/health_scoring.md), rebalance to 7 dimensions, integrat...
   - Files: `src/local_deepwiki/generators/analysis/architecture_health.py`, `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/handlers/__init__.py`, `src/local_deepwiki/handlers/analysis_architecture.py`, `src/local_deepwiki/models/__init__.py` (+6 more)
 
-- [`75290fc`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/75290fc) feat: add clone detection engine (Type 1 + Type 2 duplication)
-  - Files: `src/local_deepwiki/generators/analysis/duplication.py`, `tests/test_duplication.py`
-
-- [`3ad80b3`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/3ad80b3) feat: add cohesion-based architecture health dimension (Phase 2)
-
 ## Statistics
 
 - **Commits shown**: 30
@@ -104,16 +105,16 @@ Recent changes to this repository.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/plugins/registry.py:25-361`](files/src/local_deepwiki/plugins/registry.md)
-- [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
-- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
-- [`src/local_deepwiki/generators/analysis/testability.py:26-37`](files/src/local_deepwiki/generators/analysis/testability.md)
-- [`src/local_deepwiki/export/toc_renderer.py:8-17`](files/src/local_deepwiki/export/toc_renderer.md)
-- [`src/local_deepwiki/export/pdf.py:129-534`](files/src/local_deepwiki/export/pdf.md)
 - [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
-- [`src/local_deepwiki/generators/analysis/hotspots.py:69-89`](files/src/local_deepwiki/generators/analysis/hotspots.md)
 - [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
 - [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
+- [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
+- [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
+- `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
+- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
+- [`src/local_deepwiki/errors.py:53-118`](files/src/local_deepwiki/errors.md)
+- [`src/local_deepwiki/watcher.py:40-46`](files/src/local_deepwiki/watcher.md)
 
 
 *Showing 10 of 269 source files.*
