@@ -209,3 +209,76 @@ def test_analyze_churn_with_git_repo(tmp_path):
     assert "co_change" in result
     assert "stats" in result
     assert result["stats"]["total_commits"] >= 2
+
+
+# ---------------------------------------------------------------------------
+# Tasks 7-8: MCP handler tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_handle_get_churn_metrics(tmp_path):
+    """MCP handler returns churn data as JSON TextContent."""
+    import json
+    import subprocess
+    from unittest.mock import MagicMock, patch
+
+    from local_deepwiki.handlers.analysis_architecture import handle_get_churn_metrics
+
+    subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@t.com"], cwd=tmp_path, capture_output=True
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "T"], cwd=tmp_path, capture_output=True
+    )
+    (tmp_path / "a.py").write_text("x = 1\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=tmp_path, capture_output=True)
+
+    mock_controller = MagicMock()
+    mock_controller.require_permission.return_value = None
+    with patch(
+        "local_deepwiki.handlers.analysis_architecture.get_access_controller",
+        return_value=mock_controller,
+    ):
+        result = await handle_get_churn_metrics(
+            {"repo_path": str(tmp_path), "window_days": 90}
+        )
+    assert len(result) == 1
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert "file_churn" in data
+
+
+@pytest.mark.asyncio
+async def test_handle_get_co_change(tmp_path):
+    """MCP handler for co-change returns JSON TextContent."""
+    import json
+    import subprocess
+    from unittest.mock import MagicMock, patch
+
+    from local_deepwiki.handlers.analysis_architecture import handle_get_co_change
+
+    subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@t.com"], cwd=tmp_path, capture_output=True
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "T"], cwd=tmp_path, capture_output=True
+    )
+    (tmp_path / "a.py").write_text("x = 1\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=tmp_path, capture_output=True)
+
+    mock_controller = MagicMock()
+    mock_controller.require_permission.return_value = None
+    with patch(
+        "local_deepwiki.handlers.analysis_architecture.get_access_controller",
+        return_value=mock_controller,
+    ):
+        result = await handle_get_co_change({"repo_path": str(tmp_path)})
+    assert len(result) == 1
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert "co_change" in data

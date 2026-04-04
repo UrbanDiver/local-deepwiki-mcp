@@ -851,4 +851,70 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         },
         annotations=_READ_ONLY,
     ),
+    Tool(
+        name="get_churn_metrics",
+        description=(
+            "Analyze file change frequency from git history. Shows which files "
+            "change most often, optionally overlaid with cyclomatic complexity "
+            "to find high-risk hotspots (frequently changed + complex). "
+            "Also reports churn concentration (Gini coefficient)."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "window_days": {
+                    "type": "integer",
+                    "description": "Days of git history to analyze (1-365, default: 90)",
+                },
+                "top_n": {
+                    "type": "integer",
+                    "description": "Number of top results (1-100, default: 20)",
+                },
+                "include_complexity": {
+                    "type": "boolean",
+                    "description": "Include churn×complexity composite (default: true)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
+    Tool(
+        name="get_co_change",
+        description=(
+            "Find files that frequently change together in the same commits. "
+            "Uses Jaccard similarity to measure co-change strength. High "
+            "co-change coupling may indicate hidden dependencies or candidates "
+            "for merging/splitting."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "window_days": {
+                    "type": "integer",
+                    "description": "Days of git history to analyze (1-365, default: 90)",
+                },
+                "min_shared": {
+                    "type": "integer",
+                    "description": "Minimum shared commits for inclusion (1-50, default: 2)",
+                },
+                "top_n": {
+                    "type": "integer",
+                    "description": "Number of top pairs (1-100, default: 20)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
 )

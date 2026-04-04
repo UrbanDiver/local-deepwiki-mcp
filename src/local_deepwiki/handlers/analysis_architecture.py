@@ -18,6 +18,8 @@ from local_deepwiki.models import (
     CompareArchitectureArgs,
     GetArchitectureHealthArgs,
     GetArchitectureTrendsArgs,
+    GetChurnMetricsArgs,
+    GetCoChangeArgs,
     GetCouplingMetricsArgs,
     GetCrossModuleDependenciesArgs,
     GetDesignSmellsArgs,
@@ -828,3 +830,67 @@ async def handle_get_guided_tour(
         repo_path,
     )
     return make_tool_text_content("get_guided_tour", result)
+
+
+@handle_tool_errors
+async def handle_get_churn_metrics(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_churn_metrics tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetChurnMetricsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.churn import analyze_churn
+
+    result = analyze_churn(
+        repo_path,
+        window_days=validated.window_days,
+        top_n=validated.top_n,
+        include_complexity=validated.include_complexity,
+    )
+    return make_tool_text_content("get_churn_metrics", result)
+
+
+@handle_tool_errors
+async def handle_get_co_change(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_co_change tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetCoChangeArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.churn import analyze_churn
+
+    result = analyze_churn(
+        repo_path,
+        window_days=validated.window_days,
+        top_n=validated.top_n,
+        min_co_change=validated.min_shared,
+        include_complexity=False,
+    )
+    return make_tool_text_content(
+        "get_co_change",
+        {
+            "status": "success",
+            "co_change": result["co_change"],
+            "stats": result["stats"],
+        },
+    )

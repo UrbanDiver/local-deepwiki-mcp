@@ -861,3 +861,49 @@ class StopWikiServerArgs(BaseModel):
         default=None,
         description="Optional wiki path to identify which server to stop",
     )
+
+
+class GetChurnMetricsArgs(BaseModel):
+    """Arguments for the get_churn_metrics tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    window_days: int = Field(
+        default=90,
+        ge=1,
+        le=365,
+        description="Number of days of git history to analyze (default: 90)",
+    )
+    top_n: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Number of top results to return (default: 20)",
+    )
+    include_complexity: bool = Field(
+        default=True,
+        description="Include churn×complexity composite scores (default: true)",
+    )
+
+
+class GetCoChangeArgs(BaseModel):
+    """Arguments for the get_co_change tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    window_days: int = Field(
+        default=90,
+        ge=1,
+        le=365,
+        description="Number of days of git history to analyze (default: 90)",
+    )
+    min_shared: int = Field(
+        default=2,
+        ge=1,
+        le=50,
+        description="Minimum shared commits for a pair to be included (default: 2)",
+    )
+    top_n: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Number of top pairs to return (default: 20)",
+    )
