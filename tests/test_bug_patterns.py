@@ -255,3 +255,114 @@ def test_no_unreachable_when_return_is_last():
     pat = next(p for p in PATTERNS if p.name == "unreachable-code")
     findings = pat.detect(funcs[0], src)
     assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# Unused variable
+# ---------------------------------------------------------------------------
+def test_detect_unused_variable():
+    """Detect variable assigned but never read."""
+    root, src = _parse_python(
+        """\
+        def f():
+            x = 42
+            return 1
+        """
+    )
+    detector = next(p for p in PATTERNS if p.name == "unused-variable")
+    funcs = _find_functions(root)
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) >= 1
+    assert any("x" in f["message"] for f in findings)
+
+
+def test_unused_variable_underscore_prefix_ok():
+    """No finding for underscore-prefixed names (intentionally unused)."""
+    root, src = _parse_python(
+        """\
+        def f():
+            _unused = 42
+            return 1
+        """
+    )
+    detector = next(p for p in PATTERNS if p.name == "unused-variable")
+    funcs = _find_functions(root)
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# Exception not used
+# ---------------------------------------------------------------------------
+def test_detect_exception_not_used():
+    """Detect exception bound with 'as' but never referenced."""
+    root, src = _parse_python(
+        """\
+        def f():
+            try:
+                pass
+            except ValueError as e:
+                print("error")
+        """
+    )
+    detector = next(p for p in PATTERNS if p.name == "exception-not-used")
+    funcs = _find_functions(root)
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) == 1
+    assert "e" in findings[0]["message"]
+
+
+def test_exception_used_no_finding():
+    """No finding when the bound exception is actually used."""
+    root, src = _parse_python(
+        """\
+        def f():
+            try:
+                pass
+            except ValueError as e:
+                print(e)
+        """
+    )
+    detector = next(p for p in PATTERNS if p.name == "exception-not-used")
+    funcs = _find_functions(root)
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# Missing await
+# ---------------------------------------------------------------------------
+def test_detect_missing_await():
+    """Detect call to locally-defined async function without await."""
+    root, src = _parse_python(
+        """\
+        async def f():
+            async def inner():
+                return 1
+            inner()
+        """
+    )
+    detector = next(p for p in PATTERNS if p.name == "missing-await")
+    funcs = _find_functions(root)
+    # Get the outermost async function
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Shadowed variable
+# ---------------------------------------------------------------------------
+def test_detect_shadowed_variable():
+    """Detect for-loop variable that shadows an outer assignment."""
+    root, src = _parse_python(
+        """\
+        def f():
+            x = 1
+            for x in range(10):
+                pass
+        """
+    )
+    detector = next(p for p in PATTERNS if p.name == "shadowed-variable")
+    funcs = _find_functions(root)
+    findings = detector.detect(funcs[0], src)
+    assert len(findings) >= 1
