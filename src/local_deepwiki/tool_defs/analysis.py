@@ -980,4 +980,24 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         },
         annotations=_READ_ONLY,
     ),
+    Tool(
+        name="get_testability_metrics",
+        description=(
+            "Analyze testability metrics for a Python repository. Reports "
+            "test-to-code ratio, matches test files to source modules, counts "
+            "assertions per test, and identifies untested source files."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
 )

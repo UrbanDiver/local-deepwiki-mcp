@@ -23,6 +23,7 @@ from local_deepwiki.models import (
     GetCohesionMetricsArgs,
     GetCouplingMetricsArgs,
     GetDuplicationMetricsArgs,
+    GetTestabilityMetricsArgs,
     GetCrossModuleDependenciesArgs,
     GetDesignSmellsArgs,
     GetGuidedTourArgs,
@@ -939,3 +940,26 @@ async def handle_get_duplication_metrics(
         exclude_tests=validated.exclude_tests,
     )
     return make_tool_text_content("get_duplication_metrics", result)
+
+
+@handle_tool_errors
+async def handle_get_testability_metrics(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_testability_metrics tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetTestabilityMetricsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.testability import analyze_testability
+
+    result = analyze_testability(repo_path)
+    return make_tool_text_content("get_testability_metrics", result)

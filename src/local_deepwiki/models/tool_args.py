@@ -911,3 +911,9 @@ class GetDuplicationMetricsArgs(BaseModel):
         default=True,
         description="Exclude test files from analysis (default: true)",
     )
+
+
+class GetTestabilityMetricsArgs(BaseModel):
+    """Arguments for the get_testability_metrics tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")

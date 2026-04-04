@@ -26,7 +26,9 @@ from local_deepwiki.generators.analysis.health_scoring import (
     score_duplication,
     score_layers,
     score_smells,
+    score_testability,
 )
+from local_deepwiki.generators.analysis.testability import analyze_testability
 from local_deepwiki.generators.analysis.hotspots import analyze_hotspots
 from local_deepwiki.generators.analysis.layer_analysis import analyze_layer_dependencies
 from local_deepwiki.generators.analysis.source_filter import iter_python_files
@@ -138,6 +140,7 @@ def _score_all_dimensions(
     churn_result: dict[str, Any],
     cohesion_result: dict[str, Any],
     duplication_result: dict[str, Any],
+    testability_result: dict[str, Any],
     total_lines: int,
 ) -> dict[str, Any]:
     """Compute scored dimension dict from raw analysis results."""
@@ -160,6 +163,9 @@ def _score_all_dimensions(
         ),
         "duplication": score_duplication(
             stats=duplication_result.get("stats", {}),
+        ),
+        "testability": score_testability(
+            stats=testability_result.get("stats", {}),
         ),
     }
 
@@ -197,6 +203,8 @@ def analyze_architecture_health(
 
     duplication_result = analyze_duplication(repo_path)
 
+    testability_result = analyze_testability(repo_path)
+
     # Filter smells to source-only (exclude test/generated)
     src_smells = [s for s in smell_result.get("smells", []) if s.get("file", "").startswith("src/")]
 
@@ -208,6 +216,7 @@ def analyze_architecture_health(
         churn_result,
         cohesion_result,
         duplication_result,
+        testability_result,
         total_lines,
     )
     overall = compute_overall(dimensions)

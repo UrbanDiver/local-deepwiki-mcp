@@ -80,6 +80,7 @@ def test_analyze_architecture_health_dimension_scores(simple_repo: Path) -> None
         "churn",
         "cohesion",
         "duplication",
+        "testability",
     ):
         assert dim in dimensions, f"Missing dimension: {dim}"
         score = dimensions[dim]["score"]
