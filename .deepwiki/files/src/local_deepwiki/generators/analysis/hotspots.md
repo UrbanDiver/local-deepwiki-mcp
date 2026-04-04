@@ -2,80 +2,85 @@
 
 ## File Overview
 
-This file implements **hotspot analysis**, a mechanism for identifying and ranking functions within a codebase based on complexity or other metrics. It performs static analysis using tree-sitter AST parsing to extract function-level data without requiring external services or LLMs. The analysis supports ranking by cyclomatic complexity, parameter count, function length, and nesting depth.
+This file provides functionality to analyze source code repositories and identify "hotspots" — functions that are particularly complex or resource-intensive based on various metrics such as cyclomatic complexity, cognitive complexity, parameter count, function length, or nesting depth.
 
-The module is designed to be used by analysis tools that need to highlight problematic or complex functions in a repository, such as in documentation generation or architecture health checks.
+The analysis is performed entirely offline using tree-sitter AST parsing, without any external dependencies or network calls. It is designed to support tools like complexity reports, architecture health dashboards, and churn analysis by ranking functions across a repository based on a chosen metric.
 
 ## Key Concepts
 
-### AST-Based Function Parsing
-The core of this module's functionality is based on **tree-sitter AST parsing**. It leverages the [`CodeParser`](../../core/parser/code_parser.md) class to parse source code into structured abstract syntax trees, which are then traversed to extract function metrics.
-
-### Cyclomatic Complexity Estimation
-Cyclomatic complexity is estimated by counting decision points in the function's control flow:
-- Branching constructs like `if`, `while`, `for`, `switch`, etc., increase complexity.
-- Logical operators like `and`, `or` also contribute to complexity.
-- The `_estimate_cyclomatic` function recursively traverses a node and accumulates complexity based on these rules.
-
 ### Function Metrics Extraction
-Each function node in the AST is analyzed to extract:
-- Function name
-- Line number and end line
-- [Parameter](api_docs.md) count (excluding `self` and `cls`)
-- Cyclomatic complexity
-- Function length (in lines)
-- Nesting depth
 
-These metrics are stored and used to rank functions during hotspot analysis.
+The core of this module is the ability to extract per-function metrics from source code using AST traversal. The following metrics are computed:
 
-### Recursive AST Traversal
-The `_walk_node` function recursively traverses the AST, collecting function information and updating nesting depth when entering nested constructs like function definitions or control structures.
+- **Cyclomatic Complexity**: Estimated using `_estimate_cyclomatic`, which counts decision points.
+- **Cognitive Complexity**: Computed using `_compute_cognitive_complexity`, following SonarSource’s specification.
+- **Function Length**: Measured in lines of code.
+- **[Parameter](api_docs.md) Count**: Number of non-`self`/`cls` parameters.
+- **Nesting Depth**: How deeply nested a function is within other control structures.
+
+These metrics are essential for identifying functions that may be difficult to maintain or test.
+
+### AST Traversal Patterns
+
+The module leverages recursive AST traversal through functions like `_walk_node` and `_walk`, which walk the tree-sitter AST nodes and [collect](../../web/routes_chat.md) relevant information. These functions are structured to handle different node types appropriately:
+
+- Control flow constructs (`if`, `for`, `while`) are treated as structural increments for complexity.
+- Logical operators (`and`, `or`) are analyzed for switching between operator types to compute cognitive complexity.
+- Nesting levels are tracked to provide accurate nesting depth for functions.
+
+This approach allows for fine-grained analysis of code structure and complexity without relying on precomputed metrics or external tools.
+
+### Metric-Based Ranking
+
+The `analyze_hotspots` function provides a unified interface for ranking functions based on a specified metric. This allows users to focus on different aspects of code quality:
+
+- **Complexity**: Cyclomatic complexity
+- **Parameters**: Number of parameters
+- **Length**: Number of lines
+- **Nesting**: Nesting depth
+- **Cognitive**: Cognitive complexity
+
+This flexibility makes the module adaptable to various code quality and maintenance needs.
 
 ## Integration
 
-This module is part of the analysis pipeline and integrates with:
-- [`iter_source_files`](source_filter.md) from `local_deepwiki.generators.analysis.source_filter` to iterate over source files in a repository.
-- [`CodeParser`](../../core/parser/code_parser.md) from `local_deepwiki.core.parser` to perform AST parsing.
-- [`get_logger`](../../logging.md) from `local_deepwiki.logging` for logging during analysis.
+This module is part of the `local_deepwiki.generators.analysis` package and integrates with other core components:
 
-It is used by:
-- `hotspots_page` (for generating hotspot reports)
-- `analysis_architecture` (for architecture health checks)
-- Various internal analysis tools that require complexity or structural insights
+- **[`CodeParser`](../../core/parser/code_parser.md)**: Used via `local_deepwiki.core.parser` to parse source files into tree-sitter ASTs.
+- **[`iter_source_files`](source_filter.md)**: From `local_deepwiki.generators.analysis.source_filter`, it walks the repository and identifies source files to process.
+- **Logging**: Utilizes [`get_logger`](../../logging.md) from `local_deepwiki.logging` for status and debug messages.
 
-The module is **not dependent on any LLM or external API**, making it fast and self-contained for local analysis.
+The module is called by several other components in the system, including:
+
+- `complexity`, `design_smells`, `architecture_health`, and others for detailed analysis.
+- `churn`, `hotspots_page`, `module_health` for reporting or visualization purposes.
+
+This modular design ensures that hotspot analysis can be reused across multiple analysis tasks, promoting consistency and reducing code duplication.
 
 ## Design Notes
 
-### Why Static Analysis?
-This module avoids LLMs or external services to ensure:
-- **Speed**: Analysis runs entirely from the filesystem.
-- **Reproducibility**: No external dependencies or network calls.
-- **Security**: No data is sent to external systems.
+### Offline Analysis
 
-### Why Tree-Sitter?
-Tree-sitter provides:
-- **[Language](../../models/foundation.md)-agnostic ASTs** (supports multiple languages).
-- **Accurate parsing** with full syntactic context.
-- **Efficient traversal** for extracting function metrics.
+The entire analysis is performed offline using only local file system access and tree-sitter parsing. This makes it fast, secure, and suitable for environments where network access is restricted or unavailable.
 
-### Function Ranking and Filtering
-The `analyze_hotspots` function supports:
-- Filtering by a minimum threshold (`min_threshold`)
-- Ranking by various metrics (`complexity`, `params`, `length`, `nesting`)
-- Returning only top `N` results (`top_n`)
+### Handling of Edge Cases
 
-### Handling Anonymous Functions
-Anonymous functions are labeled as `<anonymous>` in the output to ensure all entries are meaningful.
+- **Anonymous Functions**: Anonymous functions are labeled as `<anonymous>` in the output.
+- **Invalid Metrics**: The `analyze_hotspots` function validates the input metric and returns an error if invalid.
+- **Threshold Filtering**: Functions can be filtered based on a minimum metric value, allowing for fine-grained control over results.
+- **Test File Exclusion**: By default, test files are excluded from analysis, which improves relevance for production code analysis.
 
-### Nesting Depth Calculation
-Nesting depth is calculated by tracking when entering constructs like nested functions or control structures. This helps identify deeply nested code that may be hard to follow.
+### Performance Considerations
+
+- The AST traversal is optimized to avoid unnecessary recursion and to compute metrics efficiently.
+- The use of `nonlocal` in nested functions (`_count`, `_walk`) avoids passing state through function arguments, improving readability and performance.
+- Results are pre-sorted and truncated to `top_n` to reduce memory usage and improve responsiveness.
 
 ### Metric Mapping
-The `complexity` metric is mapped to `cyclomatic` internally for consistency in sorting and reporting.
 
-### Error Handling
-If a file fails to parse, it is skipped silently. This ensures that one broken file doesn't stop the entire analysis.
+The module maps the user-facing `metric` parameter to internal keys. For example, `"complexity"` maps to `"cyclomatic"` for consistency with the complexity calculation. This design choice allows for a clean public API while internally managing multiple complexity-related metrics.
+
+This approach also supports future expansion, such as adding more metrics or modifying how they are computed, without breaking existing APIs.
 
 ## API Reference
 
@@ -104,7 +109,7 @@ Walk all source files in *repo_path* and rank functions by *metric*.
 
 
 <details>
-<summary>View Source (lines 172-241) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/hotspots.py#L172-L241">GitHub</a></summary>
+<summary>View Source (lines 266-336) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/hotspots.py#L266-L336">GitHub</a></summary>
 
 ```python
 def analyze_hotspots(
@@ -153,6 +158,7 @@ def analyze_hotspots(
             "metric_value": f[metric_key],
             "details": {
                 "cyclomatic": f["cyclomatic"],
+                "cognitive": f["cognitive"],
                 "params": f["params"],
                 "length": f["length"],
                 "nesting": f["nesting"],
@@ -186,34 +192,41 @@ def analyze_hotspots(
 ```mermaid
 flowchart TD
     N0[CodeParser]
-    N1[_count]
-    N2[_estimate_cyclomatic]
-    N3[_extract_function_info]
-    N4[_parse_file_functions]
-    N5[_scan_all_functions]
-    N6[_walk_node]
-    N7[analyze_hotspots]
-    N8[decode]
-    N9[iter_source_files]
-    N10[parse_file]
-    N11[sort]
-    N2 --> N8
-    N2 --> N1
-    N1 --> N8
-    N1 --> N1
-    N3 --> N8
+    N1[_compute_cognitive_complexity]
+    N2[_count]
+    N3[_estimate_cyclomatic]
+    N4[_extract_function_info]
+    N5[_parse_file_functions]
+    N6[_scan_all_functions]
+    N7[_walk]
+    N8[_walk_node]
+    N9[analyze_hotspots]
+    N10[decode]
+    N11[iter_source_files]
+    N12[parse_file]
+    N13[sort]
+    N3 --> N10
     N3 --> N2
-    N6 --> N3
-    N6 --> N6
-    N4 --> N0
+    N2 --> N10
+    N2 --> N2
+    N1 --> N7
+    N1 --> N10
+    N7 --> N7
+    N7 --> N10
     N4 --> N10
-    N4 --> N6
-    N5 --> N9
-    N5 --> N4
-    N7 --> N5
-    N7 --> N11
+    N4 --> N3
+    N4 --> N1
+    N8 --> N4
+    N8 --> N8
+    N5 --> N0
+    N5 --> N12
+    N5 --> N8
+    N6 --> N11
+    N6 --> N5
+    N9 --> N6
+    N9 --> N13
     classDef func fill:#e1f5fe
-    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11 func
+    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13 func
 ```
 
 ## Used By
@@ -221,13 +234,15 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **[`CodeParser`](../../core/parser/code_parser.md)**: called by `_parse_file_functions`
+- **`_compute_cognitive_complexity`**: called by `_extract_function_info`
 - **`_count`**: called by `_count`, `_estimate_cyclomatic`
 - **`_estimate_cyclomatic`**: called by `_extract_function_info`
 - **`_extract_function_info`**: called by `_walk_node`
 - **`_parse_file_functions`**: called by `_scan_all_functions`
 - **`_scan_all_functions`**: called by `analyze_hotspots`
+- **`_walk`**: called by `_compute_cognitive_complexity`, `_walk`
 - **`_walk_node`**: called by `_parse_file_functions`, `_walk_node`
-- **`decode`**: called by `_count`, `_estimate_cyclomatic`, `_extract_function_info`
+- **`decode`**: called by `_compute_cognitive_complexity`, `_count`, `_estimate_cyclomatic`, `_extract_function_info`, `_walk`
 - **[`iter_source_files`](source_filter.md)**: called by `_scan_all_functions`
 - **`parse_file`**: called by `_parse_file_functions`
 - **`sort`**: called by `analyze_hotspots`
@@ -244,6 +259,42 @@ From `test_hotspots.py::test_hotspots_returns_success`:
 result = await handle_get_hotspots({"repo_path": str(simple_repo)})
 data = json.loads(result[0].text)
 assert data["status"] == "success"
+```
+
+### Flat function with no control flow has cognitive complexity 0
+
+From `test_hotspots.py::test_cognitive_complexity_simple_function`:
+
+```python
+_compute_cognitive_complexity,
+)
+from local_deepwiki.core.parser.code_parser import CodeParser
+from local_deepwiki.models import Language as LangEnum
+from local_deepwiki.core.parser.ast_utils import find_nodes_by_type
+
+source = "def simple(a, b):\n    return a + b\n"
+parser = CodeParser()
+root = parser.parse_source(source, LangEnum.PYTHON)
+fns = find_nodes_by_type(root, {"function_definition"})
+assert _compute_cognitive_complexity(fns[0]) == 0
+```
+
+### Top-level if: +1 structural, 0 nesting = 1
+
+From `test_hotspots.py::test_cognitive_complexity_single_if`:
+
+```python
+_compute_cognitive_complexity,
+)
+from local_deepwiki.core.parser.code_parser import CodeParser
+from local_deepwiki.models import Language as LangEnum
+from local_deepwiki.core.parser.ast_utils import find_nodes_by_type
+
+source = "def f(x):\n    if x:\n        return 1\n    return 0\n"
+parser = CodeParser()
+root = parser.parse_source(source, LangEnum.PYTHON)
+fns = find_nodes_by_type(root, {"function_definition"})
+assert _compute_cognitive_complexity(fns[0]) == 1
 ```
 
 ### Example: `hotspots`
@@ -268,13 +319,15 @@ result = generate_hotspots_page(_make_data())
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `_scan_all_functions` | function | Brian Breidenbach | yesterday | `29ae780` refactor: decompose long me... |
-| `analyze_hotspots` | function | Brian Breidenbach | yesterday | `29ae780` refactor: decompose long me... |
-| `_estimate_cyclomatic` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
-| `_count` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
-| `_extract_function_info` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
-| `_walk_node` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
-| `_parse_file_functions` | function | Brian Breidenbach | 1 week ago | `f6da957` feat: add 4 architecture an... |
+| `_compute_cognitive_complexity` | function | Brian Breidenbach | today | `db19fc2` feat: add cognitive complex... |
+| `_walk` | function | Brian Breidenbach | today | `db19fc2` feat: add cognitive complex... |
+| `_extract_function_info` | function | Brian Breidenbach | today | `db19fc2` feat: add cognitive complex... |
+| `_parse_file_functions` | function | Brian Breidenbach | today | `db19fc2` feat: add cognitive complex... |
+| `analyze_hotspots` | function | Brian Breidenbach | today | `db19fc2` feat: add cognitive complex... |
+| `_scan_all_functions` | function | Brian Breidenbach | 5 days ago | `29ae780` refactor: decompose long me... |
+| `_estimate_cyclomatic` | function | Brian Breidenbach | 2 weeks ago | `f6da957` feat: add 4 architecture an... |
+| `_count` | function | Brian Breidenbach | 2 weeks ago | `f6da957` feat: add 4 architecture an... |
+| `_walk_node` | function | Brian Breidenbach | 2 weeks ago | `f6da957` feat: add 4 architecture an... |
 
 ## Additional Source Code
 
@@ -337,10 +390,129 @@ def _count(n: Node) -> None:
 </details>
 
 
+#### `_compute_cognitive_complexity`
+
+<details>
+<summary>View Source (lines 126-180) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/hotspots.py#L126-L180">GitHub</a></summary>
+
+```python
+def _compute_cognitive_complexity(node: Node) -> int:
+    """Compute cognitive complexity following SonarSource's specification.
+
+    Three increment rules:
+    1. Structural: +1 for each control flow break (if, for, while, catch, etc.)
+    2. Nesting: +nesting_depth for each structural increment inside nesting
+    3. Fundamental: +1 for each switch between logical operator types
+    """
+    score = 0
+
+    def _walk(n: Node, nesting: int) -> None:
+        nonlocal score
+
+        if n.type in _COGNITIVE_NESTING_TYPES:
+            # Structural +1, plus nesting bonus
+            score += 1 + nesting
+            # Children are nested one level deeper
+            for child in n.children:
+                _walk(child, nesting + 1)
+            return
+
+        if n.type in _COGNITIVE_FLAT_TYPES:
+            # Structural +1, but no nesting bonus and no nesting increase
+            score += 1
+            for child in n.children:
+                _walk(child, nesting)
+            return
+
+        if n.type in _COGNITIVE_NEST_ONLY:
+            # No structural increment, but increases nesting for children
+            for child in n.children:
+                _walk(child, nesting + 1)
+            return
+
+        # Logical operator sequences: +1 per switch between operator types
+        if n.type in ("boolean_operator", "binary_expression"):
+            op_text = None
+            for child in n.children:
+                child_text = (
+                    child.text.decode("utf-8", errors="replace") if child.text else ""
+                )
+                if child_text in ("and", "or", "&&", "||"):
+                    if op_text is None or child_text != op_text:
+                        score += 1
+                        op_text = child_text
+            # Still walk children for nested boolean expressions
+            for child in n.children:
+                _walk(child, nesting)
+            return
+
+        for child in n.children:
+            _walk(child, nesting)
+
+    _walk(node, 0)
+    return score
+```
+
+</details>
+
+
+#### `_walk`
+
+<details>
+<summary>View Source (lines 136-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/hotspots.py#L136-L177">GitHub</a></summary>
+
+```python
+def _walk(n: Node, nesting: int) -> None:
+        nonlocal score
+
+        if n.type in _COGNITIVE_NESTING_TYPES:
+            # Structural +1, plus nesting bonus
+            score += 1 + nesting
+            # Children are nested one level deeper
+            for child in n.children:
+                _walk(child, nesting + 1)
+            return
+
+        if n.type in _COGNITIVE_FLAT_TYPES:
+            # Structural +1, but no nesting bonus and no nesting increase
+            score += 1
+            for child in n.children:
+                _walk(child, nesting)
+            return
+
+        if n.type in _COGNITIVE_NEST_ONLY:
+            # No structural increment, but increases nesting for children
+            for child in n.children:
+                _walk(child, nesting + 1)
+            return
+
+        # Logical operator sequences: +1 per switch between operator types
+        if n.type in ("boolean_operator", "binary_expression"):
+            op_text = None
+            for child in n.children:
+                child_text = (
+                    child.text.decode("utf-8", errors="replace") if child.text else ""
+                )
+                if child_text in ("and", "or", "&&", "||"):
+                    if op_text is None or child_text != op_text:
+                        score += 1
+                        op_text = child_text
+            # Still walk children for nested boolean expressions
+            for child in n.children:
+                _walk(child, nesting)
+            return
+
+        for child in n.children:
+            _walk(child, nesting)
+```
+
+</details>
+
+
 #### `_extract_function_info`
 
 <details>
-<summary>View Source (lines 92-117) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/hotspots.py#L92-L117">GitHub</a></summary>
+<summary>View Source (lines 183-210) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/hotspots.py#L183-L210">GitHub</a></summary>
 
 ```python
 def _extract_function_info(node: Node, depth: int) -> dict[str, Any]:
@@ -359,12 +531,14 @@ def _extract_function_info(node: Node, depth: int) -> dict[str, Any]:
                 not in ("self", "cls")
             )
     cyclomatic = _estimate_cyclomatic(node)
+    cognitive = _compute_cognitive_complexity(node)
     length = node.end_point[0] - node.start_point[0] + 1
     return {
         "name": name,
         "line": node.start_point[0] + 1,
         "end_line": node.end_point[0] + 1,
         "cyclomatic": cyclomatic,
+        "cognitive": cognitive,
         "params": param_count,
         "length": length,
         "nesting": depth,
@@ -377,7 +551,7 @@ def _extract_function_info(node: Node, depth: int) -> dict[str, Any]:
 #### `_walk_node`
 
 <details>
-<summary>View Source (lines 120-126) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/hotspots.py#L120-L126">GitHub</a></summary>
+<summary>View Source (lines 213-219) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/hotspots.py#L213-L219">GitHub</a></summary>
 
 ```python
 def _walk_node(node: Node, depth: int, results: list[dict[str, Any]]) -> None:
@@ -395,7 +569,7 @@ def _walk_node(node: Node, depth: int, results: list[dict[str, Any]]) -> None:
 #### `_parse_file_functions`
 
 <details>
-<summary>View Source (lines 129-149) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/hotspots.py#L129-L149">GitHub</a></summary>
+<summary>View Source (lines 222-243) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/hotspots.py#L222-L243">GitHub</a></summary>
 
 ```python
 def _parse_file_functions(full_path: Path, rel_path: Path) -> list[dict[str, Any]]:
@@ -413,6 +587,7 @@ def _parse_file_functions(full_path: Path, rel_path: Path) -> list[dict[str, Any
             "file": str(rel_path),
             "line": entry["line"],
             "cyclomatic": entry["cyclomatic"],
+            "cognitive": entry["cognitive"],
             "params": entry["params"],
             "length": entry["length"],
             "nesting": entry["nesting"],
@@ -427,7 +602,7 @@ def _parse_file_functions(full_path: Path, rel_path: Path) -> list[dict[str, Any
 #### `_scan_all_functions`
 
 <details>
-<summary>View Source (lines 152-169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/hotspots.py#L152-L169">GitHub</a></summary>
+<summary>View Source (lines 246-263) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/hotspots.py#L246-L263">GitHub</a></summary>
 
 ```python
 def _scan_all_functions(

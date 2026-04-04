@@ -1,77 +1,85 @@
-# File Overview
+# File: `src/local_deepwiki/generators/analysis/health_scoring.py`
 
-**File**: `src/local_deepwiki/generators/analysis/health_scoring.py`
+## File Overview
 
-**Description**: This module provides functions to compute health scores for various architectural dimensions of a codebase. It converts raw metrics into dimension-specific scores (0–100) and an overall letter grade (A–F), enabling a standardized way to assess code quality and architecture health.
+This module provides a suite of functions for converting raw architecture and code metrics into dimension-specific scores and overall health grades. It is part of the analysis pipeline for generating architectural health reports. The module is designed to be pure computation — it does not perform I/O operations or directly interact with external systems. Instead, it accepts structured metric data and returns standardized score objects that include scores, letter grades, and detailed factors.
 
-**Responsibility**: The module encapsulates scoring logic for multiple architectural health dimensions, such as complexity, coupling, smells, layers, churn, cohesion, duplication, testability, and maintainability. It is designed to be used with summary data from analysis tools and does not perform I/O operations.
+The module is used by:
+- `architecture_health` (in `src/local_deepwiki/generators/analysis/architecture_report.py`)
+- Various test functions in `test_health_scoring`
 
-**Design Rationale**: The design follows a modular approach where each architectural dimension is scored independently, using weighted penalties based on metric thresholds. This allows for clear separation of concerns and makes it easy to adjust scoring logic for individual dimensions. The `compute_overall` function aggregates these scores using predefined weights, providing a unified health score.
+The overall goal is to provide a consistent and interpretable way to assess software health across multiple dimensions, such as complexity, coupling, cohesion, duplication, and maintainability.
 
----
+## Key Concepts
 
-# Key Concepts
+### Dimensional Scoring
 
-## Dimension-Based Scoring
+Each function in this module corresponds to a specific dimension of software health:
+- `score_complexity`: Evaluates cyclomatic complexity.
+- `score_coupling`: Assesses module coupling and instability.
+- `score_smells`: Rates design smells and God class occurrences.
+- `score_layers`: Checks layer discipline violations.
+- `score_churn`: Measures file churn and complexity.
+- `score_cohesion`: Evaluates class and module cohesion.
+- `score_duplication`: Detects code duplication.
+- `score_testability`: Rates test coverage and assertion density.
+- `score_maintainability`: Evaluates Maintainability Index.
 
-Each function in this module computes a score for a specific architectural dimension. The scoring algorithm typically:
-1. Takes raw metrics or summaries as input.
-2. Applies penalties based on thresholds or ratios.
-3. Caps penalties to prevent a single issue from completely derailing the score.
-4. Returns a normalized score (0–100) and a letter grade.
+These functions are designed to be **independent**, each scoring one dimension based on its specific metrics. They return a consistent structure:
+```python
+{
+    "score": float,
+    "grade": str,
+    "factors": dict
+}
+```
 
-This approach allows for fine-grained assessment of code health, highlighting different aspects like complexity, maintainability, and testability.
+### Scoring Algorithm Design
 
-## Weighted Aggregation
+The scoring algorithms are designed to:
+- Start at a perfect score (100) and deduct points based on negative indicators.
+- Apply **penalties with ceilings** to prevent over-penalization.
+- Use **weighted penalties** that reflect the severity of issues.
+- Include **detailed factor breakdowns** for transparency and debugging.
 
-The `compute_overall` function aggregates dimension scores using predefined weights (`_DIMENSION_WEIGHTS`) to produce a single health score. This reflects the relative importance of each dimension in overall architecture health.
+For example, in `score_complexity`, the maximum cyclomatic complexity and percentage of functions over CC=15 are used to compute a deduction from 100. Similarly, in `score_duplication`, a linear penalty is applied to duplication ratios, with a cap at 50 points.
 
-## Letter Grade Conversion
+### Overall Scoring
 
-The `letter_grade` function maps a numerical score to a letter grade (A–F) using a fixed threshold list (`_GRADE_THRESHOLDS`). This provides a human-readable representation of health scores.
+The `compute_overall` function aggregates scores from all dimensions using a predefined set of weights (`_DIMENSION_WEIGHTS`). This allows for a weighted average that reflects the relative importance of each dimension in the overall health assessment.
 
-## Penalty Algorithms
+## Integration
 
-Penalties are applied using linear or capped deductions, depending on the metric's severity. For example:
-- Duplication ratio uses a stepwise penalty.
-- Cohesion uses a combination of percentage and average metrics.
+This module is a core part of the analysis pipeline and is used by:
+- `architecture_health` in `src/local_deepwiki/generators/analysis/architecture_report.py` — which orchestrates the full health report generation.
+- Test suite (`test_health_scoring`) — for unit testing each scoring function in isolation.
 
-These algorithms were chosen to reflect real-world impact: small deviations should not heavily penalize, while large issues should be heavily weighted.
+The functions in this file are **pure** and **stateless**, which allows them to be easily unit-tested and reused in different contexts. The module is imported by `architecture_health`, which in turn is called by `SessionState` and `Types` handlers, indicating that the health scoring is a key part of the session-based analysis workflow.
 
----
+## Design Notes
 
-# Integration
+### Edge Case Handling
 
-This module is part of the architecture analysis pipeline and is used by other components in the codebase, particularly in:
-- `src/local_deepwiki/generators/analysis/architecture_report.py` — for generating detailed architecture health reports.
-- `src/local_deepwiki/handlers/session_state.py` — to manage the state of health scoring during analysis.
-- `src/local_deepwiki/handlers/types.py` — to define the types used in health scoring.
+- **Zero or missing metrics**: Functions like `score_complexity` and `score_smells` return a perfect score (`100`, grade `"A"`) when input data is missing or zero, to avoid penalizing projects that have no data in a dimension.
+- **Capped deductions**: All penalties are capped to avoid negative scores. For example, `score_churn` caps its deductions at 40 points for high-risk files and 15 points for Gini coefficient concentration.
+- **Fallbacks for missing data**: In functions like `score_duplication`, the module prefers inter-file metrics (e.g., `inter_file_duplication_ratio`) when available, falling back to total metrics if not.
 
-Functions are called from:
-- `test_health_scoring` — for unit testing of individual scoring functions.
-- `architecture_health` — for computing the overall health score in the architecture health report.
+### Weighted Scoring
 
-The module is designed to work with summary data from analysis tools (e.g., cyclomatic complexity, churn metrics, duplication counts) and does not perform I/O or depend on external data sources.
+The `compute_overall` function uses a fixed `_DIMENSION_WEIGHTS` dictionary to compute a weighted average of dimension scores. This allows the system to emphasize or de-emphasize certain dimensions depending on the project’s priorities or domain-specific needs.
 
----
+### Letter Grade Conversion
 
-# Design Notes
+The `letter_grade` function is a simple utility that maps a numeric score to a letter grade (A-F) using a predefined threshold list (`_GRADE_THRESHOLDS`). This is used across all scoring functions to ensure consistent grading.
 
-## Edge Case Handling
+### Design Rationale
 
-- **Zero Division Protection**: Functions like `score_complexity`, `score_smells`, and `score_cohesion` check for zero values (e.g., `total_functions`, `total_lines`) to prevent division-by-zero errors.
-- **Empty Input Handling**: Functions such as `score_coupling`, `score_churn`, and `score_maintainability` return a perfect score (100) when no data is provided, assuming no issues in a null case.
-- **Capping Penalties**: All penalties are capped to ensure no single issue completely ruins the score, reflecting real-world resilience.
+The design of this module reflects a **modular scoring system**:
+- Each dimension is scored independently, which allows for clear diagnosis of specific issues.
+- The use of consistent return formats makes it easy to aggregate and present results.
+- The functions are kept lightweight and pure, which supports scalability and testability.
 
-## Scoring Logic Choices
-
-- **Capped Deductions**: Deductions are capped to prevent extreme score drops. For example, `score_duplication` caps its deduction at 50 points for duplication ratio ≥ 0.30.
-- **Weighted Metrics**: Some functions use weighted metrics (e.g., severity in `score_smells`) to reflect the impact of different issues.
-- **Threshold-Based Scoring**: Functions like `score_testability` use thresholds to penalize low test-to-code ratios or high untested file percentages.
-
-## No I/O
-
-This module is purely computational and does not read or write files. It operates on dictionaries of metric data, making it fast and suitable for integration into larger analysis workflows.
+This approach allows for a **flexible and extensible** system where new dimensions can be added without affecting existing scoring logic.
 
 ## API Reference
 
@@ -261,7 +269,7 @@ Score design smells dimension (0-100).  Factors: - Smell density: smells per 100
 
 
 <details>
-<summary>View Source (lines 129-160) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L129-L160">GitHub</a></summary>
+<summary>View Source (lines 129-162) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L129-L162">GitHub</a></summary>
 
 ```python
 def score_smells(
@@ -278,7 +286,9 @@ def score_smells(
         return {"score": 100, "grade": "A", "factors": {}}
 
     severity_weights = {"high": 3, "medium": 1, "low": 0.5}
-    weighted_count = sum(severity_weights.get(s.get("severity", "medium"), 1) for s in smells)
+    weighted_count = sum(
+        severity_weights.get(s.get("severity", "medium"), 1) for s in smells
+    )
     density = (weighted_count / total_lines) * 1000
     god_classes = sum(1 for s in smells if s.get("type") == "god_class")
 
@@ -318,7 +328,7 @@ Score layer discipline dimension (0-100).  Simple: 100 minus 10 per violation, f
 
 
 <details>
-<summary>View Source (lines 163-176) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L163-L176">GitHub</a></summary>
+<summary>View Source (lines 165-178) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L165-L178">GitHub</a></summary>
 
 ```python
 def score_layers(violations: list[dict[str, Any]]) -> dict[str, Any]:
@@ -358,7 +368,7 @@ Score churn dimension (0-100).  Factors: - Count of files with composite > 0.5 (
 
 
 <details>
-<summary>View Source (lines 179-214) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L179-L214">GitHub</a></summary>
+<summary>View Source (lines 181-216) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L181-L216">GitHub</a></summary>
 
 ```python
 def score_churn(
@@ -421,7 +431,7 @@ Score cohesion dimension (0-100).  Factors: - Count of classes with LCOM4 > 2 (s
 
 
 <details>
-<summary>View Source (lines 217-258) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L217-L258">GitHub</a></summary>
+<summary>View Source (lines 219-267) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L219-L267">GitHub</a></summary>
 
 ```python
 def score_cohesion(
@@ -442,6 +452,7 @@ def score_cohesion(
 
     classes_gt2 = stats.get("classes_with_lcom_gt_2", 0)
     total_classes = stats.get("total_classes", 0) or 1
+    excluded = stats.get("excluded_pattern_classes", 0)
     gt2_pct = (classes_gt2 / total_classes) * 100
     avg_lcom = stats.get("avg_lcom", 1.0)
     low_modules = stats.get("low_cohesion_modules", 0)
@@ -449,22 +460,28 @@ def score_cohesion(
     score = 100.0
     # Classes with high LCOM4: up to 40 point deduction
     score -= min(gt2_pct * 2, 40)
-    # Low-cohesion modules: up to 30 point deduction
-    score -= min(low_modules * 5, 30)
+    # Low-cohesion modules: up to 15 point deduction
+    # (reduced weight — Python packages are often namespaces, not cohesive units;
+    # handler/provider packages legitimately have low internal-import ratios)
+    score -= min(low_modules * 1.5, 15)
     # High average LCOM: up to 15 point deduction
     if avg_lcom > 2.0:
         score -= min((avg_lcom - 2.0) * 5, 15)
 
     score = max(0.0, min(100.0, score))
+    factors: dict[str, Any] = {
+        "classes_with_lcom_gt_2": classes_gt2,
+        "avg_lcom": round(avg_lcom, 2),
+        "low_cohesion_modules": low_modules,
+        "total_classes": stats.get("total_classes", 0),
+    }
+    if excluded > 0:
+        factors["excluded_pattern_classes"] = excluded
+
     return {
         "score": round(score, 1),
         "grade": letter_grade(score),
-        "factors": {
-            "classes_with_lcom_gt_2": classes_gt2,
-            "avg_lcom": round(avg_lcom, 2),
-            "low_cohesion_modules": low_modules,
-            "total_classes": stats.get("total_classes", 0),
-        },
+        "factors": factors,
     }
 ```
 
@@ -488,7 +505,7 @@ Score duplication dimension (0-100).  Factors: - Duplication ratio (duplicated l
 
 
 <details>
-<summary>View Source (lines 261-305) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L261-L305">GitHub</a></summary>
+<summary>View Source (lines 270-329) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L270-L329">GitHub</a></summary>
 
 ```python
 def score_duplication(
@@ -504,8 +521,17 @@ def score_duplication(
     if not stats:
         return {"score": 100, "grade": "A", "factors": {}}
 
-    ratio = stats.get("duplication_ratio", 0.0)
-    clone_groups = stats.get("type1_clone_groups", 0) + stats.get("type2_clone_groups", 0)
+    # Prefer inter-file ratio (excludes declarative intra-file repetition)
+    total_ratio = stats.get("duplication_ratio", 0.0)
+    inter_file_ratio = stats.get("inter_file_duplication_ratio")
+    ratio = inter_file_ratio if inter_file_ratio is not None else total_ratio
+
+    # Prefer inter-file clone group count when available
+    inter_file_groups = stats.get("inter_file_clone_groups")
+    total_groups = stats.get("type1_clone_groups", 0) + stats.get(
+        "type2_clone_groups", 0
+    )
+    clone_groups = inter_file_groups if inter_file_groups is not None else total_groups
     largest = stats.get("largest_clone_lines", 0)
 
     score = 100.0
@@ -519,22 +545,28 @@ def score_duplication(
     elif ratio > 0.0:
         score -= ratio * 200  # linear up to 20 at 10%
 
-    # Clone group count: up to 25 point deduction
-    score -= min(clone_groups * 0.5, 25)
+    # Clone group count: minor adjustment (ratio is the primary signal;
+    # many small-window matches inflate group count without indicating
+    # meaningful structural duplication)
+    score -= min(clone_groups * 0.02, 5)
 
     # Largest clone: up to 15 point deduction for clones over 50 lines
     if largest > 50:
         score -= min((largest - 50) * 0.3, 15)
 
     score = max(0.0, min(100.0, score))
+    factors: dict[str, Any] = {
+        "duplication_ratio": round(total_ratio, 4),
+        "clone_groups": clone_groups,
+        "largest_clone_lines": largest,
+    }
+    if inter_file_ratio is not None:
+        factors["inter_file_duplication_ratio"] = round(inter_file_ratio, 4)
+
     return {
         "score": round(score, 1),
         "grade": letter_grade(score),
-        "factors": {
-            "duplication_ratio": round(ratio, 4),
-            "clone_groups": clone_groups,
-            "largest_clone_lines": largest,
-        },
+        "factors": factors,
     }
 ```
 
@@ -558,7 +590,7 @@ Score testability dimension (0-100).  Factors: - Test-to-code ratio (higher is b
 
 
 <details>
-<summary>View Source (lines 308-362) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L308-L362">GitHub</a></summary>
+<summary>View Source (lines 332-386) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L332-L386">GitHub</a></summary>
 
 ```python
 def score_testability(
@@ -638,7 +670,7 @@ Score maintainability dimension (0-100).  Factors: - Average Maintainability Ind
 
 
 <details>
-<summary>View Source (lines 365-400) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L365-L400">GitHub</a></summary>
+<summary>View Source (lines 389-424) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L389-L424">GitHub</a></summary>
 
 ```python
 def score_maintainability(
@@ -700,7 +732,7 @@ Compute weighted overall score from dimension scores.
 
 
 <details>
-<summary>View Source (lines 403-416) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L403-L416">GitHub</a></summary>
+<summary>View Source (lines 427-440) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/health_scoring.py#L427-L440">GitHub</a></summary>
 
 ```python
 def compute_overall(dimension_scores: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -817,13 +849,13 @@ result = score_coupling([])
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `score_smells` | function | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
-| `score_duplication` | function | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `score_cohesion` | function | Brian Breidenbach | today | `8a348c8` fix: tune scoring penalties... |
+| `score_duplication` | function | Brian Breidenbach | today | `8a348c8` fix: tune scoring penalties... |
+| `score_smells` | function | Brian Breidenbach | today | `75687d9` feat: health scorer consume... |
 | `score_maintainability` | function | Brian Breidenbach | today | `64e4b55` feat: add maintainability i... |
 | `score_testability` | function | Brian Breidenbach | today | `6d8243f` feat: add testability-based... |
-| `score_cohesion` | function | Brian Breidenbach | today | `0cd069b` feat(cohesion): add score_c... |
 | `score_churn` | function | Brian Breidenbach | today | `3336b41` feat(churn): add score_chur... |
-| `score_coupling` | function | Brian Breidenbach | yesterday | `c0fe1bd` fix: unify module labels in... |
+| `score_coupling` | function | Brian Breidenbach | 2 days ago | `c0fe1bd` fix: unify module labels in... |
 | `letter_grade` | function | Brian Breidenbach | 2 weeks ago | `c9f0d4d` refactor: extract source_fi... |
 | `score_complexity` | function | Brian Breidenbach | 2 weeks ago | `c9f0d4d` refactor: extract source_fi... |
 | `score_layers` | function | Brian Breidenbach | 2 weeks ago | `c9f0d4d` refactor: extract source_fi... |

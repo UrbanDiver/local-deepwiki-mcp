@@ -4,14 +4,25 @@
 
 | Type | Count |
 |------|-------|
+| Long Method | 2 |
 | Long Parameter List | 20 |
-| Feature Envy | 12 |
+| Feature Envy | 14 |
 | Large File | 7 |
+| Deep Nesting | 1 |
+| Dispatch Table Candidate | 2 |
 
 ## Severity Summary
 
-- **Total smells:** 39
-- **Medium:** 39
+- **Total smells:** 46
+- **High:** 2
+- **Medium:** 44
+
+## Long Method
+
+| Entity | File | Severity | Description | Suggestion |
+|--------|------|----------|-------------|------------|
+| `_compute_cognitive_complexity` | `src/local_deepwiki/generators/analysis/hotspots.py:126` | high | Function has 55 lines and cyclomatic complexity 16 (thresholds: 80 lines, CC 15) | Extract smaller helper functions. Reduce branching. |
+| `_walk` | `src/local_deepwiki/generators/analysis/hotspots.py:136` | high | Function has 42 lines and cyclomatic complexity 16 (thresholds: 80 lines, CC 15) | Extract smaller helper functions. Reduce branching. |
 
 ## Long Parameter List
 
@@ -28,7 +39,7 @@
 | `__init__` | `src/local_deepwiki/core/vectorstore/search_engine.py:361` | medium | Function has 9 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
 | `__init__` | `src/local_deepwiki/core/vectorstore/store.py:114` | medium | Function has 11 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
 | `_score_all_dimensions` | `src/local_deepwiki/generators/analysis/architecture_health.py:137` | medium | Function has 10 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
-| `_compute_testability_stats` | `src/local_deepwiki/generators/analysis/testability.py:167` | medium | Function has 7 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
+| `_compute_testability_stats` | `src/local_deepwiki/generators/analysis/testability.py:239` | medium | Function has 10 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
 | `build_cross_file_graph` | `src/local_deepwiki/generators/codemap/graph.py:552` | medium | Function has 7 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
 | `generate_file_docs` | `src/local_deepwiki/generators/wiki/files.py:703` | medium | Function has 7 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
 | `__init__` | `src/local_deepwiki/generators/wiki/generator.py:109` | medium | Function has 8 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
@@ -46,6 +57,8 @@
 | `_format_cache_section` | `src/local_deepwiki/cli/config_cli.py:95` | medium | Function calls 'cache_branch' methods 6 times — it may belong there (threshold: 5) | Consider moving this function to the 'cache_branch' class. |
 | `cmd_health_check` | `src/local_deepwiki/cli/config_cli.py:541` | medium | Function calls 'checks' methods 7 times — it may belong there (threshold: 5) | Consider moving this function to the 'checks' class. |
 | `_format_dependency_structure` | `src/local_deepwiki/generators/analysis/architecture_report.py:127` | medium | Function calls 'e' methods 6 times — it may belong there (threshold: 5) | Consider moving this function to the 'e' class. |
+| `score_cohesion` | `src/local_deepwiki/generators/analysis/health_scoring.py:219` | medium | Function calls 'stats' methods 6 times — it may belong there (threshold: 5) | Consider moving this function to the 'stats' class. |
+| `score_duplication` | `src/local_deepwiki/generators/analysis/health_scoring.py:270` | medium | Function calls 'stats' methods 6 times — it may belong there (threshold: 5) | Consider moving this function to the 'stats' class. |
 | `_recommendations_from_smells` | `src/local_deepwiki/generators/analysis/recommendations.py:106` | medium | Function calls 'smell' methods 6 times — it may belong there (threshold: 5) | Consider moving this function to the 'smell' class. |
 | `get_virtual_structure` | `src/local_deepwiki/generators/lazy_generator.py:430` | medium | Function calls 'pages' methods 6 times — it may belong there (threshold: 5) | Consider moving this function to the 'pages' class. |
 | `_populate_pyproject_standard` | `src/local_deepwiki/generators/manifest_parsers.py:26` | medium | Function calls 'project' methods 8 times — it may belong there (threshold: 5) | Consider moving this function to the 'project' class. |
@@ -67,20 +80,33 @@
 | `analysis_service.py` | `src/local_deepwiki/services/analysis_service.py:1` | medium | File has 806 lines (threshold: 800) | Split into smaller, focused modules. |
 | `analysis.py` | `src/local_deepwiki/tool_defs/analysis.py:1` | medium | File has 1032 lines (threshold: 800) | Split into smaller, focused modules. |
 
+## Deep Nesting
+
+| Entity | File | Severity | Description | Suggestion |
+|--------|------|----------|-------------|------------|
+| `_classify_class_pattern` | `src/local_deepwiki/generators/analysis/cohesion.py:93` | medium | Function has nesting depth 5 (threshold: 4) | Use early returns (guard clauses) to flatten nesting. |
+
+## Dispatch Table Candidate
+
+| Entity | File | Severity | Description | Suggestion |
+|--------|------|----------|-------------|------------|
+| `_compute_cognitive_complexity` | `src/local_deepwiki/generators/analysis/hotspots.py:126` | medium | Function has cyclomatic complexity 16 in only 55 lines (high branching density suggests an if/elif chain) | Replace conditional chain with a dictionary dispatch table or mapping. |
+| `_walk` | `src/local_deepwiki/generators/analysis/hotspots.py:136` | medium | Function has cyclomatic complexity 16 in only 42 lines (high branching density suggests an if/elif chain) | Replace conditional chain with a dictionary dispatch table or mapping. |
+
 ## Relevant Source Files
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
-- `src/local_deepwiki/models/__init__.py`
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
-- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
-- [`src/local_deepwiki/generators/analysis/architecture_health.py:55-123`](files/src/local_deepwiki/generators/analysis/architecture_health.md)
-- [`src/local_deepwiki/generators/analysis/maintainability.py:69-79`](files/src/local_deepwiki/generators/analysis/maintainability.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
+- [`src/local_deepwiki/plugins/registry.py:25-361`](files/src/local_deepwiki/plugins/registry.md)
 - [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
-- [`src/local_deepwiki/generators/analysis/churn.py:25-38`](files/src/local_deepwiki/generators/analysis/churn.md)
+- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
+- [`src/local_deepwiki/generators/analysis/testability.py:26-37`](files/src/local_deepwiki/generators/analysis/testability.md)
+- [`src/local_deepwiki/export/toc_renderer.py:8-17`](files/src/local_deepwiki/export/toc_renderer.md)
+- [`src/local_deepwiki/export/pdf.py:129-534`](files/src/local_deepwiki/export/pdf.md)
+- [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
+- [`src/local_deepwiki/generators/analysis/hotspots.py:69-89`](files/src/local_deepwiki/generators/analysis/hotspots.md)
+- [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
+- [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
 
 
-*Showing 10 of 268 source files.*
+*Showing 10 of 269 source files.*

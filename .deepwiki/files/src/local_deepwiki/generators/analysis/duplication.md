@@ -2,66 +2,87 @@
 
 ## File Overview
 
-This file implements duplication detection capabilities for source code repositories, identifying both **Type 1** (exact) and **Type 2** (structural) clones. It is part of the analysis generators in the `local_deepwiki` project and is used to assess code duplication across a codebase.
+This file implements duplication detection logic for source code, identifying both **Type 1** (exact) and **Type 2** (structural) clones within a repository. It provides functionality to scan Python files, compute fingerprints for code blocks, and analyze the extent of code duplication.
 
-The module is designed to be purely computational, relying on AST parsing and line-based fingerprinting without any external language model calls. It is intended for use in static analysis pipelines to support code quality metrics, refactorability assessments, and duplication-aware architecture reports.
+The design avoids external dependencies like LLMs and instead relies purely on static analysis using line-based fingerprinting and AST node-type sequences for structural clone detection.
 
 ## Key Concepts
 
-### Duplication Detection Strategies
+### Duplication Detection Types
 
-The file implements two distinct strategies for detecting code duplication:
+1. **Type 1 Clones (Exact Clones)**:
+   - Detected using a sliding window over normalized lines of code.
+   - Uses hash-based fingerprinting to group identical or near-identical code blocks.
+   - A block is considered a clone if it contains at least `min_lines` consecutive lines that match another block elsewhere.
 
-1. **Type 1 Clones (Exact Duplication)**:
-   - Uses a **sliding window fingerprinting** approach.
-   - Normalizes source lines by stripping whitespace and ignoring comments.
-   - Computes a hash over a fixed number of consecutive normalized lines.
-   - Identifies groups of files/locations with identical fingerprints.
+2. **Type 2 Clones (Structural Clones)**:
+   - Detected by comparing the AST node types of functions.
+   - Uses tree-sitter AST parsing to extract function structures.
+   - Groups functions with the same structural pattern, regardless of variable names or comments.
 
-2. **Type 2 Clones (Structural Duplication)**:
-   - Uses **AST node-type sequences** to compare function structures.
-   - Extracts function nodes using [`find_nodes_by_type`](../../core/parser/ast_utils.md) and collects their node types recursively.
-   - Computes a hash over the sequence of node types.
-   - Groups functions with identical structural fingerprints.
+### Why These Approaches?
 
-### Design Rationale
-
-- **Fingerprinting for Performance**: Instead of comparing every possible code block, fingerprinting allows for fast grouping of potentially duplicated code.
-- **AST-based Structural Analysis**: Structural clones are identified by comparing the tree structure of functions, which is more robust than line-based matching.
-- **Deduplication of Overlapping Windows**: For Type 1 clones, overlapping sliding windows are removed to avoid overcounting.
-- **Modular Architecture**: Functions are kept small and focused, promoting reusability and testability.
+- **Line-based fingerprinting** for Type 1 clones is a well-established technique for detecting exact code reuse, especially useful for identifying copy-paste errors.
+- **AST-based structural comparison** allows detecting semantically similar code that has been refactored (e.g., variable renaming), which line-based methods would miss.
+- The use of `defaultdict` for grouping fingerprints and clone instances enables efficient aggregation and avoids explicit checks for key existence.
+- The normalization of lines (stripping whitespace, ignoring comments) ensures that stylistic differences don't interfere with clone detection.
 
 ## Integration
 
-This module is used by the `test_duplication` test suite, which calls the `detect_type1_clones`, `detect_type2_clones`, and `analyze_duplication` functions. It is also likely used by CLI tools or other analysis modules such as `architecture_report.py` or `health_scoring.py` to provide duplication metrics as part of a broader code health assessment.
+This file is part of the `local_deepwiki.generators.analysis` module and integrates with:
 
-It integrates with:
-- [`iter_python_files`](source_filter.md) from `source_filter` to enumerate Python source files.
-- [`CodeParser`](../../core/parser/code_parser.md) and `ast_utils` for AST-based analysis.
-- `FUNCTION_NODE_TYPES` to know which AST node types represent functions.
-- [`get_logger`](../../logging.md) for logging warnings when files cannot be read.
+- `local_deepwiki.core.parser.code_parser` to parse code into ASTs.
+- `local_deepwiki.core.chunk_extractors` to identify function node types.
+- `local_deepwiki.generators.analysis.source_filter` to enumerate Python files in a repository.
+- `local_deepwiki.logging` for logging warnings during file reads.
+
+It is used by test functions (`test_duplication`) that call:
+- `detect_type1_clones`
+- `detect_type2_clones`
+- `analyze_duplication`
+
+These functions are central to generating duplication reports as part of broader analysis tools, such as those found in:
+- `src/local_deepwiki/generators/analysis/architecture_report.py`
+- `src/local_deepwiki/generators/analysis/design_smells.py`
+- `src/local_deepwiki/generators/analysis/health_scoring.py`
 
 ## Design Notes
 
-### Handling of Edge Cases
+### Handling Overlapping Clones
 
-- **Blank Lines and Comments**: `_normalize_line` filters out blank lines and comment-only lines to ensure meaningful fingerprints.
-- **File Read Errors**: If a file cannot be read, it is skipped with a warning.
-- **Small Code Blocks**: Functions or code blocks with fewer than `_MIN_AST_NODES` or `min_lines` are ignored to prevent noise.
-- **Overlapping Windows**: For Type 1 clones, `_deduplicate_clone_group` removes overlapping window instances to ensure accurate duplication counts.
+- The `_deduplicate_clone_group` function ensures that overlapping or duplicate clone instances are removed.
+- This prevents inflated clone counts when multiple windows overlap in a file.
 
-### Performance Considerations
+### File Reading and Error Handling
 
-- **Sliding Window Hashing**: Efficiently scans all possible consecutive line sequences of a given length.
-- **AST Node Collection**: Uses a recursive depth-first traversal to [collect](../../web/routes_chat.md) all node types for a function, ensuring structural integrity.
-- **Hash-based Grouping**: Uses Python’s built-in `hash()` function for fast grouping, though it may have collisions (handled by deduplication).
+- When reading files, the code uses `errors="replace"` to avoid crashing on encoding issues.
+- Any file that cannot be read is skipped with a warning, ensuring robustness in large repositories.
 
-### Constants and Configuration
+### Structural Clone Filtering
 
-- `_MIN_CLONE_LINES` and `_MIN_AST_NODES` are used to filter out very small code blocks that are unlikely to be meaningful clones. These are not defined in this file but are expected to be available in the module scope.
-- `top_n` in `analyze_duplication` controls how many top clone groups are returned, preventing an overwhelming output.
+- Functions with fewer than `_MIN_AST_NODES` are ignored to avoid noise from very small code structures.
+- This threshold prevents trivial matches from polluting clone groups.
 
-This design allows for both fine-grained and high-level duplication analysis, making it suitable for both automated tools and interactive analysis workflows.
+### Hashing Strategy
+
+- Hashes are truncated to 60 bits (`0xFFFFFFFFFFFFFFFF`) to prevent potential overflow and keep them within a reasonable size for reporting.
+- This is a common practice in fingerprinting to maintain uniqueness while avoiding excessively large numbers.
+
+### Line Normalization
+
+- Comments and blank lines are ignored during fingerprinting to ensure that stylistic or documentation differences don't affect clone detection.
+- This improves the signal-to-noise ratio in the detection process.
+
+### Summary Statistics
+
+- The `analyze_duplication` function computes useful metrics:
+  - Total lines in the scanned codebase.
+  - Number of duplicated lines.
+  - Duplication ratio (percentage of lines duplicated).
+  - Inter-file duplication ratio.
+  - Largest clone group size.
+
+These statistics provide actionable insights into the degree of code duplication in a project, useful for health scoring and refactor planning.
 
 ## API Reference
 
@@ -87,7 +108,7 @@ Detect exact code clones (Type 1) using line-based fingerprinting.
 
 
 <details>
-<summary>View Source (lines 109-148) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/duplication.py#L109-L148">GitHub</a></summary>
+<summary>View Source (lines 109-152) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/duplication.py#L109-L152">GitHub</a></summary>
 
 ```python
 def detect_type1_clones(
@@ -119,11 +140,15 @@ def detect_type1_clones(
         if len(unique_instances) < 2:
             continue
 
+        files_in_group = {inst["file"] for inst in unique_instances}
+        scope = "intra_file" if len(files_in_group) == 1 else "inter_file"
+
         clone_groups.append(
             {
                 "fingerprint": hex(fp_hash & 0xFFFFFFFFFFFFFFFF),
                 "line_count": min_lines,
                 "instances": unique_instances,
+                "scope": scope,
             }
         )
 
@@ -153,7 +178,7 @@ Detect structural clones (Type 2) by comparing function AST structure.
 
 
 <details>
-<summary>View Source (lines 151-221) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/duplication.py#L151-L221">GitHub</a></summary>
+<summary>View Source (lines 155-225) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/duplication.py#L155-L225">GitHub</a></summary>
 
 ```python
 def detect_type2_clones(
@@ -253,7 +278,7 @@ Run both detection types and compute summary statistics.
 
 
 <details>
-<summary>View Source (lines 224-280) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/duplication.py#L224-L280">GitHub</a></summary>
+<summary>View Source (lines 228-299) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/duplication.py#L228-L299">GitHub</a></summary>
 
 ```python
 def analyze_duplication(
@@ -287,7 +312,9 @@ def analyze_duplication(
             continue
 
     # Run both detectors
-    type1_clones = detect_type1_clones(repo_path, min_lines=min_lines, exclude_tests=exclude_tests)
+    type1_clones = detect_type1_clones(
+        repo_path, min_lines=min_lines, exclude_tests=exclude_tests
+    )
     type2_clones = detect_type2_clones(repo_path, exclude_tests=exclude_tests)
 
     # Compute duplicated lines:
@@ -296,9 +323,20 @@ def analyze_duplication(
         group["line_count"] * (len(group["instances"]) - 1) for group in type1_clones
     )
 
-    largest_clone_lines = max((group["line_count"] for group in type1_clones), default=0)
+    largest_clone_lines = max(
+        (group["line_count"] for group in type1_clones), default=0
+    )
 
     duplication_ratio = duplicated_lines / total_lines if total_lines > 0 else 0.0
+
+    inter_file_type1 = [g for g in type1_clones if g.get("scope") == "inter_file"]
+    inter_file_duplicated_lines = sum(
+        group["line_count"] * (len(group["instances"]) - 1)
+        for group in inter_file_type1
+    )
+    inter_file_ratio = (
+        inter_file_duplicated_lines / total_lines if total_lines > 0 else 0.0
+    )
 
     return {
         "status": "success",
@@ -308,8 +346,10 @@ def analyze_duplication(
             "total_lines": total_lines,
             "duplicated_lines": duplicated_lines,
             "duplication_ratio": duplication_ratio,
+            "inter_file_duplication_ratio": inter_file_ratio,
             "type1_clone_groups": len(type1_clones),
             "type2_clone_groups": len(type2_clones),
+            "inter_file_clone_groups": len(inter_file_type1) + len(type2_clones),
             "largest_clone_lines": largest_clone_lines,
         },
     }
@@ -498,10 +538,10 @@ def complex_fn(x, y, z):
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
+| `analyze_duplication` | function | Brian Breidenbach | today | `8a348c8` fix: tune scoring penalties... |
+| `detect_type1_clones` | function | Brian Breidenbach | today | `eb1bd6e` feat: separate intra-file f... |
 | `_build_fingerprints` | function | Brian Breidenbach | today | `a75af5c` refactor: extract helpers f... |
 | `_deduplicate_clone_group` | function | Brian Breidenbach | today | `a75af5c` refactor: extract helpers f... |
-| `detect_type1_clones` | function | Brian Breidenbach | today | `a75af5c` refactor: extract helpers f... |
-| `analyze_duplication` | function | Brian Breidenbach | today | `3fed1da` feat: add duplication-based... |
 | `_normalize_line` | function | Brian Breidenbach | today | `75290fc` feat: add clone detection e... |
 | `_collect_node_types` | function | Brian Breidenbach | today | `75290fc` feat: add clone detection e... |
 | `detect_type2_clones` | function | Brian Breidenbach | today | `75290fc` feat: add clone detection e... |

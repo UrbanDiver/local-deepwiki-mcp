@@ -4,14 +4,14 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 **Quick Navigation:** [#](##) | [A](#a) | [B](#b) | [C](#c) | [D](#d) | [E](#e) | [F](#f) | [G](#g) | [H](#h) | [I](#i) | [K](#k) | [L](#l) | [M](#m) | [N](#n) | [O](#o) | [P](#p) | [Q](#q) | [R](#r) | [S](#s) | [T](#t) | [U](#u) | [V](#v) | [W](#w)
 
-**Total:** 2586 entities (416 classes, 1346 functions, 824 methods)
+**Total:** 2595 entities (416 classes, 1354 functions, 825 methods)
 
 ---
 
 <p><a href="#" onclick="document.querySelectorAll('details').forEach(d=>d.open=true);return false">Expand All</a> | <a href="#" onclick="document.querySelectorAll('details').forEach(d=>d.open=false);return false">Collapse All</a></p>
 
 <details id="#" markdown="1">
-<summary><strong>#</strong> — 1140 entities</summary>
+<summary><strong>#</strong> — 1148 entities</summary>
 
 - ▪️ **[`PluginRegistry._`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: LanguageParserPlugin) → None` (`registry.py`)
 - ▪️ **[`PluginRegistry._`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: WikiGeneratorPlugin) → None` (`registry.py`)
@@ -63,7 +63,6 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`AccessController.__init__`](files/src/local_deepwiki/security/access_control.md)** `(mode: RBACMode)` (`access_control.py`) - Initialize the access controller.
 - ▪️ **[`RoleManager.__init__`](files/src/local_deepwiki/security/role_config.md)** `(config: RoleConfig | None)` (`role_config.py`) - Initialize the role manager.
 - ▪️ **[`RepositoryAccessController.__init__`](files/src/local_deepwiki/security/repository_access.md)** `(config: RepositoryAccessConfig | None)` (`repository_access.py`) - Initialize the repository access controller.
-- ▪️ **[`PluginRegistry.__init__`](files/src/local_deepwiki/plugins/registry.md)** `(...) → None` (`registry.py`) - Initialize the plugin registry.
 - ▪️ **[`CachingLLMProvider.__init__`](files/src/local_deepwiki/providers/llm/cached.md)** `(provider: LLMProvider, cache: LLMCache)` (`cached.py`) - Initialize the caching provider.
 - ▪️ **[`AnthropicProvider.__init__`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(model: str, api_key: str | None)` (`anthropic.py`) - Initialize the Anthropic provider.
 - ▪️ **[`OllamaProvider.__init__`](files/src/local_deepwiki/providers/llm/ollama.md)** `(model: str, base_url: str)` (`ollama.py`) - Initialize the Ollama provider.
@@ -85,7 +84,6 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`CodeExampleExtractor.__init__`](files/src/local_deepwiki/generators/examples/extractor.md)** `(vector_store: "VectorStore", repo_path: Path | None)` (`extractor.py`) - Initialize the extractor.
 - ▪️ **[`StreamingHtmlExporter.__init__`](files/src/local_deepwiki/export/html.md)** `(wiki_path: Path, output_path: Path, config: ExportConfig | None, ...+1)` (`html.py`) - Initialize the streaming HTML exporter.
 - ▪️ **[`HtmlExporter.__init__`](files/src/local_deepwiki/export/html.md)** `(wiki_path: Path, output_path: Path, no_progress: bool)` (`html.py`) - Initialize the exporter.
-- ▪️ **[`StreamingPdfExporter.__init__`](files/src/local_deepwiki/export/pdf.md)** `(wiki_path: Path, output_path: Path, config: ExportConfig | None, ...+1)` (`pdf.py`) - Initialize the streaming PDF exporter.
 - ▪️ **[`PdfExporter.__init__`](files/src/local_deepwiki/export/pdf_sync.md)** `(wiki_path: Path, output_path: Path, no_progress: bool)` (`pdf_sync.py`) - Initialize the exporter.
 - ▪️ **[`WikiPageIterator.__init__`](files/src/local_deepwiki/export/streaming.md)** `(wiki_path: Path, toc_order: list[str] | None)` (`streaming.py`) - Initialize the iterator.
 - ▪️ **[`ProgressNotifier.__init__`](files/src/local_deepwiki/handlers/_progress.md)** `(progress_manager: ProgressManager, server: Server | None, progress_token: str | int | None, ...+1)` (`_progress.py`) - Initialize the notifier.
@@ -97,6 +95,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`RepositoryIndexer.__init__`](files/src/local_deepwiki/core/indexer.md)** `(repo_path: Path, config: Config | None, embedding_provider_name: str | None)` (`indexer.py`) - Initialize the indexer.
 - ▪️ **[`OpenAILLMProvider.__init__`](files/src/local_deepwiki/providers/llm/openai.md)** `(model: str, api_key: str | None, base_url: str | None)` (`openai.py`) - Initialize the OpenAI provider.
 - ▪️ **[`GeneratorService.__init__`](files/src/local_deepwiki/services/generator_service.md)** `(vector_store: VectorStore, config: Config) → None` (`generator_service.py`)
+- ▪️ **[`PluginRegistry.__init__`](files/src/local_deepwiki/plugins/registry.md)** `(...) → None` (`registry.py`) - Initialize the plugin registry.
+- ▪️ **[`StreamingPdfExporter.__init__`](files/src/local_deepwiki/export/pdf.md)** `(wiki_path: Path, output_path: Path, config: ExportConfig | None, ...+1)` (`pdf.py`) - Initialize the streaming PDF exporter.
 - ▪️ **[`ChunkIterator.__iter__`](files/src/local_deepwiki/core/vectorstore/iterators.md)** `(...) → Iterator[CodeChunk]` (`iterators.py`) - Iterate over all chunks in batches.
 - ▪️ **[`ConfigDiff.__post_init__`](files/src/local_deepwiki/config/loader.md)** `(...) → None` (`loader.py`) - Compute changes after initialization.
 - ▪️ **[`GenerationProgress.__post_init__`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → None` (`progress_tracker.py`) - Initialize log file.
@@ -122,7 +122,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_add_score_row`](files/src/local_deepwiki/cli/check_cli.md)** `(table: Table, score: float, min_score: float | None) → None` (`check_cli.py`) - Add the overall score row to the health table.
 - 🔹 **[`_add_subgraphs`](files/src/local_deepwiki/generators/diagrams/dependency_diagram.md)** `(lines: list[str], module_groups: dict[str, list[str]], node_ids: dict[str, str]) → None` (`dependency_diagram.py`) - Add subgraph definitions for module groups.
 - ▪️ **[`ExamplesWikiGenerator._add_test_examples_section`](files/src/local_deepwiki/generators/examples/plugin.md)** `(lines: list[str], test_examples: dict[str, list[CodeExample]]) → None` (`plugin.py`) - Append the 'Examples from Tests' section to *lines* in-pl...
-- ▪️ **[`StreamingPdfExporter._add_toc_entries_html`](files/src/local_deepwiki/export/pdf.md)** `(entries: list[dict[str, Any]], parts: list[str], depth: int) → None` (`pdf.py`) - Recursively add TOC entries to HTML parts.
+- 🔹 **[`_add_toc_entries_html`](files/src/local_deepwiki/export/toc_renderer.md)** `(entries: list[dict[str, Any]], parts: list[str], depth: int) → None` (`toc_renderer.py`) - Recursively add TOC entries to HTML parts list.
 - 🔹 **[`_add_wiki_links`](files/src/local_deepwiki/generators/diagrams/dependency_diagram.md)** `(lines: list[str], node_ids: dict[str, str], project_name: str, ...+1) → None` (`dependency_diagram.py`) - Append Mermaid click handlers linking nodes to wiki pages.
 - 🔹 **[`_aggregate_coupling`](files/src/local_deepwiki/generators/analysis/module_health.md)** `(coupling_result: dict[str, Any], module_name: str) → dict[str, Any] | None` (`module_health.py`) - Aggregate afferent/efferent coupling for a module and its...
 - 🔹 **[`_analyze_file`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(full_path: Path, rel_path: Path, severity_threshold: str) → list[dict[str, Any]]` (`design_smells.py`) - Detect design smells in a single source file.
@@ -286,6 +286,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_chunk_to_entity_entry`](files/src/local_deepwiki/generators/search.md)** `(chunk: [CodeChunk](files/src/local_deepwiki/models/chunks.md), file_path: str) → dict` (`search.py`) - Convert a single code chunk to a search entity entry dict.
 - 🔹 **[`_chunk_to_text`](files/src/local_deepwiki/core/vectorstore/store.md)** `(chunk: [CodeChunk](files/src/local_deepwiki/models/chunks.md)) → str` (`store.py`) - Convert a chunk to text for embedding.
 - 🔷 **[`_ChunkMaps`](files/src/local_deepwiki/generators/wiki/source_formatter.md)** (`source_formatter.py`) - Maps for looking up chunks by name.
+- 🔹 **[`_classify_class_pattern`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(class_node: Any, source: bytes) → str | None` (`cohesion.py`) - Classify a class as a known OOP pattern where LCOM4 is mi...
 - 🔹 **[`_classify_doctest_line`](files/src/local_deepwiki/generators/examples/docstring.md)** `(stripped: str, in_code: bool) → str` (`docstring.py`) - Classify a stripped doctest line into one of: prompt, con...
 - 🔹 **[`_classify_files`](files/src/local_deepwiki/generators/analysis/testability.md)** `(all_py: list[tuple[Path, str]], source_files_set: set[str]) → tuple[list[tuple[Path, str]], list[tuple[Path, str]]]` (`testability.py`) - Split files into test and source lists. Populates *source...
 - 🔹 **[`_classify_generic_error`](files/src/local_deepwiki/providers/retry.md)** `(e: Exception) → tuple[bool, bool]` (`retry.py`) - Classify a generic exception as rate-limit and/or server-...
@@ -342,6 +343,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_compute_ca_ce`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(modules: list[dict[str, Any]], edges: list[dict[str, Any]]) → tuple[dict[str, int], dict[str, int]]` (`coupling.py`) - Compute afferent (Ca) and efferent (Ce) coupling counts p...
 - ▪️ **[`EmbeddingCache._compute_cache_key`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(text: str) → str` (`cache.py`) - Compute a cache key for the given text and model.
 - ▪️ **[`ConfigDiff._compute_changes`](files/src/local_deepwiki/config/loader.md)** `(source: str) → None` (`loader.py`) - Compute the differences between base and override configs.
+- 🔹 **[`_compute_cognitive_complexity`](files/src/local_deepwiki/generators/analysis/hotspots.md)** `(node: Node) → int` (`hotspots.py`) - Compute cognitive complexity following SonarSource's spec...
 - 🔹 **[`_compute_coupling_diff`](files/src/local_deepwiki/generators/analysis/architecture_compare.md)** `(base_metrics: list[dict[str, Any]], head_metrics: list[dict[str, Any]]) → dict[str, Any]` (`architecture_compare.py`) - Diff high-distance modules between base and head coupling...
 - 🔹⚡ **[`_compute_coverage_stats`](files/src/local_deepwiki/handlers/analysis_metadata.md)** `(wiki_path: Path) → dict[str, Any] | None` (`analysis_metadata.py`) - Read coverage.json and return a curated coverage dict.
 - 🔹 **[`_compute_deltas`](files/src/local_deepwiki/generators/analysis/architecture_compare.md)** `(base: dict[str, Any], head: dict[str, Any]) → dict[str, Any]` (`architecture_compare.py`) - Compute metric deltas between base and head health reports.
@@ -360,7 +362,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_compute_smell_diff`](files/src/local_deepwiki/generators/analysis/architecture_compare.md)** `(base_health: dict[str, Any], head_health: dict[str, Any]) → dict[str, Any]` (`architecture_compare.py`) - Diff high-severity smells between base and head health re...
 - 🔹 **[`_compute_smell_summary`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(all_smells: list[dict[str, Any]]) → dict[str, Any]` (`design_smells.py`) - Build the summary dict from a flat list of smell dicts.
 - 🔹 **[`_compute_suggestions`](files/src/local_deepwiki/handlers/agentic.md)** `(tools_used: list[str]) → list[dict[str, str]]` (`agentic.py`) - Build ordered suggestions from the tool-graph based on re...
-- 🔹 **[`_compute_testability_stats`](files/src/local_deepwiki/generators/analysis/testability.md)** `(source_paths: list[tuple[Path, str]], test_paths: list[tuple[Path, str]], test_files: list[dict[str, Any]], ...+4) → tuple[list[str], dict[str, Any]]` (`testability.py`) - Compute summary statistics.
+- 🔹 **[`_compute_testability_stats`](files/src/local_deepwiki/generators/analysis/testability.md)** `(source_paths: list[tuple[Path, str]], test_paths: list[tuple[Path, str]], test_files: list[dict[str, Any]], ...+6) → tuple[list[str], dict[str, Any]]` (`testability.py`) - Compute summary statistics.
 - 🔹 **[`_compute_verdict`](files/src/local_deepwiki/generators/analysis/architecture_compare.md)** `(deltas: dict[str, Any]) → dict[str, Any]` (`architecture_compare.py`) - Compute architecture verdict from deltas.
 - ▪️ **[`_CacheStorage._conn`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → sqlite3.Connection` (`cache.py`) - Return the current thread's connection via the owner's fa...
 - ▪️ **[`LLMCache._connect`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → LanceDB.DBConnection` (`llm_cache.py`) - Get or create database connection.
@@ -369,8 +371,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_content_preview`](files/src/local_deepwiki/generators/codemap/graph.md)** `(content: str, max_lines: int) → str` (`graph.py`) - Return the first *max_lines* non-blank lines of *content*.
 - ▪️ **[`SearchMixin._convert_fts_results`](files/src/local_deepwiki/core/vectorstore/mixins/search.md)** `(rows: list[dict[str, Any]]) → list[[SearchResult](files/src/local_deepwiki/handlers/types.md)]` (`search.py`) - Convert FTS result rows to SearchResult objects with norm...
 - 🔹 **[`_convert_vector_results`](files/src/local_deepwiki/core/vectorstore/search_pipeline.md)** `(rows: list[dict[str, Any]], min_similarity: float, row_to_chunk: RowToChunk) → list[[SearchResult](files/src/local_deepwiki/handlers/types.md)]` (`search_pipeline.py`) - Convert raw LanceDB vector-search rows to SearchResult ob...
-- 🔹 **[`_count`](files/src/local_deepwiki/generators/analysis/hotspots.md)** `(n: Node) → None` (`hotspots.py`)
 - 🔹 **[`_count`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(n: Node) → None` (`design_smells.py`)
+- 🔹 **[`_count`](files/src/local_deepwiki/generators/analysis/hotspots.md)** `(n: Node) → None` (`hotspots.py`)
 - 🔹 **[`_count_assertions`](files/src/local_deepwiki/generators/analysis/testability.md)** `(content: str) → int` (`testability.py`) - Count assertion statements in a file.
 - 🔹 **[`_count_branches`](files/src/local_deepwiki/generators/analysis/complexity.md)** `(n: Node, count: list[int]) → None` (`complexity.py`) - Recursively count branch and logical-operator decision po...
 - 🔹 **[`_count_call_graph_connections`](files/src/local_deepwiki/generators/codemap/generator.md)** `(combined_cg: dict[str, list[str]]) → Counter[str]` (`generator.py`) - Count caller/callee mentions in the call graph, skipping ...
@@ -459,8 +461,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_entity_raises_part`](files/src/local_deepwiki/generators/analysis/glossary.md)** `(entity: "[EntityEntry](files/src/local_deepwiki/generators/analysis/glossary.md)") → str` (`glossary.py`) - Return a raises indicator string, or empty string if no r...
 - 🔹 **[`_entity_type_badge`](files/src/local_deepwiki/generators/analysis/glossary.md)** `(entity: "[EntityEntry](files/src/local_deepwiki/generators/analysis/glossary.md)") → str` (`glossary.py`) - Return the type badge string (with async marker if applic...
 - 🔹 **[`_estimate_cyclomatic`](files/src/local_deepwiki/generators/analysis/complexity.md)** `(node: Node) → int` (`complexity.py`) - Estimate cyclomatic complexity by counting decision points.
-- 🔹 **[`_estimate_cyclomatic`](files/src/local_deepwiki/generators/analysis/hotspots.md)** `(node: Node) → int` (`hotspots.py`) - Estimate cyclomatic complexity by counting decision points.
 - 🔹 **[`_estimate_cyclomatic`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(node: Node) → int` (`design_smells.py`)
+- 🔹 **[`_estimate_cyclomatic`](files/src/local_deepwiki/generators/analysis/hotspots.md)** `(node: Node) → int` (`hotspots.py`) - Estimate cyclomatic complexity by counting decision points.
 - ▪️ **[`PaginationEngine._estimate_total_results`](files/src/local_deepwiki/core/vectorstore/search_engine.md)** `(table: Any, query_embedding: list[float], request: [SearchRequest](files/src/local_deepwiki/core/vectorstore/mixins/search_types.md), ...+3) → tuple[list[dict], int]` (`search_engine.py`) - Fetch candidates and estimate total result count.
 - ▪️ **[`ASTCache._estimate_tree_size`](files/src/local_deepwiki/core/parser/ast_cache.md)** `(tree: Any) → int` (`ast_cache.py`) - Estimate memory size of a tree-sitter Tree.
 - ▪️ **[`ASTCache._evict_lru`](files/src/local_deepwiki/core/parser/ast_cache.md)** `(...) → None` (`ast_cache.py`) - Evict least recently used entries until under max_entries.
@@ -486,6 +488,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`HtmlExporter._export_standard`](files/src/local_deepwiki/export/html.md)** `(...) → int` (`html.py`) - Export using standard mode (loads all pages in memory).
 - ▪️ **[`HtmlExporter._export_streaming`](files/src/local_deepwiki/export/html.md)** `(...) → int` (`html.py`) - Export using streaming mode for large wikis.
 - ▪️ **[`StreamingHtmlExporter._export_wiki_page`](files/src/local_deepwiki/export/html.md)** `(page: [WikiPage](files/src/local_deepwiki/export/streaming.md)) → None` (`html.py`) - Export a single wiki page to HTML.
+- 🔹 **[`_extract_base_name`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(node: Any, source: bytes) → str` (`cohesion.py`) - Extract the final identifier from a base class node.
 - 🔹 **[`_extract_c_cpp_call`](files/src/local_deepwiki/generators/analysis/callgraph.md)** `(call_node: Node, source: bytes) → str | None` (`callgraph.py`) - Extract call name from a C/C++ call expression node.
 - ▪️ **[`GraphRelationshipExtractor._extract_calls`](files/src/local_deepwiki/core/graph_rag/extractor.md)** `(root_node: Any, source_bytes: bytes, language: [Language](files/src/local_deepwiki/models/foundation.md), ...+3) → tuple[[GraphRelationship](files/src/local_deepwiki/core/graph_rag/models.md), ...]` (`extractor.py`) - Extract *calls* relationships from function/method bodies.
 - 🔹 **[`_extract_class_attributes`](files/src/local_deepwiki/generators/diagrams/class_diagram.md)** `(content: str, language: str) → list[str]` (`class_diagram.py`) - Extract class attributes from content.
@@ -744,6 +747,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_handle_startup_failure`](files/src/local_deepwiki/handlers/web_server.md)** `(process: subprocess.Popen, wiki_path: Path) → None` ⚠️[`ValidationError`](files/src/local_deepwiki/errors.md) (`web_server.py`) - Raise a descriptive ValidationError when the server exits...
 - 🔹 **[`_handle_status_error`](files/src/local_deepwiki/providers/errors.md)** `(e: Exception, config: [ApiErrorConfig](files/src/local_deepwiki/providers/errors.md)) → None` ⚠️`[ProviderModelNotFoundError](files/src/local_deepwiki/providers/errors.md), [ProviderRateLimitError](files/src/local_deepwiki/providers/errors.md)` (`errors.py`) - Raise the appropriate provider error for an API status er...
 - 🔹 **[`_handle_typed_default_param`](files/src/local_deepwiki/core/chunk_extractors.md)** `(child: Node, source: bytes, param_types: dict[str, str | None]) → None` (`chunk_extractors.py`) - Process a typed_default_parameter node.
+- 🔹 **[`_has_abstractmethod_decorator`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(method_node: Any, source: bytes) → bool` (`cohesion.py`) - Return True if *method_node* has an ``@abstractmethod`` d...
 - 🔹 **[`_has_enough_outbound_calls`](files/src/local_deepwiki/generators/codemap/generator.md)** `(func_name: str, call_graph: dict[str, list[str]] | None) → bool` (`generator.py`) - Check whether *func_name* has enough outbound calls for a...
 - 🔹 **[`_has_fts_index`](files/src/local_deepwiki/core/vectorstore/indexes.md)** `(indices: list[object]) → bool` (`indexes.py`) - Return True if any of the listed indexes is a full-text s...
 - 🔹 **[`_has_import_of_module`](files/src/local_deepwiki/services/analysis_service.md)** `(content: str, module_stem: str) → bool` (`analysis_service.py`) - Check whether *content* contains an import line referenci...
@@ -930,6 +934,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_rank_functions_by_connections`](files/src/local_deepwiki/generators/codemap/generator.md)** `(combined_cg: dict[str, list[str]], all_chunks: list[[CodeChunk](files/src/local_deepwiki/models/chunks.md)], chunk_by_name: dict[str, [CodeChunk](files/src/local_deepwiki/models/chunks.md)], ...+1) → Counter[str]` (`generator.py`) - Score every function by call-graph connections, chunk-typ...
 - 🔹 **[`_rbac_mode_from_env`](files/src/local_deepwiki/security/access_control.md)** `(...) → [RBACMode](files/src/local_deepwiki/security/access_control.md)` (`access_control.py`) - Read RBAC mode from the ``DEEPWIKI_RBAC_MODE`` environmen...
 - 🔹 **[`_read_authoritative_docs`](files/src/local_deepwiki/generators/wiki/pages.md)** `(repo_path: Path | None) → str | None` (`pages.py`) - Read authoritative project documentation for LLM grounding.
+- 🔹 **[`_read_coverage_db`](files/src/local_deepwiki/generators/analysis/testability.md)** `(coverage_path: Path, repo_path: Path, source_files_set: set[str]) → tuple[set[str], float] | None` (`testability.py`) - Read a ``.coverage`` database and return covered source f...
 - 🔹 **[`_read_file_content`](files/src/local_deepwiki/core/parser/code_parser.md)** `(file_path: Path) → bytes` (`code_parser.py`) - Read file content, using memory-mapping for large files.
 - ▪️ **[`WikiStatusManager._read_page`](files/src/local_deepwiki/generators/wiki/status.md)** `(...) → [WikiPage](files/src/local_deepwiki/export/streaming.md) | None` (`status.py`)
 - ▪️ **[`WikiStatusManager._read_status`](files/src/local_deepwiki/generators/wiki/status.md)** `(...) → [WikiGenerationStatus](files/src/local_deepwiki/models/wiki.md) | None` (`status.py`)
@@ -946,6 +951,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_recurse`](files/src/local_deepwiki/generators/diagrams/sequence_diagram.md)** `(func: str, depth: int) → None` (`sequence_diagram.py`)
 - 🔹 **[`_recurse`](files/src/local_deepwiki/generators/diagrams/sequence_diagram.md)** `(caller: str, depth: int) → None` (`sequence_diagram.py`)
 - 🔹 **[`_refactoring_risk`](files/src/local_deepwiki/generators/analysis/module_health.md)** `(afferent_coupling: int) → str` (`module_health.py`) - Estimate risk of refactoring based on how many modules de...
+- ▪️ **[`PluginRegistry._register_plugin`](files/src/local_deepwiki/plugins/registry.md)** `(registry: dict[str, Any], plugin: Plugin, name_attr: str, ...+1) → None` (`registry.py`)
 - 🔹 **[`_relative_path`](files/src/local_deepwiki/generators/source_refs.md)** `(from_path: str, to_path: str) → str` (`source_refs.py`) - Lazy-import [wrapper](files/src/local_deepwiki/handlers/_error_handling.md) to avoid circular dependency.
 - ▪️ **[`CrossLinker._relative_path`](files/src/local_deepwiki/generators/crosslinks.md)** `(from_path: str, to_path: str) → str` (`crosslinks.py`) - Calculate relative path between two wiki pages.
 - 🔹 **[`_remap_embeddings`](files/src/local_deepwiki/core/vectorstore/embedding.md)** `(unique_embeddings: list[list[float]], texts: list[str], text_to_index: dict[str, int]) → list[list[float]]` (`embedding.py`) - Remap unique embeddings back to the original (possibly du...
@@ -1124,6 +1130,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹⚡ **[`_try_load_cached_auxiliary_pages`](files/src/local_deepwiki/generators/wiki/phases.md)** `(ctx: _GenerationContext, aux_pages: list[tuple[str, str]], index_status: [IndexStatus](files/src/local_deepwiki/models/wiki.md), ...+1) → bool` (`phases.py`) - Try to load all auxiliary pages from cache.
 - 🔹⚡ **[`_try_load_cached_file_page`](files/src/local_deepwiki/generators/wiki/files.md)** `(file_info: [FileInfo](files/src/local_deepwiki/models/chunks.md), wiki_path: str, source_files: list[str], ...+1) → [WikiPage](files/src/local_deepwiki/export/streaming.md) | None` (`files.py`) - Return the existing cached page if regeneration is not ne...
 - 🔷 **[`_UnionFind`](files/src/local_deepwiki/generators/analysis/cohesion.md)** (`cohesion.py`) - Disjoint-set data structure with path compression.
+- ▪️ **[`PluginRegistry._unregister_plugin`](files/src/local_deepwiki/plugins/registry.md)** `(registry: dict[str, Any], name: str, kind: str) → bool` (`registry.py`)
 - 🔹 **[`_unwrap_chunk`](files/src/local_deepwiki/generators/diagrams/_utils.md)** `(chunk: [CodeChunk](files/src/local_deepwiki/models/chunks.md) | Any) → [CodeChunk](files/src/local_deepwiki/models/chunks.md)` (`_utils.py`) - Unwrap SearchResult to get the underlying chunk.
 - 🔹 **[`_validate_and_build_config`](files/src/local_deepwiki/handlers/indexing.md)** `(validated: [IndexRepositoryArgs](files/src/local_deepwiki/models/tool_args.md)) → tuple[Path, Any, str | None, str | None]` ⚠️`[ValidationError](files/src/local_deepwiki/errors.md), [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`indexing.py`) - Validate inputs and build configuration for indexing.
 - 🔹 **[`_validate_chat_history`](files/src/local_deepwiki/web/routes_chat.md)** `(history: Any) → tuple[Response, int] | None` (`routes_chat.py`) - Validate the chat history field; return an error response...
@@ -1152,6 +1159,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_walk`](files/src/local_deepwiki/generators/analysis/complexity.md)** `(n: Node) → None` (`complexity.py`)
 - 🔹 **[`_walk`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(n: Node) → None` (`design_smells.py`)
 - 🔹 **[`_walk`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(n: Node) → None` (`coupling.py`)
+- 🔹 **[`_walk`](files/src/local_deepwiki/generators/analysis/hotspots.md)** `(n: Node, nesting: int) → None` (`hotspots.py`)
 - 🔹 **[`_walk_ast`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(node: Any, rel_path: Path, threshold_level: int, ...+2) → None` (`design_smells.py`) - Recursively walk the AST, dispatching to class/function h...
 - 🔹 **[`_walk_class_node`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(node: Any, rel_path: Path, threshold_level: int, ...+1) → None` (`design_smells.py`) - Detect god-class smells for a class AST node.
 - 🔹 **[`_walk_function_node`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(node: Any, rel_path: Path, threshold_level: int, ...+2) → None` (`design_smells.py`) - Detect all function-level smells for a function AST node.
@@ -1219,7 +1227,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`analyze_module_health`](files/src/local_deepwiki/generators/analysis/module_health.md)** `(repo_path: Path, module_name: str) → dict[str, Any]` (`module_health.py`) - Analyze health of a single module.
 - 🔹⚡ **[`analyze_project_coverage`](files/src/local_deepwiki/generators/analysis/coverage.md)** `(index_status: [IndexStatus](files/src/local_deepwiki/models/wiki.md), vector_store: [VectorStore](files/src/local_deepwiki/core/vectorstore/store.md)) → tuple[[CoverageStats](files/src/local_deepwiki/generators/analysis/coverage.md), list[[FileCoverage](files/src/local_deepwiki/generators/analysis/coverage.md)]]` (`coverage.py`) - Analyze documentation coverage for the entire project.
 - 🔹 **[`analyze_staleness`](files/src/local_deepwiki/generators/analysis/stale_detection.md)** `(repo_path: Path, wiki_status: [WikiGenerationStatus](files/src/local_deepwiki/models/wiki.md), stale_threshold_days: int) → [StaleReport](files/src/local_deepwiki/generators/analysis/stale_detection.md)` (`stale_detection.py`) - Analyze all wiki pages for staleness.
-- 🔹 **[`analyze_testability`](files/src/local_deepwiki/generators/analysis/testability.md)** `(repo_path: Path | str, exclude_patterns: list[str] | None) → dict[str, Any]` (`testability.py`) - Analyze testability metrics for a repository.
+- 🔹 **[`analyze_testability`](files/src/local_deepwiki/generators/analysis/testability.md)** `(repo_path: Path | str, coverage_path: Path | None, exclude_patterns: list[str] | None) → dict[str, Any]` (`testability.py`) - Analyze testability metrics for a repository.
 - 🔷 **[`AnalyzeArchitectureArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the analyze_architecture composite tool.
 - 🔷 **[`AnalyzeDiffArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the analyze_diff tool.
 - ▪️⚡ **[`QueryService.answer_question`](files/src/local_deepwiki/services/query_service.md)** `(request: [QuestionRequest](files/src/local_deepwiki/services/query_service.md)) → [QueryResult](files/src/local_deepwiki/services/models.md)` (`query_service.py`) - Execute the full RAG pipeline: search -> [rerank] -> synt...
@@ -1596,8 +1604,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`export_error`](files/src/local_deepwiki/error_factories.md)** `(message: str, export_format: str, output_path: str | None, ...+1) → [ExportError](files/src/local_deepwiki/errors.md)` (`error_factories.py`) - Create an export error with actionable hints.
 - ▪️⚡ **[`WikiService.export_html`](files/src/local_deepwiki/services/wiki_service.md)** `(wiki_path: Path, output: Path) → [ExportResult](files/src/local_deepwiki/services/models.md)` ⚠️[`path_not_found_error`](files/src/local_deepwiki/error_factories.md) (`wiki_service.py`) - Export wiki to static HTML.
 - ▪️⚡ **[`WikiService.export_pdf`](files/src/local_deepwiki/services/wiki_service.md)** `(wiki_path: Path, output: Path, single_file: bool) → [ExportResult](files/src/local_deepwiki/services/models.md)` ⚠️[`path_not_found_error`](files/src/local_deepwiki/error_factories.md) (`wiki_service.py`) - Export wiki to PDF.
-- ▪️⚡ **[`StreamingPdfExporter.export_separate`](files/src/local_deepwiki/export/pdf.md)** `([progress_callback](files/src/local_deepwiki/handlers/research.md): [ProgressCallback](files/src/local_deepwiki/models/foundation.md) | None) → [ExportResult](files/src/local_deepwiki/services/models.md)` (`pdf.py`) - Export each wiki page as a separate PDF with streaming.
 - ▪️ **[`PdfExporter.export_separate`](files/src/local_deepwiki/export/pdf_sync.md)** `(...) → list[Path]` (`pdf_sync.py`) - Export each wiki page as a separate PDF.
+- ▪️⚡ **[`StreamingPdfExporter.export_separate`](files/src/local_deepwiki/export/pdf.md)** `([progress_callback](files/src/local_deepwiki/handlers/research.md): [ProgressCallback](files/src/local_deepwiki/models/foundation.md) | None) → [ExportResult](files/src/local_deepwiki/services/models.md)` (`pdf.py`) - Export each wiki page as a separate PDF with streaming.
 - ▪️ **[`PdfExporter.export_single`](files/src/local_deepwiki/export/pdf_sync.md)** `(...) → Path` (`pdf_sync.py`) - Export all wiki pages to a single PDF.
 - 🔹 **[`export_to_html`](files/src/local_deepwiki/export/html.md)** `(wiki_path: str | Path, output_path: str | Path | None, no_progress: bool) → str` (`html.py`) - Export wiki to static HTML files.
 - 🔹 **[`export_to_pdf`](files/src/local_deepwiki/export/pdf_sync.md)** `(wiki_path: Path | str, output_path: Path | str | None, single_file: bool, ...+1) → str` ⚠️`ValueError` (`pdf_sync.py`) - Export wiki to PDF format.
@@ -1637,9 +1645,9 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`extract_python_return_type`](files/src/local_deepwiki/generators/analysis/api_docs.md)** `(func_node: Node, source: bytes) → str | None` (`api_docs.py`) - Extract return type annotation from a Python function.
 - 🔹 **[`extract_snippet`](files/src/local_deepwiki/generators/search.md)** `(content: str, max_length: int) → str` (`search.py`) - Extract a text snippet from markdown content.
 - 🔹 **[`extract_title`](files/src/local_deepwiki/export/html.md)** `(md_file: Path) → str` (`html.py`) - Extract title from markdown file.
-- 🔹 **[`extract_title`](files/src/local_deepwiki/export/pdf.md)** `(md_file: Path) → str` (`pdf.py`) - Extract title from markdown file.
 - 🔹 **[`extract_title`](files/src/local_deepwiki/export/shared.md)** `(md_file: Path) → str` (`shared.py`) - Extract title from a markdown file.
 - 🔹 **[`extract_title`](files/src/local_deepwiki/web/app.md)** `(md_file: Path) → str` (`app.py`) - Extract title from markdown file.
+- 🔹 **[`extract_title`](files/src/local_deepwiki/export/pdf.md)** `(md_file: Path) → str` (`pdf.py`) - Extract title from markdown file.
 
 </details>
 
@@ -2360,7 +2368,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 </details>
 
 <details id="r" markdown="1">
-<summary><strong>R</strong> — 135 entities</summary>
+<summary><strong>R</strong> — 136 entities</summary>
 
 - 🔷 **[`RAGTrace`](files/src/local_deepwiki/core/tracing.md)** (`tracing.py`) - Records one RAG pipeline execution for debugging.
 - 🔹 **[`rate_limit`](files/src/local_deepwiki/web/rate_limit.md)** `(requests_per_minute: int) → Any` (`[rate_limit](files/src/local_deepwiki/web/rate_limit.md).py`) - Rate limit decorator for Flask routes.
@@ -2418,6 +2426,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`render_mermaid_to_svg`](files/src/local_deepwiki/export/mermaid_renderer.md)** `(diagram_code: str, timeout: int) → str | None` (`mermaid_renderer.py`) - Render a mermaid diagram to SVG using mermaid-cli.
 - 🔹 **[`render_toc`](files/src/local_deepwiki/export/shared.md)** `(entries: list[dict[str, Any]], current_path: str, root_path: str) → str` (`shared.py`) - Render a list of TOC entries as HTML.
 - 🔹 **[`render_toc_entry`](files/src/local_deepwiki/export/shared.md)** `(entry: dict[str, Any], current_path: str, root_path: str) → str` (`shared.py`) - Render a single TOC entry recursively as HTML.
+- 🔹 **[`render_toc_html`](files/src/local_deepwiki/export/toc_renderer.md)** `(entries: list[dict[str, Any]]) → str` (`toc_renderer.py`) - Render a list of TOC entries to an HTML string.
 - 🔹 **[`replace_link`](files/src/local_deepwiki/export/html.md)** `(match: re.Match[str]) → str` (`html.py`)
 - 🔷 **[`RepositoryAccessConfig`](files/src/local_deepwiki/security/repository_access.md)** (`repository_access.py`) - Configuration for repository access control.
 - 🔷 **[`RepositoryAccessController`](files/src/local_deepwiki/security/repository_access.md)** (`repository_access.py`) - Controls which repositories can be indexed.
@@ -2751,16 +2760,16 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
-- `src/local_deepwiki/models/__init__.py`
-- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
-- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
-- [`src/local_deepwiki/generators/analysis/architecture_health.py:55-123`](files/src/local_deepwiki/generators/analysis/architecture_health.md)
-- [`src/local_deepwiki/generators/analysis/maintainability.py:69-79`](files/src/local_deepwiki/generators/analysis/maintainability.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
+- [`src/local_deepwiki/plugins/registry.py:25-361`](files/src/local_deepwiki/plugins/registry.md)
 - [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
-- [`src/local_deepwiki/generators/analysis/churn.py:25-38`](files/src/local_deepwiki/generators/analysis/churn.md)
+- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
+- [`src/local_deepwiki/generators/analysis/testability.py:26-37`](files/src/local_deepwiki/generators/analysis/testability.md)
+- [`src/local_deepwiki/export/toc_renderer.py:8-17`](files/src/local_deepwiki/export/toc_renderer.md)
+- [`src/local_deepwiki/export/pdf.py:129-534`](files/src/local_deepwiki/export/pdf.md)
+- [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
+- [`src/local_deepwiki/generators/analysis/hotspots.py:69-89`](files/src/local_deepwiki/generators/analysis/hotspots.md)
+- [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
+- [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
 
 
-*Showing 10 of 268 source files.*
+*Showing 10 of 269 source files.*

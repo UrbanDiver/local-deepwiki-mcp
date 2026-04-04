@@ -94,7 +94,7 @@
                 },
                 {
                   "number": "8.1.1.8",
-                  "title": "server.py",
+                  "title": "Server",
                   "path": "files/src/local_deepwiki/server.md"
                 },
                 {
@@ -560,7 +560,7 @@
                     },
                     {
                       "number": "8.1.1.14.4",
-                      "title": "Pdf",
+                      "title": "pdf.py",
                       "path": "files/src/local_deepwiki/export/pdf.md"
                     },
                     {
@@ -582,6 +582,11 @@
                       "number": "8.1.1.14.8",
                       "title": "Streaming",
                       "path": "files/src/local_deepwiki/export/streaming.md"
+                    },
+                    {
+                      "number": "8.1.1.14.9",
+                      "title": "toc_renderer.py",
+                      "path": "files/src/local_deepwiki/export/toc_renderer.md"
                     }
                   ]
                 },
@@ -697,7 +702,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.4",
-                          "title": "architecture_health.py",
+                          "title": "Architecture Health",
                           "path": "files/src/local_deepwiki/generators/analysis/architecture_health.md"
                         },
                         {
@@ -712,7 +717,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.7",
-                          "title": "churn.py",
+                          "title": "Churn",
                           "path": "files/src/local_deepwiki/generators/analysis/churn.md"
                         },
                         {
@@ -777,7 +782,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.20",
-                          "title": "Hotspots",
+                          "title": "hotspots.py",
                           "path": "files/src/local_deepwiki/generators/analysis/hotspots.md"
                         },
                         {
@@ -797,7 +802,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.24",
-                          "title": "maintainability.py",
+                          "title": "Maintainability",
                           "path": "files/src/local_deepwiki/generators/analysis/maintainability.md"
                         },
                         {
@@ -1089,7 +1094,7 @@
                     },
                     {
                       "number": "8.1.1.16.9",
-                      "title": "analysis_architecture.py",
+                      "title": "Analysis Architecture",
                       "path": "files/src/local_deepwiki/handlers/analysis_architecture.md"
                     },
                     {
@@ -1191,7 +1196,7 @@
                     },
                     {
                       "number": "8.1.1.17.5",
-                      "title": "tool_args.py",
+                      "title": "Tool Args",
                       "path": "files/src/local_deepwiki/models/tool_args.md"
                     },
                     {
@@ -1213,7 +1218,7 @@
                     },
                     {
                       "number": "8.1.1.18.2",
-                      "title": "Registry",
+                      "title": "registry.py",
                       "path": "files/src/local_deepwiki/plugins/registry.md"
                     }
                   ]
@@ -1375,7 +1380,7 @@
                   "children": [
                     {
                       "number": "8.1.1.22.1",
-                      "title": "analysis.py",
+                      "title": "Analysis",
                       "path": "files/src/local_deepwiki/tool_defs/analysis.md"
                     },
                     {

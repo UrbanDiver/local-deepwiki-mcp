@@ -1,179 +1,171 @@
 {
   "repo_path": "/Users/brian/Projects/local-deepwiki-mcp",
-  "indexed_at": 1775268213.479624,
-  "total_files": 506,
-  "total_chunks": 9088,
+  "indexed_at": 1775285392.195155,
+  "total_files": 512,
+  "total_chunks": 9204,
   "languages": {
-    "python": 506
+    "python": 512
   },
   "files": [
     {
-      "path": "tests/test_churn.py",
+      "path": "tests/test_duplication.py",
       "language": "python",
-      "size_bytes": 9736,
-      "last_modified": 1775264120.7745738,
-      "hash": "d3d86244fa3e3956e3e1a49474e31b50f350de51290f8774a5d7902099d255d7",
-      "chunk_count": 20
+      "size_bytes": 8388,
+      "last_modified": 1775282498.0136633,
+      "hash": "2062876b9ebaae7d1dcb4ac65022b8e07fd4fd054bd6c15fb84b808b58ac61af",
+      "chunk_count": 18
+    },
+    {
+      "path": "tests/conftest.py",
+      "language": "python",
+      "size_bytes": 6490,
+      "last_modified": 1775282498.0133383,
+      "hash": "483e695daa5dbc2696f955abe1a00fc6300cfdd804c1f6123f6724dc0404adca",
+      "chunk_count": 9
     },
     {
       "path": "tests/test_testability.py",
       "language": "python",
-      "size_bytes": 8286,
-      "last_modified": 1775266778.0518935,
-      "hash": "e68741235c89d09dcaa21cebbe3acbda00a69f724386dad5a7902916785aea67",
-      "chunk_count": 26
-    },
-    {
-      "path": "tests/test_duplication.py",
-      "language": "python",
-      "size_bytes": 5439,
-      "last_modified": 1775266038.6751852,
-      "hash": "30f1b77e9922fe37e42e372f4a05ca906e319c13d5344d86032c5a075df64f6b",
-      "chunk_count": 13
+      "size_bytes": 13903,
+      "last_modified": 1775283646.2157083,
+      "hash": "d0b5673bfeecc8463623daa26eb52f0c1c91d99b891c64e6297712c8db97de2b",
+      "chunk_count": 34
     },
     {
       "path": "tests/test_cohesion.py",
       "language": "python",
-      "size_bytes": 10649,
-      "last_modified": 1775265194.4528174,
-      "hash": "d43fed21eae95bd14fe7637cd924de28add8b2650c991ab15cd9c97cf13c358d",
-      "chunk_count": 18
+      "size_bytes": 15927,
+      "last_modified": 1775282498.0135314,
+      "hash": "55eb35bc532711133761d70662f33f67886c1fe5dc0c389ca8bb901038316b6d",
+      "chunk_count": 24
     },
     {
-      "path": "src/local_deepwiki/server.py",
+      "path": "tests/test_toc_renderer.py",
       "language": "python",
-      "size_bytes": 9474,
-      "last_modified": 1775267589.2911694,
-      "hash": "d96ce7a9bf6a10dd5ea95a7732e43a47e4e0c04798ffac923226470dad514102",
-      "chunk_count": 9
+      "size_bytes": 1500,
+      "last_modified": 1775282498.014249,
+      "hash": "38c176b76567922bedfbee10fa72860590c0d79b1d0e6ef3e9b34b2663896d6b",
+      "chunk_count": 7
     },
     {
-      "path": "tests/test_output_sizes.py",
+      "path": "tests/test_handlers_prompts.py",
       "language": "python",
-      "size_bytes": 3120,
-      "last_modified": 1775267589.291784,
-      "hash": "4655e3358fd9107d8586db7015aa47e9987ae412134ac903594f6727315d55c9",
-      "chunk_count": 13
+      "size_bytes": 10298,
+      "last_modified": 1775283934.8304708,
+      "hash": "6655d1e6d721ec277116427ad2dfb7289d07bb8523b47cced65149488e68c051",
+      "chunk_count": 10
     },
     {
-      "path": "src/local_deepwiki/models/__init__.py",
+      "path": "tests/test_agentic_workflows.py",
       "language": "python",
-      "size_bytes": 5089,
-      "last_modified": 1775267589.290893,
-      "hash": "c67e47aa70612978eaff50c58329e9e2da0cfe03b4e89eabfc41f15f5eb6828a",
-      "chunk_count": 4
+      "size_bytes": 10726,
+      "last_modified": 1775283961.8844151,
+      "hash": "319eda9114b130ce1dd847eefd6280ee08b724ece5f8ca440b6d6adbdea5b936",
+      "chunk_count": 12
+    },
+    {
+      "path": "tests/test_rate_limit.py",
+      "language": "python",
+      "size_bytes": 4054,
+      "last_modified": 1775283893.8223445,
+      "hash": "6a042d13edc65f456c85cf1b02d00e25d2f600092cc2a4870c0374fdaaab1fd0",
+      "chunk_count": 6
+    },
+    {
+      "path": "tests/test_hotspots.py",
+      "language": "python",
+      "size_bytes": 13999,
+      "last_modified": 1775284809.2563033,
+      "hash": "09e9a1cfbf860fb3cd27944f3eff63e5366b25eb59582b03ab9f30d77efcd622",
+      "chunk_count": 29
+    },
+    {
+      "path": "tests/test_pdf_streaming.py",
+      "language": "python",
+      "size_bytes": 29507,
+      "last_modified": 1775282498.0140533,
+      "hash": "2f58ba9d61a0c9be472ebd2c379c8da3139a20c46f6ca7b987f1ba1783e237d8",
+      "chunk_count": 49
     },
     {
       "path": "tests/test_health_scoring.py",
       "language": "python",
-      "size_bytes": 26445,
-      "last_modified": 1775267589.2915843,
-      "hash": "87502b0a2dd62a205e983a523a0ef4f57646d995d00ddf45468cd1f8aaf109d6",
-      "chunk_count": 89
+      "size_bytes": 28120,
+      "last_modified": 1775282498.0138052,
+      "hash": "608d69d862e83a0bb5bfcfaf18370385cd9e3820d353459d154a2358d8838c95",
+      "chunk_count": 91
     },
     {
-      "path": "tests/test_architecture_health.py",
+      "path": "src/local_deepwiki/plugins/registry.py",
       "language": "python",
-      "size_bytes": 10585,
-      "last_modified": 1775267589.2914598,
-      "hash": "28d04a3e8202564057ce0b6dad695b85652a7928f038dec10a2500b939bdaa06",
-      "chunk_count": 20
-    },
-    {
-      "path": "src/local_deepwiki/tool_defs/analysis.py",
-      "language": "python",
-      "size_bytes": 40880,
-      "last_modified": 1775267589.2913115,
-      "hash": "17daefa3bf1f11530f5a1072bb7fba6ad3227f0699a5e26cf1733722cd43e8e6",
-      "chunk_count": 3
-    },
-    {
-      "path": "tests/test_maintainability.py",
-      "language": "python",
-      "size_bytes": 9480,
-      "last_modified": 1775267589.2916746,
-      "hash": "21de5f86340bb88a3af5fe064455f3a9ce5cae89032910bc685b502c12253e2f",
-      "chunk_count": 17
-    },
-    {
-      "path": "src/local_deepwiki/generators/analysis/duplication.py",
-      "language": "python",
-      "size_bytes": 9238,
-      "last_modified": 1775267909.8724303,
-      "hash": "f5ce354c90ac1681298cb49b9548554668f5ae24bd4021f6e5c84ab2f9892a2b",
-      "chunk_count": 10
-    },
-    {
-      "path": "src/local_deepwiki/generators/analysis/architecture_health.py",
-      "language": "python",
-      "size_bytes": 9291,
-      "last_modified": 1775267589.2901952,
-      "hash": "8be7f42206ee83b7f70e635c9bd22ce83d932b40e43b30d9e7abb86d9870158e",
-      "chunk_count": 7
-    },
-    {
-      "path": "src/local_deepwiki/generators/analysis/maintainability.py",
-      "language": "python",
-      "size_bytes": 7144,
-      "last_modified": 1775267887.4438465,
-      "hash": "2ba9afdb3b9d864371cbd7535218752ada3efb57eb2fd8ffbba5353566771caf",
-      "chunk_count": 9
-    },
-    {
-      "path": "src/local_deepwiki/models/tool_args.py",
-      "language": "python",
-      "size_bytes": 30286,
-      "last_modified": 1775267589.2910242,
-      "hash": "956ac091cce3bc667b95ce9b0ae3fc1ae404543752360b4afb06d472fd98e90f",
-      "chunk_count": 61
-    },
-    {
-      "path": "src/local_deepwiki/generators/analysis/cohesion.py",
-      "language": "python",
-      "size_bytes": 11190,
-      "last_modified": 1775265194.4510298,
-      "hash": "bc6ecf3c39555dedc10e0ac0ff5d6544a7f7edcc7c5f55192697847c2bc549d7",
-      "chunk_count": 13
+      "size_bytes": 13149,
+      "last_modified": 1775282498.0132082,
+      "hash": "6743dcf24672c9cfb6f6146c220f66b3a997083e306c57c7a368d7ba6030f132",
+      "chunk_count": 32
     },
     {
       "path": "src/local_deepwiki/generators/analysis/health_scoring.py",
       "language": "python",
-      "size_bytes": 12522,
-      "last_modified": 1775267589.2903373,
-      "hash": "98f92fca8e9977d71ec957ba2f30ab5e88fef622bf8f4772a34e83b6b0025017",
+      "size_bytes": 13573,
+      "last_modified": 1775282498.0129704,
+      "hash": "1ea81b9ade0d0efae123aff2545204b146101fd6739f5c712b6341a04e66addc",
       "chunk_count": 14
     },
     {
-      "path": "src/local_deepwiki/generators/analysis/churn.py",
+      "path": "tests/test_generator_service.py",
       "language": "python",
-      "size_bytes": 8967,
-      "last_modified": 1775268050.9252372,
-      "hash": "1569eb9bc369a3d583447b987de4560c529037e4079c7fccc5a03b77be789da8",
-      "chunk_count": 12
+      "size_bytes": 26588,
+      "last_modified": 1775284088.4594994,
+      "hash": "01e198928499af66a21989f8c44e727a2d6fdc7ad6f571d4b8d83d9274dfe462",
+      "chunk_count": 40
     },
     {
-      "path": "src/local_deepwiki/handlers/__init__.py",
+      "path": "src/local_deepwiki/generators/analysis/duplication.py",
       "language": "python",
-      "size_bytes": 5854,
-      "last_modified": 1775267589.2905977,
-      "hash": "a2556c1d9318a7ff3bc6d9111d2d1aa719c4cf43048d297b0442d64a30175c6c",
-      "chunk_count": 4
+      "size_bytes": 9923,
+      "last_modified": 1775282498.0128336,
+      "hash": "ef1ddd08bd7adbf693bdcc0b851272f958231ac5d30b7b95721a655fa482188d",
+      "chunk_count": 10
     },
     {
       "path": "src/local_deepwiki/generators/analysis/testability.py",
       "language": "python",
-      "size_bytes": 7916,
-      "last_modified": 1775267909.8735175,
-      "hash": "f3bcf19914d37cbebcaa71dc9e896573fc9693c6722010bfc41059c21aa3ebca",
-      "chunk_count": 12
+      "size_bytes": 11795,
+      "last_modified": 1775283605.89974,
+      "hash": "940ab14b6bbfee21132916aa8ccd47e595221256a73c570eab3ffaec75fcece4",
+      "chunk_count": 13
     },
     {
-      "path": "src/local_deepwiki/handlers/analysis_architecture.py",
+      "path": "src/local_deepwiki/export/toc_renderer.py",
       "language": "python",
-      "size_bytes": 31809,
-      "last_modified": 1775267589.290765,
-      "hash": "486b4354332f3ce8577fbf1c47031a889c333a9ff977b0925cc2358f8889bc00",
-      "chunk_count": 27
+      "size_bytes": 971,
+      "last_modified": 1775282498.0124207,
+      "hash": "69e390fe682ab14fcf998fa8a9e370c36bce371ecd211a1d2192ced40e983cd7",
+      "chunk_count": 5
+    },
+    {
+      "path": "src/local_deepwiki/export/pdf.py",
+      "language": "python",
+      "size_bytes": 18436,
+      "last_modified": 1775282498.0123239,
+      "hash": "49ed97777b7e4b532200e224781f7cdf6c535200c895870dd48f277c21790386",
+      "chunk_count": 18
+    },
+    {
+      "path": "src/local_deepwiki/generators/analysis/cohesion.py",
+      "language": "python",
+      "size_bytes": 14735,
+      "last_modified": 1775282498.0126836,
+      "hash": "1e5d2f9adc84b3879d2614d87943d8722dc96bbcaf801851b08b213048891fbb",
+      "chunk_count": 16
+    },
+    {
+      "path": "src/local_deepwiki/generators/analysis/hotspots.py",
+      "language": "python",
+      "size_bytes": 10223,
+      "last_modified": 1775284743.2815955,
+      "hash": "0524bed942f7461052b191347c68374f4c55950d5f09afbbb7e6dcc009b66a54",
+      "chunk_count": 12
     },
     {
       "path": "tests/test_provider_factories.py",
@@ -222,6 +214,14 @@
       "last_modified": 1774141850.5573778,
       "hash": "88666231ec76ba19e1df2644ac668d63d61e2cbe8564a1639bb82355da1760ae",
       "chunk_count": 27
+    },
+    {
+      "path": "tests/test_churn.py",
+      "language": "python",
+      "size_bytes": 9736,
+      "last_modified": 1775264120.7745738,
+      "hash": "d3d86244fa3e3956e3e1a49474e31b50f350de51290f8774a5d7902099d255d7",
+      "chunk_count": 20
     },
     {
       "path": "tests/test_fuzzy_search.py",
@@ -342,14 +342,6 @@
       "last_modified": 1771830896.9442246,
       "hash": "ffc9d0bd32bb4fde415b5e95c67008880ce4d01c4ada99b62d258c34b068f17f",
       "chunk_count": 15
-    },
-    {
-      "path": "tests/conftest.py",
-      "language": "python",
-      "size_bytes": 5933,
-      "last_modified": 1773983422.929354,
-      "hash": "9452975cb13e99bb0516ddd76e7a5b804dc7eff49010f863c39c548b22706a86",
-      "chunk_count": 9
     },
     {
       "path": "tests/test_wiki_generation_warnings.py",
@@ -568,14 +560,6 @@
       "chunk_count": 20
     },
     {
-      "path": "tests/test_pdf_streaming.py",
-      "language": "python",
-      "size_bytes": 29569,
-      "last_modified": 1771830896.953466,
-      "hash": "338a446d85da726d89041b6a5a0c4a664f235e6b9069371125047ca1c386f896",
-      "chunk_count": 49
-    },
-    {
       "path": "tests/test_codemap_overview.py",
       "language": "python",
       "size_bytes": 9157,
@@ -662,6 +646,14 @@
       "last_modified": 1771830896.9576178,
       "hash": "9fc7cf561b76f3e4c6483672452392d3a79fce26431193140b6dde7ab348b64c",
       "chunk_count": 23
+    },
+    {
+      "path": "tests/test_architecture_health.py",
+      "language": "python",
+      "size_bytes": 10585,
+      "last_modified": 1775267589.2914598,
+      "hash": "28d04a3e8202564057ce0b6dad695b85652a7928f038dec10a2500b939bdaa06",
+      "chunk_count": 20
     },
     {
       "path": "tests/test_diagrams_class.py",
@@ -854,6 +846,14 @@
       "last_modified": 1774654003.600249,
       "hash": "be261b61f04eb4ec23809d48b2f32b5482a12811adc4099d0876139c5d4d4c3c",
       "chunk_count": 7
+    },
+    {
+      "path": "tests/test_output_sizes.py",
+      "language": "python",
+      "size_bytes": 3120,
+      "last_modified": 1775267589.291784,
+      "hash": "4655e3358fd9107d8586db7015aa47e9987ae412134ac903594f6727315d55c9",
+      "chunk_count": 13
     },
     {
       "path": "tests/test_llm_providers.py",
@@ -1432,6 +1432,14 @@
       "chunk_count": 19
     },
     {
+      "path": "tests/test_maintainability.py",
+      "language": "python",
+      "size_bytes": 9480,
+      "last_modified": 1775267589.2916746,
+      "hash": "21de5f86340bb88a3af5fe064455f3a9ce5cae89032910bc685b502c12253e2f",
+      "chunk_count": 17
+    },
+    {
       "path": "tests/test_handlers_research_export.py",
       "language": "python",
       "size_bytes": 51513,
@@ -1736,14 +1744,6 @@
       "chunk_count": 43
     },
     {
-      "path": "tests/test_hotspots.py",
-      "language": "python",
-      "size_bytes": 8642,
-      "last_modified": 1774636700.1218877,
-      "hash": "475087303416d746667c90f44fd66deee88b87f969c57722e5e19d83457f52fa",
-      "chunk_count": 21
-    },
-    {
       "path": "tests/test_wiki_modules_coverage.py",
       "language": "python",
       "size_bytes": 24398,
@@ -2022,6 +2022,14 @@
       "last_modified": 1771828171.7014034,
       "hash": "68ec3cf8e03a9c24ec79e6f3e47c01e3349d48c27a5f21b61153d08b81f58f7d",
       "chunk_count": 5
+    },
+    {
+      "path": "src/local_deepwiki/server.py",
+      "language": "python",
+      "size_bytes": 9474,
+      "last_modified": 1775267589.2911694,
+      "hash": "d96ce7a9bf6a10dd5ea95a7732e43a47e4e0c04798ffac923226470dad514102",
+      "chunk_count": 9
     },
     {
       "path": "src/local_deepwiki/cli_progress.py",
@@ -2696,14 +2704,6 @@
       "chunk_count": 12
     },
     {
-      "path": "src/local_deepwiki/plugins/registry.py",
-      "language": "python",
-      "size_bytes": 14099,
-      "last_modified": 1774879684.3170698,
-      "hash": "59d4bc945796a57dc8bbba70ce3337472314b373b3dfd5f774b44533107bd608",
-      "chunk_count": 30
-    },
-    {
       "path": "src/local_deepwiki/plugins/__init__.py",
       "language": "python",
       "size_bytes": 1004,
@@ -2896,6 +2896,14 @@
       "chunk_count": 13
     },
     {
+      "path": "src/local_deepwiki/tool_defs/analysis.py",
+      "language": "python",
+      "size_bytes": 40880,
+      "last_modified": 1775267589.2913115,
+      "hash": "17daefa3bf1f11530f5a1072bb7fba6ad3227f0699a5e26cf1733722cd43e8e6",
+      "chunk_count": 3
+    },
+    {
       "path": "src/local_deepwiki/tool_defs/__init__.py",
       "language": "python",
       "size_bytes": 917,
@@ -2952,12 +2960,28 @@
       "chunk_count": 7
     },
     {
+      "path": "src/local_deepwiki/models/__init__.py",
+      "language": "python",
+      "size_bytes": 5089,
+      "last_modified": 1775267589.290893,
+      "hash": "c67e47aa70612978eaff50c58329e9e2da0cfe03b4e89eabfc41f15f5eb6828a",
+      "chunk_count": 4
+    },
+    {
       "path": "src/local_deepwiki/models/foundation.py",
       "language": "python",
       "size_bytes": 2777,
       "last_modified": 1775135124.5036247,
       "hash": "9335d362b13ab3796523b04c766ddcbb0e17eb6b30748dd1bec7ecd7f9ce5b1b",
       "chunk_count": 11
+    },
+    {
+      "path": "src/local_deepwiki/models/tool_args.py",
+      "language": "python",
+      "size_bytes": 30286,
+      "last_modified": 1775267589.2910242,
+      "hash": "956ac091cce3bc667b95ce9b0ae3fc1ae404543752360b4afb06d472fd98e90f",
+      "chunk_count": 61
     },
     {
       "path": "src/local_deepwiki/models/wiki.py",
@@ -3224,6 +3248,22 @@
       "chunk_count": 5
     },
     {
+      "path": "src/local_deepwiki/generators/analysis/architecture_health.py",
+      "language": "python",
+      "size_bytes": 9291,
+      "last_modified": 1775267589.2901952,
+      "hash": "8be7f42206ee83b7f70e635c9bd22ce83d932b40e43b30d9e7abb86d9870158e",
+      "chunk_count": 7
+    },
+    {
+      "path": "src/local_deepwiki/generators/analysis/maintainability.py",
+      "language": "python",
+      "size_bytes": 7144,
+      "last_modified": 1775267887.4438465,
+      "hash": "2ba9afdb3b9d864371cbd7535218752ada3efb57eb2fd8ffbba5353566771caf",
+      "chunk_count": 9
+    },
+    {
       "path": "src/local_deepwiki/generators/analysis/stale_detection.py",
       "language": "python",
       "size_bytes": 7712,
@@ -3336,6 +3376,14 @@
       "chunk_count": 8
     },
     {
+      "path": "src/local_deepwiki/generators/analysis/churn.py",
+      "language": "python",
+      "size_bytes": 8967,
+      "last_modified": 1775268050.9252372,
+      "hash": "1569eb9bc369a3d583447b987de4560c529037e4079c7fccc5a03b77be789da8",
+      "chunk_count": 12
+    },
+    {
       "path": "src/local_deepwiki/generators/analysis/architecture_report.py",
       "language": "python",
       "size_bytes": 5825,
@@ -3358,14 +3406,6 @@
       "last_modified": 1775096249.9304814,
       "hash": "857224815fc5ad3eaf6f0e0244efb5544e037cf296938e24a6e690a1ab93513b",
       "chunk_count": 26
-    },
-    {
-      "path": "src/local_deepwiki/generators/analysis/hotspots.py",
-      "language": "python",
-      "size_bytes": 7242,
-      "last_modified": 1774828586.0730438,
-      "hash": "1fa374db9abbd35f0a1e757fc41dc11e712c039732987e952344c9f88aa38621",
-      "chunk_count": 10
     },
     {
       "path": "src/local_deepwiki/generators/analysis/layer_analysis.py",
@@ -3752,14 +3792,6 @@
       "chunk_count": 5
     },
     {
-      "path": "src/local_deepwiki/export/pdf.py",
-      "language": "python",
-      "size_bytes": 18953,
-      "last_modified": 1774141850.5504355,
-      "hash": "7bdd57a8c226ecd5a6e45048f1fbdb773f7fd1e839b88a93301aebee4f1bc12a",
-      "chunk_count": 19
-    },
-    {
       "path": "src/local_deepwiki/export/shared.py",
       "language": "python",
       "size_bytes": 5204,
@@ -3864,6 +3896,14 @@
       "chunk_count": 13
     },
     {
+      "path": "src/local_deepwiki/handlers/__init__.py",
+      "language": "python",
+      "size_bytes": 5854,
+      "last_modified": 1775267589.2905977,
+      "hash": "a2556c1d9318a7ff3bc6d9111d2d1aa719c4cf43048d297b0442d64a30175c6c",
+      "chunk_count": 4
+    },
+    {
       "path": "src/local_deepwiki/handlers/_index_helpers.py",
       "language": "python",
       "size_bytes": 3619,
@@ -3910,6 +3950,14 @@
       "last_modified": 1771828171.8413503,
       "hash": "429a879753848bce3037fb87cd46477f7853a7bc77922859c4b34a19ab773849",
       "chunk_count": 10
+    },
+    {
+      "path": "src/local_deepwiki/handlers/analysis_architecture.py",
+      "language": "python",
+      "size_bytes": 31809,
+      "last_modified": 1775267589.290765,
+      "hash": "486b4354332f3ce8577fbf1c47031a889c333a9ff977b0925cc2358f8889bc00",
+      "chunk_count": 27
     },
     {
       "path": "src/local_deepwiki/handlers/generators.py",

@@ -5,15 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki-style MCP server for private repository documentation. This project provides a local infrastructure for indexing and querying code repositories using LLM-powered tools, with support for both local and cloud-based language model providers. It enables developers to create, maintain, and search documentation directly from their codebase.
+Local DeepWiki MCP server enables private, local documentation generation and management for software repositories. It provides an intelligent, AI-powered wiki system that indexes codebases and generates contextual documentation. The project supports both local and hybrid deployment models with flexible configuration options.
 
 ## Key Features
 
-- **Async-native architecture** - All core operations use asyncio for efficient concurrent processing
-- **AST-aware code chunking** - Code is split at function and class boundaries using tree-sitter for more precise semantic indexing
-- **Multi-provider LLM support** - Supports local (Ollama), cloud (Anthropic, OpenAI) and hybrid configurations through provider abstraction
-- **Comprehensive testing framework** - Uses pytest-asyncio with shared test factories and mocking for LLM/embedding providers
-- **Multi-language codebase support** - Processes Python, TypeScript/TSX, JavaScript, Go, Rust, Java, C, C++, Objective-C, Swift, Ruby, PHP, Kotlin, and C# codebases
+- **AI-powered documentation generation** - Creates contextual wiki content using LLM providers (Anthropic, OpenAI, Ollama) with support for multiple programming languages including Python, TypeScript, JavaScript, Go, Rust, and more
+- **Async architecture with provider abstraction** - All core operations use asyncio and implement provider abstraction for LLM and embedding services through base classes in `providers/base.py`
+- **AST-aware code chunking** - Splits code into meaningful chunks at function and class boundaries using tree-sitter for more accurate documentation generation
+- **Multi-model configuration support** - Supports configuration hierarchy with CLI args > env vars > config file > defaults, plus multiple example configs for local, cloud, and hybrid deployment
+- **Comprehensive testing framework** - Includes pytest-based tests with async support, mocking of LLM/embedding providers, and shared test fixtures for consistent development workflows
 
 ## Technology Stack
 
@@ -25,6 +25,12 @@ Local DeepWiki-style MCP server for private repository documentation. This proje
 
 ```
 local-deepwiki-mcp/
+├── docs/
+│   ├── internal/
+│   ├── plans/
+│   ├── superpowers/
+│   ├── plan-dual-audience-wiki-content.md
+│   └── plan-lazy-wiki-generation.md
 ├── examples/
 │   ├── config-cloud.yaml
 │   ├── config-hybrid.yaml
@@ -38,17 +44,11 @@ local-deepwiki-mcp/
 │   ├── conftest.py
 │   ├── test_access_control.py
 │   ├── test_agentic_rag.py
+│   ├── test_agentic_workflows.py
 │   ├── test_analysis_architecture.py
 │   ├── test_analyze_diff.py
 │   ├── test_anthropic_provider.py
 │   ├── test_api_docs.py
-│   ├── test_architecture_compare.py
-│   ├── test_architecture_composite.py
-│   ├── test_architecture_health.py
-│   ├── test_architecture_report.py
-│   ├── test_architecture_trends.py
-│   ├── test_ask_about_diff.py
-│   ├── test_audit.py
 │   ...
 ...
 ```

@@ -2,60 +2,59 @@
 
 ## File Overview
 
-This file provides functionality for exporting DeepWiki documentation to PDF format, supporting both batched streaming export and individual page exports. It leverages WeasyPrint for HTML-to-PDF rendering and integrates with Mermaid for diagram rendering. The file is designed to handle large wikis efficiently by processing pages in batches and managing temporary files.
+This file provides functionality for exporting DeepWiki documentation to PDF format. It supports both streaming, batched export of multiple pages into a single PDF and exporting each page as a separate PDF file. The implementation leverages `weasyprint` for HTML-to-PDF rendering and includes special handling for Mermaid diagrams, which are rendered to PNG for better compatibility in PDFs.
 
-The core export logic is encapsulated in the `StreamingPdfExporter` class, which inherits from [`StreamingExporter`](streaming.md) and implements asynchronous page processing with progress reporting. It also includes utility functions for rendering markdown content suitable for PDF and extracting titles from markdown files.
+The design rationale emphasizes performance through batching and memory management, as well as robustness in the face of individual page failures during export.
 
 ## Key Concepts
 
-### Streaming Export Pattern
-The `StreamingPdfExporter` implements a streaming pattern to manage memory usage when processing large wikis. Pages are processed in batches, with each batch rendered to a temporary PDF file. This approach prevents memory exhaustion and allows for progress tracking during long-running exports.
+### Streaming and Batching
+The `StreamingPdfExporter` class implements a streaming approach to PDF export, where pages are processed in batches to manage memory usage and provide progress feedback. This is particularly important for large wikis, as it prevents loading all content into memory at once.
 
 ### Mermaid Diagram Handling
-The file includes logic to render Mermaid diagrams as PNG images for inclusion in PDFs. This is necessary because SVGs rendered by Mermaid often don't render correctly in WeasyPrint. The implementation gracefully falls back to placeholder text if the required CLI tool (`mmdc`) is not available.
+Mermaid diagrams in Markdown are rendered to PNG images using an external `mmdc` CLI tool. If the CLI is not available, placeholders are used instead. This ensures that diagrams are visible in the PDF output, albeit with a fallback mechanism for environments without the required tools.
+
+### Progress Reporting and Error Boundaries
+The system supports optional progress callbacks to inform users about export status. Individual page failures are caught and logged without aborting the entire export, ensuring that a single problematic page does not prevent the rest of the documentation from being exported.
 
 ### PDF Merging Strategy
-When merging multiple batch PDFs into a final output, the code attempts to use `pypdf` for efficient merging. If `pypdf` is unavailable, it falls back to copying only the first PDF, which is a pragmatic compromise for environments where `pypdf` cannot be installed.
-
-### HTML Template and Styling
-The file uses a predefined HTML template (`PDF_HTML_TEMPLATE`) and CSS styles (`PRINT_CSS`) to ensure consistent formatting across all exported pages. This centralizes styling logic and ensures that exported PDFs have a uniform appearance.
+When merging multiple batch PDFs into a single output, the implementation attempts to use `pypdf` for efficient concatenation. If `pypdf` is not available, it falls back to copying only the first batch, which results in loss of content from subsequent batches but avoids crashing the export.
 
 ## Integration
 
-This file is part of the `local_deepwiki.export` module and integrates with several other components:
+This file integrates with several other components in the DeepWiki codebase:
 
-- **Mermaid Integration**: Uses functions from `local_deepwiki.export.mermaid_renderer` to process Mermaid diagrams.
-- **Shared Components**: Leverages `extract_title` from `local_deepwiki.export.shared` for consistent title extraction.
-- **Streaming Infrastructure**: Inherits from [`StreamingExporter`](streaming.md) and uses [`ExportConfig`](streaming.md), [`ExportResult`](../services/models.md), [`ProgressCallback`](../models/foundation.md), and [`WikiPage`](streaming.md) types defined in `local_deepwiki.export.streaming`.
-- **PDF Export Utilities**: Depends on `local_deepwiki.export.pdf_sync` for synchronous PDF export functionality, although the main implementation is in this file.
+- **`local_deepwiki.export.mermaid_renderer`**: Provides Mermaid diagram rendering capabilities.
+- **`local_deepwiki.export.pdf_styles`**: Supplies HTML template and CSS for PDF formatting.
+- **`local_deepwiki.export.shared`**: Reuses the `extract_title` function for consistent title extraction.
+- **`local_deepwiki.export.streaming`**: Inherits from [`StreamingExporter`](streaming.md) and uses shared types like [`ExportConfig`](streaming.md), [`ExportResult`](../services/models.md), and [`ProgressCallback`](../models/foundation.md).
+- **`local_deepwiki.export.toc_renderer`**: Used to generate a table of contents for the PDF.
+- **`local_deepwiki.export.pdf_sync`**: Exposes synchronous PDF export functions ([`PdfExporter`](pdf_sync.md), [`export_to_pdf`](pdf_sync.md), `main`) that are imported but not directly used in this file.
 
-The `StreamingPdfExporter` class is used by test functions like `test_export_progress`, `test_pdf_streaming`, and `test_streaming_export`, indicating that it is a core component of the export system.
+It is called by:
+- `StreamingPdfExporter` (used by test functions like `test_export_progress`, `test_pdf_streaming`, `test_streaming_export`)
+- `render_markdown_for_pdf` (used by `pdf_sync`, `test_pdf_mermaid`, `test_pdf_rendering`)
+- `extract_title` (used by `html`, `shared`, `streaming` and four other modules)
 
 ## Design Notes
 
-### Error Handling and Resilience
-The export process includes robust error handling to prevent a single page failure from aborting the entire export. Individual page errors are logged and collected in an errors list, allowing the export to continue processing remaining pages.
+### Why Streaming/Batching?
+The choice to use streaming and batching was made to balance memory usage and performance. For large wikis, loading all pages into memory simultaneously would be impractical. Batching allows for controlled memory consumption while still enabling progress reporting.
 
-### Batch Size Configuration
-The batch size for processing pages is configurable via [`ExportConfig`](streaming.md). This allows users to tune performance for their specific hardware or document size requirements.
+### Mermaid Rendering Fallback
+Mermaid diagrams are rendered to PNG to ensure better font rendering and compatibility in PDFs compared to SVG. The fallback to placeholders when `mmdc` is not available ensures that the export process completes even in restricted environments.
+
+### Error Handling
+Individual page failures are handled with a `try...except` block that logs the error and appends it to a shared error list. This prevents a single bad page from halting the entire export, making the process more resilient.
+
+### PDF Merging Efficiency
+The fallback to `pypdf` for PDF merging is chosen for performance reasons. When `pypdf` is unavailable, a warning is logged to inform users of the limitation, ensuring transparency about what content may be missing from the final output.
 
 ### Temporary File Management
-Temporary PDF files are created within a `TemporaryDirectory` to ensure cleanup. After processing, these files are copied to the final destination to avoid cleanup issues.
+The `_process_pages_in_batches` method uses a `tempfile.TemporaryDirectory` to manage intermediate batch PDFs. These are copied out before the directory is cleaned up, ensuring that the final output files are preserved. This approach isolates temporary files from the user's file system and prevents clutter.
 
-### Fallback Mechanisms
-Several fallbacks are implemented:
-- If `pypdf` is not available, the merging process uses a simple copy instead of failing.
-- If Mermaid CLI is not available, diagrams are replaced with informative placeholders.
-- If WeasyPrint is not installed, a helpful error is raised at runtime rather than at import time.
-
-### Memory Efficiency
-The use of `asyncio.to_thread` ensures that blocking I/O operations (like file I/O and PDF generation) do not block the event loop, maintaining responsiveness during long-running exports. Page content is released after processing to reduce memory pressure.
-
-### Progress Reporting
-Progress is reported using a callback mechanism that allows integration with UI components or logging systems. This is especially important for large wikis where users need feedback on export status.
-
-### PDF Output Flexibility
-The exporter supports both single-file output (with TOC) and separate file output per page, providing flexibility for different use cases.
+### HTML Template and CSS
+The PDF output is generated using a predefined HTML template and CSS (`PDF_HTML_TEMPLATE`, `PRINT_CSS`) to ensure consistent styling across exports. This separation of content and presentation simplifies maintenance and ensures that the PDFs look professional and consistent.
 
 ## API Reference
 
@@ -69,11 +68,11 @@ Memory-efficient PDF exporter using streaming page iteration.  Processes pages i
 
 
 <details>
-<summary>View Source (lines 129-546) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L129-L546">GitHub</a></summary>
+<summary>View Source (lines 129-534) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L129-L534">GitHub</a></summary>
 
 ```python
 class StreamingPdfExporter(StreamingExporter):
-    # Methods: __init__, export, _resolve_output_file, _process_pages_in_batches, _finalize_pdf, export_separate, _render_batch_to_pdf, _build_streaming_toc_html, _add_toc_entries_html, _export_single_page, _merge_pdfs, _create_empty_pdf
+    # Methods: __init__, export, _resolve_output_file, _process_pages_in_batches, _finalize_pdf, export_separate, _render_batch_to_pdf, _build_streaming_toc_html, _export_single_page, _merge_pdfs, _create_empty_pdf
 ```
 
 </details>
@@ -443,7 +442,6 @@ classDiagram
         +export_separate(progress_callback: ProgressCallback | None) ExportResult
         -_render_batch_to_pdf(pages: list[WikiPage], output_path: Path, include_toc: bool) None
         -_build_streaming_toc_html() str
-        -_add_toc_entries_html(entries: list[dict[str, Any]], parts: list[str], depth: int) None
         -_export_single_page(page: WikiPage, output_file: Path) None
         -_merge_pdfs(pdf_files: list[Path], output_path: Path) None
         -_create_empty_pdf(output_path: Path) None
@@ -469,9 +467,9 @@ flowchart TD
     N11[StreamingPdfExporter._resol...]
     N12[StreamingPdfExporter.export]
     N13[StreamingPdfExporter.export...]
-    N14[_add_toc_entries_html]
-    N15[_require_weasyprint]
-    N16[b64encode]
+    N14[_require_weasyprint]
+    N15[b64encode]
+    N16[convert]
     N17[copy]
     N18[decode]
     N19[extract_mermaid_blocks]
@@ -485,13 +483,14 @@ flowchart TD
     N27[render_mermaid_to_png]
     N28[to_thread]
     N29[write_pdf]
-    N15 --> N3
+    N14 --> N3
     N26 --> N22
     N26 --> N19
     N26 --> N27
     N26 --> N18
-    N26 --> N16
+    N26 --> N15
     N26 --> N4
+    N26 --> N16
     N12 --> N23
     N12 --> N28
     N12 --> N21
@@ -513,17 +512,17 @@ flowchart TD
     N13 --> N25
     N13 --> N1
     N10 --> N26
-    N10 --> N15
+    N10 --> N14
     N10 --> N2
     N10 --> N0
     N10 --> N29
     N6 --> N26
-    N6 --> N15
+    N6 --> N14
     N6 --> N2
     N6 --> N0
     N6 --> N29
     N8 --> N17
-    N5 --> N15
+    N5 --> N14
     N5 --> N2
     N5 --> N0
     N5 --> N29
@@ -546,7 +545,6 @@ Functions and methods in this file and their callers:
 - **`PdfWriter`**: called by `StreamingPdfExporter._merge_pdfs`
 - **`TemporaryDirectory`**: called by `StreamingPdfExporter._process_pages_in_batches`
 - **`__init__`**: called by `StreamingPdfExporter.__init__`
-- **`_add_toc_entries_html`**: called by `StreamingPdfExporter._add_toc_entries_html`, `StreamingPdfExporter._build_streaming_toc_html`
 - **`_build_streaming_toc_html`**: called by `StreamingPdfExporter._render_batch_to_pdf`
 - **`_create_empty_pdf`**: called by `StreamingPdfExporter._finalize_pdf`
 - **`_finalize_pdf`**: called by `StreamingPdfExporter.export`
@@ -569,6 +567,7 @@ Functions and methods in this file and their callers:
 - **`release_content`**: called by `StreamingPdfExporter._process_pages_in_batches`, `StreamingPdfExporter.export_separate`
 - **`render_markdown_for_pdf`**: called by `StreamingPdfExporter._export_single_page`, `StreamingPdfExporter._render_batch_to_pdf`
 - **[`render_mermaid_to_png`](mermaid_renderer.md)**: called by `render_markdown_for_pdf`
+- **[`render_toc_html`](toc_renderer.md)**: called by `StreamingPdfExporter._build_streaming_toc_html`
 - **`to_thread`**: called by `StreamingPdfExporter._finalize_pdf`, `StreamingPdfExporter._process_pages_in_batches`, `StreamingPdfExporter._resolve_output_file`, `StreamingPdfExporter.export`, `StreamingPdfExporter.export_separate`
 - **`with_suffix`**: called by `StreamingPdfExporter.export_separate`
 - **`write`**: called by `StreamingPdfExporter._merge_pdfs`
@@ -662,11 +661,12 @@ assert result is False
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `StreamingPdfExporter` | class | Brian Breidenbach | 1 week ago | `6c0c361` refactor: extract helpers f... |
-| `export` | method | Brian Breidenbach | 1 week ago | `6c0c361` refactor: extract helpers f... |
-| `_resolve_output_file` | method | Brian Breidenbach | 1 week ago | `6c0c361` refactor: extract helpers f... |
-| `_process_pages_in_batches` | method | Brian Breidenbach | 1 week ago | `6c0c361` refactor: extract helpers f... |
-| `_finalize_pdf` | method | Brian Breidenbach | 1 week ago | `6c0c361` refactor: extract helpers f... |
+| `StreamingPdfExporter` | class | Brian Breidenbach | today | `e03bc9c` refactor: extract TOC rende... |
+| `_build_streaming_toc_html` | method | Brian Breidenbach | today | `e03bc9c` refactor: extract TOC rende... |
+| `export` | method | Brian Breidenbach | 2 weeks ago | `6c0c361` refactor: extract helpers f... |
+| `_resolve_output_file` | method | Brian Breidenbach | 2 weeks ago | `6c0c361` refactor: extract helpers f... |
+| `_process_pages_in_batches` | method | Brian Breidenbach | 2 weeks ago | `6c0c361` refactor: extract helpers f... |
+| `_finalize_pdf` | method | Brian Breidenbach | 2 weeks ago | `6c0c361` refactor: extract helpers f... |
 | `export_separate` | method | Brian Breidenbach | Feb 23, 2026 | `c6fe2bd` refactor: split oversized m... |
 | `_export_single_page` | method | Brian Breidenbach | Feb 20, 2026 | `6be69f5` refactor: low-priority Pyth... |
 | `_merge_pdfs` | method | Brian Breidenbach | Feb 20, 2026 | `6be69f5` refactor: low-priority Pyth... |
@@ -676,8 +676,6 @@ assert result is False
 | `_require_weasyprint` | function | Brian Breidenbach | Feb 10, 2026 | `20c40bf` fix: graceful degradation w... |
 | `extract_title` | function | Brian Breidenbach | Feb 09, 2026 | `2130136` refactor: Extract duplicate... |
 | `__init__` | method | Brian Breidenbach | Jan 26, 2026 | `a64166a` Add seven medium-priority e... |
-| `_build_streaming_toc_html` | method | Brian Breidenbach | Jan 26, 2026 | `a64166a` Add seven medium-priority e... |
-| `_add_toc_entries_html` | method | Brian Breidenbach | Jan 26, 2026 | `a64166a` Add seven medium-priority e... |
 
 ## Additional Source Code
 
@@ -913,36 +911,14 @@ def _render_batch_to_pdf(
 #### `_build_streaming_toc_html`
 
 <details>
-<summary>View Source (lines 459-464) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L459-L464">GitHub</a></summary>
+<summary>View Source (lines 459-463) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L459-L463">GitHub</a></summary>
 
 ```python
 def _build_streaming_toc_html(self) -> str:
         """Build TOC HTML from loaded TOC entries."""
-        parts = ['<div class="toc">']
-        self._add_toc_entries_html(self._toc_entries, parts, 0)
-        parts.append("</div>")
-        return "\n".join(parts)
-```
+        from local_deepwiki.export.toc_renderer import render_toc_html
 
-</details>
-
-
-#### `_add_toc_entries_html`
-
-<details>
-<summary>View Source (lines 466-475) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L466-L475">GitHub</a></summary>
-
-```python
-def _add_toc_entries_html(
-        self, entries: list[dict[str, Any]], parts: list[str], depth: int
-    ) -> None:
-        """Recursively add TOC entries to HTML parts."""
-        for entry in entries:
-            title = entry.get("title", "")
-            indent = "  " * depth
-            parts.append(f'<div class="toc-item">{indent}{title}</div>')
-            if "children" in entry:
-                self._add_toc_entries_html(entry["children"], parts, depth + 1)
+        return render_toc_html(self._toc_entries)
 ```
 
 </details>
@@ -951,7 +927,7 @@ def _add_toc_entries_html(
 #### `_export_single_page`
 
 <details>
-<summary>View Source (lines 478-498) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L478-L498">GitHub</a></summary>
+<summary>View Source (lines 466-486) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L466-L486">GitHub</a></summary>
 
 ```python
 def _export_single_page(page: WikiPage, output_file: Path) -> None:
@@ -983,7 +959,7 @@ def _export_single_page(page: WikiPage, output_file: Path) -> None:
 #### `_merge_pdfs`
 
 <details>
-<summary>View Source (lines 501-530) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L501-L530">GitHub</a></summary>
+<summary>View Source (lines 489-518) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L489-L518">GitHub</a></summary>
 
 ```python
 def _merge_pdfs(pdf_files: list[Path], output_path: Path) -> None:
@@ -1024,7 +1000,7 @@ def _merge_pdfs(pdf_files: list[Path], output_path: Path) -> None:
 #### `_create_empty_pdf`
 
 <details>
-<summary>View Source (lines 533-546) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L533-L546">GitHub</a></summary>
+<summary>View Source (lines 521-534) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L521-L534">GitHub</a></summary>
 
 ```python
 def _create_empty_pdf(output_path: Path) -> None:
@@ -1047,4 +1023,4 @@ def _create_empty_pdf(output_path: Path) -> None:
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/export/pdf.py:129-546`
+- `src/local_deepwiki/export/pdf.py:129-534`

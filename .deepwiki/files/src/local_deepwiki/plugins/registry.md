@@ -1,73 +1,56 @@
-# File: `src/local_deepwiki/plugins/registry.py`
+# Plugin Registry Module
 
 ## File Overview
 
-This file implements a plugin registry system for managing various types of plugins used by the `local_deepwiki` application. It provides a centralized mechanism to discover, load, register, and manage plugins such as language parsers, wiki generators, and embedding providers.
+This module implements a plugin registry system for managing language parsers, wiki generators, and embedding providers used by the local_deepwiki application. The registry provides a centralized mechanism for discovering, loading, registering, and managing plugins from multiple sources including directories, entry points, and custom locations.
 
-The registry supports loading plugins from multiple sources:
-- Direct Python files in a directory
-- Setuptools entry points defined in `pyproject.toml` or `setup.py`
-
-This design enables extensibility and modularity, allowing third-party developers to contribute plugins without modifying the core application code.
+The design rationale centers on creating a flexible, extensible plugin architecture that supports both built-in and third-party plugins while maintaining clean separation of concerns and proper resource cleanup.
 
 ## Key Concepts
 
-### Plugin Registry Pattern
-The `PluginRegistry` class implements a singleton pattern using `ContextVar` to maintain a global instance. This ensures that all parts of the application can access the same plugin registry, which is essential for consistent plugin management across the system.
+### Plugin Registration Pattern
+The registry implements a type-safe registration system using `singledispatchmethod` to automatically route plugin registration based on plugin type. This approach provides clean method dispatch while maintaining a unified registration interface.
 
-### Plugin Type Dispatching
-The registry uses `singledispatchmethod` to dynamically dispatch registration based on plugin type. This allows the system to register different plugin types (language parsers, wiki generators, embedding providers) with appropriate logic while keeping a unified interface for registration.
-
-### Plugin Discovery and Loading
+### Plugin Discovery Strategy
 The system supports multiple plugin discovery mechanisms:
-- Directory scanning for `.py` files
-- Setuptools entry points for external plugins
+- Directory scanning for Python modules
+- Setuptools entry points for package-level plugins
 - Repository-specific and user-specific plugin directories
 
-This multi-source approach allows for flexible plugin installation and configuration, supporting both built-in and user-installed plugins.
+This multi-source approach enables both built-in functionality and extensibility through external packages.
 
-### Plugin Lifecycle Management
-Each plugin type supports initialization (`initialize()`) and cleanup (`cleanup()`) methods. The registry ensures proper lifecycle management during registration and shutdown, including global cleanup via `cleanup_all()`.
+### Resource Management
+Each plugin implements an `initialize()` and `cleanup()` method. The registry ensures proper resource cleanup during shutdown or reset operations, with exception handling to prevent one bad plugin from breaking the entire system.
+
+### Singleton Pattern
+The module provides a global registry instance using `contextvars.ContextVar`, allowing consistent access across the application while supporting test isolation through `reset_plugin_registry()`.
 
 ## Integration
 
-### With the Application
-The `PluginRegistry` is used throughout the `local_deepwiki` application to:
-- Load plugins during startup via `discover_plugins()`
-- Retrieve specific plugins for processing content
-- Manage plugin lifecycle during application shutdown
+This module integrates deeply with the core application architecture by:
+1. **Dependency Injection**: Plugins are registered and retrieved through the global registry, enabling loose coupling between components
+2. **CLI Integration**: The registry is used by CLI commands like `init_cli.py` and `update_cli.py` to discover and load plugins
+3. **Configuration Flow**: Plugins are discovered and loaded during application initialization, as shown in `config/loader.py`
+4. **Core Components**: The registry is used by vector store components in `core/vectorstore/embedding.py` to access embedding providers
 
-### With External Components
-This file integrates with:
-- `local_deepwiki.plugins.base`: Provides the base plugin classes that are registered and managed
-- `local_deepwiki.logging`: Uses logging for plugin discovery, registration, and error handling
-- `importlib.metadata`: Enables loading plugins from setuptools entry points
-
-### Testing
-The global registry instance is exposed via `get_plugin_registry()` and can be reset via `reset_plugin_registry()`, making it easy to isolate tests and ensure clean state between test runs.
+The module imports from `local_deepwiki.plugins.base` to understand plugin interfaces and uses `importlib.metadata` for entry point discovery, making it a central hub for plugin lifecycle management.
 
 ## Design Notes
 
-### Singleton with ContextVar
-The registry uses `ContextVar` to implement a global singleton. This approach allows for better testing and context isolation, especially in asynchronous environments where multiple contexts might need separate plugin registries.
+### Plugin Loading Isolation
+The registry implements robust error handling during plugin loading. When a plugin fails to load, the system logs a warning and continues processing other plugins, ensuring that one faulty plugin doesn't prevent the entire system from starting.
 
-### Plugin Isolation
-[Plugin](base.md) loading is wrapped in try/except blocks to ensure that a single failing plugin does not crash the entire system. This is crucial for robustness in plugin-heavy environments.
+### Version Compatibility
+The entry point loading mechanism includes Python 3.9 compatibility by falling back to the older `importlib.metadata.entry_points` import method when the newer syntax isn't available, ensuring broad compatibility.
 
 ### Directory Loading Strategy
-When loading plugins from directories, the system:
-- Skips files starting with `_` to avoid loading internal modules
-- Uses unique module names to prevent duplicate loading
-- Logs warnings for failed plugin loads rather than crashing
+[Plugin](base.md) modules are loaded with unique names (`local_deepwiki_plugin_{stem}`) to prevent import conflicts. The registry tracks loaded modules to avoid duplicate loading, even if the same plugin is discovered multiple times.
 
-### Entry Point Compatibility
-The system handles Python version differences when loading entry points, supporting both Python 3.10+ (using `importlib.metadata.entry_points`) and Python 3.9 (using `importlib.metadata.entry_points as get_entry_points`).
+### Cleanup Strategy
+The `cleanup_all()` method ensures that all plugins are properly cleaned up in a specific order (parsers, generators, embedding providers) to maintain proper resource lifecycle management and prevent resource leaks.
 
-### Plugin Cleanup Strategy
-The `cleanup_all()` method ensures that all registered plugins are properly cleaned up, calling `cleanup()` on each plugin and clearing internal data structures. This prevents resource leaks and ensures proper shutdown behavior.
-
-### Extension-Based Plugin Selection
-The `get_parser_for_extension()` method allows finding a language parser by file extension, enabling automatic plugin selection based on file type. This improves usability by reducing explicit plugin selection requirements.
+### Context-Aware Singleton
+Using `ContextVar` for the global registry instance allows for better testing isolation while maintaining a consistent interface for the rest of the application, supporting both single-application and multi-application scenarios.
 
 ## API Reference
 
@@ -79,11 +62,11 @@ Registry for discovering and managing plugins.
 
 
 <details>
-<summary>View Source (lines 25-394) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L25-L394">GitHub</a></summary>
+<summary>View Source (lines 25-361) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L25-L361">GitHub</a></summary>
 
 ```python
 class PluginRegistry:
-    # Methods: __init__, language_parsers, wiki_generators, embedding_providers, register_language_parser, register_wiki_generator, register_embedding_provider, register, _, _, _, unregister_language_parser, unregister_wiki_generator, unregister_embedding_provider, get_language_parser, get_wiki_generator, get_embedding_provider, get_parser_for_extension, load_from_directory, _load_entry_point, load_from_entry_points, discover_plugins, cleanup_all, list_plugins
+    # Methods: __init__, language_parsers, wiki_generators, embedding_providers, _register_plugin, register_language_parser, register_wiki_generator, register_embedding_provider, register, _, _, _, _unregister_plugin, unregister_language_parser, unregister_wiki_generator, unregister_embedding_provider, get_language_parser, get_wiki_generator, get_embedding_provider, get_parser_for_extension, load_from_directory, _load_entry_point, load_from_entry_points, discover_plugins, cleanup_all, list_plugins
 ```
 
 </details>
@@ -182,25 +165,18 @@ Register a language parser plugin.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `plugin` | `LanguageParserPlugin` | - | The plugin to register. |
+| `plugin` | `LanguageParserPlugin` | - | - |
 
 
 <details>
-<summary>View Source (lines 57-68) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L57-L68">GitHub</a></summary>
+<summary>View Source (lines 71-75) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L71-L75">GitHub</a></summary>
 
 ```python
 def register_language_parser(self, plugin: LanguageParserPlugin) -> None:
-        """Register a language parser plugin.
-
-        Args:
-            plugin: The plugin to register.
-        """
-        name = plugin.language_name
-        if name in self._language_parsers:
-            logger.warning("Language parser '%s' already registered, overwriting", name)
-        self._language_parsers[name] = plugin
-        plugin.initialize()
-        logger.info("Registered language parser plugin: %s", plugin.metadata)
+        """Register a language parser plugin."""
+        self._register_plugin(
+            self._language_parsers, plugin, "language_name", "Language parser"
+        )
 ```
 
 </details>
@@ -216,25 +192,18 @@ Register a wiki generator plugin.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `plugin` | `WikiGeneratorPlugin` | - | The plugin to register. |
+| `plugin` | `WikiGeneratorPlugin` | - | - |
 
 
 <details>
-<summary>View Source (lines 70-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L70-L81">GitHub</a></summary>
+<summary>View Source (lines 77-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L77-L81">GitHub</a></summary>
 
 ```python
 def register_wiki_generator(self, plugin: WikiGeneratorPlugin) -> None:
-        """Register a wiki generator plugin.
-
-        Args:
-            plugin: The plugin to register.
-        """
-        name = plugin.generator_name
-        if name in self._wiki_generators:
-            logger.warning("Wiki generator '%s' already registered, overwriting", name)
-        self._wiki_generators[name] = plugin
-        plugin.initialize()
-        logger.info("Registered wiki generator plugin: %s", plugin.metadata)
+        """Register a wiki generator plugin."""
+        self._register_plugin(
+            self._wiki_generators, plugin, "generator_name", "Wiki generator"
+        )
 ```
 
 </details>
@@ -250,27 +219,18 @@ Register an embedding provider plugin.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `plugin` | `EmbeddingProviderPlugin` | - | The plugin to register. |
+| `plugin` | `EmbeddingProviderPlugin` | - | - |
 
 
 <details>
-<summary>View Source (lines 83-96) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L83-L96">GitHub</a></summary>
+<summary>View Source (lines 83-87) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L83-L87">GitHub</a></summary>
 
 ```python
 def register_embedding_provider(self, plugin: EmbeddingProviderPlugin) -> None:
-        """Register an embedding provider plugin.
-
-        Args:
-            plugin: The plugin to register.
-        """
-        name = plugin.provider_name
-        if name in self._embedding_providers:
-            logger.warning(
-                "Embedding provider '%s' already registered, overwriting", name
-            )
-        self._embedding_providers[name] = plugin
-        plugin.initialize()
-        logger.info("Registered embedding provider plugin: %s", plugin.metadata)
+        """Register an embedding provider plugin."""
+        self._register_plugin(
+            self._embedding_providers, plugin, "provider_name", "Embedding provider"
+        )
 ```
 
 </details>
@@ -290,7 +250,7 @@ Register a plugin based on its type.
 
 
 <details>
-<summary>View Source (lines 99-108) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L99-L108">GitHub</a></summary>
+<summary>View Source (lines 90-99) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L90-L99">GitHub</a></summary>
 
 ```python
 def register(self, plugin: Plugin) -> None:
@@ -318,28 +278,16 @@ Unregister a language parser plugin.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `name` | `str` | - | The language name. |
+| `name` | `str` | - | - |
 
 
 <details>
-<summary>View Source (lines 122-136) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L122-L136">GitHub</a></summary>
+<summary>View Source (lines 123-125) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L123-L125">GitHub</a></summary>
 
 ```python
 def unregister_language_parser(self, name: str) -> bool:
-        """Unregister a language parser plugin.
-
-        Args:
-            name: The language name.
-
-        Returns:
-            True if plugin was unregistered, False if not found.
-        """
-        if name in self._language_parsers:
-            plugin = self._language_parsers.pop(name)
-            plugin.cleanup()
-            logger.info("Unregistered language parser: %s", name)
-            return True
-        return False
+        """Unregister a language parser plugin."""
+        return self._unregister_plugin(self._language_parsers, name, "language parser")
 ```
 
 </details>
@@ -355,28 +303,16 @@ Unregister a wiki generator plugin.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `name` | `str` | - | The generator name. |
+| `name` | `str` | - | - |
 
 
 <details>
-<summary>View Source (lines 138-152) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L138-L152">GitHub</a></summary>
+<summary>View Source (lines 127-129) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L127-L129">GitHub</a></summary>
 
 ```python
 def unregister_wiki_generator(self, name: str) -> bool:
-        """Unregister a wiki generator plugin.
-
-        Args:
-            name: The generator name.
-
-        Returns:
-            True if plugin was unregistered, False if not found.
-        """
-        if name in self._wiki_generators:
-            plugin = self._wiki_generators.pop(name)
-            plugin.cleanup()
-            logger.info("Unregistered wiki generator: %s", name)
-            return True
-        return False
+        """Unregister a wiki generator plugin."""
+        return self._unregister_plugin(self._wiki_generators, name, "wiki generator")
 ```
 
 </details>
@@ -392,28 +328,18 @@ Unregister an embedding provider plugin.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `name` | `str` | - | The provider name. |
+| `name` | `str` | - | - |
 
 
 <details>
-<summary>View Source (lines 154-168) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L154-L168">GitHub</a></summary>
+<summary>View Source (lines 131-135) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L131-L135">GitHub</a></summary>
 
 ```python
 def unregister_embedding_provider(self, name: str) -> bool:
-        """Unregister an embedding provider plugin.
-
-        Args:
-            name: The provider name.
-
-        Returns:
-            True if plugin was unregistered, False if not found.
-        """
-        if name in self._embedding_providers:
-            plugin = self._embedding_providers.pop(name)
-            plugin.cleanup()
-            logger.info("Unregistered embedding provider: %s", name)
-            return True
-        return False
+        """Unregister an embedding provider plugin."""
+        return self._unregister_plugin(
+            self._embedding_providers, name, "embedding provider"
+        )
 ```
 
 </details>
@@ -433,7 +359,7 @@ Get a language parser plugin by name.
 
 
 <details>
-<summary>View Source (lines 170-179) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L170-L179">GitHub</a></summary>
+<summary>View Source (lines 137-146) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L137-L146">GitHub</a></summary>
 
 ```python
 def get_language_parser(self, name: str) -> LanguageParserPlugin | None:
@@ -465,7 +391,7 @@ Get a wiki generator plugin by name.
 
 
 <details>
-<summary>View Source (lines 181-190) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L181-L190">GitHub</a></summary>
+<summary>View Source (lines 148-157) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L148-L157">GitHub</a></summary>
 
 ```python
 def get_wiki_generator(self, name: str) -> WikiGeneratorPlugin | None:
@@ -497,7 +423,7 @@ Get an embedding provider plugin by name.
 
 
 <details>
-<summary>View Source (lines 192-201) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L192-L201">GitHub</a></summary>
+<summary>View Source (lines 159-168) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L159-L168">GitHub</a></summary>
 
 ```python
 def get_embedding_provider(self, name: str) -> EmbeddingProviderPlugin | None:
@@ -529,7 +455,7 @@ Find a language parser plugin that handles a file extension.
 
 
 <details>
-<summary>View Source (lines 203-216) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L203-L216">GitHub</a></summary>
+<summary>View Source (lines 170-183) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L170-L183">GitHub</a></summary>
 
 ```python
 def get_parser_for_extension(self, extension: str) -> LanguageParserPlugin | None:
@@ -565,7 +491,7 @@ Load plugins from a directory.  Looks for Python files in the directory and impo
 
 
 <details>
-<summary>View Source (lines 218-260) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L218-L260">GitHub</a></summary>
+<summary>View Source (lines 185-227) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L185-L227">GitHub</a></summary>
 
 ```python
 def load_from_directory(self, directory: Path) -> int:
@@ -625,7 +551,7 @@ Load plugins from setuptools entry points.  Discovers plugins registered via pyp
 
 
 <details>
-<summary>View Source (lines 276-310) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L276-L310">GitHub</a></summary>
+<summary>View Source (lines 243-277) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L243-L277">GitHub</a></summary>
 
 ```python
 def load_from_entry_points(self) -> int:
@@ -683,7 +609,7 @@ Discover and load plugins from all sources.  Searches in order: 1. Custom direct
 
 
 <details>
-<summary>View Source (lines 312-357) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L312-L357">GitHub</a></summary>
+<summary>View Source (lines 279-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L279-L324">GitHub</a></summary>
 
 ```python
 def discover_plugins(
@@ -746,7 +672,7 @@ Clean up all registered plugins.
 
 
 <details>
-<summary>View Source (lines 359-382) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L359-L382">GitHub</a></summary>
+<summary>View Source (lines 326-349) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L326-L349">GitHub</a></summary>
 
 ```python
 def cleanup_all(self) -> None:
@@ -790,7 +716,7 @@ List all registered plugins by type.
 
 
 <details>
-<summary>View Source (lines 384-394) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L384-L394">GitHub</a></summary>
+<summary>View Source (lines 351-361) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L351-L361">GitHub</a></summary>
 
 ```python
 def list_plugins(self) -> dict[str, list[str]]:
@@ -823,7 +749,7 @@ Get the global plugin registry instance.
 
 
 <details>
-<summary>View Source (lines 401-411) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L401-L411">GitHub</a></summary>
+<summary>View Source (lines 368-378) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L368-L378">GitHub</a></summary>
 
 ```python
 def get_plugin_registry() -> PluginRegistry:
@@ -855,7 +781,7 @@ Reset the global plugin registry.  Useful for testing.
 
 
 <details>
-<summary>View Source (lines 414-422) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L414-L422">GitHub</a></summary>
+<summary>View Source (lines 381-389) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L381-L389">GitHub</a></summary>
 
 ```python
 def reset_plugin_registry() -> None:
@@ -880,17 +806,17 @@ classDiagram
         +language_parsers() dict[str, LanguageParserPlugin]
         +wiki_generators() dict[str, WikiGeneratorPlugin]
         +embedding_providers() dict[str, EmbeddingProviderPlugin]
+        -_register_plugin(registry: dict[str, Any], plugin: Plugin, ...) None
         +register_language_parser(plugin: LanguageParserPlugin) None
         +register_wiki_generator(plugin: WikiGeneratorPlugin) None
         +register_embedding_provider(plugin: EmbeddingProviderPlugin) None
         +register(plugin: Plugin) None
         -_(plugin: LanguageParserPlugin) None
+        -_unregister_plugin(registry: dict[str, Any], name: str, kind: str) bool
         +unregister_language_parser(name: str) bool
         +unregister_wiki_generator(name: str) bool
         +unregister_embedding_provider(name: str) bool
         +get_language_parser(name: str) LanguageParserPlugin | None
-        +get_wiki_generator(name: str) WikiGeneratorPlugin | None
-        +get_embedding_provider(name: str) EmbeddingProviderPlugin | None
     }
 ```
 
@@ -901,56 +827,54 @@ flowchart TD
     N0[PluginRegistry]
     N1[PluginRegistry._]
     N2[PluginRegistry._load_entry_...]
-    N3[PluginRegistry.discover_plu...]
-    N4[PluginRegistry.embedding_pr...]
-    N5[PluginRegistry.language_par...]
-    N6[PluginRegistry.load_from_di...]
-    N7[PluginRegistry.load_from_en...]
-    N8[PluginRegistry.register]
-    N9[PluginRegistry.register_emb...]
-    N10[PluginRegistry.register_lan...]
-    N11[PluginRegistry.register_wik...]
-    N12[PluginRegistry.unregister_e...]
-    N13[PluginRegistry.unregister_l...]
-    N14[PluginRegistry.unregister_w...]
-    N15[PluginRegistry.wiki_generators]
-    N16[TypeError]
-    N17[cleanup]
-    N18[cleanup_all]
-    N19[copy]
-    N20[exec_module]
-    N21[exists]
-    N22[get_plugin_registry]
-    N23[glob]
-    N24[initialize]
-    N25[is_dir]
-    N26[module_from_spec]
-    N27[register_embedding_provider]
-    N28[reset_plugin_registry]
-    N29[spec_from_file_location]
-    N22 --> N0
-    N28 --> N18
-    N5 --> N19
-    N15 --> N19
-    N4 --> N19
-    N10 --> N24
-    N11 --> N24
-    N9 --> N24
-    N8 --> N16
-    N1 --> N27
-    N13 --> N17
-    N14 --> N17
-    N12 --> N17
-    N6 --> N21
-    N6 --> N25
+    N3[PluginRegistry._register_pl...]
+    N4[PluginRegistry._unregister_...]
+    N5[PluginRegistry.discover_plu...]
+    N6[PluginRegistry.embedding_pr...]
+    N7[PluginRegistry.language_par...]
+    N8[PluginRegistry.load_from_di...]
+    N9[PluginRegistry.load_from_en...]
+    N10[PluginRegistry.register]
+    N11[PluginRegistry.register_emb...]
+    N12[PluginRegistry.register_lan...]
+    N13[PluginRegistry.register_wik...]
+    N14[PluginRegistry.unregister_e...]
+    N15[PluginRegistry.unregister_l...]
+    N16[PluginRegistry.unregister_w...]
+    N17[PluginRegistry.wiki_generators]
+    N18[TypeError]
+    N19[_register_plugin]
+    N20[_unregister_plugin]
+    N21[cleanup]
+    N22[cleanup_all]
+    N23[copy]
+    N24[exists]
+    N25[get_plugin_registry]
+    N26[initialize]
+    N27[is_dir]
+    N28[register_embedding_provider]
+    N29[reset_plugin_registry]
+    N25 --> N0
+    N29 --> N22
+    N7 --> N23
+    N17 --> N23
     N6 --> N23
-    N6 --> N29
-    N6 --> N26
-    N6 --> N20
+    N3 --> N26
+    N12 --> N19
+    N13 --> N19
+    N11 --> N19
+    N10 --> N18
+    N1 --> N28
+    N4 --> N21
+    N15 --> N20
+    N16 --> N20
+    N14 --> N20
+    N8 --> N24
+    N8 --> N27
     classDef func fill:#e1f5fe
-    class N0,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
+    class N0,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
     classDef method fill:#fff3e0
-    class N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15 method
+    class N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17 method
 ```
 
 ## Used By
@@ -960,8 +884,10 @@ Functions and methods in this file and their callers:
 - **`PluginRegistry`**: called by `get_plugin_registry`
 - **`TypeError`**: called by `PluginRegistry.register`
 - **`_load_entry_point`**: called by `PluginRegistry.load_from_entry_points`
+- **`_register_plugin`**: called by `PluginRegistry.register_embedding_provider`, `PluginRegistry.register_language_parser`, `PluginRegistry.register_wiki_generator`
+- **`_unregister_plugin`**: called by `PluginRegistry.unregister_embedding_provider`, `PluginRegistry.unregister_language_parser`, `PluginRegistry.unregister_wiki_generator`
 - **`add`**: called by `PluginRegistry.load_from_directory`
-- **`cleanup`**: called by `PluginRegistry.cleanup_all`, `PluginRegistry.unregister_embedding_provider`, `PluginRegistry.unregister_language_parser`, `PluginRegistry.unregister_wiki_generator`
+- **`cleanup`**: called by `PluginRegistry._unregister_plugin`, `PluginRegistry.cleanup_all`
 - **`cleanup_all`**: called by `reset_plugin_registry`
 - **`copy`**: called by `PluginRegistry.embedding_providers`, `PluginRegistry.language_parsers`, `PluginRegistry.wiki_generators`
 - **`entry_points`**: called by `PluginRegistry.load_from_entry_points`
@@ -970,7 +896,7 @@ Functions and methods in this file and their callers:
 - **`get_entry_points`**: called by `PluginRegistry.load_from_entry_points`
 - **`glob`**: called by `PluginRegistry.load_from_directory`
 - **`home`**: called by `PluginRegistry.discover_plugins`
-- **`initialize`**: called by `PluginRegistry.register_embedding_provider`, `PluginRegistry.register_language_parser`, `PluginRegistry.register_wiki_generator`
+- **`initialize`**: called by `PluginRegistry._register_plugin`
 - **`is_dir`**: called by `PluginRegistry.load_from_directory`
 - **`load`**: called by `PluginRegistry._load_entry_point`
 - **`load_from_directory`**: called by `PluginRegistry.discover_plugins`
@@ -985,9 +911,17 @@ Functions and methods in this file and their callers:
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `PluginRegistry` | class | Brian Breidenbach | yesterday | `ca3ccca` refactor: flatten deep nest... |
-| `_load_entry_point` | method | Brian Breidenbach | yesterday | `ca3ccca` refactor: flatten deep nest... |
-| `load_from_entry_points` | method | Brian Breidenbach | yesterday | `ca3ccca` refactor: flatten deep nest... |
+| `PluginRegistry` | class | Brian Breidenbach | today | `2bc1322` refactor: extract generic r... |
+| `_register_plugin` | method | Brian Breidenbach | today | `2bc1322` refactor: extract generic r... |
+| `register_language_parser` | method | Brian Breidenbach | today | `2bc1322` refactor: extract generic r... |
+| `register_wiki_generator` | method | Brian Breidenbach | today | `2bc1322` refactor: extract generic r... |
+| `register_embedding_provider` | method | Brian Breidenbach | today | `2bc1322` refactor: extract generic r... |
+| `_unregister_plugin` | method | Brian Breidenbach | today | `2bc1322` refactor: extract generic r... |
+| `unregister_language_parser` | method | Brian Breidenbach | today | `2bc1322` refactor: extract generic r... |
+| `unregister_wiki_generator` | method | Brian Breidenbach | today | `2bc1322` refactor: extract generic r... |
+| `unregister_embedding_provider` | method | Brian Breidenbach | today | `2bc1322` refactor: extract generic r... |
+| `_load_entry_point` | method | Brian Breidenbach | 4 days ago | `ca3ccca` refactor: flatten deep nest... |
+| `load_from_entry_points` | method | Brian Breidenbach | 4 days ago | `ca3ccca` refactor: flatten deep nest... |
 | `load_from_directory` | method | Brian Breidenbach | Feb 23, 2026 | `a662e1a` refactor: reduce complexity... |
 | `cleanup_all` | method | Brian Breidenbach | Feb 23, 2026 | `a662e1a` refactor: reduce complexity... |
 | `__init__` | method | Brian Breidenbach | Feb 23, 2026 | `c6fe2bd` refactor: split oversized m... |
@@ -997,13 +931,7 @@ Functions and methods in this file and their callers:
 | `_` | method | Brian Breidenbach | Feb 21, 2026 | `01e8359` refactor: add __all__, dict... |
 | `_` | method | Brian Breidenbach | Feb 21, 2026 | `01e8359` refactor: add __all__, dict... |
 | `_` | method | Brian Breidenbach | Feb 21, 2026 | `01e8359` refactor: add __all__, dict... |
-| `register_embedding_provider` | method | Brian Breidenbach | Feb 20, 2026 | `b807417` refactor: high-priority Pyt... |
 | `discover_plugins` | method | Brian Breidenbach | Feb 20, 2026 | `b807417` refactor: high-priority Pyt... |
-| `register_language_parser` | method | Brian Breidenbach | Feb 11, 2026 | `ba96da1` fix: publication plan P0-P2... |
-| `register_wiki_generator` | method | Brian Breidenbach | Feb 11, 2026 | `ba96da1` fix: publication plan P0-P2... |
-| `unregister_language_parser` | method | Brian Breidenbach | Feb 11, 2026 | `ba96da1` fix: publication plan P0-P2... |
-| `unregister_wiki_generator` | method | Brian Breidenbach | Feb 11, 2026 | `ba96da1` fix: publication plan P0-P2... |
-| `unregister_embedding_provider` | method | Brian Breidenbach | Feb 11, 2026 | `ba96da1` fix: publication plan P0-P2... |
 | `language_parsers` | method | Brian Breidenbach | Jan 25, 2026 | `f2db999` Add plugin system for exten... |
 | `wiki_generators` | method | Brian Breidenbach | Jan 25, 2026 | `f2db999` Add plugin system for exten... |
 | `embedding_providers` | method | Brian Breidenbach | Jan 25, 2026 | `f2db999` Add plugin system for exten... |
@@ -1017,10 +945,34 @@ Functions and methods in this file and their callers:
 
 Source code for functions and methods not listed in the API Reference above.
 
+#### `_register_plugin`
+
+<details>
+<summary>View Source (lines 57-69) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L57-L69">GitHub</a></summary>
+
+```python
+def _register_plugin(
+        self,
+        registry: dict[str, Any],
+        plugin: Plugin,
+        name_attr: str,
+        kind: str,
+    ) -> None:
+        name = getattr(plugin, name_attr)
+        if name in registry:
+            logger.warning("%s '%s' already registered, overwriting", kind, name)
+        registry[name] = plugin
+        plugin.initialize()
+        logger.info("Registered %s plugin: %s", kind, plugin.metadata)
+```
+
+</details>
+
+
 #### `_`
 
 <details>
-<summary>View Source (lines 111-112) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L111-L112">GitHub</a></summary>
+<summary>View Source (lines 102-103) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L102-L103">GitHub</a></summary>
 
 ```python
 def _(self, plugin: LanguageParserPlugin) -> None:
@@ -1033,7 +985,7 @@ def _(self, plugin: LanguageParserPlugin) -> None:
 #### `_`
 
 <details>
-<summary>View Source (lines 115-116) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L115-L116">GitHub</a></summary>
+<summary>View Source (lines 106-107) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L106-L107">GitHub</a></summary>
 
 ```python
 def _(self, plugin: WikiGeneratorPlugin) -> None:
@@ -1046,7 +998,7 @@ def _(self, plugin: WikiGeneratorPlugin) -> None:
 #### `_`
 
 <details>
-<summary>View Source (lines 119-120) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L119-L120">GitHub</a></summary>
+<summary>View Source (lines 110-111) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L110-L111">GitHub</a></summary>
 
 ```python
 def _(self, plugin: EmbeddingProviderPlugin) -> None:
@@ -1056,10 +1008,30 @@ def _(self, plugin: EmbeddingProviderPlugin) -> None:
 </details>
 
 
+#### `_unregister_plugin`
+
+<details>
+<summary>View Source (lines 113-121) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L113-L121">GitHub</a></summary>
+
+```python
+def _unregister_plugin(
+        self, registry: dict[str, Any], name: str, kind: str
+    ) -> bool:
+        if name in registry:
+            plugin = registry.pop(name)
+            plugin.cleanup()
+            logger.info("Unregistered %s: %s", kind, name)
+            return True
+        return False
+```
+
+</details>
+
+
 #### `_load_entry_point`
 
 <details>
-<summary>View Source (lines 262-274) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L262-L274">GitHub</a></summary>
+<summary>View Source (lines 229-241) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/plugins/registry.py#L229-L241">GitHub</a></summary>
 
 ```python
 def _load_entry_point(self, ep: Any) -> bool:
@@ -1081,4 +1053,4 @@ def _load_entry_point(self, ep: Any) -> bool:
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/plugins/registry.py:25-394`
+- `src/local_deepwiki/plugins/registry.py:25-361`

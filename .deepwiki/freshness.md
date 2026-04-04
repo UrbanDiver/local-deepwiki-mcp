@@ -7,9 +7,9 @@ Pages are flagged when source files have been modified after the documentation w
 
 | Metric | Value |
 |--------|-------|
-| Total file pages | 243 |
+| Total file pages | 244 |
 | Potentially stale | 3 |
-| Up to date | 240 |
+| Up to date | 241 |
 | Freshness | 99% |
 
 ## ⚠️ Potentially Stale Documentation
@@ -31,4 +31,4 @@ To refresh stale documentation:
 3. **Manual review** may be needed for pages where only comments or docstrings changed
 
 ---
-*Report generated: 2026-04-03 21:16:49*
+*Report generated: 2026-04-04 01:59:43*

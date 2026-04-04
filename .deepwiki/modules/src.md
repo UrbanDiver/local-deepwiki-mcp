@@ -1,122 +1,110 @@
-# Module: local_deepwiki
+# Module: local_deepwiki.plugins.registry
 
 ## Module Purpose
 
-The `local_deepwiki` module provides the core functionality for a local code intelligence and documentation system. It serves as the foundation for analyzing codebases, generating wikis, and providing intelligent code search and analysis capabilities. The module is structured around an MCP (Model Control Protocol) server that exposes various tools for code analysis, documentation generation, and project understanding.
+The `local_deepwiki.plugins.registry` module provides a plugin registry system for the local_deepwiki project. It enables dynamic discovery, loading, and management of various plugin types including language parsers, wiki generators, and embedding providers. The registry supports loading plugins from directories and entry points, maintaining a collection of registered plugins that can be retrieved by name or used to handle specific file extensions.
 
 ## Key Classes and Functions
 
-### Core Server Components
+### PluginRegistry Class
 
-- **[`list_tools`](../files/src/local_deepwiki/server.md)** - Asynchronously lists all available tools in the system
-- **[`call_tool`](../files/src/local_deepwiki/server.md)** - Handles tool calls by routing them to appropriate handlers
-- **`main`** - Main entry point for starting the MCP server
-- **`run`** - Async function that runs the server using stdio transport
+The [`PluginRegistry`](../files/src/local_deepwiki/plugins/registry.md) class is the core component of this module. It maintains dictionaries of registered plugins for different categories:
 
-### Tool Definitions
+- [Language](../files/src/local_deepwiki/models/foundation.md) parser plugins (`_language_parsers`)
+- Wiki generator plugins (`_wiki_generators`)
+- Embedding provider plugins (`_embedding_providers`)
 
-- **`TOOL_DEFINITIONS`** - Collection of all available tool definitions
-- **`TOOL_HANDLERS`** - Mapping of tool names to their handler functions
-- **`PROGRESS_ENABLED_TOOLS`** - Set of tools that support progress reporting
+**Methods:**
 
-### Analysis and Generation Functions
-
-- **[`analyze_duplication`](../files/src/local_deepwiki/generators/analysis/duplication.md)** - Main function for detecting code duplication (both Type 1 and Type 2 clones)
-- **[`detect_type1_clones`](../files/src/local_deepwiki/generators/analysis/duplication.md)** - Detects exact code clones using line-based fingerprinting
-- **[`detect_type2_clones`](../files/src/local_deepwiki/generators/analysis/duplication.md)** - Detects structural clones by comparing function AST structure
-- **`_normalize_line`** - Normalizes source lines for fingerprinting
-- **`_build_fingerprints`** - Builds hash-to-location mappings from files
-- **`_deduplicate_clone_group`** - Removes overlapping windows from clone groups
-- **`_collect_node_types`** - Collects AST node types for structural analysis
-
-### Data Models
-
-The module re-exports various data models through `local_deepwiki.models`:
-- **[`IndexRepositoryArgs`](../files/src/local_deepwiki/models/tool_args.md)** - Arguments for indexing repository operations
-- **[`ProgressCallback`](../files/src/local_deepwiki/models/foundation.md)** - Callback for progress reporting
-- **`ToolHandler`** - Type definition for tool handlers
-- **[`WikiPage`](../files/src/local_deepwiki/export/streaming.md)** - Model for wiki page data
-- And many others for various tool arguments and results
+- `__init__(self)`: Initializes the plugin registry with empty dictionaries for each plugin type and a set to track loaded modules.
+- `language_parsers(self)`: Returns a copy of the registered language parser plugins.
+- `wiki_generators(self)`: Returns a copy of the registered wiki generator plugins.
+- `embedding_providers(self)`: Returns a copy of the registered embedding provider plugins.
+- `_register_plugin(self, registry, plugin, name_attr, kind)`: Internal method to register a plugin in the specified registry, handling duplicate warnings and plugin initialization.
+- `register_language_parser(self, plugin)`: Registers a language parser plugin.
+- `register_wiki_generator(self, plugin)`: Registers a wiki generator plugin.
+- `register_embedding_provider(self, plugin)`: Registers an embedding provider plugin.
+- `register(self, plugin)`: Raises a `TypeError` for unknown plugin types (currently not implemented for base [`Plugin`](../files/src/local_deepwiki/plugins/base.md)).
+- `_unregister_plugin(self, registry, name, kind)`: Internal method to unregister a plugin from the specified registry.
+- `unregister_language_parser(self, name)`: Unregisters a language parser plugin by name.
+- `unregister_wiki_generator(self, name)`: Unregisters a wiki generator plugin by name.
+- `unregister_embedding_provider(self, name)`: Unregisters an embedding provider plugin by name.
+- `get_language_parser(self, name)`: Retrieves a language parser plugin by name.
+- `get_wiki_generator(self, name)`: Retrieves a wiki generator plugin by name.
+- `get_embedding_provider(self, name)`: Retrieves an embedding provider plugin by name.
+- `get_parser_for_extension(self, extension)`: Finds a language parser plugin that handles a given file extension.
+- `load_from_directory(self, directory)`: Loads plugins from a specified directory by importing Python files.
+- `_load_entry_point(self, ep)`: Attempts to load and register a plugin from an entry point.
+- `load_from_entry_points(self)`: Loads plugins from entry points using `importlib.metadata`.
+- `discover_plugins(self)`: Discovers and loads plugins from both directory and entry point sources.
+- `cleanup_all(self)`: Cleans up all registered plugins.
+- `list_plugins(self)`: Lists all registered plugins.
 
 ## How Components Interact
 
-The module operates as an MCP server that:
-1. Defines a collection of tools in `TOOL_DEFINITIONS`
-2. Maps tool names to handler functions in `TOOL_HANDLERS`
-3. Validates tool-handler consistency at startup
-4. Receives tool calls through the [`call_tool`](../files/src/local_deepwiki/server.md) function
-5. Routes calls to appropriate handlers, with special handling for tools that require server context (like indexing and research)
-6. Provides analysis capabilities through functions like [`analyze_duplication`](../files/src/local_deepwiki/generators/analysis/duplication.md) that perform code analysis
-7. Uses data models for consistent data flow between components
+The [`PluginRegistry`](../files/src/local_deepwiki/plugins/registry.md) class serves as a central hub for plugin management. It allows plugins of different types to be registered and retrieved by name. The registry supports two primary loading mechanisms:
 
-The server framework handles the communication layer while the core logic resides in the analysis and generation functions that process code repositories and generate insights.
+1. **Directory Loading**: Plugins can be loaded from a directory by importing Python files that register themselves with the global registry.
+2. **Entry Point Loading**: Plugins can be discovered and loaded via Python's entry point system using `importlib.metadata`.
+
+The registry maintains a mapping of plugin names to plugin instances, and provides methods to find plugins by extension, making it easy to route file processing to the appropriate language parser.
 
 ## Usage Examples
 
-### Starting the Server
 ```python
-# Start the MCP server
-if __name__ == "__main__":
-    main()
+from local_deepwiki.plugins.registry import get_plugin_registry
+
+# Get the global plugin registry
+registry = get_plugin_registry()
+
+# Register a plugin
+registry.register_language_parser(my_parser_plugin)
+
+# Get a plugin by name
+parser = registry.get_language_parser("python")
+
+# Get a parser for a specific file extension
+parser = registry.get_parser_for_extension(".py")
 ```
 
-### Using Analysis Functions
 ```python
-from local_deepwiki.generators.analysis.duplication import analyze_duplication
+from local_deepwiki.plugins.registry import get_plugin_registry
 
-# Analyze code duplication in a repository
-result = analyze_duplication(
-    repo_path="/path/to/repo",
-    min_lines=10,
-    top_n=10,
-    exclude_tests=True
-)
-print(result["stats"])
-```
+# Load plugins from a directory
+registry = get_plugin_registry()
+registry.load_from_directory(Path("/path/to/plugins"))
 
-### Listing Available Tools
-```python
-import asyncio
-from local_deepwiki.server import list_tools
-
-# Get list of available tools
-tools = asyncio.run(list_tools())
-print(tools)
+# Load plugins from entry points
+registry.load_from_entry_points()
 ```
 
 ## Dependencies
 
 This module depends on:
-- `asyncio` - For asynchronous operations
-- `mcp` - Model Control Protocol server implementation
-- `local_deepwiki.handlers` - Tool handler implementations
-- `local_deepwiki.models` - Data models and tool argument definitions
-- `local_deepwiki.tool_defs` - Tool definitions
-- `local_deepwiki.logging` - Logging configuration
-- `local_deepwiki.security.access_control` - Security and access control
-- `local_deepwiki.handlers.session_state` - Session state management
-- `local_deepwiki.generators.analysis.duplication` - Duplication analysis functions
-- `local_deepwiki.core.chunk_extractors` - Code chunk extraction utilities
-- `local_deepwiki.core.parser.ast_utils` - AST utilities
-- `local_deepwiki.core.parser.code_parser` - Code parsing utilities
-- `local_deepwiki.generators.analysis.source_filter` - Source file filtering utilities
-
-The module also imports various standard library modules including `argparse`, `collections`, `contextlib`, `dataclasses`, `datetime`, `enum`, `json`, `logging`, `math`, `operator`, and `typing` for general functionality.
+- `importlib.util`
+- `sys`
+- `contextvars.ContextVar`
+- `functools.singledispatchmethod`
+- `pathlib.Path`
+- `typing.Any`, `TypeVar`
+- [`local_deepwiki.logging.get_logger`](../files/src/local_deepwiki/logging.md)
+- `local_deepwiki.plugins.base` (for plugin base classes)
+- `importlib.metadata.entry_points` (for loading plugins from entry points)
 
 ## Relevant Source Files
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/server.py:98-100`](../files/src/local_deepwiki/server.md)
-- `src/local_deepwiki/models/__init__.py`
-- [`src/local_deepwiki/tool_defs/analysis.py`](../files/src/local_deepwiki/tool_defs/analysis.md)
-- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](../files/src/local_deepwiki/generators/analysis/duplication.md)
-- [`src/local_deepwiki/generators/analysis/architecture_health.py:55-123`](../files/src/local_deepwiki/generators/analysis/architecture_health.md)
-- [`src/local_deepwiki/generators/analysis/maintainability.py:69-79`](../files/src/local_deepwiki/generators/analysis/maintainability.md)
-- [`src/local_deepwiki/models/tool_args.py:15-49`](../files/src/local_deepwiki/models/tool_args.md)
-- [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](../files/src/local_deepwiki/generators/analysis/cohesion.md)
+- [`src/local_deepwiki/plugins/registry.py:25-361`](../files/src/local_deepwiki/plugins/registry.md)
 - [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](../files/src/local_deepwiki/generators/analysis/health_scoring.md)
-- [`src/local_deepwiki/generators/analysis/churn.py:25-38`](../files/src/local_deepwiki/generators/analysis/churn.md)
+- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](../files/src/local_deepwiki/generators/analysis/duplication.md)
+- [`src/local_deepwiki/generators/analysis/testability.py:26-37`](../files/src/local_deepwiki/generators/analysis/testability.md)
+- [`src/local_deepwiki/export/toc_renderer.py:8-17`](../files/src/local_deepwiki/export/toc_renderer.md)
+- [`src/local_deepwiki/export/pdf.py:129-534`](../files/src/local_deepwiki/export/pdf.md)
+- [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](../files/src/local_deepwiki/generators/analysis/cohesion.md)
+- [`src/local_deepwiki/generators/analysis/hotspots.py:69-89`](../files/src/local_deepwiki/generators/analysis/hotspots.md)
+- [`src/local_deepwiki/logging.py:28-83`](../files/src/local_deepwiki/logging.md)
+- [`src/local_deepwiki/server.py:98-100`](../files/src/local_deepwiki/server.md)
 
 
-*Showing 10 of 268 source files.*
+*Showing 10 of 269 source files.*

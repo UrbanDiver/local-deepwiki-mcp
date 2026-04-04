@@ -2,91 +2,96 @@
 
 ## File Overview
 
-This file computes cohesion metrics for Python code, specifically focusing on **class cohesion** and **module import cohesion**. It uses static analysis via the Tree-sitter AST parser to extract information from source code without any external LLM calls.
+This file implements cohesion metrics for Python code analysis, focusing on two key aspects:
+1. **Class Cohesion** using the Lack of Cohesion of Methods (LCOM4) metric.
+2. **Module Cohesion** by computing the internal-import ratio within Python package directories.
 
-The **class cohesion** is measured using the **LCOM4 metric**, which evaluates how well methods in a class are related by shared instance variables (fields). A lower LCOM4 value indicates higher cohesion.
-
-The **module cohesion** is measured by computing the **internal-import ratio** — the proportion of imports within a module that refer to other files in the same module. This helps identify modules with high internal coupling and low cohesion.
+The implementation relies entirely on static source code analysis using Tree-sitter ASTs and does not involve any LLM calls. It provides functions to compute these metrics for an entire repository and returns structured results suitable for further analysis or reporting.
 
 ## Key Concepts
 
-### 1. **LCOM4 (Lack of Cohesion of Methods)**
-- **What it measures**: The number of connected components in the method-field graph where methods sharing at least one field are connected.
-- **Why it was chosen**: LCOM4 is a well-established metric for quantifying class cohesion, offering a numeric value that can be compared across classes.
-- **Algorithm**:
-  - For each class, extract all methods.
-  - For each method, identify the instance fields it accesses (`self.<field>`).
-  - Use a **Union-Find** data structure to group methods that share fields.
-  - The number of connected components equals the LCOM4 value.
+### Class Cohesion: LCOM4 Metric
 
-### 2. **Union-Find Data Structure**
-- **What it is**: A disjoint-set data structure that supports efficient union and find operations with path compression.
-- **Why it was chosen**: It is optimal for grouping elements into connected components, which is exactly what is needed for computing LCOM4.
+The **LCOM4** (Lack of Cohesion of Methods) metric is used to measure how well methods in a class are grouped together based on their shared fields. A higher LCOM4 value indicates lower cohesion — meaning that methods in the class are less related to each other and may be candidates for refactoring.
 
-### 3. **Module Cohesion via Internal-Import Ratio**
-- **What it measures**: The ratio of internal imports to total imports in a module.
-- **Why it was chosen**: This provides a simple, actionable metric for identifying modules with poor internal structure or high coupling to external dependencies.
-- **Implementation**:
-  - For each Python file, parse import statements.
-  - Determine the module label for the file and each import.
-  - Count how many imports refer to the same module (internal).
-  - Compute the ratio.
+#### Algorithm Design
+- **Method-Field Graph**: For each class, the algorithm constructs a graph where nodes represent methods and edges connect methods that share at least one field.
+- **Connected Components**: Using a **Union-Find (Disjoint Set)** data structure (`_UnionFind`), it identifies connected components in the method-field graph.
+- **Result**: The number of connected components equals the LCOM4 value — more components imply lower cohesion.
 
-### 4. **Path-to-Module Label Conversion**
-- **What it does**: Converts file paths like `src/mypkg/core/indexer.py` into dotted module labels like `mypkg.core.indexer`.
-- **Why it was chosen**: Ensures consistent and accurate matching of imports to modules, especially when dealing with nested packages.
+#### Pattern Recognition
+To avoid misinterpreting certain class patterns, the system recognizes:
+- **Abstract Base Classes (ABC)**: Classes inheriting from `abc.ABC` or using `@abstractmethod` decorators.
+- **Protocol Classes**: Classes inheriting from `typing.Protocol`.
+- **Mixin Classes**: Classes whose names contain "Mixin".
+
+These patterns are classified separately and excluded from standard LCOM4 computation because they are intentionally designed to be less cohesive.
+
+### Module Cohesion: Internal Import Ratio
+
+This metric evaluates how much a module (Python package directory) imports from within itself versus external modules.
+
+#### Algorithm Design
+- **Import Extraction**: Extracts all import statements from each Python file.
+- **Module Labeling**: Converts file paths to dotted module labels using `_module_label`.
+- **Cohesion Ratio**: For each module, calculates the ratio of internal imports (imports referencing files within the same module) to total imports.
+- **Result**: A list of modules sorted by their cohesion ratio (ascending), where lower ratios indicate less cohesive modules.
 
 ## Integration
 
-This file is part of the **analysis** module and is used by several test and CLI components:
+This file is part of the analysis pipeline for generating code quality reports. It integrates with several core components:
 
-- **Called by**:
-  - `test_cohesion`: Tests both `analyze_class_cohesion` and `compute_module_cohesion`.
-  - `layer_analysis`: Uses `_extract_imports`.
-  - `coupling`: Uses `_module_label` and `_parent_module`.
-  - `module_dependencies`: Uses `_module_label` and `_parent_module`.
+### External Dependencies
+- **[`CodeParser`](../../core/parser/code_parser.md)**: Parses Python files into Tree-sitter ASTs.
+- **[`iter_python_files`](source_filter.md)**: Provides a generator for traversing Python source files.
+- **[`find_nodes_by_type`](../../core/parser/ast_utils.md), [`get_node_name`](../../core/parser/ast_utils.md), [`get_node_text`](../../core/parser/ast_utils.md)**: AST utilities for extracting node information.
+- **`CLASS_NODE_TYPES`, `FUNCTION_NODE_TYPES`**: [Language](../../models/foundation.md)-specific node types used for finding class and method nodes.
 
-It integrates with:
-- [`CodeParser`](../../core/parser/code_parser.md) from `local_deepwiki.core.parser.code_parser` to parse Python files.
-- [`iter_python_files`](source_filter.md) from `local_deepwiki.generators.analysis.source_filter` to traverse the repository.
-- [`find_nodes_by_type`](../../core/parser/ast_utils.md), [`get_node_name`](../../core/parser/ast_utils.md), [`get_node_text`](../../core/parser/ast_utils.md) from `local_deepwiki.core.parser.ast_utils` for AST traversal and node information.
-- `CLASS_NODE_TYPES`, `FUNCTION_NODE_TYPES` from `local_deepwiki.core.chunk_extractors` to identify class and function nodes.
-- `LangEnum` from `local_deepwiki.models` to support language-specific parsing.
+### Called From
+- **`walk`**: Used by `ast_utils`, `complexity`, and `coupling` — likely for AST traversal.
+- **`_classify_class_pattern`**: Used by `test_cohesion` for unit testing.
+- **`compute_lcom4`**: Used by `test_cohesion` for unit testing.
+- **`analyze_class_cohesion`**: Used by `test_cohesion` for unit testing.
+- **`_extract_imports`**: Used by `layer_analysis` — for extracting imports during layered architecture analysis.
+- **`_module_label`**: Used by `coupling` and `module_dependencies` — for converting file paths to module labels.
+- **`compute_module_cohesion`**: Used by `test_cohesion` for unit testing.
+- **`analyze_cohesion`**: Used by `test_cohesion` for unit testing.
+
+### Related Files
+This file is closely related to:
+- `src/local_deepwiki/generators/analysis/architecture_report.py`
+- `src/local_deepwiki/generators/analysis/dependency_graph_data.py`
+- `src/local_deepwiki/generators/analysis/design_smells.py`
+
+These modules may consume or extend the results produced by this file to provide broader architectural insights.
 
 ## Design Notes
 
-### 1. **LCOM4 Computation**
-- The algorithm correctly identifies shared fields by walking the AST and checking for `self.<field>` patterns.
-- It uses a **Union-Find** structure to efficiently compute connected components, avoiding a quadratic complexity for comparing all pairs of methods.
-- Edge cases like classes with no methods or no fields are handled gracefully by returning `0`.
+### Why LCOM4?
+LCOM4 is chosen for its simplicity and effectiveness in identifying poorly cohesive classes. It's a well-established metric that requires no external dependencies or heuristics beyond the AST. It's particularly useful for detecting classes that have multiple responsibilities or are not well-structured.
 
-### 2. **Import Parsing**
-- Uses regular expressions to match import patterns, including `import <module>` and `from <module> import ...`.
-- The `_IMPORT_PATTERNS` list is not shown but is assumed to be defined elsewhere (likely in the same file or imported).
-- Files that cannot be read are skipped with a warning, ensuring robustness.
+### Union-Find for Connected Components
+The `_UnionFind` class is used for efficient computation of connected components in the method-field graph. This data structure supports amortized constant-time `find` and `union` operations, making it ideal for large codebases where performance matters.
 
-### 3. **Module Labeling**
-- The `_module_label` function strips common [wrapper](../../handlers/_error_handling.md) directories like `src`, `lib`, `pkg`, to produce clean module labels.
-- It also collapses `__init__.py` entries to their parent module to ensure consistent labeling.
-- This design allows for precise matching of import paths with module labels.
+### Handling Special Class Patterns
+By recognizing abstract base classes, protocol classes, and mixins, the system avoids applying LCOM4 to patterns where low cohesion is intentional. This prevents false positives in the cohesion analysis.
 
-### 4. **Cohesion Ratio Calculation**
-- The ratio is calculated as `internal_imports / total_imports`, rounded to 4 decimal places.
-- Modules with no imports are correctly assigned a ratio of `0.0`.
-- Sorting by cohesion ratio ascending helps identify the least cohesive modules first, which is useful for refactoring.
+### Module Cohesion Filtering
+In `compute_module_cohesion`, small leaf packages with zero internal imports are excluded from being flagged as low cohesion. This prevents penalizing truly independent implementations like providers or utility modules.
 
-### 5. **Performance Considerations**
-- AST parsing and traversal are done per file, avoiding full repository parsing in a single pass.
-- Union-Find ensures efficient LCOM4 computation even for classes with many methods.
-- No external services or LLMs are used, keeping the analysis fast and deterministic.
+### File Path Labeling
+The `_module_label` function normalizes file paths to dotted module names, preserving the full package hierarchy. This ensures that import paths match exactly, which is crucial for accurate cohesion calculations.
 
-### 6. **Test Exclusion**
-- By default, test files are excluded (`exclude_tests=True`) to avoid skewing cohesion metrics with test-specific code.
-- This behavior is consistent with other analysis tools in the project.
+### Performance Considerations
+- AST parsing is performed once per file.
+- All computations are done in-memory without I/O or external service calls.
+- The use of `set` and `defaultdict` helps optimize lookups and aggregations.
 
-### 7. **Error Handling**
-- File reading errors are caught and logged with a warning, ensuring the analysis does not crash on corrupted or inaccessible files.
-- Empty or invalid ASTs are gracefully skipped.
+### Edge Cases Handled
+- Empty classes or classes with no methods are handled gracefully by returning LCOM4 = 0.
+- Files that cannot be read are skipped with a warning.
+- Imports that do not resolve to dotted module names are ignored.
+- Classes without explicit names are labeled as `<anonymous>`.
 
 ## API Reference
 
@@ -146,7 +151,7 @@ Compute LCOM4 for a single class node.  LCOM4 counts the connected components in
 
 
 <details>
-<summary>View Source (lines 88-122) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L88-L122">GitHub</a></summary>
+<summary>View Source (lines 166-200) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L166-L200">GitHub</a></summary>
 
 ```python
 def compute_lcom4(class_node: Any, source: bytes, language: LangEnum) -> int:
@@ -208,7 +213,7 @@ Walk Python files, parse each, find classes, compute LCOM4 per class.
 
 
 <details>
-<summary>View Source (lines 130-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L130-L182">GitHub</a></summary>
+<summary>View Source (lines 208-264) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L208-L264">GitHub</a></summary>
 
 ```python
 def analyze_class_cohesion(
@@ -231,7 +236,9 @@ def analyze_class_cohesion(
     parser = CodeParser()
     results: list[dict[str, Any]] = []
 
-    for full_path, rel_path in iter_python_files(repo_path, exclude_tests=exclude_tests):
+    for full_path, rel_path in iter_python_files(
+        repo_path, exclude_tests=exclude_tests
+    ):
         parsed = parser.parse_file(full_path)
         if parsed is None:
             continue
@@ -244,6 +251,7 @@ def analyze_class_cohesion(
         for cls_node in find_nodes_by_type(root, class_types):
             cls_name = get_node_name(cls_node, source, detected_lang) or "<anonymous>"
             lcom4 = compute_lcom4(cls_node, source, detected_lang)
+            pattern = _classify_class_pattern(cls_node, source)
 
             func_types = FUNCTION_NODE_TYPES.get(detected_lang, set())
             methods = find_nodes_by_type(cls_node, func_types)
@@ -259,6 +267,7 @@ def analyze_class_cohesion(
                     "lcom4": lcom4,
                     "method_count": len(methods),
                     "field_count": len(all_fields),
+                    "pattern": pattern,
                 }
             )
 
@@ -286,7 +295,7 @@ Compute internal-import ratio per module directory.  A "module" is a Python pack
 
 
 <details>
-<summary>View Source (lines 235-298) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L235-L298">GitHub</a></summary>
+<summary>View Source (lines 317-380) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L317-L380">GitHub</a></summary>
 
 ```python
 def compute_module_cohesion(repo_path: Path) -> list[dict[str, Any]]:
@@ -378,7 +387,7 @@ Run both class and module cohesion analyses.
 
 
 <details>
-<summary>View Source (lines 306-342) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L306-L342">GitHub</a></summary>
+<summary>View Source (lines 388-438) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L388-L438">GitHub</a></summary>
 
 ```python
 def analyze_cohesion(
@@ -402,9 +411,22 @@ def analyze_cohesion(
     module_results = compute_module_cohesion(repo_path)
 
     total_classes = len(all_classes)
-    classes_gt_2 = sum(1 for c in all_classes if c["lcom4"] > 2)
-    avg_lcom = sum(c["lcom4"] for c in all_classes) / total_classes if total_classes > 0 else 0.0
-    low_cohesion_modules = sum(1 for m in module_results if m["cohesion_ratio"] < 0.3)
+    regular_classes = [c for c in all_classes if c.get("pattern") is None]
+    pattern_count = total_classes - len(regular_classes)
+    classes_gt_2 = sum(1 for c in regular_classes if c["lcom4"] > 2)
+    avg_lcom = (
+        sum(c["lcom4"] for c in regular_classes) / len(regular_classes)
+        if regular_classes
+        else 0.0
+    )
+    # Don't penalize small leaf packages with 0 internal imports —
+    # they're likely independent implementations (e.g. providers/llm).
+    low_cohesion_modules = sum(
+        1
+        for m in module_results
+        if m["cohesion_ratio"] < 0.3
+        and not (m["internal_imports"] == 0 and m["file_count"] < 6)
+    )
 
     return {
         "status": "success",
@@ -416,6 +438,7 @@ def analyze_cohesion(
             "avg_lcom": round(avg_lcom, 2),
             "total_modules": len(module_results),
             "low_cohesion_modules": low_cohesion_modules,
+            "excluded_pattern_classes": pattern_count,
         },
     }
 ```
@@ -441,68 +464,79 @@ classDiagram
 flowchart TD
     N0[CodeParser]
     N1[_UnionFind]
-    N2[_extract_imports]
-    N3[_extract_self_fields]
-    N4[_module_label]
-    N5[_parent_module]
-    N6[add]
-    N7[analyze_class_cohesion]
-    N8[analyze_cohesion]
-    N9[child_by_field_name]
-    N10[components]
-    N11[compute_lcom4]
-    N12[compute_module_cohesion]
-    N13[defaultdict]
-    N14[find_nodes_by_type]
-    N15[get_node_name]
-    N16[get_node_text]
-    N17[group]
-    N18[iter_python_files]
-    N19[match]
-    N20[parse_file]
-    N21[read_text]
-    N22[sort]
-    N23[splitlines]
-    N24[union]
-    N25[walk]
-    N26[with_suffix]
-    N3 --> N16
-    N3 --> N9
-    N3 --> N6
-    N3 --> N25
-    N25 --> N16
-    N25 --> N9
-    N25 --> N6
-    N25 --> N25
-    N11 --> N14
-    N11 --> N3
-    N11 --> N1
-    N11 --> N24
-    N11 --> N10
-    N7 --> N0
-    N7 --> N18
-    N7 --> N20
-    N7 --> N14
-    N7 --> N15
-    N7 --> N11
-    N7 --> N3
-    N7 --> N22
-    N2 --> N23
+    N2[_classify_class_pattern]
+    N3[_extract_base_name]
+    N4[_extract_imports]
+    N5[_extract_self_fields]
+    N6[_has_abstractmethod_decorator]
+    N7[_module_label]
+    N8[_parent_module]
+    N9[add]
+    N10[analyze_class_cohesion]
+    N11[analyze_cohesion]
+    N12[child_by_field_name]
+    N13[components]
+    N14[compute_lcom4]
+    N15[compute_module_cohesion]
+    N16[defaultdict]
+    N17[find_nodes_by_type]
+    N18[get_node_name]
+    N19[get_node_text]
+    N20[group]
+    N21[iter_python_files]
+    N22[match]
+    N23[parse_file]
+    N24[read_text]
+    N25[sort]
+    N26[splitlines]
+    N27[union]
+    N28[walk]
+    N29[with_suffix]
+    N5 --> N19
+    N5 --> N12
+    N5 --> N9
+    N5 --> N28
+    N28 --> N19
+    N28 --> N12
+    N28 --> N9
+    N28 --> N28
+    N2 --> N12
     N2 --> N19
+    N2 --> N3
     N2 --> N17
+    N2 --> N6
+    N3 --> N19
+    N6 --> N19
+    N14 --> N17
+    N14 --> N5
+    N14 --> N1
+    N14 --> N27
+    N14 --> N13
+    N10 --> N0
+    N10 --> N21
+    N10 --> N23
+    N10 --> N17
+    N10 --> N18
+    N10 --> N14
+    N10 --> N2
+    N10 --> N5
+    N10 --> N25
     N4 --> N26
-    N12 --> N13
-    N12 --> N18
-    N12 --> N4
-    N12 --> N5
-    N12 --> N21
-    N12 --> N2
-    N12 --> N6
-    N12 --> N22
-    N8 --> N7
-    N8 --> N12
+    N4 --> N22
+    N4 --> N20
+    N7 --> N29
+    N15 --> N16
+    N15 --> N21
+    N15 --> N7
+    N15 --> N8
+    N15 --> N24
+    N15 --> N4
+    N15 --> N9
+    N15 --> N25
+    N11 --> N10
+    N11 --> N15
     classDef func fill:#e1f5fe
-    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26 func
+    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
 ```
 
 ## Used By
@@ -511,20 +545,23 @@ Functions and methods in this file and their callers:
 
 - **[`CodeParser`](../../core/parser/code_parser.md)**: called by `analyze_class_cohesion`
 - **`_UnionFind`**: called by `compute_lcom4`
+- **`_classify_class_pattern`**: called by `analyze_class_cohesion`
+- **`_extract_base_name`**: called by `_classify_class_pattern`
 - **`_extract_imports`**: called by `compute_module_cohesion`
 - **`_extract_self_fields`**: called by `analyze_class_cohesion`, `compute_lcom4`
+- **`_has_abstractmethod_decorator`**: called by `_classify_class_pattern`
 - **`_module_label`**: called by `compute_module_cohesion`
 - **`_parent_module`**: called by `compute_module_cohesion`
 - **`add`**: called by `_extract_self_fields`, `compute_module_cohesion`, `walk`
 - **`analyze_class_cohesion`**: called by `analyze_cohesion`
-- **`child_by_field_name`**: called by `_extract_self_fields`, `walk`
+- **`child_by_field_name`**: called by `_classify_class_pattern`, `_extract_self_fields`, `walk`
 - **`components`**: called by `compute_lcom4`
 - **`compute_lcom4`**: called by `analyze_class_cohesion`
 - **`compute_module_cohesion`**: called by `analyze_cohesion`
 - **`defaultdict`**: called by `compute_module_cohesion`
-- **[`find_nodes_by_type`](../../core/parser/ast_utils.md)**: called by `analyze_class_cohesion`, `compute_lcom4`
+- **[`find_nodes_by_type`](../../core/parser/ast_utils.md)**: called by `_classify_class_pattern`, `analyze_class_cohesion`, `compute_lcom4`
 - **[`get_node_name`](../../core/parser/ast_utils.md)**: called by `analyze_class_cohesion`
-- **[`get_node_text`](../../core/parser/ast_utils.md)**: called by `_extract_self_fields`, `walk`
+- **[`get_node_text`](../../core/parser/ast_utils.md)**: called by `_classify_class_pattern`, `_extract_base_name`, `_extract_self_fields`, `_has_abstractmethod_decorator`, `walk`
 - **`group`**: called by `_extract_imports`
 - **[`iter_python_files`](source_filter.md)**: called by `analyze_class_cohesion`, `compute_module_cohesion`
 - **`match`**: called by `_extract_imports`
@@ -634,60 +671,54 @@ class Splittable:
     assert result == 2
 ```
 
-### Example: `analyze_class_cohesion`
+### Class inheriting from ABC is classified as 'abc'
 
-From `test_cohesion.py::test_analyze_class_cohesion`:
+From `test_cohesion.py::test_classify_abc_class`:
 
 ```python
-from local_deepwiki.generators.analysis.cohesion import analyze_class_cohesion
+from local_deepwiki.generators.analysis.cohesion import _classify_class_pattern
+    from local_deepwiki.models import Language as LangEnum
 
-    _write_py(
-        tmp_path / "src" / "mod.py",
-        """
-class Foo:
-    def set_x(self):
-        self.x = 1
-    def get_x(self):
-        return self.x
-    def set_y(self):
-        self.y = 2
-    def get_y(self):
-        return self.y
-""",
-    )
-    results = analyze_class_cohesion(tmp_path)
-    assert len(results) >= 1
-    assert results[0]["class_name"] == "Foo"
+    source = """
+from abc import ABC, abstractmethod
+
+class MyBase(ABC):
+    @abstractmethod
+    def do_thing(self):
+        pass
+    @abstractmethod
+    def do_other(self):
+        pass
+"""
+    parser = CodeParser()
+    root = parser.parse_source(source, LangEnum.PYTHON)
+    classes = find_nodes_by_type(root, CLASS_NODE_TYPES[LangEnum.PYTHON])
+    assert len(classes) == 1
+    result = _classify_class_pattern(classes[0], source.encode())
+    assert result == "abc"
 ```
 
-### Results should be sorted by LCOM4 descending
+### Class inheriting from Protocol is classified as 'protocol'
 
-From `test_cohesion.py::test_analyze_class_cohesion_sorted_descending`:
+From `test_cohesion.py::test_classify_protocol_class`:
 
 ```python
-from local_deepwiki.generators.analysis.cohesion import analyze_class_cohesion
+from local_deepwiki.generators.analysis.cohesion import _classify_class_pattern
+    from local_deepwiki.models import Language as LangEnum
 
-    _write_py(
-        tmp_path / "src" / "mod.py",
-        """
-class Low:
-    def __init__(self):
-        self.x = 0
-    def get_x(self):
-        return self.x
+    source = """
+from typing import Protocol
 
-class High:
-    def set_a(self):
-        self.a = 1
-    def set_b(self):
-        self.b = 2
-    def set_c(self):
-        self.c = 3
-""",
-    )
-    results = analyze_class_cohesion(tmp_path)
-    assert len(results) == 2
-    assert results[0]["class_name"] == "High"
+class Readable(Protocol):
+    def read(self) -> bytes:
+        ...
+"""
+    parser = CodeParser()
+    root = parser.parse_source(source, LangEnum.PYTHON)
+    classes = find_nodes_by_type(root, CLASS_NODE_TYPES[LangEnum.PYTHON])
+    assert len(classes) == 1
+    result = _classify_class_pattern(classes[0], source.encode())
+    assert result == "protocol"
 ```
 
 
@@ -695,8 +726,11 @@ class High:
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `analyze_class_cohesion` | function | Brian Breidenbach | today | `8a5e93f` feat: add cohesion-based ar... |
-| `analyze_cohesion` | function | Brian Breidenbach | today | `8a5e93f` feat: add cohesion-based ar... |
+| `_classify_class_pattern` | function | Brian Breidenbach | today | `4fb073b` feat: pattern-aware cohesio... |
+| `_extract_base_name` | function | Brian Breidenbach | today | `4fb073b` feat: pattern-aware cohesio... |
+| `_has_abstractmethod_decorator` | function | Brian Breidenbach | today | `4fb073b` feat: pattern-aware cohesio... |
+| `analyze_class_cohesion` | function | Brian Breidenbach | today | `4fb073b` feat: pattern-aware cohesio... |
+| `analyze_cohesion` | function | Brian Breidenbach | today | `4fb073b` feat: pattern-aware cohesio... |
 | `_UnionFind` | class | Brian Breidenbach | today | `0d6b194` feat: add LCOM4 class cohes... |
 | `_extract_self_fields` | function | Brian Breidenbach | today | `0d6b194` feat: add LCOM4 class cohes... |
 | `walk` | function | Brian Breidenbach | today | `0d6b194` feat: add LCOM4 class cohes... |
@@ -771,10 +805,110 @@ def _extract_self_fields(method_node: Any, source: bytes) -> set[str]:
 </details>
 
 
+#### `_classify_class_pattern`
+
+<details>
+<summary>View Source (lines 93-132) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L93-L132">GitHub</a></summary>
+
+```python
+def _classify_class_pattern(class_node: Any, source: bytes) -> str | None:
+    """Classify a class as a known OOP pattern where LCOM4 is misleading.
+
+    Returns:
+        ``"abc"`` for abstract base classes, ``"protocol"`` for Protocol
+        classes, ``"mixin"`` for mixin classes, or ``None`` for regular classes.
+    """
+    # --- Check class name for Mixin ---
+    name_node = class_node.child_by_field_name("name")
+    if name_node and "Mixin" in get_node_text(name_node, source):
+        return "mixin"
+
+    # --- Check base classes in the argument_list ---
+    for child in class_node.children:
+        if child.type == "argument_list":
+            for arg in child.children:
+                base_name = _extract_base_name(arg, source)
+                if base_name in _ABC_BASES:
+                    return "abc"
+                if base_name in _PROTOCOL_BASES:
+                    return "protocol"
+                # Handle keyword arguments like metaclass=ABCMeta
+                if arg.type == "keyword_argument":
+                    for kw_child in arg.children:
+                        kw_name = _extract_base_name(kw_child, source)
+                        if kw_name in _ABC_BASES:
+                            return "abc"
+            break
+
+    # --- Check for @abstractmethod on >= half of methods ---
+    func_types = FUNCTION_NODE_TYPES.get(LangEnum.PYTHON, set())
+    methods = find_nodes_by_type(class_node, func_types)
+    if methods:
+        abstract_count = sum(
+            1 for m in methods if _has_abstractmethod_decorator(m, source)
+        )
+        if abstract_count >= len(methods) / 2:
+            return "abc"
+
+    return None
+```
+
+</details>
+
+
+#### `_extract_base_name`
+
+<details>
+<summary>View Source (lines 135-147) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L135-L147">GitHub</a></summary>
+
+```python
+def _extract_base_name(node: Any, source: bytes) -> str:
+    """Extract the final identifier from a base class node.
+
+    For ``ABC`` returns ``"ABC"``. For ``abc.ABC`` returns ``"ABC"``.
+    """
+    if node.type == "identifier":
+        return get_node_text(node, source)
+    if node.type == "attribute":
+        # Dotted name -- last identifier child is the class name.
+        children = [c for c in node.children if c.type == "identifier"]
+        if children:
+            return get_node_text(children[-1], source)
+    return ""
+```
+
+</details>
+
+
+#### `_has_abstractmethod_decorator`
+
+<details>
+<summary>View Source (lines 150-163) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L150-L163">GitHub</a></summary>
+
+```python
+def _has_abstractmethod_decorator(method_node: Any, source: bytes) -> bool:
+    """Return True if *method_node* has an ``@abstractmethod`` decorator."""
+    parent = method_node.parent
+    if parent is None or parent.type != "decorated_definition":
+        return False
+    for sibling in parent.children:
+        if sibling.type == "decorator":
+            for dec_child in sibling.children:
+                if (
+                    dec_child.type == "identifier"
+                    and get_node_text(dec_child, source) == "abstractmethod"
+                ):
+                    return True
+    return False
+```
+
+</details>
+
+
 #### `_extract_imports`
 
 <details>
-<summary>View Source (lines 190-200) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L190-L200">GitHub</a></summary>
+<summary>View Source (lines 272-282) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L272-L282">GitHub</a></summary>
 
 ```python
 def _extract_imports(source: str) -> list[str]:
@@ -796,7 +930,7 @@ def _extract_imports(source: str) -> list[str]:
 #### `_module_label`
 
 <details>
-<summary>View Source (lines 203-220) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L203-L220">GitHub</a></summary>
+<summary>View Source (lines 285-302) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L285-L302">GitHub</a></summary>
 
 ```python
 def _module_label(rel_path: Path) -> str:
@@ -825,7 +959,7 @@ def _module_label(rel_path: Path) -> str:
 #### `_parent_module`
 
 <details>
-<summary>View Source (lines 223-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L223-L232">GitHub</a></summary>
+<summary>View Source (lines 305-314) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/cohesion.py#L305-L314">GitHub</a></summary>
 
 ```python
 def _parent_module(label: str) -> str:
