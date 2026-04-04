@@ -20,6 +20,7 @@ from local_deepwiki.models import (
     GetArchitectureTrendsArgs,
     GetChurnMetricsArgs,
     GetCoChangeArgs,
+    GetCohesionMetricsArgs,
     GetCouplingMetricsArgs,
     GetCrossModuleDependenciesArgs,
     GetDesignSmellsArgs,
@@ -64,7 +65,9 @@ async def handle_get_layer_dependencies(
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    from local_deepwiki.generators.analysis.layer_analysis import analyze_layer_dependencies
+    from local_deepwiki.generators.analysis.layer_analysis import (
+        analyze_layer_dependencies,
+    )
     from local_deepwiki.generators.manifest import get_cached_manifest
 
     manifest = get_cached_manifest(repo_path)
@@ -114,7 +117,8 @@ def _collect_file_metrics(repo_path: Path) -> dict[str, Any]:
         # Skip hidden dirs and common non-source trees
         rel_parts = rel_path.parts
         if any(
-            part.startswith(".") or part in ("node_modules", "__pycache__") for part in rel_parts
+            part.startswith(".") or part in ("node_modules", "__pycache__")
+            for part in rel_parts
         ):
             continue
 
@@ -123,7 +127,9 @@ def _collect_file_metrics(repo_path: Path) -> dict[str, Any]:
         except OSError:
             continue
 
-        line_count = content.count("\n") + (1 if content and not content.endswith("\n") else 0)
+        line_count = content.count("\n") + (
+            1 if content and not content.endswith("\n") else 0
+        )
         total_lines += line_count
 
         file_sizes.append({"file": str(rel_path), "lines": line_count})
@@ -420,7 +426,9 @@ async def handle_get_architecture_health(
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    from local_deepwiki.generators.analysis.architecture_health import analyze_architecture_health
+    from local_deepwiki.generators.analysis.architecture_health import (
+        analyze_architecture_health,
+    )
     from local_deepwiki.generators.manifest import get_cached_manifest
 
     manifest = get_cached_manifest(repo_path)
@@ -435,7 +443,9 @@ async def handle_get_architecture_health(
     if detail == "summary":
         overall = result.get("overall", {})
         findings = result.get("top_findings", {})
-        trimmed_findings = {k: v[:3] if isinstance(v, list) else v for k, v in findings.items()}
+        trimmed_findings = {
+            k: v[:3] if isinstance(v, list) else v for k, v in findings.items()
+        }
         result = {
             "status": "success",
             "project_name": result.get("project_name", ""),
@@ -474,7 +484,9 @@ async def handle_compare_architecture(
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    from local_deepwiki.generators.analysis.architecture_compare import compare_architecture
+    from local_deepwiki.generators.analysis.architecture_compare import (
+        compare_architecture,
+    )
     from local_deepwiki.generators.manifest import get_cached_manifest
 
     manifest = get_cached_manifest(repo_path)
@@ -550,7 +562,9 @@ def _ensure_toc_entry(wiki_path: Path) -> None:
     # Build new entries list with onboarding inserted at position 1
     new_entry = TocEntry(number="", title="Onboarding Guide", path="onboarding.md")
     insert_pos = min(1, len(toc.entries))
-    all_entries = list(toc.entries[:insert_pos]) + [new_entry] + list(toc.entries[insert_pos:])
+    all_entries = (
+        list(toc.entries[:insert_pos]) + [new_entry] + list(toc.entries[insert_pos:])
+    )
 
     # Renumber all entries (TocEntry is frozen, so build new list)
     toc.entries = [
@@ -588,7 +602,9 @@ async def handle_get_onboarding_guide(
     # Try rich onboarding (requires index + vector store + LLM)
     try:
         from local_deepwiki.config import get_config
-        from local_deepwiki.generators.analysis.onboarding import generate_rich_onboarding
+        from local_deepwiki.generators.analysis.onboarding import (
+            generate_rich_onboarding,
+        )
         from local_deepwiki.handlers._index_helpers import _create_vector_store
         from local_deepwiki.providers.llm import get_llm_provider
 
@@ -619,7 +635,9 @@ async def handle_get_onboarding_guide(
             },
         )
     except Exception:
-        logger.info("Rich onboarding unavailable, falling back to basic for %s", repo_path)
+        logger.info(
+            "Rich onboarding unavailable, falling back to basic for %s", repo_path
+        )
 
     # Fallback to basic onboarding
     from local_deepwiki.generators.analysis.onboarding import (
@@ -627,7 +645,9 @@ async def handle_get_onboarding_guide(
         generate_onboarding_guide,
     )
 
-    basic_result = generate_onboarding_guide(repo_path, detail_level=validated.detail_level)
+    basic_result = generate_onboarding_guide(
+        repo_path, detail_level=validated.detail_level
+    )
     guide = format_onboarding_guide(basic_result, detail_level=validated.detail_level)
 
     logger.info("Basic onboarding guide generated for %s", repo_path)
@@ -757,7 +777,8 @@ async def handle_get_architecture_trends(
                 "from": snapshots[0].get("timestamp", ""),
                 "to": snapshots[-1].get("timestamp", ""),
             },
-            "score_change": snapshots[-1].get("score", 0) - snapshots[0].get("score", 0),
+            "score_change": snapshots[-1].get("score", 0)
+            - snapshots[0].get("score", 0),
             "current_grade": snapshots[-1].get("grade", "?"),
         }
 
@@ -874,3 +895,30 @@ async def handle_get_co_change(
             "stats": result["stats"],
         },
     )
+
+
+@handle_tool_errors
+async def handle_get_cohesion_metrics(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_cohesion_metrics tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetCohesionMetricsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.cohesion import analyze_cohesion
+
+    result = analyze_cohesion(
+        repo_path,
+        top_n=validated.top_n,
+        exclude_tests=validated.exclude_tests,
+    )
+    return make_tool_text_content("get_cohesion_metrics", result)

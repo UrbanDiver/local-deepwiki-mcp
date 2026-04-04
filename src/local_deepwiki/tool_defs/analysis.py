@@ -917,4 +917,34 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         },
         annotations=_READ_ONLY,
     ),
+    Tool(
+        name="get_cohesion_metrics",
+        description=(
+            "Analyze class and module cohesion. Reports LCOM4 (Lack of "
+            "Cohesion of Methods) for each class and internal-import ratio "
+            "for each package. Classes with LCOM4 > 1 may be candidates for "
+            "splitting. Modules with low cohesion ratio rely heavily on "
+            "external imports."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "top_n": {
+                    "type": "integer",
+                    "description": "Number of top results to return (1-100, default: 20)",
+                },
+                "exclude_tests": {
+                    "type": "boolean",
+                    "description": "Exclude test files from analysis (default: true)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
 )

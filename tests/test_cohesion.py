@@ -304,3 +304,33 @@ class C{i}:
     result = analyze_cohesion(tmp_path, top_n=3)
     assert len(result["class_cohesion"]) <= 3
     assert result["stats"]["total_classes"] == 5
+
+
+@pytest.mark.asyncio
+async def test_handle_get_cohesion_metrics(tmp_path):
+    """MCP handler returns TextContent with cohesion JSON."""
+    import json
+    from unittest.mock import MagicMock, patch
+
+    from local_deepwiki.handlers.analysis_architecture import (
+        handle_get_cohesion_metrics,
+    )
+
+    _write_py(
+        tmp_path / "src" / "mod.py",
+        "class Foo:\n    def do(self):\n        self.x = 1\n",
+    )
+
+    mock_controller = MagicMock()
+    mock_controller.require_permission.return_value = None
+
+    with patch(
+        "local_deepwiki.handlers.analysis_architecture.get_access_controller",
+        return_value=mock_controller,
+    ):
+        result = await handle_get_cohesion_metrics({"repo_path": str(tmp_path)})
+
+    assert len(result) == 1
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert "class_cohesion" in data
