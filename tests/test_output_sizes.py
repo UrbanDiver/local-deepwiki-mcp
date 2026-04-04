@@ -93,7 +93,7 @@ async def test_health_summary_under_3k(mock_access_control, sized_repo):
     result = await handle_get_architecture_health(
         {"repo_path": str(sized_repo), "detail_level": "summary"}
     )
-    assert len(result[0].text) < 3000
+    assert len(result[0].text) < 3500
 
 
 async def test_analyze_architecture_standard_under_8k(mock_access_control, sized_repo):

@@ -81,6 +81,7 @@ def test_analyze_architecture_health_dimension_scores(simple_repo: Path) -> None
         "cohesion",
         "duplication",
         "testability",
+        "maintainability",
     ):
         assert dim in dimensions, f"Missing dimension: {dim}"
         score = dimensions[dim]["score"]
@@ -215,7 +216,9 @@ async def test_handle_get_architecture_health_missing_repo() -> None:
         "local_deepwiki.handlers.analysis_architecture.get_access_controller",
         return_value=mock_controller,
     ):
-        result = await handle_get_architecture_health({"repo_path": "/nonexistent/path/xyz"})
+        result = await handle_get_architecture_health(
+            {"repo_path": "/nonexistent/path/xyz"}
+        )
 
     assert len(result) == 1
     assert "error" in result[0].text.lower() or "not found" in result[0].text.lower()
@@ -247,7 +250,7 @@ async def test_architecture_health_summary_detail(tmp_path):
     assert "grade" in data["overall"]
     assert "dimensions" in data["overall"]
     assert "stats" not in data
-    assert len(result[0].text) < 2500
+    assert len(result[0].text) < 3000
 
 
 def test_analyze_architecture_health_includes_next_steps(simple_repo):
@@ -311,7 +314,9 @@ def test_analyze_architecture_health_includes_churn_dimension(simple_repo):
         capture_output=True,
     )
     subprocess.run(["git", "add", "."], cwd=simple_repo, capture_output=True)
-    subprocess.run(["git", "commit", "-m", "init"], cwd=simple_repo, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "init"], cwd=simple_repo, capture_output=True
+    )
 
     from local_deepwiki.generators.analysis.architecture_health import (
         analyze_architecture_health,

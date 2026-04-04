@@ -13,6 +13,7 @@ from local_deepwiki.generators.analysis.health_scoring import (
     score_coupling,
     score_duplication,
     score_layers,
+    score_maintainability,
     score_smells,
     score_testability,
 )
@@ -404,7 +405,8 @@ def test_score_churn_no_high_churn_complex_files():
 
 def test_score_churn_many_high_churn_complex_files():
     composite = [
-        {"file": f"f{i}.py", "churn": 20, "complexity": 30, "composite": 0.8} for i in range(10)
+        {"file": f"f{i}.py", "churn": 20, "complexity": 30, "composite": 0.8}
+        for i in range(10)
     ]
     stats = {"gini_coefficient": 0.5, "total_files": 20}
     result = score_churn(composite, stats=stats)
@@ -654,6 +656,84 @@ def test_score_testability_zero_source_files():
 
 
 # ---------------------------------------------------------------------------
+# score_maintainability
+# ---------------------------------------------------------------------------
+
+
+def test_score_maintainability_empty_stats():
+    result = score_maintainability(stats={})
+    assert result["score"] == 100
+    assert result["grade"] == "A"
+
+
+def test_score_maintainability_excellent():
+    stats = {
+        "avg_mi": 80.0,
+        "low_mi_pct": 0.0,
+        "low_mi_functions": 0,
+        "min_mi": 60.0,
+    }
+    result = score_maintainability(stats=stats)
+    assert result["score"] == 100.0
+    assert result["grade"] == "A"
+
+
+def test_score_maintainability_low_avg_mi():
+    stats = {
+        "avg_mi": 25.0,
+        "low_mi_pct": 5.0,
+        "low_mi_functions": 2,
+        "min_mi": 15.0,
+    }
+    result = score_maintainability(stats=stats)
+    # avg_mi < 40 → deduction = min((40-25)*1.0, 40) = 15
+    # low_mi_pct = 5 → deduction = min(5*0.7, 35) = 3.5
+    # min_mi >= 10 → no extra deduction
+    # score = 100 - 15 - 3.5 = 81.5
+    assert result["score"] == pytest.approx(81.5, rel=0.01)
+
+
+def test_score_maintainability_very_low_min_mi():
+    stats = {
+        "avg_mi": 50.0,
+        "low_mi_pct": 10.0,
+        "low_mi_functions": 5,
+        "min_mi": 3.0,
+    }
+    result = score_maintainability(stats=stats)
+    # avg_mi >= 40 → no avg deduction
+    # low_mi_pct = 10 → deduction = min(10*0.7, 35) = 7.0
+    # min_mi < 10 → deduction = min((10-3)*1.5, 15) = 10.5
+    # score = 100 - 0 - 7.0 - 10.5 = 82.5
+    assert result["score"] == pytest.approx(82.5, rel=0.01)
+
+
+def test_score_maintainability_score_clamped():
+    stats = {
+        "avg_mi": 5.0,
+        "low_mi_pct": 80.0,
+        "low_mi_functions": 100,
+        "min_mi": 0.0,
+    }
+    result = score_maintainability(stats=stats)
+    assert 0.0 <= result["score"] <= 100.0
+
+
+def test_score_maintainability_returns_factors():
+    stats = {
+        "avg_mi": 60.0,
+        "low_mi_pct": 5.0,
+        "low_mi_functions": 3,
+        "min_mi": 12.0,
+    }
+    result = score_maintainability(stats=stats)
+    assert "avg_mi" in result["factors"]
+    assert "low_mi_functions" in result["factors"]
+    assert "low_mi_pct" in result["factors"]
+    assert "min_mi" in result["factors"]
+
+
+# ---------------------------------------------------------------------------
 # compute_overall
 # ---------------------------------------------------------------------------
 
@@ -668,6 +748,7 @@ def test_compute_overall_all_perfect():
         "cohesion": {"score": 100},
         "duplication": {"score": 100},
         "testability": {"score": 100},
+        "maintainability": {"score": 100},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 100.0
@@ -684,6 +765,7 @@ def test_compute_overall_all_zero():
         "cohesion": {"score": 0},
         "duplication": {"score": 0},
         "testability": {"score": 0},
+        "maintainability": {"score": 0},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 0.0
@@ -692,9 +774,10 @@ def test_compute_overall_all_zero():
 
 def test_compute_overall_weighted_average():
     # All 100 except smells=0. New weights:
-    # complexity=0.16, coupling=0.14, smells=0.14, layers=0.10,
-    # churn=0.12, cohesion=0.12, duplication=0.10, testability=0.12
-    # expected = 100*(1 - 0.14) = 86.0
+    # complexity=0.15, coupling=0.12, smells=0.12, layers=0.09,
+    # churn=0.12, cohesion=0.12, duplication=0.10, testability=0.10,
+    # maintainability=0.08
+    # expected = 100*(1 - 0.12) = 88.0
     dimensions = {
         "complexity": {"score": 100},
         "coupling": {"score": 100},
@@ -704,9 +787,10 @@ def test_compute_overall_weighted_average():
         "cohesion": {"score": 100},
         "duplication": {"score": 100},
         "testability": {"score": 100},
+        "maintainability": {"score": 100},
     }
     result = compute_overall(dimensions)
-    assert result["score"] == pytest.approx(86.0, rel=0.01)
+    assert result["score"] == pytest.approx(88.0, rel=0.01)
     assert result["grade"] == "B"
 
 
@@ -717,8 +801,8 @@ def test_compute_overall_missing_dimension_defaults_100():
         # all others missing -> default 100
     }
     result = compute_overall(dimensions)
-    # 0*0.16 + 100*(0.14+0.14+0.10+0.12+0.12+0.10+0.12) = 84.0
-    assert result["score"] == pytest.approx(84.0, rel=0.01)
+    # 0*0.15 + 100*(0.12+0.12+0.09+0.12+0.12+0.10+0.10+0.08) = 85.0
+    assert result["score"] == pytest.approx(85.0, rel=0.01)
 
 
 def test_compute_overall_dimensions_included_in_result():
@@ -731,6 +815,7 @@ def test_compute_overall_dimensions_included_in_result():
         "cohesion": {"score": 75},
         "duplication": {"score": 80},
         "testability": {"score": 90},
+        "maintainability": {"score": 85},
     }
     result = compute_overall(dimensions)
     assert result["dimensions"] is dimensions
@@ -748,6 +833,7 @@ def test_compute_overall_weights_included_in_result():
     assert "cohesion" in weights
     assert "duplication" in weights
     assert "testability" in weights
+    assert "maintainability" in weights
     # Weights should sum to approximately 1.0
     assert sum(weights.values()) == pytest.approx(1.0, rel=0.001)
 
@@ -763,6 +849,7 @@ def test_compute_overall_grade_b_boundary():
         "cohesion": {"score": 75},
         "duplication": {"score": 75},
         "testability": {"score": 75},
+        "maintainability": {"score": 75},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 75.0
