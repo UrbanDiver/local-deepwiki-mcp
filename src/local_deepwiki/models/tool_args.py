@@ -889,3 +889,25 @@ class GetCohesionMetricsArgs(BaseModel):
         default=True,
         description="Exclude test files from analysis (default: true)",
     )
+
+
+class GetDuplicationMetricsArgs(BaseModel):
+    """Arguments for the get_duplication_metrics tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    min_lines: int = Field(
+        default=6,
+        ge=3,
+        le=50,
+        description="Minimum lines for a clone block (default: 6)",
+    )
+    top_n: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Number of top results to return (default: 20)",
+    )
+    exclude_tests: bool = Field(
+        default=True,
+        description="Exclude test files from analysis (default: true)",
+    )

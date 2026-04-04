@@ -72,7 +72,15 @@ def test_analyze_architecture_health_dimension_scores(simple_repo: Path) -> None
     result = analyze_architecture_health(simple_repo, "test-project")
     dimensions = result["overall"]["dimensions"]
 
-    for dim in ("complexity", "coupling", "smells", "layers", "churn", "cohesion"):
+    for dim in (
+        "complexity",
+        "coupling",
+        "smells",
+        "layers",
+        "churn",
+        "cohesion",
+        "duplication",
+    ):
         assert dim in dimensions, f"Missing dimension: {dim}"
         score = dimensions[dim]["score"]
         assert 0 <= score <= 100, f"Score out of range for {dim}: {score}"
@@ -238,7 +246,7 @@ async def test_architecture_health_summary_detail(tmp_path):
     assert "grade" in data["overall"]
     assert "dimensions" in data["overall"]
     assert "stats" not in data
-    assert len(result[0].text) < 2000
+    assert len(result[0].text) < 2500
 
 
 def test_analyze_architecture_health_includes_next_steps(simple_repo):

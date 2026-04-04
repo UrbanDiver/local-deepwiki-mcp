@@ -947,4 +947,37 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         },
         annotations=_READ_ONLY,
     ),
+    Tool(
+        name="get_duplication_metrics",
+        description=(
+            "Detect code duplication using two methods: exact clones (Type 1, "
+            "line-based fingerprinting) and structural clones (Type 2, AST "
+            "node-type sequences). Reports duplication ratio, clone groups, "
+            "and largest clone blocks."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository",
+                },
+                "min_lines": {
+                    "type": "integer",
+                    "description": "Minimum lines for clone (3-50, default: 6)",
+                },
+                "top_n": {
+                    "type": "integer",
+                    "description": "Number of top results (1-100, default: 20)",
+                },
+                "exclude_tests": {
+                    "type": "boolean",
+                    "description": "Exclude test files (default: true)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
 )

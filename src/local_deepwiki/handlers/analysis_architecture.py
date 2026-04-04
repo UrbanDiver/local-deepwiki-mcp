@@ -22,6 +22,7 @@ from local_deepwiki.models import (
     GetCoChangeArgs,
     GetCohesionMetricsArgs,
     GetCouplingMetricsArgs,
+    GetDuplicationMetricsArgs,
     GetCrossModuleDependenciesArgs,
     GetDesignSmellsArgs,
     GetGuidedTourArgs,
@@ -910,3 +911,31 @@ async def handle_get_cohesion_metrics(
         exclude_tests=validated.exclude_tests,
     )
     return make_tool_text_content("get_cohesion_metrics", result)
+
+
+@handle_tool_errors
+async def handle_get_duplication_metrics(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_duplication_metrics tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetDuplicationMetricsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.duplication import analyze_duplication
+
+    result = analyze_duplication(
+        repo_path,
+        min_lines=validated.min_lines,
+        top_n=validated.top_n,
+        exclude_tests=validated.exclude_tests,
+    )
+    return make_tool_text_content("get_duplication_metrics", result)
