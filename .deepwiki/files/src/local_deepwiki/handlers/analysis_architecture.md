@@ -2,105 +2,116 @@
 
 ## File Overview
 
-This file implements a suite of handler functions for architecture analysis tools. These functions are responsible for processing user requests to analyze the structure, health, and dependencies of a Python codebase. Each handler corresponds to a specific analysis task, such as detecting design smells, computing coupling metrics, or generating onboarding guides.
+This file provides a collection of asynchronous handler functions that implement various architecture analysis tools. These tools analyze codebases for structural health, dependencies, design smells, and maintainability metrics.
 
-The handlers validate input arguments using pydantic models, perform permission checks, and delegate the actual analysis to specialized generator modules. They return structured results wrapped in `TextContent` objects for consumption by the tool calling system.
+The handlers are designed to be called by a tooling interface (likely a LLM agent or CLI) and return structured results in the form of `TextContent` objects. They integrate with the broader local_deepwiki system by validating inputs, enforcing access control, and delegating to specialized generators for the actual analysis logic.
 
 ## Key Concepts
 
-### 1. **Tool Handler Pattern**
-Each public function in this module (`handle_*`) follows a consistent pattern:
-- Validates incoming arguments using pydantic models
-- Performs permission checks
-- Resolves the repository path and ensures it exists
-- Delegates to a corresponding generator function
-- Applies filtering or summarization based on flags like `summary_only`
-- Wraps results in `TextContent` for output
+### Architecture Analysis Tools
+This file implements a suite of tools for static code analysis:
+- **Layer Dependencies**: Detects violations of architectural layering rules
+- **Hotspots**: Identifies complex functions based on cyclomatic complexity or other metrics
+- **Cross-Module Dependencies**: Builds and analyzes the inter-module import graph
+- **Coupling Metrics**: Computes Martin's coupling metrics (Ca, Ce, I, A, D) per module
+- **Design Smells**: Detects common design smells like God Class or Long Method
+- **Architecture Health**: Provides a comprehensive health score and summary
+- **Onboarding Guide**: Generates a guide for new developers
+- **Recommendations**: Offers actionable improvement suggestions
+- **Module Health**: Analyzes the health of a specific module
+- **Trends**: Tracks architecture health over time
+- **Guided Tour**: Provides a guided walkthrough of architecture aspects
+- **Churn Metrics**: Identifies frequently changed code sections
+- **Cohesion Metrics**: Measures module cohesion
+- **Duplication Metrics**: Finds duplicated code blocks
+- **Testability Metrics**: Evaluates code testability
+- **Maintainability Metrics**: Assesses code maintainability
 
-This pattern promotes consistency, reduces boilerplate, and centralizes validation logic.
-
-### 2. **Modular Architecture Analysis**
-The module integrates with various generator modules to perform different types of analysis:
-- Layer dependency analysis (`layer_analysis`)
-- Hotspot detection (`hotspots`)
-- Cross-module dependency graphs (`module_dependencies`)
-- Coupling metrics (`coupling`)
-- Design smell detection (`design_smells`)
-- Architecture health (`architecture_health`)
-- Architecture comparison (`architecture_compare`)
-- Composite architecture analysis (`architecture_composite`)
-- Onboarding guide generation (`onboarding`)
-- Recommendations (`recommendations`)
-- Module health (`module_health`)
-- Trends analysis (`tours`)
-
-Each generator encapsulates its own domain-specific logic, promoting separation of concerns and reusability.
-
-### 3. **Result Filtering and Overflow Prevention**
-Several handlers apply filters to prevent overwhelming output:
-- For cross-module dependencies, it sorts modules by edge count and limits the number returned.
-- For coupling metrics, it sorts by distance and limits the number returned.
-- For design smells, it limits the number of results returned or groups by type.
-
-These measures ensure that responses remain manageable and useful for end users.
-
-### 4. **Fallback Mechanisms**
-Some handlers implement fallbacks:
-- The `get_onboarding_guide` handler attempts to generate a rich version using vector stores and LLMs, falling back to a basic version if those are unavailable.
-- The `get_recommendations` handler uses template-only recommendations if LLM enrichment fails.
-
-This design ensures robustness even when optional dependencies are missing.
+### Design Rationale
+- **Modularity**: Each handler function encapsulates a distinct analysis task, promoting separation of concerns.
+- **Input Validation**: All handlers validate input arguments using pydantic models, ensuring robustness.
+- **Access Control**: Handlers enforce `INDEX_READ` permissions using a central access controller.
+- **Result Filtering**: For performance, handlers implement overflow-prevention filters (summary_only, top_n) that are applied post-analysis.
+- **Fallback Mechanisms**: Some handlers (e.g., `handle_get_onboarding_guide`) provide fallbacks when advanced features like vector stores or LLMs are unavailable.
+- **Logging**: Comprehensive logging is used to track tool execution and results for debugging and monitoring.
 
 ## Integration
 
 ### External Usage
-This file is the core of the architecture analysis functionality and is used by:
-- The main server for processing tool calls
-- Various test modules (`test_analysis_architecture`, `test_architecture_health`, etc.) for validating behavior
+This file is the core of the architecture analysis module. It is called by:
+- `handle_get_layer_dependencies`
+- `handle_get_architecture_summary`
+- `handle_get_hotspots`
+- `handle_get_cross_module_dependencies`
+- `handle_get_coupling_metrics`
+- `handle_get_design_smells`
+- `handle_get_architecture_health`
+- `handle_compare_architecture`
+- `handle_analyze_architecture`
+- `handle_get_onboarding_guide`
+- `handle_get_recommendations`
+- `handle_get_module_health`
+- `handle_get_architecture_trends`
+- `handle_get_guided_tour`
+- `handle_get_churn_metrics`
+- `handle_get_co_change`
+- `handle_get_cohesion_metrics`
+- `handle_get_duplication_metrics`
+- `handle_get_testability_metrics`
+- `handle_get_maintainability_metrics`
 
-Handlers are invoked by the tool calling system via the `tool_call` interface, which routes calls to these functions based on the tool name.
+These functions are likely invoked by an LLM agent or command-line interface that orchestrates analysis tasks.
 
 ### Dependencies
-This file depends on:
-- Core utilities like [`get_logger`](../logging.md), [`get_access_controller`](../security/access_control.md), and [`make_tool_text_content`](_response.md)
-- Generator modules from `local_deepwiki.generators.analysis.*` and related submodules
-- Configuration and model definitions from `local_deepwiki.config` and `local_deepwiki.models`
-- File system operations via `pathlib.Path`
-- LLM and vector store helpers for rich onboarding and recommendation enrichment
+The file imports:
+- Core utilities: `Path`, `Any`, `TextContent`, `pydanticValidationError`, [`get_logger`](../logging.md)
+- Error handling: [`path_not_found_error`](../error_factories.md), [`handle_tool_errors`](_error_handling.md), [`make_tool_text_content`](_response.md)
+- Models: Various `Args` models from `local_deepwiki.models` for input validation
+- Generators: Specific analysis logic from `local_deepwiki.generators.analysis.*` modules
+- Infrastructure: [`get_access_controller`](../security/access_control.md), [`get_cached_manifest`](../generators/manifest.md), [`get_config`](../config/loader.md), `get_llm_provider`, `_create_vector_store`
+- Utilities: [`read_toc`](../generators/toc.md), [`write_toc`](../generators/toc.md), [`TocEntry`](../generators/toc.md), [`load_snapshots`](../core/health_history.md)
 
-It integrates tightly with the indexing and manifest system ([`get_cached_manifest`](../generators/manifest.md)) to ensure accurate analysis and caching behavior.
+These dependencies enable the handlers to perform:
+- Input validation and error handling
+- Access control enforcement
+- Repository path resolution and existence checks
+- Static code analysis using specialized generators
+- Vector store and LLM integration for rich onboarding
+- Tool output formatting and logging
 
 ## Design Notes
 
-### 1. **Permission Enforcement**
-All handlers enforce `INDEX_READ` permissions using the access controller. This ensures that architecture analysis is only performed when appropriate access is granted, aligning with the system's security model.
+### Input Validation and Error Handling
+All handlers validate their arguments using pydantic models (`Get*Args` classes). This ensures consistent input expectations and provides clear error messages. Invalid arguments result in a `ValueError` being raised.
 
-### 2. **Path Resolution and Validation**
-Repository paths are resolved using `Path(...).resolve()` to normalize them and prevent path traversal issues. Additionally, a check ensures the path exists before proceeding, raising a specific error if not found.
+### Access Control
+Each handler requires `INDEX_READ` permission, enforced via `get_access_controller()`. This design centralizes access control and ensures that analysis tools are only accessible to authorized users.
 
-### 3. **Immutability in Filtering**
-When applying filters (e.g., limiting results or sorting), the handlers create new dictionaries instead of mutating existing ones. This preserves the original data and avoids side effects.
+### Overflow Prevention
+Handlers that return potentially large result sets implement overflow-prevention filters:
+- `summary_only`: Returns only summary statistics
+- `top_n`: Limits the number of results returned
+- `include_leaves`: Filters out modules with no external dependencies (Ce=0) unless explicitly requested
 
-### 4. **Summary vs Full Output**
-Many handlers support a `summary_only` flag that returns a minimal version of the result. This allows callers to quickly get an overview without full details, optimizing performance and reducing data transfer.
+### Fallback Strategies
+Some handlers, like `handle_get_onboarding_guide`, implement fallback logic:
+- Attempt rich onboarding using vector store and LLM
+- Fall back to basic onboarding if advanced features are unavailable
 
-### 5. **Error Handling**
-All handlers use [`handle_tool_errors`](_error_handling.md) for consistent error wrapping and logging. Validation errors are caught and re-raised as `ValueError` to propagate meaningful messages to the caller.
+### Logging
+Comprehensive logging is used throughout:
+- Tool execution details
+- Summary statistics (e.g., number of violations, smells, modules)
+- Performance metrics (e.g., snapshot count, score change)
 
-### 6. **Logging**
-Each handler logs key information about the operation performed, including the repository path, counts of findings, and grades/scores where applicable. This provides visibility into tool usage and helps with debugging.
+### Result Formatting
+All handlers return results wrapped in `make_tool_text_content()`, ensuring consistent output formatting for the calling system.
 
-### 7. **Onboarding Guide TOC Entry**
-The `_ensure_toc_entry` function ensures that the generated onboarding guide is listed in the table of contents. It inserts the entry at position 1 (after the first item) and renumbers all subsequent entries, maintaining a clean and consistent structure.
-
-### 8. **Rich vs Basic Onboarding**
-The `get_onboarding_guide` handler tries to generate a rich version using LLMs and vector stores. If unavailable, it falls back to a basic version, ensuring functionality regardless of environment capabilities.
-
-### 9. **Recommendation Enrichment**
-Recommendations can be enriched using an LLM provider if enabled. If enrichment fails, the handler continues with template-based results, ensuring no failure in the tool call chain.
-
-### 10. **Architecture Trends Snapshot Loading**
-The `get_architecture_trends` handler loads historical snapshots from `.deepwiki/health_history.json`. It defaults to a 30-day lookback if no `since` date is provided, making trend analysis accessible by default.
+### Performance Considerations
+- File traversal is optimized using `Path.rglob()` and filtering out hidden directories and common non-source trees.
+- Large files are identified and tracked using a threshold (`_LARGE_FILE_LINE_THRESHOLD`).
+- Results are sorted and truncated to prevent overwhelming output.
+- Some handlers cache manifest data to avoid repeated file I/O.
 
 ## API Reference
 
@@ -126,7 +137,7 @@ Handle get_layer_dependencies tool call.  Runs static layer dependency analysis 
 
 
 <details>
-<summary>View Source (lines 43-94) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L43-L94">GitHub</a></summary>
+<summary>View Source (lines 49-100) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L49-L100">GitHub</a></summary>
 
 ```python
 async def handle_get_layer_dependencies(
@@ -205,7 +216,7 @@ Handle get_architecture_summary tool call.  Deprecated: delegates to get_archite
 
 
 <details>
-<summary>View Source (lines 150-158) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L150-L158">GitHub</a></summary>
+<summary>View Source (lines 153-161) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L153-L161">GitHub</a></summary>
 
 ```python
 async def handle_get_architecture_summary(
@@ -241,7 +252,7 @@ Handle get_hotspots tool call.  Ranks all functions in the repository by a chose
 
 
 <details>
-<summary>View Source (lines 162-206) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L162-L206">GitHub</a></summary>
+<summary>View Source (lines 165-209) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L165-L209">GitHub</a></summary>
 
 ```python
 async def handle_get_hotspots(
@@ -313,7 +324,7 @@ Handle get_cross_module_dependencies tool call.  Builds the inter-module import 
 
 
 <details>
-<summary>View Source (lines 236-291) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L236-L291">GitHub</a></summary>
+<summary>View Source (lines 239-294) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L239-L294">GitHub</a></summary>
 
 ```python
 async def handle_get_cross_module_dependencies(
@@ -396,7 +407,7 @@ Handle get_coupling_metrics tool call.  Computes Robert C. Martin coupling metri
 
 
 <details>
-<summary>View Source (lines 295-356) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L295-L356">GitHub</a></summary>
+<summary>View Source (lines 298-359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L298-L359">GitHub</a></summary>
 
 ```python
 async def handle_get_coupling_metrics(
@@ -485,7 +496,7 @@ Handle get_design_smells tool call.  Detects design smells (God Class, Long Meth
 
 
 <details>
-<summary>View Source (lines 360-406) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L360-L406">GitHub</a></summary>
+<summary>View Source (lines 363-409) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L363-L409">GitHub</a></summary>
 
 ```python
 async def handle_get_design_smells(
@@ -559,7 +570,7 @@ Handle get_architecture_health tool call.
 
 
 <details>
-<summary>View Source (lines 410-464) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L410-L464">GitHub</a></summary>
+<summary>View Source (lines 413-465) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L413-L465">GitHub</a></summary>
 
 ```python
 async def handle_get_architecture_health(
@@ -595,9 +606,7 @@ async def handle_get_architecture_health(
     if detail == "summary":
         overall = result.get("overall", {})
         findings = result.get("top_findings", {})
-        trimmed_findings = {
-            k: v[:3] if isinstance(v, list) else v for k, v in findings.items()
-        }
+        trimmed_findings = {k: v[:3] if isinstance(v, list) else v for k, v in findings.items()}
         result = {
             "status": "success",
             "project_name": result.get("project_name", ""),
@@ -641,7 +650,7 @@ Handle [compare_architecture](../generators/analysis/architecture_compare.md) to
 
 
 <details>
-<summary>View Source (lines 468-504) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L468-L504">GitHub</a></summary>
+<summary>View Source (lines 469-505) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L469-L505">GitHub</a></summary>
 
 ```python
 async def handle_compare_architecture(
@@ -705,7 +714,7 @@ Handle analyze_architecture composite tool call.
 
 
 <details>
-<summary>View Source (lines 508-543) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L508-L543">GitHub</a></summary>
+<summary>View Source (lines 509-544) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L509-L544">GitHub</a></summary>
 
 ```python
 async def handle_analyze_architecture(
@@ -768,7 +777,7 @@ Handle get_onboarding_guide tool call.
 
 
 <details>
-<summary>View Source (lines 581-658) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L581-L658">GitHub</a></summary>
+<summary>View Source (lines 580-653) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L580-L653">GitHub</a></summary>
 
 ```python
 async def handle_get_onboarding_guide(
@@ -825,9 +834,7 @@ async def handle_get_onboarding_guide(
             },
         )
     except Exception:
-        logger.info(
-            "Rich onboarding unavailable, falling back to basic for %s", repo_path
-        )
+        logger.info("Rich onboarding unavailable, falling back to basic for %s", repo_path)
 
     # Fallback to basic onboarding
     from local_deepwiki.generators.analysis.onboarding import (
@@ -835,9 +842,7 @@ async def handle_get_onboarding_guide(
         generate_onboarding_guide,
     )
 
-    basic_result = generate_onboarding_guide(
-        repo_path, detail_level=validated.detail_level
-    )
+    basic_result = generate_onboarding_guide(repo_path, detail_level=validated.detail_level)
     guide = format_onboarding_guide(basic_result, detail_level=validated.detail_level)
 
     logger.info("Basic onboarding guide generated for %s", repo_path)
@@ -873,7 +878,7 @@ Handle get_recommendations tool call.
 
 
 <details>
-<summary>View Source (lines 662-709) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L662-L709">GitHub</a></summary>
+<summary>View Source (lines 657-704) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L657-L704">GitHub</a></summary>
 
 ```python
 async def handle_get_recommendations(
@@ -948,7 +953,7 @@ Handle get_module_health tool call.
 
 
 <details>
-<summary>View Source (lines 713-738) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L713-L738">GitHub</a></summary>
+<summary>View Source (lines 708-733) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L708-L733">GitHub</a></summary>
 
 ```python
 async def handle_get_module_health(
@@ -1001,7 +1006,7 @@ Handle get_architecture_trends tool call.
 
 
 <details>
-<summary>View Source (lines 742-795) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L742-L795">GitHub</a></summary>
+<summary>View Source (lines 737-789) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L737-L789">GitHub</a></summary>
 
 ```python
 async def handle_get_architecture_trends(
@@ -1039,8 +1044,7 @@ async def handle_get_architecture_trends(
                 "from": snapshots[0].get("timestamp", ""),
                 "to": snapshots[-1].get("timestamp", ""),
             },
-            "score_change": snapshots[-1].get("score", 0)
-            - snapshots[0].get("score", 0),
+            "score_change": snapshots[-1].get("score", 0) - snapshots[0].get("score", 0),
             "current_grade": snapshots[-1].get("grade", "?"),
         }
 
@@ -1081,9 +1085,8 @@ Handle get_guided_tour tool call.
 
 
 
-
 <details>
-<summary>View Source (lines 799-830) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L799-L830">GitHub</a></summary>
+<summary>View Source (lines 793-824) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L793-L824">GitHub</a></summary>
 
 ```python
 async def handle_get_guided_tour(
@@ -1122,6 +1125,322 @@ async def handle_get_guided_tour(
 
 </details>
 
+#### `handle_get_churn_metrics`
+
+`@handle_tool_errors`
+
+```python
+async def handle_get_churn_metrics(args: dict[str, Any]) -> list[TextContent]
+```
+
+Handle get_churn_metrics tool call.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `args` | `dict[str, Any]` | - | - |
+
+**Returns:** `list[TextContent]`
+
+
+
+<details>
+<summary>View Source (lines 828-852) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L828-L852">GitHub</a></summary>
+
+```python
+async def handle_get_churn_metrics(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_churn_metrics tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetChurnMetricsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.churn import analyze_churn
+
+    result = analyze_churn(
+        repo_path,
+        window_days=validated.window_days,
+        top_n=validated.top_n,
+        include_complexity=validated.include_complexity,
+    )
+    return make_tool_text_content("get_churn_metrics", result)
+```
+
+</details>
+
+#### `handle_get_co_change`
+
+`@handle_tool_errors`
+
+```python
+async def handle_get_co_change(args: dict[str, Any]) -> list[TextContent]
+```
+
+Handle get_co_change tool call.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `args` | `dict[str, Any]` | - | - |
+
+**Returns:** `list[TextContent]`
+
+
+
+<details>
+<summary>View Source (lines 856-888) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L856-L888">GitHub</a></summary>
+
+```python
+async def handle_get_co_change(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_co_change tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetCoChangeArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.churn import analyze_churn
+
+    result = analyze_churn(
+        repo_path,
+        window_days=validated.window_days,
+        top_n=validated.top_n,
+        min_co_change=validated.min_shared,
+        include_complexity=False,
+    )
+    return make_tool_text_content(
+        "get_co_change",
+        {
+            "status": "success",
+            "co_change": result["co_change"],
+            "stats": result["stats"],
+        },
+    )
+```
+
+</details>
+
+#### `handle_get_cohesion_metrics`
+
+`@handle_tool_errors`
+
+```python
+async def handle_get_cohesion_metrics(args: dict[str, Any]) -> list[TextContent]
+```
+
+Handle get_cohesion_metrics tool call.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `args` | `dict[str, Any]` | - | - |
+
+**Returns:** `list[TextContent]`
+
+
+
+<details>
+<summary>View Source (lines 892-915) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L892-L915">GitHub</a></summary>
+
+```python
+async def handle_get_cohesion_metrics(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_cohesion_metrics tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetCohesionMetricsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.cohesion import analyze_cohesion
+
+    result = analyze_cohesion(
+        repo_path,
+        top_n=validated.top_n,
+        exclude_tests=validated.exclude_tests,
+    )
+    return make_tool_text_content("get_cohesion_metrics", result)
+```
+
+</details>
+
+#### `handle_get_duplication_metrics`
+
+`@handle_tool_errors`
+
+```python
+async def handle_get_duplication_metrics(args: dict[str, Any]) -> list[TextContent]
+```
+
+Handle get_duplication_metrics tool call.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `args` | `dict[str, Any]` | - | - |
+
+**Returns:** `list[TextContent]`
+
+
+
+<details>
+<summary>View Source (lines 919-943) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L919-L943">GitHub</a></summary>
+
+```python
+async def handle_get_duplication_metrics(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_duplication_metrics tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetDuplicationMetricsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.duplication import analyze_duplication
+
+    result = analyze_duplication(
+        repo_path,
+        min_lines=validated.min_lines,
+        top_n=validated.top_n,
+        exclude_tests=validated.exclude_tests,
+    )
+    return make_tool_text_content("get_duplication_metrics", result)
+```
+
+</details>
+
+#### `handle_get_testability_metrics`
+
+`@handle_tool_errors`
+
+```python
+async def handle_get_testability_metrics(args: dict[str, Any]) -> list[TextContent]
+```
+
+Handle get_testability_metrics tool call.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `args` | `dict[str, Any]` | - | - |
+
+**Returns:** `list[TextContent]`
+
+
+
+<details>
+<summary>View Source (lines 947-966) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L947-L966">GitHub</a></summary>
+
+```python
+async def handle_get_testability_metrics(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_testability_metrics tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetTestabilityMetricsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.testability import analyze_testability
+
+    result = analyze_testability(repo_path)
+    return make_tool_text_content("get_testability_metrics", result)
+```
+
+</details>
+
+#### `handle_get_maintainability_metrics`
+
+`@handle_tool_errors`
+
+```python
+async def handle_get_maintainability_metrics(args: dict[str, Any]) -> list[TextContent]
+```
+
+Handle get_maintainability_metrics tool call.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `args` | `dict[str, Any]` | - | - |
+
+**Returns:** `list[TextContent]`
+
+
+
+
+<details>
+<summary>View Source (lines 970-995) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L970-L995">GitHub</a></summary>
+
+```python
+async def handle_get_maintainability_metrics(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_maintainability_metrics tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetMaintainabilityMetricsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.maintainability import (
+        analyze_maintainability,
+    )
+
+    result = analyze_maintainability(
+        repo_path,
+        top_n=validated.top_n,
+        exclude_tests=validated.exclude_tests,
+    )
+    return make_tool_text_content("get_maintainability_metrics", result)
+```
+
+</details>
+
 ## Call Graph
 
 ```mermaid
@@ -1129,162 +1448,209 @@ flowchart TD
     N0[Path]
     N1[ValueError]
     N2[_collect_file_metrics]
-    N3[_ensure_toc_entry]
-    N4[analyze_layer_dependencies]
-    N5[exists]
-    N6[get_access_controller]
-    N7[get_cached_manifest]
-    N8[get_llm_provider]
-    N9[handle_analyze_architecture]
-    N10[handle_compare_architecture]
-    N11[handle_get_architecture_health]
-    N12[handle_get_architecture_trends]
+    N3[exists]
+    N4[get_access_controller]
+    N5[get_cached_manifest]
+    N6[handle_analyze_architecture]
+    N7[handle_compare_architecture]
+    N8[handle_get_architecture_health]
+    N9[handle_get_architecture_trends]
+    N10[handle_get_churn_metrics]
+    N11[handle_get_co_change]
+    N12[handle_get_cohesion_metrics]
     N13[handle_get_coupling_metrics]
     N14[handle_get_cross_module_dep...]
     N15[handle_get_design_smells]
-    N16[handle_get_guided_tour]
-    N17[handle_get_hotspots]
-    N18[handle_get_layer_dependencies]
-    N19[handle_get_module_health]
-    N20[handle_get_onboarding_guide]
-    N21[handle_get_recommendations]
-    N22[make_tool_text_content]
-    N23[model_validate]
-    N24[path_not_found_error]
-    N25[read_text]
-    N26[relative_to]
-    N27[require_permission]
-    N28[resolve]
-    N29[rglob]
-    N18 --> N6
-    N18 --> N27
-    N18 --> N23
-    N18 --> N1
-    N18 --> N28
-    N18 --> N0
-    N18 --> N5
-    N18 --> N24
-    N18 --> N7
-    N18 --> N4
-    N18 --> N22
-    N2 --> N29
-    N2 --> N26
-    N2 --> N25
-    N17 --> N6
-    N17 --> N27
-    N17 --> N23
-    N17 --> N1
-    N17 --> N28
-    N17 --> N0
-    N17 --> N5
-    N17 --> N24
-    N17 --> N22
-    N14 --> N6
-    N14 --> N27
-    N14 --> N23
-    N14 --> N1
-    N14 --> N28
-    N14 --> N0
-    N14 --> N5
-    N14 --> N24
-    N14 --> N22
-    N13 --> N6
-    N13 --> N27
-    N13 --> N23
-    N13 --> N1
-    N13 --> N28
-    N13 --> N0
-    N13 --> N5
-    N13 --> N24
-    N13 --> N22
-    N15 --> N6
-    N15 --> N27
-    N15 --> N23
-    N15 --> N1
-    N15 --> N28
-    N15 --> N0
-    N15 --> N5
-    N15 --> N24
-    N15 --> N22
-    N11 --> N6
-    N11 --> N27
-    N11 --> N23
-    N11 --> N1
-    N11 --> N28
-    N11 --> N0
-    N11 --> N5
-    N11 --> N24
-    N11 --> N7
-    N11 --> N2
-    N11 --> N22
-    N10 --> N6
-    N10 --> N27
-    N10 --> N23
-    N10 --> N1
-    N10 --> N28
-    N10 --> N0
-    N10 --> N5
-    N10 --> N24
-    N10 --> N7
-    N10 --> N22
-    N9 --> N6
-    N9 --> N27
-    N9 --> N23
-    N9 --> N1
-    N9 --> N28
-    N9 --> N0
-    N9 --> N5
-    N9 --> N24
-    N9 --> N7
-    N9 --> N22
-    N20 --> N6
-    N20 --> N27
-    N20 --> N23
-    N20 --> N1
-    N20 --> N28
-    N20 --> N0
-    N20 --> N5
-    N20 --> N24
-    N20 --> N8
-    N20 --> N3
-    N20 --> N22
-    N21 --> N6
-    N21 --> N27
-    N21 --> N23
-    N21 --> N1
-    N21 --> N28
-    N21 --> N0
-    N21 --> N5
-    N21 --> N24
-    N21 --> N8
-    N21 --> N22
-    N19 --> N6
-    N19 --> N27
-    N19 --> N23
-    N19 --> N1
+    N16[handle_get_duplication_metrics]
+    N17[handle_get_guided_tour]
+    N18[handle_get_hotspots]
+    N19[handle_get_layer_dependencies]
+    N20[handle_get_maintainability_...]
+    N21[handle_get_module_health]
+    N22[handle_get_onboarding_guide]
+    N23[handle_get_recommendations]
+    N24[handle_get_testability_metrics]
+    N25[make_tool_text_content]
+    N26[model_validate]
+    N27[path_not_found_error]
+    N28[require_permission]
+    N29[resolve]
+    N19 --> N4
     N19 --> N28
+    N19 --> N26
+    N19 --> N1
+    N19 --> N29
     N19 --> N0
+    N19 --> N3
+    N19 --> N27
     N19 --> N5
-    N19 --> N24
-    N19 --> N22
-    N12 --> N6
-    N12 --> N27
-    N12 --> N23
-    N12 --> N1
+    N19 --> N25
+    N18 --> N4
+    N18 --> N28
+    N18 --> N26
+    N18 --> N1
+    N18 --> N29
+    N18 --> N0
+    N18 --> N3
+    N18 --> N27
+    N18 --> N25
+    N14 --> N4
+    N14 --> N28
+    N14 --> N26
+    N14 --> N1
+    N14 --> N29
+    N14 --> N0
+    N14 --> N3
+    N14 --> N27
+    N14 --> N25
+    N13 --> N4
+    N13 --> N28
+    N13 --> N26
+    N13 --> N1
+    N13 --> N29
+    N13 --> N0
+    N13 --> N3
+    N13 --> N27
+    N13 --> N25
+    N15 --> N4
+    N15 --> N28
+    N15 --> N26
+    N15 --> N1
+    N15 --> N29
+    N15 --> N0
+    N15 --> N3
+    N15 --> N27
+    N15 --> N25
+    N8 --> N4
+    N8 --> N28
+    N8 --> N26
+    N8 --> N1
+    N8 --> N29
+    N8 --> N0
+    N8 --> N3
+    N8 --> N27
+    N8 --> N5
+    N8 --> N2
+    N8 --> N25
+    N7 --> N4
+    N7 --> N28
+    N7 --> N26
+    N7 --> N1
+    N7 --> N29
+    N7 --> N0
+    N7 --> N3
+    N7 --> N27
+    N7 --> N5
+    N7 --> N25
+    N6 --> N4
+    N6 --> N28
+    N6 --> N26
+    N6 --> N1
+    N6 --> N29
+    N6 --> N0
+    N6 --> N3
+    N6 --> N27
+    N6 --> N5
+    N6 --> N25
+    N22 --> N4
+    N22 --> N28
+    N22 --> N26
+    N22 --> N1
+    N22 --> N29
+    N22 --> N0
+    N22 --> N3
+    N22 --> N27
+    N22 --> N25
+    N23 --> N4
+    N23 --> N28
+    N23 --> N26
+    N23 --> N1
+    N23 --> N29
+    N23 --> N0
+    N23 --> N3
+    N23 --> N27
+    N23 --> N25
+    N21 --> N4
+    N21 --> N28
+    N21 --> N26
+    N21 --> N1
+    N21 --> N29
+    N21 --> N0
+    N21 --> N3
+    N21 --> N27
+    N21 --> N25
+    N9 --> N4
+    N9 --> N28
+    N9 --> N26
+    N9 --> N1
+    N9 --> N29
+    N9 --> N0
+    N9 --> N3
+    N9 --> N27
+    N9 --> N25
+    N17 --> N4
+    N17 --> N28
+    N17 --> N26
+    N17 --> N1
+    N17 --> N29
+    N17 --> N0
+    N17 --> N3
+    N17 --> N27
+    N17 --> N25
+    N10 --> N4
+    N10 --> N28
+    N10 --> N26
+    N10 --> N1
+    N10 --> N29
+    N10 --> N0
+    N10 --> N3
+    N10 --> N27
+    N10 --> N25
+    N11 --> N4
+    N11 --> N28
+    N11 --> N26
+    N11 --> N1
+    N11 --> N29
+    N11 --> N0
+    N11 --> N3
+    N11 --> N27
+    N11 --> N25
+    N12 --> N4
     N12 --> N28
+    N12 --> N26
+    N12 --> N1
+    N12 --> N29
     N12 --> N0
-    N12 --> N5
-    N12 --> N24
-    N12 --> N22
-    N16 --> N6
-    N16 --> N27
-    N16 --> N23
-    N16 --> N1
+    N12 --> N3
+    N12 --> N27
+    N12 --> N25
+    N16 --> N4
     N16 --> N28
+    N16 --> N26
+    N16 --> N1
+    N16 --> N29
     N16 --> N0
-    N16 --> N5
-    N16 --> N24
-    N16 --> N22
+    N16 --> N3
+    N16 --> N27
+    N16 --> N25
+    N24 --> N4
+    N24 --> N28
+    N24 --> N26
+    N24 --> N1
+    N24 --> N29
+    N24 --> N0
+    N24 --> N3
+    N24 --> N27
+    N24 --> N25
+    N20 --> N4
+    N20 --> N28
+    N20 --> N26
+    N20 --> N1
+    N20 --> N29
+    N20 --> N0
+    N20 --> N3
+    N20 --> N27
+    N20 --> N25
     classDef func fill:#e1f5fe
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
 ```
@@ -1293,9 +1659,9 @@ flowchart TD
 
 Functions and methods in this file and their callers:
 
-- **`Path`**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`
+- **`Path`**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_churn_metrics`, `handle_get_co_change`, `handle_get_cohesion_metrics`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_duplication_metrics`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_maintainability_metrics`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`, `handle_get_testability_metrics`
 - **[`TocEntry`](../generators/toc.md)**: called by `_ensure_toc_entry`
-- **`ValueError`**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`
+- **`ValueError`**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_churn_metrics`, `handle_get_co_change`, `handle_get_cohesion_metrics`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_duplication_metrics`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_maintainability_metrics`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`, `handle_get_testability_metrics`
 - **`_collect_file_metrics`**: called by `handle_get_architecture_health`
 - **`_count_module_edges`**: called by `handle_get_cross_module_dependencies`
 - **`_count_smells_by_type`**: called by `handle_get_design_smells`
@@ -1303,35 +1669,40 @@ Functions and methods in this file and their callers:
 - **`_ensure_toc_entry`**: called by `handle_get_onboarding_guide`
 - **[`analyze_architecture_composite`](../generators/analysis/architecture_composite.md)**: called by `handle_analyze_architecture`
 - **[`analyze_architecture_health`](../generators/analysis/architecture_health.md)**: called by `handle_get_architecture_health`
+- **[`analyze_churn`](../generators/analysis/churn.md)**: called by `handle_get_churn_metrics`, `handle_get_co_change`
+- **[`analyze_cohesion`](../generators/analysis/cohesion.md)**: called by `handle_get_cohesion_metrics`
 - **[`analyze_coupling_metrics`](../generators/analysis/coupling.md)**: called by `handle_get_coupling_metrics`
 - **[`analyze_cross_module_dependencies`](../generators/analysis/module_dependencies.md)**: called by `handle_get_cross_module_dependencies`
 - **[`analyze_design_smells`](../generators/analysis/design_smells.md)**: called by `handle_get_design_smells`
+- **[`analyze_duplication`](../generators/analysis/duplication.md)**: called by `handle_get_duplication_metrics`
 - **[`analyze_hotspots`](../generators/analysis/hotspots.md)**: called by `handle_get_hotspots`
 - **[`analyze_layer_dependencies`](../generators/analysis/layer_analysis.md)**: called by `handle_get_layer_dependencies`
+- **[`analyze_maintainability`](../generators/analysis/maintainability.md)**: called by `handle_get_maintainability_metrics`
 - **[`analyze_module_health`](../generators/analysis/module_health.md)**: called by `handle_get_module_health`
+- **[`analyze_testability`](../generators/analysis/testability.md)**: called by `handle_get_testability_metrics`
 - **[`compare_architecture`](../generators/analysis/architecture_compare.md)**: called by `handle_compare_architecture`
 - **[`enrich_recommendations`](../generators/analysis/recommendations.md)**: called by `handle_get_recommendations`
-- **`exists`**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`
+- **`exists`**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_churn_metrics`, `handle_get_co_change`, `handle_get_cohesion_metrics`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_duplication_metrics`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_maintainability_metrics`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`, `handle_get_testability_metrics`
 - **[`format_onboarding_guide`](../generators/analysis/onboarding.md)**: called by `handle_get_onboarding_guide`
 - **[`generate_onboarding_guide`](../generators/analysis/onboarding.md)**: called by `handle_get_onboarding_guide`
 - **[`generate_recommendations`](../generators/analysis/recommendations.md)**: called by `handle_get_recommendations`
 - **[`generate_rich_onboarding`](../generators/analysis/onboarding.md)**: called by `handle_get_onboarding_guide`
 - **[`generate_tour`](../generators/analysis/tours.md)**: called by `handle_get_guided_tour`
-- **[`get_access_controller`](../security/access_control.md)**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`
+- **[`get_access_controller`](../security/access_control.md)**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_churn_metrics`, `handle_get_co_change`, `handle_get_cohesion_metrics`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_duplication_metrics`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_maintainability_metrics`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`, `handle_get_testability_metrics`
 - **[`get_cached_manifest`](../generators/manifest.md)**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_layer_dependencies`
 - **[`get_config`](../config/loader.md)**: called by `handle_get_onboarding_guide`
 - **`get_llm_provider`**: called by `handle_get_onboarding_guide`, `handle_get_recommendations`
 - **`handle_get_architecture_health`**: called by `handle_get_architecture_summary`
 - **[`load_snapshots`](../core/health_history.md)**: called by `handle_get_architecture_trends`
-- **[`make_tool_text_content`](_response.md)**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`
-- **`model_validate`**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`
+- **[`make_tool_text_content`](_response.md)**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_churn_metrics`, `handle_get_co_change`, `handle_get_cohesion_metrics`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_duplication_metrics`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_maintainability_metrics`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`, `handle_get_testability_metrics`
+- **`model_validate`**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_churn_metrics`, `handle_get_co_change`, `handle_get_cohesion_metrics`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_duplication_metrics`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_maintainability_metrics`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`, `handle_get_testability_metrics`
 - **`now`**: called by `handle_get_architecture_trends`
-- **[`path_not_found_error`](../error_factories.md)**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`
+- **[`path_not_found_error`](../error_factories.md)**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_churn_metrics`, `handle_get_co_change`, `handle_get_cohesion_metrics`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_duplication_metrics`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_maintainability_metrics`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`, `handle_get_testability_metrics`
 - **`read_text`**: called by `_collect_file_metrics`
 - **[`read_toc`](../generators/toc.md)**: called by `_ensure_toc_entry`
 - **`relative_to`**: called by `_collect_file_metrics`
-- **[`require_permission`](../security/access_control.md)**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`
-- **`resolve`**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`
+- **[`require_permission`](../security/access_control.md)**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_churn_metrics`, `handle_get_co_change`, `handle_get_cohesion_metrics`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_duplication_metrics`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_maintainability_metrics`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`, `handle_get_testability_metrics`
+- **`resolve`**: called by `handle_analyze_architecture`, `handle_compare_architecture`, `handle_get_architecture_health`, `handle_get_architecture_trends`, `handle_get_churn_metrics`, `handle_get_co_change`, `handle_get_cohesion_metrics`, `handle_get_coupling_metrics`, `handle_get_cross_module_dependencies`, `handle_get_design_smells`, `handle_get_duplication_metrics`, `handle_get_guided_tour`, `handle_get_hotspots`, `handle_get_layer_dependencies`, `handle_get_maintainability_metrics`, `handle_get_module_health`, `handle_get_onboarding_guide`, `handle_get_recommendations`, `handle_get_testability_metrics`
 - **`rglob`**: called by `_collect_file_metrics`
 - **`sort`**: called by `_collect_file_metrics`
 - **`strftime`**: called by `handle_get_architecture_trends`
@@ -1402,24 +1773,30 @@ assert len(data["smells"]) == 5
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `handle_get_coupling_metrics` | function | Brian Breidenbach | today | `56000bf` fix: improve analysis accur... |
-| `_ensure_toc_entry` | function | Brian Breidenbach | 4 days ago | `d570a08` fix: eliminate list mutatio... |
-| `handle_get_onboarding_guide` | function | Brian Breidenbach | 4 days ago | `4cccc8d` feat: update onboarding han... |
-| `handle_get_guided_tour` | function | Brian Breidenbach | 5 days ago | `d2cd819` feat: add get_guided_tour M... |
-| `handle_compare_architecture` | function | Brian Breidenbach | 5 days ago | `37320f0` feat: add detail_level to c... |
-| `handle_get_architecture_trends` | function | Brian Breidenbach | 5 days ago | `fc85c34` feat: add deepwiki check CL... |
-| `handle_get_recommendations` | function | Brian Breidenbach | 5 days ago | `caa4c66` feat: add get_recommendatio... |
-| `handle_analyze_architecture` | function | Brian Breidenbach | 5 days ago | `133094f` feat: add analyze_architect... |
-| `handle_get_architecture_summary` | function | Brian Breidenbach | 5 days ago | `8c05f89` refactor: deprecate get_arc... |
-| `handle_get_architecture_health` | function | Brian Breidenbach | 5 days ago | `951a981` feat: add detail_level para... |
-| `handle_get_layer_dependencies` | function | Brian Breidenbach | 5 days ago | `38ffb40` feat: add summary_only para... |
-| `handle_get_hotspots` | function | Brian Breidenbach | 5 days ago | `38ffb40` feat: add summary_only para... |
-| `handle_get_cross_module_dependencies` | function | Brian Breidenbach | 5 days ago | `38ffb40` feat: add summary_only para... |
-| `_count_smells_by_type` | function | Brian Breidenbach | 1 week ago | `2b6636a` feat: add top_n and summary... |
-| `_count_module_edges` | function | Brian Breidenbach | 1 week ago | `2b6636a` feat: add top_n and summary... |
-| `handle_get_design_smells` | function | Brian Breidenbach | 1 week ago | `2b6636a` feat: add top_n and summary... |
-| `handle_get_module_health` | function | Brian Breidenbach | 1 week ago | `b1fa5b6` fix: restore v2 tools and l... |
-| `_collect_file_metrics` | function | Brian Breidenbach | 2 weeks ago | `3d14562` feat: add get_layer_depende... |
+| `_collect_file_metrics` | function | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `handle_get_architecture_health` | function | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `_ensure_toc_entry` | function | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `handle_get_onboarding_guide` | function | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `handle_get_architecture_trends` | function | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `handle_get_maintainability_metrics` | function | Brian Breidenbach | today | `64e4b55` feat: add maintainability i... |
+| `handle_get_testability_metrics` | function | Brian Breidenbach | today | `6d8243f` feat: add testability-based... |
+| `handle_get_duplication_metrics` | function | Brian Breidenbach | today | `d7e2187` feat(duplication): add scor... |
+| `handle_get_layer_dependencies` | function | Brian Breidenbach | today | `d2646c8` feat(cohesion): integrate i... |
+| `handle_compare_architecture` | function | Brian Breidenbach | today | `d2646c8` feat(cohesion): integrate i... |
+| `handle_get_cohesion_metrics` | function | Brian Breidenbach | today | `d2646c8` feat(cohesion): integrate i... |
+| `handle_get_churn_metrics` | function | Brian Breidenbach | today | `148a027` feat(churn): add MCP tools ... |
+| `handle_get_co_change` | function | Brian Breidenbach | today | `148a027` feat(churn): add MCP tools ... |
+| `handle_get_coupling_metrics` | function | Brian Breidenbach | yesterday | `56000bf` fix: improve analysis accur... |
+| `handle_get_guided_tour` | function | Brian Breidenbach | 1 week ago | `d2cd819` feat: add get_guided_tour M... |
+| `handle_get_recommendations` | function | Brian Breidenbach | 1 week ago | `caa4c66` feat: add get_recommendatio... |
+| `handle_analyze_architecture` | function | Brian Breidenbach | 1 week ago | `133094f` feat: add analyze_architect... |
+| `handle_get_architecture_summary` | function | Brian Breidenbach | 1 week ago | `8c05f89` refactor: deprecate get_arc... |
+| `handle_get_hotspots` | function | Brian Breidenbach | 1 week ago | `38ffb40` feat: add summary_only para... |
+| `handle_get_cross_module_dependencies` | function | Brian Breidenbach | 1 week ago | `38ffb40` feat: add summary_only para... |
+| `_count_smells_by_type` | function | Brian Breidenbach | 2 weeks ago | `2b6636a` feat: add top_n and summary... |
+| `_count_module_edges` | function | Brian Breidenbach | 2 weeks ago | `2b6636a` feat: add top_n and summary... |
+| `handle_get_design_smells` | function | Brian Breidenbach | 2 weeks ago | `2b6636a` feat: add top_n and summary... |
+| `handle_get_module_health` | function | Brian Breidenbach | 2 weeks ago | `b1fa5b6` fix: restore v2 tools and l... |
 
 ## Additional Source Code
 
@@ -1428,7 +1805,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_collect_file_metrics`
 
 <details>
-<summary>View Source (lines 97-146) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L97-L146">GitHub</a></summary>
+<summary>View Source (lines 103-149) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L103-L149">GitHub</a></summary>
 
 ```python
 def _collect_file_metrics(repo_path: Path) -> dict[str, Any]:
@@ -1451,8 +1828,7 @@ def _collect_file_metrics(repo_path: Path) -> dict[str, Any]:
         # Skip hidden dirs and common non-source trees
         rel_parts = rel_path.parts
         if any(
-            part.startswith(".") or part in ("node_modules", "__pycache__")
-            for part in rel_parts
+            part.startswith(".") or part in ("node_modules", "__pycache__") for part in rel_parts
         ):
             continue
 
@@ -1461,9 +1837,7 @@ def _collect_file_metrics(repo_path: Path) -> dict[str, Any]:
         except OSError:
             continue
 
-        line_count = content.count("\n") + (
-            1 if content and not content.endswith("\n") else 0
-        )
+        line_count = content.count("\n") + (1 if content and not content.endswith("\n") else 0)
         total_lines += line_count
 
         file_sizes.append({"file": str(rel_path), "lines": line_count})
@@ -1489,7 +1863,7 @@ def _collect_file_metrics(repo_path: Path) -> dict[str, Any]:
 #### `_count_smells_by_type`
 
 <details>
-<summary>View Source (lines 209-218) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L209-L218">GitHub</a></summary>
+<summary>View Source (lines 212-221) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L212-L221">GitHub</a></summary>
 
 ```python
 def _count_smells_by_type(smells: list[dict[str, Any]]) -> dict[str, int]:
@@ -1510,7 +1884,7 @@ def _count_smells_by_type(smells: list[dict[str, Any]]) -> dict[str, int]:
 #### `_count_module_edges`
 
 <details>
-<summary>View Source (lines 221-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L221-L232">GitHub</a></summary>
+<summary>View Source (lines 224-235) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L224-L235">GitHub</a></summary>
 
 ```python
 def _count_module_edges(edges: list[dict[str, Any]]) -> dict[str, int]:
@@ -1533,7 +1907,7 @@ def _count_module_edges(edges: list[dict[str, Any]]) -> dict[str, int]:
 #### `_ensure_toc_entry`
 
 <details>
-<summary>View Source (lines 546-577) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L546-L577">GitHub</a></summary>
+<summary>View Source (lines 547-576) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/handlers/analysis_architecture.py#L547-L576">GitHub</a></summary>
 
 ```python
 def _ensure_toc_entry(wiki_path: Path) -> None:
@@ -1552,9 +1926,7 @@ def _ensure_toc_entry(wiki_path: Path) -> None:
     # Build new entries list with onboarding inserted at position 1
     new_entry = TocEntry(number="", title="Onboarding Guide", path="onboarding.md")
     insert_pos = min(1, len(toc.entries))
-    all_entries = (
-        list(toc.entries[:insert_pos]) + [new_entry] + list(toc.entries[insert_pos:])
-    )
+    all_entries = list(toc.entries[:insert_pos]) + [new_entry] + list(toc.entries[insert_pos:])
 
     # Renumber all entries (TocEntry is frozen, so build new list)
     toc.entries = [
@@ -1574,4 +1946,4 @@ def _ensure_toc_entry(wiki_path: Path) -> None:
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/handlers/analysis_architecture.py:43-94`
+- `src/local_deepwiki/handlers/analysis_architecture.py:49-100`

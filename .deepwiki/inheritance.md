@@ -199,16 +199,16 @@ classDiagram
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
-- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
-- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
-- [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
-- [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
-- [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
-- [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
-- `src/local_deepwiki/__init__.py`
-- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
-- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
+- [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
+- `src/local_deepwiki/models/__init__.py`
+- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
+- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
+- [`src/local_deepwiki/generators/analysis/architecture_health.py:55-123`](files/src/local_deepwiki/generators/analysis/architecture_health.md)
+- [`src/local_deepwiki/generators/analysis/maintainability.py:69-79`](files/src/local_deepwiki/generators/analysis/maintainability.md)
+- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
+- [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/generators/analysis/churn.py:25-38`](files/src/local_deepwiki/generators/analysis/churn.md)
 
 
-*Showing 10 of 263 source files.*
+*Showing 10 of 268 source files.*

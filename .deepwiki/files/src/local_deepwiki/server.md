@@ -2,77 +2,68 @@
 
 ## File Overview
 
-This file implements the **MCP (Model Control Protocol) server** for the `local_deepwiki` application. It serves as the core entry point for handling tool requests and integrating with the DeepWiki functionality. The server is built using the `mcp` library and supports communication via stdio, making it compatible with tools that implement the MCP protocol.
+This file implements the main MCP (Model Control Protocol) server for the `local_deepwiki` application. It provides the core functionality to expose a set of tools and handlers that allow an LLM or other client to interact with the local codebase and documentation system.
 
 The server is responsible for:
-- Defining and validating available tools
-- Handling tool execution via registered handlers
-- Managing access control and logging security posture
-- Initializing and running the MCP server instance
+- Defining and registering available tools via `TOOL_DEFINITIONS`
+- Mapping tool names to their corresponding handlers
+- Handling tool invocation with proper logging and session tracking
+- Managing server startup, including validation and security posture logging
+- Running the MCP server over stdio for communication with clients
 
 ## Key Concepts
 
-### Tool Registration and Dispatch
+### Tool Registration and Dispatching
 
-The server uses a centralized `TOOL_DEFINITIONS` list to define all available tools. Each tool is mapped to a corresponding handler function in `TOOL_HANDLERS`. This pattern ensures that:
-- Tools are explicitly defined and documented
-- There's a clear separation between tool definition and implementation
-- Runtime consistency checks prevent missing or extra handlers
+The server uses a centralized approach to tool registration via `TOOL_DEFINITIONS` and a mapping of tool names to handlers (`TOOL_HANDLERS`). This pattern enables:
+- Clear separation between tool definition and implementation
+- Easy addition or removal of tools without changing core server logic
+- Validation that all defined tools have corresponding handlers and vice versa
 
-### Asynchronous Execution Model
+### Asynchronous Execution
 
-The server leverages `asyncio` for handling concurrent tool calls and I/O operations. This is essential for:
-- Supporting long-running operations like repository indexing or deep research
-- Efficiently managing multiple concurrent tool requests
-- Integrating with the `mcp` server which is inherently async
+The server is built using `asyncio`, allowing it to handle concurrent tool calls efficiently. Tools like `index_repository`, `deep_research`, and `resume_research` are special-cased to receive a server context for progress streaming, demonstrating an awareness of asynchronous workflows.
 
 ### Security and Access Control
 
-The server implements a role-based access control (RBAC) system that can be configured in three modes:
-- `DISABLED`: No permission checks
-- `PERMISSIVE`: Unauthenticated requests allowed
-- `ENFORCED`: All requests must be authenticated
-
-This design allows the system to be used in development (permissive) or production (enforced) environments without code changes.
+The server integrates with a Role-Based Access Control (RBAC) system. It logs the current security mode at startup to inform users about the level of authentication enforcement. This design choice emphasizes the importance of security configuration in development and production environments.
 
 ## Integration
 
-### With Other Components
+### Within the Codebase
 
-This file integrates with several other parts of the codebase:
-- **Handlers**: All tool implementations are imported from `local_deepwiki.handlers` and registered via `TOOL_HANDLERS`.
-- **Tool Definitions**: `TOOL_DEFINITIONS` from `local_deepwiki.tool_defs` is used to validate tool handlers.
-- **Logging**: Uses `local_deepwiki.logging.get_logger()` for consistent logging.
-- **Access Control**: Relies on `local_deepwiki.security.access_control` for RBAC setup.
-- **Session State**: Uses `local_deepwiki.handlers.session_state` to track tool usage.
+This file is a core component of the `local_deepwiki` system and integrates with several other modules:
+
+- **Handlers**: The server imports a large number of handlers from `local_deepwiki.handlers`, which implement the actual functionality of each tool.
+- **Tool Definitions**: It uses `TOOL_DEFINITIONS` from `local_deepwiki.tool_defs` to define available tools.
+- **Session State Management**: It imports [`record_tool_call`](handlers/session_state.md) from `local_deepwiki.handlers.session_state` to track tool usage.
+- **Security Module**: It uses [`get_access_controller`](security/access_control.md) and [`RBACMode`](security/access_control.md) from `local_deepwiki.security.access_control` to manage access control.
 
 ### External Usage
 
-This file is used by:
-- `list_tools` and `_validate_tool_handler_consistency` are used by `test_server` for testing.
-- `main` is used by `test_pdf_streaming` for integration testing.
+The `main` function is the primary entry point for starting the server and is used by `test_pdf_streaming`. The functions `list_tools` and `_validate_tool_handler_consistency` are used by `test_server`, ensuring that tool definitions and handlers are in sync.
 
 ## Design Notes
 
-### Tool Handler Consistency
+### Tool Handler Consistency Validation
 
-The `_validate_tool_handler_consistency` function ensures that:
-- Every tool defined in `TOOL_DEFINITIONS` has a corresponding handler in `TOOL_HANDLERS`
-- Every handler in `TOOL_HANDLERS` has a matching tool definition
+The `_validate_tool_handler_consistency` function ensures that there are no mismatches between tool definitions and handlers. This prevents silent regressions where:
+- A new tool is defined but not implemented
+- A handler exists for a tool that has been removed
 
-This prevents silent regressions where new tools are added but not implemented, or handlers are removed but tool definitions remain.
+This validation is performed at startup to fail fast and maintain system integrity.
 
 ### Special Handling for Progress-Enabled Tools
 
-Some tools, such as `index_repository`, `deep_research`, and `resume_research`, require server context to stream progress updates. These are handled specially in `call_tool` to pass the `server` object to their handlers.
+Tools like `index_repository`, `deep_research`, and `resume_research` require special handling for progress updates. These tools are explicitly dispatched with a `server` parameter to enable streaming progress back to the client. This design choice acknowledges that certain long-running operations benefit from real-time feedback.
 
-### Security Logging
+### Logging Security Posture
 
-The `_log_security_posture` function logs the current RBAC mode at startup to ensure operators are aware of the security configuration, especially in production environments.
+The `_log_security_posture` function logs the current RBAC mode at startup. This is a deliberate design to make security configuration visible to users, encouraging proper setup in production environments. The use of different log levels (`warning`, `info`) helps differentiate between disabled and enforced modes.
 
-### Async Entry Point
+### Asynchronous Server Run
 
-The `main` function and `run` inner function follow the `mcp` library's recommended pattern for running servers via stdio. This design choice enables integration with tools that support the MCP protocol, such as LLM agents or IDE extensions.
+The `run` function uses `asyncio.run()` to execute the MCP server loop. It relies on `stdio_server` from the `mcp` library to establish communication over standard input/output, which is a common pattern for MCP servers to integrate with LLM clients and agents.
 
 ## API Reference
 
@@ -93,7 +84,7 @@ List available tools.
 
 
 <details>
-<summary>View Source (lines 92-94) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L92-L94">GitHub</a></summary>
+<summary>View Source (lines 98-100) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L98-L100">GitHub</a></summary>
 
 ```python
 async def list_tools() -> list:
@@ -124,7 +115,7 @@ Handle tool calls.
 
 
 <details>
-<summary>View Source (lines 192-215) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L192-L215">GitHub</a></summary>
+<summary>View Source (lines 204-227) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L204-L227">GitHub</a></summary>
 
 ```python
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
@@ -168,7 +159,7 @@ Main entry point for the MCP server.
 
 
 <details>
-<summary>View Source (lines 236-250) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L236-L250">GitHub</a></summary>
+<summary>View Source (lines 248-262) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L248-L262">GitHub</a></summary>
 
 ```python
 def main() -> None:
@@ -202,7 +193,7 @@ async def run() -> None
 
 
 <details>
-<summary>View Source (lines 242-248) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L242-L248">GitHub</a></summary>
+<summary>View Source (lines 254-260) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L254-L260">GitHub</a></summary>
 
 ```python
 async def run() -> None:
@@ -366,7 +357,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_validate_tool_handler_consistency`
 
 <details>
-<summary>View Source (lines 164-188) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L164-L188">GitHub</a></summary>
+<summary>View Source (lines 176-200) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L176-L200">GitHub</a></summary>
 
 ```python
 def _validate_tool_handler_consistency() -> None:
@@ -402,7 +393,7 @@ def _validate_tool_handler_consistency() -> None:
 #### `_log_security_posture`
 
 <details>
-<summary>View Source (lines 218-233) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L218-L233">GitHub</a></summary>
+<summary>View Source (lines 230-245) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L230-L245">GitHub</a></summary>
 
 ```python
 def _log_security_posture() -> None:
@@ -427,4 +418,4 @@ def _log_security_posture() -> None:
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/server.py:92-94`
+- `src/local_deepwiki/server.py:98-100`

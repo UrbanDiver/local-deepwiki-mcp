@@ -2,36 +2,43 @@
 
 ## File Overview
 
-This file defines a collection of **MCP (Model Control Protocol) tools** used for performing various analysis and search operations within the local DeepWiki system. These tools are designed to enable a language model to query and interact with a knowledge base or documentation repository, offering capabilities such as searching, retrieving context, and analyzing code or project structures.
+This file defines a collection of MCP (Model Context Protocol) tools related to analysis and search functionalities within the local DeepWiki system. These tools are designed to provide structured access to wiki data, enabling users to search, analyze, and understand the content and structure of a knowledge base.
 
-The tools defined in this module are intended for use in a **read-only** context, as indicated by the import of `_READ_ONLY` from `local_deepwiki.tool_defs.annotations`. This suggests that these tools are meant to fetch or analyze data, rather than modify it.
+The file serves as a central definition point for various analysis-related tools that can be invoked by an LLM or other system components to perform tasks such as searching for entities, retrieving project metadata, analyzing code complexity, and understanding architectural dependencies.
 
 ## Key Concepts
 
-The core abstraction in this file is the **MCP Tool**, which is a standardized way to define actions that a language model can perform. Each tool in this file is defined using the `Tool` class from `mcp.types`, ensuring compatibility with the MCP protocol.
+The core abstraction in this file is the definition of `Tool` instances from the `mcp.types` module, which represent discrete capabilities that can be exposed to a language model or agent. Each tool is defined with a specific name, description, and input/output schema, enabling precise interaction with the underlying system.
 
-The design rationale behind this structure is to provide a **modular and extensible** interface for interacting with the knowledge base. Tools are grouped by functionality — such as searching, retrieving statistics, or analyzing diffs — allowing for clear separation of concerns and ease of integration with language models or other systems that consume MCP tools.
+These tools are marked with `_READ_ONLY` annotations, indicating that they are intended for read-only operations, which aligns with the system's design to prevent unintended modifications to the wiki content or structure during analysis tasks.
 
-The use of `_READ_ONLY` suggests a **security and data integrity** concern, ensuring that the tools defined here are not used for write operations, which is important in a controlled environment like a local documentation system.
+The tools are purposefully grouped around common analysis workflows:
+- **Search and retrieval**: `search_wiki`, `fuzzy_search`, `explain_entity`
+- **Project and content understanding**: `get_project_manifest`, `get_wiki_stats`, `get_file_context`
+- **Code and architecture analysis**: `get_complexity_metrics`, `impact_analysis`, `get_layer_dependencies`, `get_architecture_summary`
+- **Diff and change analysis**: `analyze_diff`, `ask_about_diff`
+
+This grouping reflects a modular approach to analysis, allowing for fine-grained access to different aspects of the wiki system, and supports a wide range of use cases from simple entity lookup to complex architectural impact analysis.
 
 ## Integration
 
-This file is part of the `local_deepwiki.tool_defs` module and is imported by several key components in the larger system:
+This file is imported by:
+- `src/local_deepwiki/cli/init_cli.py` — Likely used to register the tools with the CLI interface
+- `src/local_deepwiki/handlers/session_state.py` — Possibly used to dynamically configure or provide tools during session handling
+- `src/local_deepwiki/plugins/__init__.py` — Used to initialize or load analysis tools as part of plugin system
+- `src/local_deepwiki/plugins/base.py` — Potentially used to define base tool behavior or extend plugin capabilities
+- `src/local_deepwiki/server.py` — Likely used to expose the tools via the server's API or tool registry
 
-- It is likely used by the **session state handler** (`src/local_deepwiki/handlers/session_state.py`) to define the set of tools available during a session.
-- It may be referenced by the **CLI initialization** (`src/local_deepwiki/cli/init_cli.py`) to register tools for command-line interaction.
-- It could also be integrated into the **server logic** (`src/local_deepwiki/server.py`) to expose these tools via an API or protocol.
-
-The import of `Tool` from `mcp.types` indicates that this module is part of a system that adheres to the **MCP standard**, which is used to define tools that can be invoked by LLMs or other agents. The `_READ_ONLY` annotation is a hint that this module is meant to enforce read-only access to data, possibly as a safeguard in environments where modification is not allowed.
+The integration with `mcp.types.Tool` and `local_deepwiki.tool_defs.annotations._READ_ONLY` suggests that this file is part of a larger system that supports MCP-compliant tool definitions and enforces read-only access patterns, which is critical for ensuring system integrity and preventing accidental data modification during analysis.
 
 ## Design Notes
 
-- The tools defined here are **focused on retrieval and analysis**, not modification. This is enforced by the `_READ_ONLY` import, which likely affects how tools are registered or executed.
-- The tools are **designed to be stateless**, as they are meant to be invoked as standalone functions with inputs and outputs, aligning with the MCP protocol’s expectations.
-- The **modular approach** to tool definition allows for easy expansion or modification of capabilities without affecting the rest of the system.
-- There is no indication of complex logic or data transformation within this file — it primarily defines the **tool interfaces**. The actual implementation of these tools is likely found in other modules or plugins, such as those in `src/local_deepwiki/plugins/`.
+- **Read-only enforcement**: The use of `_READ_ONLY` annotations indicates a strong design decision to enforce immutability during analysis operations, likely to prevent unintended side effects or data corruption.
+- **Tool Schema Consistency**: All tools are defined using the same foundational `Tool` type, which ensures consistency in how tools are structured and consumed across the system.
+- **Modular Tool Design**: The tools are grouped logically, enabling a clear separation of concerns and making it easier to extend or modify individual functionalities without affecting others.
+- **MCP Compliance**: The use of `mcp.types.Tool` implies that this module is part of a system designed to be compatible with Model Context Protocol, supporting interoperability with LLMs or agents that understand this standard.
 
-This file acts as a **contract** for what tools are available for use in the DeepWiki system, ensuring that the tools are consistent with the MCP protocol and adhere to the intended access patterns (read-only).
+This file does not include any complex logic or algorithms; its primary role is to define the interface and behavior of analysis tools, making it a critical component in enabling the system's analytical capabilities.
 
 ## Usage Examples
 

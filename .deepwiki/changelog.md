@@ -4,7 +4,82 @@ Recent changes to this repository.
 
 ## Recent Commits
 
+### April 03, 2026
+
+- [`72da5da`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/72da5da) docs: update README with 64 tools, architecture health section, and 9 dimensions
+  - Files: `README.md`
+
+- [`a75af5c`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/a75af5c) refactor: extract helpers from long analysis methods
+  - Files: `src/local_deepwiki/generators/analysis/churn.py`, `src/local_deepwiki/generators/analysis/duplication.py`, `src/local_deepwiki/generators/analysis/maintainability.py`, `src/local_deepwiki/generators/analysis/testability.py`
+
+- [`56cb3da`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/56cb3da) feat: add maintainability index architecture health dimension (Phase 5)
+
+- [`d50a656`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d50a656) feat: add maintainability index architecture health dimension (Phase 5)
+  - Files: `src/local_deepwiki/generators/analysis/architecture_health.py`, `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/handlers/analysis_architecture.py`, `src/local_deepwiki/models/tool_args.py`, `tests/test_architecture_health.py` (+1 more)
+
+- [`64e4b55`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/64e4b55) feat: add maintainability index architecture health dimension (Phase 5)
+  - Files: `src/local_deepwiki/generators/analysis/architecture_health.py`, `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/generators/analysis/maintainability.py`, `src/local_deepwiki/handlers/__init__.py`, `src/local_deepwiki/handlers/analysis_architecture.py` (+8 more)
+
+- [`ace2c6d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ace2c6d) feat: add testability-based architecture health dimension (Phase 4)
+
+- [`f47812a`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/f47812a) feat: add testability-based architecture health dimension (Phase 4)
+  - Files: `src/local_deepwiki/generators/analysis/architecture_health.py`, `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/generators/analysis/testability.py`, `src/local_deepwiki/handlers/analysis_architecture.py`, `src/local_deepwiki/models/tool_args.py` (+2 more)
+
+- [`6d8243f`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/6d8243f) feat: add testability-based architecture health dimension (Phase 4)
+  - Files: `src/local_deepwiki/generators/analysis/architecture_health.py`, `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/generators/analysis/testability.py`, `src/local_deepwiki/handlers/__init__.py`, `src/local_deepwiki/handlers/analysis_architecture.py` (+7 more)
+
+- [`9e4aba6`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/9e4aba6) feat: add duplication-based architecture health dimension (Phase 3)
+
+- [`3fed1da`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/3fed1da) feat: add duplication-based architecture health dimension (Phase 3)
+  - Files: `src/local_deepwiki/generators/analysis/architecture_health.py`, `src/local_deepwiki/generators/analysis/duplication.py`, `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/handlers/analysis_architecture.py`, `src/local_deepwiki/models/tool_args.py` (+2 more)
+
+- [`d7e2187`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d7e2187) feat(duplication): add [score_duplication](files/src/local_deepwiki/generators/analysis/health_scoring.md), rebalance to 7 dimensions, integrat...
+  - Files: `src/local_deepwiki/generators/analysis/architecture_health.py`, `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/handlers/__init__.py`, `src/local_deepwiki/handlers/analysis_architecture.py`, `src/local_deepwiki/models/__init__.py` (+6 more)
+
+- [`75290fc`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/75290fc) feat: add clone detection engine (Type 1 + Type 2 duplication)
+  - Files: `src/local_deepwiki/generators/analysis/duplication.py`, `tests/test_duplication.py`
+
+- [`3ad80b3`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/3ad80b3) feat: add cohesion-based architecture health dimension (Phase 2)
+
+- [`8a5e93f`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8a5e93f) feat: add cohesion-based architecture health dimension (Phase 2)
+  - Files: `src/local_deepwiki/generators/analysis/architecture_health.py`, `src/local_deepwiki/generators/analysis/cohesion.py`, `src/local_deepwiki/handlers/analysis_architecture.py`, `src/local_deepwiki/models/tool_args.py`, `tests/test_architecture_health.py` (+1 more)
+
+- [`d2646c8`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d2646c8) feat(cohesion): integrate into health grade, add get_cohesion_metrics MCP tool
+  - Files: `src/local_deepwiki/generators/analysis/architecture_health.py`, `src/local_deepwiki/handlers/__init__.py`, `src/local_deepwiki/handlers/analysis_architecture.py`, `src/local_deepwiki/models/__init__.py`, `src/local_deepwiki/models/tool_args.py` (+4 more)
+
+- [`0cd069b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/0cd069b) feat(cohesion): add [score_cohesion](files/src/local_deepwiki/generators/analysis/health_scoring.md) and rebalance weights to 6 dimensions
+  - Files: `src/local_deepwiki/generators/analysis/health_scoring.py`, `tests/test_health_scoring.py`
+
+- [`0d6b194`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/0d6b194) feat: add LCOM4 class cohesion and module import cohesion analysis
+  - Files: `src/local_deepwiki/generators/analysis/cohesion.py`, `tests/test_cohesion.py`
+
+- [`7a49ac9`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/7a49ac9) chore: update pre-built wiki with Objective-C support
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coupling.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md` (+55 more)
+
+- [`1d9acfb`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1d9acfb) feat: add Objective-C language support
+  - Files: `CHANGELOG.md`, `CLAUDE.md`, `README.md`, `pyproject.toml`, `src/local_deepwiki/core/parser/docstrings.py` (+3 more)
+
+- [`ce54d91`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ce54d91) feat: add churn-based architecture health dimension (Phase 1)
+
+- [`c9577b2`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c9577b2) feat: add churn-based architecture health dimension (Phase 1)
+  - Files: `src/local_deepwiki/generators/analysis/architecture_health.py`, `src/local_deepwiki/generators/analysis/churn.py`, `src/local_deepwiki/generators/analysis/health_scoring.py`, `src/local_deepwiki/handlers/analysis_architecture.py`, `src/local_deepwiki/models/tool_args.py` (+3 more)
+
+- [`148a027`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/148a027) feat(churn): add MCP tools get_churn_metrics and get_co_change
+  - Files: `src/local_deepwiki/handlers/__init__.py`, `src/local_deepwiki/handlers/analysis_architecture.py`, `src/local_deepwiki/models/__init__.py`, `src/local_deepwiki/models/tool_args.py`, `src/local_deepwiki/server.py` (+2 more)
+
+- [`3336b41`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/3336b41) feat(churn): add [score_churn](files/src/local_deepwiki/generators/analysis/health_scoring.md), rebalance weights, integrate into health grade
+  - Files: `src/local_deepwiki/generators/analysis/architecture_health.py`, `src/local_deepwiki/generators/analysis/health_scoring.py`, `tests/test_architecture_health.py`, `tests/test_health_scoring.py`
+
+- [`deeeed1`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/deeeed1) feat(churn): add churn×complexity composite and [analyze_churn](files/src/local_deepwiki/generators/analysis/churn.md) orchestrator
+  - Files: `src/local_deepwiki/generators/analysis/churn.py`, `tests/test_churn.py`
+
+- [`da9dcc6`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/da9dcc6) feat(churn): add git log parser, file churn, and co-change coupling
+  - Files: `src/local_deepwiki/generators/analysis/churn.py`, `tests/test_churn.py`
+
 ### April 01, 2026
+
+- [`8daaf32`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8daaf32) chore: update pre-built wiki with latest regeneration
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coupling.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md` (+63 more)
 
 - [`d437e06`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d437e06) chore: update pre-built wiki with latest analysis fixes
   - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coupling.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md` (+68 more)
@@ -20,106 +95,26 @@ Recent changes to this repository.
 - [`c80b757`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c80b757) build: exclude .deepwiki and tests from sdist
   - Files: `pyproject.toml`
 
-- [`d3607fa`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d3607fa) feat: include pre-built wiki for instant demo experience
-  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/codemaps/5a5ebac46ed2321c.json`, `.deepwiki/codemaps/ab03c302df6cf212.json`, `.deepwiki/codemaps/handle-impact-analysis.md` (+871 more)
-
-- [`71f7287`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/71f7287) chore: clean up project presentation
-  - Files: `CHANGELOG.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `src/local_deepwiki/tools/__init__.py`
-
-- [`27e3cd1`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/27e3cd1) feat: release readiness — OpenAI default, proxy support, onboarding docs
-  - Files: `.gitignore`, `README.md`, `docs/PLAN-agent-improvements.md`, `docs/superpowers/plans/2026-03-19-architecture-improvements.md`, `docs/superpowers/plans/2026-03-19-architecture-tools-v2.md` (+35 more)
-
-- [`1276e81`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1276e81) refactor: remove backward-compat shims, dead code, and duplicate functions
-  - Files: `.github/actions/deepwiki-analyze/entrypoint.py`, `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/core/git_utils.py`, `src/local_deepwiki/core/graph_rag/store.py`, `src/local_deepwiki/core/indexer.py` (+38 more)
-
-- [`14b2499`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/14b2499) fix: skip bare-word link targets in wiki link checker
-  - Files: `tests/wiki_output_helpers.py`
-
-- [`d8d0cfa`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d8d0cfa) fix: codemap wiki pages match interactive codemap parameters
-  - Files: `src/local_deepwiki/config/models_wiki.py`, `src/local_deepwiki/generators/wiki/codemap_pages.py`, `src/local_deepwiki/web/templates/codemap.html`, `src/local_deepwiki/web/templates/page.html`
-
-- [`639e476`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/639e476) refactor: extract _has_enough_outbound_calls and _validate_suggestions
-  - Files: `src/local_deepwiki/generators/codemap/generator.py`
-
-- [`1b79dfb`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1b79dfb) feat: interactive code references in chat responses
-  - Files: `src/local_deepwiki/web/templates/chat.html`
-
-- [`6087eaa`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/6087eaa) feat: add /api/code-snippet endpoint for expandable source code
-  - Files: `src/local_deepwiki/web/routes_chat.py`, `tests/test_chat_code_refs.py`
-
-- [`7da10d9`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/7da10d9) docs: chat code references design spec
-  - Files: `docs/superpowers/specs/2026-03-31-chat-code-references-design.md`
-
-- [`dbabaa8`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/dbabaa8) fix: harden wiki link checker against LLM hallucination patterns
-  - Files: `tests/wiki_output_helpers.py`
-
-### March 30, 2026
-
-- [`e56e9ca`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e56e9ca) fix: hybrid chat search + validated codemap suggestions
-  - Files: `src/local_deepwiki/generators/codemap/generator.py`, `tests/test_codemap_entry_points.py`
-
-- [`447d5b7`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/447d5b7) fix: filter leaf nodes and trivial wrappers from codemap suggestions
-  - Files: `src/local_deepwiki/generators/codemap/generator.py`, `tests/test_codemap_suggestions.py`
-
-- [`b731205`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/b731205) fix: use hybrid search in chat streaming for natural language queries
-  - Files: `src/local_deepwiki/services/query_service.py`, `tests/test_query_service.py`
-
-- [`7045100`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/7045100) fix: resolve Pyright errors and harden wiki link checker
-  - Files: `tests/wiki_output_helpers.py`
-
-- [`4b1fa98`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4b1fa98) fix: add type narrowing for Optional fields in wiki pipeline
-  - Files: `src/local_deepwiki/generators/wiki/generator.py`, `src/local_deepwiki/generators/wiki/pipeline.py`
-
-- [`154b1a6`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/154b1a6) chore: remove unused [FuzzySearchHelper](files/src/local_deepwiki/core/fuzzy_search.md) and [VectorStore](files/src/local_deepwiki/core/vectorstore/store.md) imports from [SearchMixin](files/src/local_deepwiki/core/vectorstore/mixins/search.md)
-  - Files: `src/local_deepwiki/core/vectorstore/mixins/search.py`
-
-- [`8815414`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8815414) refactor: remove 18 dead delegation methods from [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md)
-  - Files: `src/local_deepwiki/generators/wiki/generator.py`, `tests/test_plugins.py`, `tests/test_wiki_generation_warnings.py`, `tests/test_wiki_incremental.py`
-
-- [`0d1edf2`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/0d1edf2) refactor: extract _build_initial_pipeline_ctx from [init_generation_context](files/src/local_deepwiki/generators/wiki/pipeline.md)
-  - Files: `src/local_deepwiki/generators/wiki/pipeline.py`
-
-- [`e10b842`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e10b842) fix: _ensure_pipeline_ctx uses getattr for test-created instances
-  - Files: `src/local_deepwiki/generators/wiki/generator.py`
-
-- [`233b2ed`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/233b2ed) refactor: simplify phases.py to use ctx.pipeline_ctx, clean unused imports
-  - Files: `src/local_deepwiki/core/vectorstore/mixins/search.py`, `src/local_deepwiki/generators/wiki/phases.py`
-
-- [`22c9676`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/22c9676) refactor: build [WikiPipelineContext](files/src/local_deepwiki/generators/wiki/context.md) once, remove redundant params
-  - Files: `src/local_deepwiki/generators/wiki/generator.py`, `src/local_deepwiki/generators/wiki/pipeline.py`, `tests/test_wiki_context.py`
-
-- [`ecc1f18`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ecc1f18) refactor: [SearchMixin](files/src/local_deepwiki/core/vectorstore/mixins/search.md) builds [SearchRequest](files/src/local_deepwiki/core/vectorstore/mixins/search_types.md) before delegating to engine
-  - Files: `src/local_deepwiki/core/vectorstore/mixins/search.py`, `tests/test_search_params.py`
-
-- [`e5792b5`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e5792b5) refactor: simplify [SearchEngine](files/src/local_deepwiki/core/vectorstore/search_engine.md).search() to accept only [SearchRequest](files/src/local_deepwiki/core/vectorstore/mixins/search_types.md)
-  - Files: `src/local_deepwiki/core/vectorstore/search_engine.py`, `tests/test_search_params.py`
-
-- [`c14fae3`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c14fae3) feat: add offset and cursor fields to [SearchRequest](files/src/local_deepwiki/core/vectorstore/mixins/search_types.md)
-  - Files: `src/local_deepwiki/core/vectorstore/mixins/search_types.py`, `tests/test_search_params.py`
-
-- [`a6e9042`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/a6e9042) refactor: remove legacy kwargs from [SearchEngine](files/src/local_deepwiki/core/vectorstore/search_engine.md).__init__
-  - Files: `src/local_deepwiki/core/vectorstore/search_engine.py`, `tests/test_search_params.py`
-
 ## Statistics
 
 - **Commits shown**: 30
 - **Contributors**: 1
-- **Latest commit**: 2026-04-01
+- **Latest commit**: 2026-04-03
 
 ## Relevant Source Files
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
-- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
-- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
-- [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
-- [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
-- [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
-- [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
-- `src/local_deepwiki/__init__.py`
-- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
-- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
+- [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
+- `src/local_deepwiki/models/__init__.py`
+- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
+- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
+- [`src/local_deepwiki/generators/analysis/architecture_health.py:55-123`](files/src/local_deepwiki/generators/analysis/architecture_health.md)
+- [`src/local_deepwiki/generators/analysis/maintainability.py:69-79`](files/src/local_deepwiki/generators/analysis/maintainability.md)
+- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
+- [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/generators/analysis/churn.py:25-38`](files/src/local_deepwiki/generators/analysis/churn.md)
 
 
-*Showing 10 of 263 source files.*
+*Showing 10 of 268 source files.*

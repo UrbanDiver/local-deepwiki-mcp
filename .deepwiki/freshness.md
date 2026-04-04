@@ -3,9 +3,24 @@
 This page identifies documentation that may be outdated compared to the source code.
 Pages are flagged when source files have been modified after the documentation was generated.
 
-## ✅ All Documentation Up to Date
+## Summary
 
-All 238 file documentation pages are current with their source code.
+| Metric | Value |
+|--------|-------|
+| Total file pages | 243 |
+| Potentially stale | 3 |
+| Up to date | 240 |
+| Freshness | 99% |
+
+## ⚠️ Potentially Stale Documentation
+
+The following pages may need review. Source files were modified after documentation was generated.
+
+| Page | Days Stale | Last Doc Update | Source Modified |
+|------|------------|-----------------|-----------------|
+| [docstrings](files/src/local_deepwiki/core/parser/docstrings.md) | 1 | yesterday | today |
+| [languages](files/src/local_deepwiki/core/parser/languages.md) | 1 | yesterday | today |
+| [foundation](files/src/local_deepwiki/models/foundation.md) | 1 | yesterday | today |
 
 ## Recommendations
 
@@ -16,4 +31,4 @@ To refresh stale documentation:
 3. **Manual review** may be needed for pages where only comments or docstrings changed
 
 ---
-*Report generated: 2026-04-02 08:14:50*
+*Report generated: 2026-04-03 21:16:49*

@@ -1,47 +1,69 @@
 # Developer Onboarding Guide
 
-Local DeepWiki is a powerful, local-first tool that transforms your private repository documentation into a searchable, intelligent knowledge base using AI-driven retrieval-augmented generation (RAG) techniques. Designed for developers, technical writers, and engineering teams, it enables seamless access to contextual information from your codebase without the need for external services or cloud dependencies. This project solves the common problem of scattered, hard-to-find documentation by creating a unified, AI-enhanced search layer that understands code relationships and semantic context.
+The `local-deepwiki` project is a powerful, local-first solution that brings the capabilities of DeepWiki-style documentation to private repositories. Designed for developers who need to navigate complex codebases, it offers an intelligent, AI-driven documentation experience that can answer questions about code structure, dependencies, and relationships. This system enables teams to maintain a rich, searchable knowledge base directly from their local development environments, without relying on external services or cloud infrastructure.
 
-The system operates as a Flask-based web server that integrates with local code repositories, using vector databases to store embeddings of documentation chunks and leveraging various AI providers (Anthropic, OpenAI, Ollama) to power natural language queries. It supports multiple configuration modes including local, hybrid, and cloud-based setups, allowing teams to choose the best approach for their infrastructure. By combining traditional code analysis with modern NLP techniques, Local DeepWiki provides a deep understanding of your codebase, enabling both code exploration and documentation retrieval with intelligent context awareness.
+The project is built with Python 3.11+ and leverages a robust stack including Flask for the web interface, LanceDB for vector storage, and various AI/ML providers such as Anthropic, Ollama, and OpenAI. It supports multiple configuration modes—local, hybrid, and cloud—making it adaptable to different deployment scenarios. Whether you're exploring a new codebase, conducting impact analysis, or simply looking for documentation on how a specific function works, `local-deepwiki` provides a unified interface that bridges code and knowledge through semantic search and graph-based retrieval.
 
 ## Architecture at a Glance
 
 ```mermaid
 componentDiagram
-    component "CLI Interface" as CLI
-    component "Web Server" as Web
-    component "Configuration System" as Config
-    component "Core Services" as Core
-    component "AI Providers" as AI
-    component "Data Stores" as Data
-    component "Documentation Parser" as Parser
+    component "CLI Layer" as CLI {
+        CLI -> ConfigCLI : config
+        CLI -> CacheCLI : cache
+        CLI -> InitCLI : init
+        CLI -> StatusCLI : status
+        CLI -> UpdateCLI : update
+        CLI -> CheckCLI : check
+        CLI -> ProfileCLI : profile
+        CLI -> SearchModelsCLI : search
+        CLI -> InteractiveSearchCLI : interactive
+    }
 
-    CLI --> Web
-    Web --> Core
-    Core --> Config
-    Core --> AI
-    Core --> Data
-    Core --> Parser
-    Config --> Data
-    Parser --> Data
-    AI --> Data
+    component "Core Services" as Core {
+        Core -> ConfigLoader : load config
+        Core -> GeneratorService : generate
+        Core -> AnalysisService : analyze
+        Core -> GraphRAG : retrieve
+        Core -> Parser : parse
+    }
+
+    component "Web Layer" as Web {
+        Web -> FlaskApp : serve
+        Web -> AccessControl : enforce
+        Web -> Handlers : route
+    }
+
+    component "AI/ML Providers" as Providers {
+        Providers -> LLMProvider : LLM
+        Providers -> EmbeddingProvider : Embeddings
+        Providers -> SearchProvider : Search
+    }
+
+    component "Storage" as Storage {
+        Storage -> VectorDB : store
+        Storage -> Filesystem : persist
+    }
+
+    CLI --> Core
+    Core --> Web
+    Core --> Providers
+    Core --> Storage
 ```
 
-The architecture is organized into several key subsystems:
-
-- **CLI Interface** ([`src/local_deepwiki/cli/main.py`](files/src/local_deepwiki/cli/main.py)) - Provides command-line tools for configuration, initialization, and management of the documentation system.
-- **Web Server** ([`src/local_deepwiki/web/app.py`](files/src/local_deepwiki/web/app.py)) - Serves the Flask web application that handles HTTP requests and routes them to appropriate handlers.
-- **Configuration System** ([`src/local_deepwiki/config/`](files/src/local_deepwiki/config/index.md)) - Manages all configuration loading and model definitions for LLMs, embeddings, and search parameters.
-- **Core Services** ([`src/local_deepwiki/core/`](files/src/local_deepwiki/core/index.md)) - Contains the main logic for processing, analysis, and retrieval operations including deep research, graph RAG, and code parsing.
-- **AI Providers** ([`src/local_deepwiki/plugins/registry.py`](files/src/local_deepwiki/plugins/registry.md)) - Integrates with various AI services like OpenAI, Anthropic, and Ollama for language model and embedding generation.
-- **Data Stores** ([`src/local_deepwiki/config/models.py`](files/src/local_deepwiki/config/models.md)) - Handles vector database operations using LanceDB for semantic search and storage of embeddings.
-- **Documentation Parser** ([`src/local_deepwiki/core/parser/`](files/src/local_deepwiki/core/parser/index.md)) - Parses source code and documentation files to extract meaningful chunks for indexing and retrieval.
+- **CLI Layer**: Provides command-line tools for configuration, initialization, status checking, and updates. [CLI Overview](files/src/local_deepwiki/cli/main.md)
+- **Core Services**: Contains the main logic for configuration loading, documentation generation, analysis, graph-based retrieval, and parsing. [Core Services](src/local_deepwiki/core)
+- **Web Layer**: Serves the web interface using Flask and handles request routing with access control. [Web App](files/src/local_deepwiki/web/app.md)
+- **AI/ML Providers**: Integrates with various AI/ML services for LLMs, embeddings, and search capabilities. [Providers](files/src/local_deepwiki/config/provider_models.md)
+- **Storage**: Manages vector databases (LanceDB) and file system storage for documentation chunks and metadata. [Storage](files/src/local_deepwiki/config/models.md)
 
 ## How It Works
 
 ### Flow: Server Request Processing
 
-Question: How does the core server process incoming requests and route them to the appropriate handlers for documentation retrieval?
+Question: How does the core server process incoming requests and route them to appropriate handlers for documentation retrieval?
+
+Files: `src/local_deepwiki/web/app.py`
 
 ```mermaid
 flowchart TD
@@ -60,15 +82,19 @@ flowchart TD
     click N1 "files/src/local_deepwiki/web/app.py" _blank
 ```
 
-This code flow demonstrates the initialization and setup of a wiki web server that processes incoming requests for documentation retrieval. The server begins with a [`run_server`](files/src/local_deepwiki/web/app.md) function that creates a Flask application instance through [`create_app`](files/src/local_deepwiki/web/app.md), which configures the wiki path and sets up the routing infrastructure for handling documentation requests.
+#### Narrative Walkthrough
 
-The execution trace starts with the [`run_server`](files/src/local_deepwiki/web/app.md) function at [`src/local_deepwiki/web/app.py:558-575`](files/src/local_deepwiki/web/app.py), which serves as the entry point for starting the wiki web server, accepting parameters like wiki path and host configuration, and acts as the main execution driver for the server startup process. This function then calls [`create_app`](files/src/local_deepwiki/web/app.md) at [`src/local_deepwiki/web/app.py:543-555`](files/src/local_deepwiki/web/app.py), which creates and configures a Flask application instance with the specified wiki path, setting up the global `WIKI_PATH` variable and establishing the foundation for request routing and documentation handling.
+The server initialization begins with the [`run_server`](files/src/local_deepwiki/web/app.md) function located in `src/local_deepwiki/web/app.py` at line 558. This function serves as the entry point for starting the wiki web server, accepting parameters like the wiki path and host configuration. It acts as the main execution driver for the server startup process.
 
-Key observations include the clear separation of concerns pattern where [`run_server`](files/src/local_deepwiki/web/app.md) handles server initialization and [`create_app`](files/src/local_deepwiki/web/app.md) manages Flask application configuration, making the code modular and testable. The global variable `WIKI_PATH` is used to maintain state across the Flask application, which is a common pattern for sharing configuration data throughout the application's request lifecycle. The execution flow shows a simple but effective bootstrapping approach where the server setup is minimal and focused, relying on Flask's built-in routing mechanisms for handling incoming requests.
+Once [`run_server`](files/src/local_deepwiki/web/app.md) is invoked, it calls the [`create_app`](files/src/local_deepwiki/web/app.md) function, also found in `src/local_deepwiki/web/app.py` at line 543. This function creates and configures a Flask application instance with the specified wiki path. It sets up the global `WIKI_PATH` variable and establishes the foundation for request routing and documentation handling.
+
+This flow demonstrates a clear separation of concerns where [`run_server`](files/src/local_deepwiki/web/app.md) handles server initialization and [`create_app`](files/src/local_deepwiki/web/app.md) manages Flask application configuration. The global variable `WIKI_PATH` is used to maintain state across the Flask application, which is a common pattern for sharing configuration data throughout the application's request lifecycle. The execution flow shows a simple but effective bootstrapping approach where the server setup is minimal and focused, relying on Flask's built-in routing mechanisms for handling incoming requests.
 
 ### Flow: Documentation Retrieval
 
 Question: How does the graph-based RAG system retrieve and rank relevant documentation chunks from the local repository?
+
+Files: `src/local_deepwiki/config/models.py`, `src/local_deepwiki/core/path_utils.py`, `src/local_deepwiki/error_factories.py`, `src/local_deepwiki/errors.py`, `src/local_deepwiki/generators/analysis/callgraph.py`, `src/local_deepwiki/handlers/_index_helpers.py`, `src/local_deepwiki/handlers/_response.py`, `src/local_deepwiki/handlers/analysis_entity.py`, `src/local_deepwiki/handlers/generators.py`, `src/local_deepwiki/plugins/registry.py`
 
 ```mermaid
 flowchart TD
@@ -168,83 +194,98 @@ flowchart TD
     click N19 "files/src/local_deepwiki/services/generator_service.py" _blank
 ```
 
-This code flow implements a graph-based Retrieval-Augmented Generation (RAG) system that retrieves and ranks relevant documentation chunks from a local repository when handling a call graph generation request. The system first validates the requested file path within the repository, then uses a generator service with a vector store to extract and process call graphs, ultimately returning structured documentation content to the user.
+#### Narrative Walkthrough
 
-The execution trace begins with [`handle_get_call_graph`](files/src/local_deepwiki/handlers/generators.md) at [`src/local_deepwiki/handlers/generators.py:152-189`](files/src/local_deepwiki/handlers/generators.py), which handles the get_call_graph tool call request and initializes the process. It calls `get_access_controller()` at [`src/local_deepwiki/security/access_control.py:347-361`](files/src/local_deepwiki/security/access_control.py) to verify access permissions before proceeding. Next, [`validate_file_in_repo`](files/src/local_deepwiki/core/path_utils.md) at [`src/local_deepwiki/core/path_utils.py:17-40`](files/src/local_deepwiki/core/path_utils.py) validates that the requested file path is within the repository boundaries and exists, raising a [ValidationError](files/src/local_deepwiki/errors.md) if path validation fails.
+The documentation retrieval process begins with [`handle_get_call_graph`](files/src/local_deepwiki/handlers/generators.md) at `src/local_deepwiki/handlers/generators.py:152-189`. This function handles the get_call_graph tool call request and initializes the process by calling `get_access_controller()` from `src/local_deepwiki/security/access_control.py:347-361` to verify access permissions before proceeding.
 
-The process continues with `_build_generator_service` at [`src/local_deepwiki/handlers/generators.py:44-47`](files/src/local_deepwiki/handlers/generators.py), which creates a [GeneratorService](files/src/local_deepwiki/services/generator_service.md) with a vector store for the specified repository by calling `_create_vector_store()` at [`src/local_deepwiki/handlers/_index_helpers.py:52-68`](files/src/local_deepwiki/handlers/_index_helpers.py). This initializes a [VectorStore](files/src/local_deepwiki/core/vectorstore/store.md) with the configured embedding provider, using `get_vector_db_path` at [`src/local_deepwiki/config/models.py:255-257`](files/src/local_deepwiki/config/models.py) to determine the vector database path for the repository.
+Next, [`validate_file_in_repo`](files/src/local_deepwiki/core/path_utils.md) at `src/local_deepwiki/core/path_utils.py:17-40` ensures that the requested file path is within the repository boundaries and exists. If validation fails, a [`ValidationError`](files/src/local_deepwiki/errors.md) is raised, as defined in `src/local_deepwiki/errors.py:121-157`.
 
-The `GeneratorService.generate_call_graph` at [`src/local_deepwiki/services/generator_service.py:23-602`](files/src/local_deepwiki/services/generator_service.py) then generates call graph information for the specified repository, processing the call graph data through various analysis steps. The [`CallGraphExtractor`](files/src/local_deepwiki/generators/analysis/callgraph.md) at [`src/local_deepwiki/generators/analysis/callgraph.py:314-382`](files/src/local_deepwiki/generators/analysis/callgraph.py) extracts call graphs from source files using the repository's code analysis capabilities, building forward and reverse call graphs for comprehensive analysis.
+The system then calls `_build_generator_service` at `src/local_deepwiki/handlers/generators.py:44-47`, which creates a [`GeneratorService`](files/src/local_deepwiki/services/generator_service.md) with a vector store for the specified repository. This function calls `_create_vector_store()` from `src/local_deepwiki/handlers/_index_helpers.py:52-68` to initialize the vector database for semantic search.
 
-Finally, [`generate_call_graph_diagram`](files/src/local_deepwiki/generators/analysis/callgraph.md) at [`src/local_deepwiki/generators/analysis/callgraph.py:443-470`](files/src/local_deepwiki/generators/analysis/callgraph.py) creates a Mermaid flowchart representation of the call graph, returning a formatted diagram string for visualization. The [`make_tool_text_content`](files/src/local_deepwiki/handlers/_response.md) at [`src/local_deepwiki/handlers/_response.py:40-61`](files/src/local_deepwiki/handlers/_response.py) wraps the generated call graph data in a standardized JSON envelope, preparing the response content for delivery to the requesting agent.
+The `GeneratorService.generate_call_graph` at `src/local_deepwiki/services/generator_service.py:23-602` generates call graph information for the specified repository. It processes the call graph data through various analysis steps, including the [`CallGraphExtractor`](files/src/local_deepwiki/generators/analysis/callgraph.md) at `src/local_deepwiki/generators/analysis/callgraph.py:314-382`, which extracts call graphs from source files.
 
-Key observations include the layered architecture pattern where access control is enforced early in the process, followed by validation, then generation, and finally response formatting. Error handling is comprehensive with specific [ValidationError](files/src/local_deepwiki/errors.md) types and sanitization of error messages to prevent information leakage. The RAG system leverages vector stores for semantic similarity search, enabling intelligent retrieval of relevant documentation chunks from the local repository based on query context.
+Finally, [`generate_call_graph_diagram`](files/src/local_deepwiki/generators/analysis/callgraph.md) at `src/local_deepwiki/generators/analysis/callgraph.py:443-470` creates a Mermaid flowchart representation of the call graph. The result is wrapped in a standardized JSON envelope by [`make_tool_text_content`](files/src/local_deepwiki/handlers/_response.md) at `src/local_deepwiki/handlers/_response.py:40-61` and delivered to the requesting agent.
+
+This system follows a layered architecture pattern where access control is enforced early in the process, followed by validation, then generation, and finally response formatting. Error handling is comprehensive with specific [`ValidationError`](files/src/local_deepwiki/errors.md) types and sanitization of error messages to prevent information leakage.
 
 ## Getting Started
 
-To get started with Local DeepWiki, you'll need Python 3.11 or higher and the following dependencies:
+To get started with `local-deepwiki`, you'll need to ensure the following prerequisites are met:
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-repo/local-deepwiki.git
-   cd local-deepwiki
-   ```
+- Python 3.11 or higher
+- Git for version control
+- A local development environment with appropriate permissions to access your repository
 
-2. Install the project in development mode:
-   ```bash
-   pip install -e .
-   ```
+Install the project dependencies using `pip`:
 
-3. Initialize the configuration:
-   ```bash
-   local-deepwiki init
-   ```
+```bash
+pip install -e .
+```
 
-4. Run the server:
-   ```bash
-   local-deepwiki serve --wiki-path /path/to/your/repo
-   ```
+You can also install in development mode with additional test dependencies:
 
-The server will start on `http://localhost:5173` by default. You can also run the CLI commands to check configuration, update models, or perform cache operations.
+```bash
+pip install -e ".[dev]"
+```
+
+To run the server, use the CLI entry point:
+
+```bash
+local-deepwiki run --wiki-path /path/to/your/repo
+```
+
+For configuration options, see the example config files in the `examples/` directory:
+
+- `config-local.yaml` for local-only setup
+- `config-hybrid.yaml` for hybrid mode
+- `config-cloud.yaml` for cloud-based setup
 
 ## Key Concepts
 
 | Concept | What It Means |
 |--------|---------------|
-| **Retrieval-Augmented Generation (RAG)** | A technique that combines information retrieval with language generation to produce more accurate and contextual responses by retrieving relevant documents from a knowledge base |
-| **Vector Store** | A database that stores vector embeddings of text chunks for semantic similarity search, enabling intelligent document retrieval based on meaning rather than keywords |
-| **Call Graph** | A representation of the relationships between functions or methods in a codebase, showing which functions call which others |
-| **Embedding Provider** | An AI service that converts text into numerical vectors (embeddings) that capture semantic meaning for use in similarity searches |
-| **CLI Interface** | Command-line tools for managing and configuring the Local DeepWiki system, including initialization, configuration, and maintenance commands |
-| **Flask Web Server** | The web framework used to serve HTTP endpoints for documentation retrieval and interaction with the AI system |
-| **Access Control** | A system that enforces permissions and restrictions on who can access specific repository files or functionality |
-| **Graph RAG** | A variant of RAG that uses graph-based representations of code relationships to enhance documentation retrieval and understanding |
+| **RAG System** | Retrieval-Augmented Generation system that retrieves relevant documentation chunks from a local repository using semantic search |
+| **Vector Store** | Database (LanceDB) used to store and search embeddings of documentation chunks for semantic similarity |
+| **Call Graph** | A representation of how functions and methods call each other in a codebase, used for analysis and documentation |
+| **CLI Layer** | Command-line interface components for configuration, initialization, status checking, and updates |
+| **Generator Service** | Core service responsible for generating documentation content including call graphs and analysis reports |
+| **Access Control** | Security mechanism enforcing role-based access control (RBAC) for documentation retrieval |
+| **Embedding Provider** | AI service that generates vector embeddings for semantic search, supporting multiple providers (OpenAI, Ollama, Anthropic) |
+| **GraphRAG** | Graph-based Retrieval-Augmented Generation that uses graph structures to improve search relevance |
 
 ## Development Workflow
 
-To run tests, lint, and perform common development tasks:
+To run tests, use:
 
-1. Install development dependencies:
-   ```bash
-   pip install -e ".[dev]"
-   ```
+```bash
+pytest tests/
+```
 
-2. Run tests:
-   ```bash
-   pytest tests/
-   ```
+To run tests with coverage:
 
-3. Run linting:
-   ```bash
-   pre-commit run --all-files
-   ```
+```bash
+pytest tests/ --cov=src/local_deepwiki
+```
 
-4. Format code:
-   ```bash
-   black src/
-   ```
+To lint the codebase:
 
-The project uses pre-commit hooks for automatic formatting and linting. Make sure to run `pre-commit install` after cloning the repository to set up the hooks.
+```bash
+pre-commit run --all-files
+```
+
+To format code:
+
+```bash
+black src/
+```
+
+For development, install the project in editable mode with dev dependencies:
+
+```bash
+pip install -e ".[dev]"
+```
+
+The project uses `pyproject.toml` for configuration and `.pre-commit-config.yaml` for pre-commit hooks.
 
 ## Further Reading
 
@@ -257,16 +298,16 @@ The project uses pre-commit hooks for automatic formatting and linting. Make sur
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
-- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
-- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
-- [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
-- [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
-- [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
-- [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
-- `src/local_deepwiki/__init__.py`
-- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
-- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
+- [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
+- `src/local_deepwiki/models/__init__.py`
+- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
+- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
+- [`src/local_deepwiki/generators/analysis/architecture_health.py:55-123`](files/src/local_deepwiki/generators/analysis/architecture_health.md)
+- [`src/local_deepwiki/generators/analysis/maintainability.py:69-79`](files/src/local_deepwiki/generators/analysis/maintainability.md)
+- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
+- [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/generators/analysis/churn.py:25-38`](files/src/local_deepwiki/generators/analysis/churn.md)
 
 
-*Showing 10 of 263 source files.*
+*Showing 10 of 268 source files.*

@@ -1,75 +1,82 @@
-# File: src/local_deepwiki/models/tool_args.py
+# File: `src/local_deepwiki/models/tool_args.py`
 
 ## File Overview
 
-This file defines pydantic BaseModel classes for arguments used by various tools in the DeepWiki system. Each class corresponds to a specific tool and encapsulates the expected input parameters for that tool. The purpose of this file is to provide a standardized, validated, and documented interface for all tool invocations, ensuring consistent argument handling across the system.
+This file defines pydantic models for arguments passed to various tools within the local_deepwiki system. Each model corresponds to a specific tool and specifies the expected input parameters, their types, and descriptions.
 
-The design rationale behind using pydantic models is to leverage its built-in validation, serialization, and documentation generation capabilities. This approach enforces type safety and provides clear, self-documenting interfaces for each tool, improving both developer experience and runtime reliability.
+The purpose of this file is to provide a centralized, standardized way to define and validate tool arguments. This ensures consistency across the system and improves maintainability by encapsulating argument validation logic in one place.
 
 ## Key Concepts
 
-### Tool Argument Validation and Documentation
+### Tool Argument Validation
 
-Each tool argument class inherits from `BaseModel` and uses pydantic's `Field` for parameter definition. This pattern centralizes validation logic and automatically generates documentation from the field definitions. It also ensures that all tool invocations adhere to expected data types and constraints.
+The core abstraction in this file is the use of pydantic `BaseModel` to define structured argument inputs for tools. This approach offers several benefits:
 
-### Consistent Argument Patterns
+1. **Type Safety**: Ensures that arguments passed to tools have correct types at runtime.
+2. **Documentation**: Each field's description serves as inline documentation for tool usage.
+3. **Validation**: Built-in validation (e.g., `min_length`, `ge`, `le`) prevents invalid inputs.
+4. **Default Values**: Default values are explicitly defined, making tool behavior predictable.
 
-Several tools share common argument patterns, such as `repo_path` or `file_path`, which are defined with consistent descriptions and validation rules. This promotes a unified user experience across tools and reduces cognitive load for developers interacting with the system.
+### Standardized Tool Interfaces
+
+Each class in this file represents a distinct tool interface. This design choice aligns with the system's modular architecture, where individual tools are responsible for specific functionalities (e.g., indexing repositories, querying codebases, analyzing architecture).
 
 ### Integration with Provider Types
 
-The file imports and utilizes several enum types from `local_deepwiki.models.provider_types`:
-- [`EmbeddingProviderType`](provider_types.md)
-- [`LLMProviderType`](provider_types.md)
-- [`CodemapFocusType`](provider_types.md)
-- [`DiagramType`](provider_types.md)
+The file imports and uses several provider type enums:
+- [`LLMProviderType`](provider_types.md): For specifying LLM providers
+- [`EmbeddingProviderType`](provider_types.md): For specifying embedding providers
+- [`DiagramType`](provider_types.md): For specifying diagram types
+- [`CodemapFocusType`](provider_types.md): For specifying focus modes in codemap generation
 
-These types are used to define tool arguments that accept specific provider or mode values, ensuring that tool inputs are constrained to valid options and providing better type safety and documentation.
+These types are used to constrain input values to valid options, ensuring that tools operate within defined boundaries.
 
 ## Integration
 
-### External Usage
+This file is a core part of the local_deepwiki system, directly used by:
 
-This file is used by the core system and various components:
-- Core tools like `ReadWikiStructureArgs`, `ReadWikiPageArgs`, `SearchCodeArgs` are directly used by core functionality
-- Generator tools like `GetGlossaryArgs` are used by generators
-- Test and analysis tools like `ExplainEntityArgs`, `ImpactAnalysisArgs`, `AnalyzeDiffArgs` are used by test_explain_entity, analysis_entity, and test_analyze_diff respectively
-- Codemap tools like `GenerateCodemapArgs`, `SuggestCodemapTopicsArgs` are used by test_codemap
-- Agentic tools like `SuggestNextActionsArgs` are used by agentic components
+- **Core Tools**: Many classes like `IndexRepositoryArgs`, `AskQuestionArgs`, `SearchCodeArgs`, etc., are used by core functionality.
+- **Generators**: `GetGlossaryArgs` is used by the `get_glossary` generator.
+- **Test Modules**: `ExplainEntityArgs` is used by `test_explain_entity`, `ImpactAnalysisArgs` by `analysis_entity`, and `AnalyzeDiffArgs` by `test_analyze_diff`.
+- **CLI**: Classes like `IndexRepositoryArgs` and `ListIndexedReposArgs` are used by the CLI for parsing command-line arguments.
+- **Agentic Workflow**: `SuggestNextActionsArgs` is used by the agentic system to suggest next steps.
 
-### Related Files
-
-This file integrates with several other modules in the project:
-- `src/local_deepwiki/cli/init_cli.py` - likely uses these models to define CLI argument parsers
-- `src/local_deepwiki/config/models_embedding.py` and `src/local_deepwiki/config/models_llm.py` - provide configuration models that may be referenced by these argument models
-- `src/local_deepwiki/config/processing_models.py` - may contain shared processing logic used by these tools
-- `src/local_deepwiki/config/prompts.py` - may provide prompt templates that these tools use
+The models are imported by modules like `src/local_deepwiki/cli/init_cli.py` for CLI argument parsing and are used throughout the system to ensure consistent argument handling.
 
 ## Design Notes
 
-### Validation and Constraints
+### Centralized Argument Definitions
 
-The design includes various constraints on fields to ensure data integrity:
-- `min_length`, `max_length` constraints on string fields
-- `ge` (greater than or equal) and `le` (less than or equal) for numeric fields
-- `default` values for optional parameters
-- `description` fields that serve as documentation for each argument
+By centralizing all tool argument models in one file, the system ensures that:
+1. All tools have consistent argument structures.
+2. Validation logic is shared and maintained in one place.
+3. Tool interfaces are clearly defined and documented.
 
-### Consistent Field Definitions
+### Use of pydantic Field Constraints
 
-Fields like `repo_path` and `wiki_path` consistently use descriptive field descriptions and maximum length constraints (e.g., `max_length=4096` for repository paths), which helps with both validation and error messaging.
+The extensive use of pydantic's `Field` constraints (e.g., `ge`, `le`, `min_length`, `max_length`) reflects a design choice to enforce input validation at the argument level. This prevents runtime errors due to invalid inputs and provides clear error messages to users.
 
-### Tool-Specific Patterns
+### Optional Fields and Defaults
 
-Different tools follow distinct argument patterns based on their functionality:
-- Repository-level tools (e.g., `IndexRepositoryArgs`, `AskQuestionArgs`) typically require `repo_path`
-- Wiki-specific tools (e.g., `ReadWikiStructureArgs`, `ExportWikiHtmlArgs`) require `wiki_path`
-- Code analysis tools (e.g., `GetInheritanceArgs`, `GetCallGraphArgs`) often include filtering and pagination options
-- Diff-related tools (e.g., `AnalyzeDiffArgs`, `AskAboutDiffArgs`) include git reference parameters (`base_ref`, `head_ref`)
+Many fields are optional (`None` by default) or have sensible defaults, which allows for flexible usage while maintaining predictable behavior. For example:
+- `output_dir` in `IndexRepositoryArgs` defaults to `None`, letting the system choose a default path.
+- `agentic_rag` in `AskQuestionArgs` defaults to `False`, ensuring standard behavior unless explicitly requested.
 
-### Enum Usage for Mode Selection
+### Provider Type Enums
 
-The use of enum types like [`CodemapFocusType`](provider_types.md) and [`DiagramType`](provider_types.md) ensures that tools receive only valid mode or type arguments, preventing runtime errors from invalid mode selections and providing better autocomplete and documentation support.
+The use of enums for provider types ([`LLMProviderType`](provider_types.md), [`EmbeddingProviderType`](provider_types.md), etc.) provides:
+1. Type safety for provider selection.
+2. Auto-completion support in IDEs.
+3. Easy expansion of supported providers in the future.
+4. Validation that only valid provider types are used.
+
+### Tool-Specific Validation
+
+Each tool's argument model is tailored to its specific requirements. For example:
+- `SearchCodeArgs` includes parameters for filtering (`language`, `type`, `path`) and fuzzy matching (`fuzzy`, `fuzzy_weight`).
+- `GenerateCodemapArgs` includes parameters for traversal depth (`max_depth`) and node limits (`max_nodes`), which are critical for controlling resource usage in graph generation.
+
+This granular validation ensures that tools receive inputs appropriate for their specific use cases, preventing misuse or inefficient operations.
 
 ## API Reference
 
@@ -162,16 +169,14 @@ Arguments for the deep_research tool.
 
 
 <details>
-<summary>View Source (lines 70-86) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L70-L86">GitHub</a></summary>
+<summary>View Source (lines 70-84) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L70-L84">GitHub</a></summary>
 
 ```python
 class DeepResearchArgs(BaseModel):
     """Arguments for the deep_research tool."""
 
     repo_path: str = Field(description="Path to the indexed repository")
-    question: str = Field(
-        min_length=1, description="Complex question requiring deep analysis"
-    )
+    question: str = Field(min_length=1, description="Complex question requiring deep analysis")
     max_chunks: int = Field(
         default=30, ge=10, le=50, description="Maximum code chunks to analyze (10-50)"
     )
@@ -194,7 +199,7 @@ Arguments for the read_wiki_structure tool.
 
 
 <details>
-<summary>View Source (lines 89-92) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L89-L92">GitHub</a></summary>
+<summary>View Source (lines 87-90) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L87-L90">GitHub</a></summary>
 
 ```python
 class ReadWikiStructureArgs(BaseModel):
@@ -213,16 +218,14 @@ Arguments for the read_wiki_page tool.
 
 
 <details>
-<summary>View Source (lines 95-101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L95-L101">GitHub</a></summary>
+<summary>View Source (lines 93-97) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L93-L97">GitHub</a></summary>
 
 ```python
 class ReadWikiPageArgs(BaseModel):
     """Arguments for the read_wiki_page tool."""
 
     wiki_path: str = Field(description="Path to the wiki directory")
-    page: str = Field(
-        min_length=1, description="Relative path to the page within the wiki"
-    )
+    page: str = Field(min_length=1, description="Relative path to the page within the wiki")
 ```
 
 </details>
@@ -235,7 +238,7 @@ Arguments for the search_code tool.
 
 
 <details>
-<summary>View Source (lines 104-118) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L104-L118">GitHub</a></summary>
+<summary>View Source (lines 100-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L100-L114">GitHub</a></summary>
 
 ```python
 class SearchCodeArgs(BaseModel):
@@ -265,16 +268,14 @@ Arguments for the export_wiki_html tool.
 
 
 <details>
-<summary>View Source (lines 121-127) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L121-L127">GitHub</a></summary>
+<summary>View Source (lines 117-121) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L117-L121">GitHub</a></summary>
 
 ```python
 class ExportWikiHtmlArgs(BaseModel):
     """Arguments for the export_wiki_html tool."""
 
     wiki_path: str = Field(description="Path to the wiki directory to export")
-    output_path: str | None = Field(
-        default=None, description="Output directory for HTML files"
-    )
+    output_path: str | None = Field(default=None, description="Output directory for HTML files")
 ```
 
 </details>
@@ -287,7 +288,7 @@ Arguments for the export_wiki_pdf tool.
 
 
 <details>
-<summary>View Source (lines 130-137) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L130-L137">GitHub</a></summary>
+<summary>View Source (lines 124-129) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L124-L129">GitHub</a></summary>
 
 ```python
 class ExportWikiPdfArgs(BaseModel):
@@ -295,9 +296,7 @@ class ExportWikiPdfArgs(BaseModel):
 
     wiki_path: str = Field(description="Path to the wiki directory to export")
     output_path: str | None = Field(default=None, description="Output path for PDF")
-    single_file: bool = Field(
-        default=True, description="Combine all pages into single PDF"
-    )
+    single_file: bool = Field(default=True, description="Combine all pages into single PDF")
 ```
 
 </details>
@@ -310,16 +309,14 @@ Arguments for the get_glossary tool.
 
 
 <details>
-<summary>View Source (lines 140-161) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L140-L161">GitHub</a></summary>
+<summary>View Source (lines 132-151) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L132-L151">GitHub</a></summary>
 
 ```python
 class GetGlossaryArgs(BaseModel):
     """Arguments for the get_glossary tool."""
 
     repo_path: str = Field(description="Path to the indexed repository")
-    search: str | None = Field(
-        default=None, description="Optional search term to filter entities"
-    )
+    search: str | None = Field(default=None, description="Optional search term to filter entities")
     file_path: str | None = Field(
         default=None,
         description="Filter to entities from a specific file (relative path)",
@@ -347,7 +344,7 @@ Arguments for the get_diagrams tool.
 
 
 <details>
-<summary>View Source (lines 164-174) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L164-L174">GitHub</a></summary>
+<summary>View Source (lines 154-164) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L154-L164">GitHub</a></summary>
 
 ```python
 class GetDiagramsArgs(BaseModel):
@@ -373,7 +370,7 @@ Arguments for the get_inheritance tool.
 
 
 <details>
-<summary>View Source (lines 177-195) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L177-L195">GitHub</a></summary>
+<summary>View Source (lines 167-185) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L167-L185">GitHub</a></summary>
 
 ```python
 class GetInheritanceArgs(BaseModel):
@@ -407,7 +404,7 @@ Arguments for the get_call_graph tool.
 
 
 <details>
-<summary>View Source (lines 198-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L198-L205">GitHub</a></summary>
+<summary>View Source (lines 188-195) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L188-L195">GitHub</a></summary>
 
 ```python
 class GetCallGraphArgs(BaseModel):
@@ -430,7 +427,7 @@ Arguments for the get_coverage tool.
 
 
 <details>
-<summary>View Source (lines 208-211) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L208-L211">GitHub</a></summary>
+<summary>View Source (lines 198-201) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L198-L201">GitHub</a></summary>
 
 ```python
 class GetCoverageArgs(BaseModel):
@@ -449,7 +446,7 @@ Arguments for the detect_stale_docs tool.
 
 
 <details>
-<summary>View Source (lines 214-222) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L214-L222">GitHub</a></summary>
+<summary>View Source (lines 204-212) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L204-L212">GitHub</a></summary>
 
 ```python
 class DetectStaleDocsArgs(BaseModel):
@@ -473,7 +470,7 @@ Arguments for the get_changelog tool.
 
 
 <details>
-<summary>View Source (lines 225-231) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L225-L231">GitHub</a></summary>
+<summary>View Source (lines 215-221) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L215-L221">GitHub</a></summary>
 
 ```python
 class GetChangelogArgs(BaseModel):
@@ -495,7 +492,7 @@ Arguments for the detect_secrets tool.
 
 
 <details>
-<summary>View Source (lines 234-241) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L234-L241">GitHub</a></summary>
+<summary>View Source (lines 224-231) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L224-L231">GitHub</a></summary>
 
 ```python
 class DetectSecretsArgs(BaseModel):
@@ -518,7 +515,7 @@ Arguments for the get_test_examples tool.
 
 
 <details>
-<summary>View Source (lines 244-254) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L244-L254">GitHub</a></summary>
+<summary>View Source (lines 234-244) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L234-L244">GitHub</a></summary>
 
 ```python
 class GetTestExamplesArgs(BaseModel):
@@ -544,7 +541,7 @@ Arguments for the get_api_docs tool.
 
 
 <details>
-<summary>View Source (lines 257-264) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L257-L264">GitHub</a></summary>
+<summary>View Source (lines 247-254) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L247-L254">GitHub</a></summary>
 
 ```python
 class GetApiDocsArgs(BaseModel):
@@ -567,7 +564,7 @@ Arguments for the list_indexed_repos tool.
 
 
 <details>
-<summary>View Source (lines 267-273) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L267-L273">GitHub</a></summary>
+<summary>View Source (lines 257-263) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L257-L263">GitHub</a></summary>
 
 ```python
 class ListIndexedReposArgs(BaseModel):
@@ -589,7 +586,7 @@ Arguments for the get_index_status tool.
 
 
 <details>
-<summary>View Source (lines 276-279) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L276-L279">GitHub</a></summary>
+<summary>View Source (lines 266-269) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L266-L269">GitHub</a></summary>
 
 ```python
 class GetIndexStatusArgs(BaseModel):
@@ -608,19 +605,15 @@ Arguments for the search_wiki tool.
 
 
 <details>
-<summary>View Source (lines 282-295) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L282-L295">GitHub</a></summary>
+<summary>View Source (lines 272-281) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L272-L281">GitHub</a></summary>
 
 ```python
 class SearchWikiArgs(BaseModel):
     """Arguments for the search_wiki tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     query: str = Field(min_length=1, max_length=1000, description="Search query string")
-    limit: int = Field(
-        default=20, ge=1, le=100, description="Maximum results to return (1-100)"
-    )
+    limit: int = Field(default=20, ge=1, le=100, description="Maximum results to return (1-100)")
     entity_types: list[str] | None = Field(
         default=None,
         description="Optional filter by entity type: 'function', 'class', 'method', or 'page'",
@@ -637,7 +630,7 @@ Arguments for the get_project_manifest tool.
 
 
 <details>
-<summary>View Source (lines 298-305) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L298-L305">GitHub</a></summary>
+<summary>View Source (lines 284-291) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L284-L291">GitHub</a></summary>
 
 ```python
 class GetProjectManifestArgs(BaseModel):
@@ -660,15 +653,13 @@ Arguments for the get_file_context tool.
 
 
 <details>
-<summary>View Source (lines 308-321) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L308-L321">GitHub</a></summary>
+<summary>View Source (lines 294-305) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L294-L305">GitHub</a></summary>
 
 ```python
 class GetFileContextArgs(BaseModel):
     """Arguments for the get_file_context tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     file_path: str = Field(
         min_length=1,
         description="File path relative to repo root (e.g., 'src/local_deepwiki/server.py')",
@@ -689,15 +680,13 @@ Arguments for the fuzzy_search tool.
 
 
 <details>
-<summary>View Source (lines 324-344) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L324-L344">GitHub</a></summary>
+<summary>View Source (lines 308-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L308-L324">GitHub</a></summary>
 
 ```python
 class FuzzySearchArgs(BaseModel):
     """Arguments for the fuzzy_search tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     query: str = Field(
         min_length=1,
         max_length=1000,
@@ -706,9 +695,7 @@ class FuzzySearchArgs(BaseModel):
     threshold: float = Field(
         default=0.6, ge=0.0, le=1.0, description="Minimum similarity score (0.0-1.0)"
     )
-    limit: int = Field(
-        default=10, ge=1, le=50, description="Maximum results to return (1-50)"
-    )
+    limit: int = Field(default=10, ge=1, le=50, description="Maximum results to return (1-50)")
     entity_type: str | None = Field(
         default=None,
         description="Optional filter: 'function', 'class', 'method', or 'module'",
@@ -725,15 +712,13 @@ Arguments for the explain_entity tool.
 
 
 <details>
-<summary>View Source (lines 347-372) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L347-L372">GitHub</a></summary>
+<summary>View Source (lines 327-348) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L327-L348">GitHub</a></summary>
 
 ```python
 class ExplainEntityArgs(BaseModel):
     """Arguments for the explain_entity tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     entity_name: str = Field(
         min_length=1,
         max_length=500,
@@ -748,9 +733,7 @@ class ExplainEntityArgs(BaseModel):
     include_test_examples: bool = Field(
         default=True, description="Include usage examples from tests"
     )
-    include_api_docs: bool = Field(
-        default=True, description="Include API signature details"
-    )
+    include_api_docs: bool = Field(default=True, description="Include API signature details")
     max_test_examples: int = Field(
         default=3, ge=1, le=10, description="Max test examples to include (1-10)"
     )
@@ -766,15 +749,13 @@ Arguments for the impact_analysis tool.
 
 
 <details>
-<summary>View Source (lines 375-401) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L375-L401">GitHub</a></summary>
+<summary>View Source (lines 351-375) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L351-L375">GitHub</a></summary>
 
 ```python
 class ImpactAnalysisArgs(BaseModel):
     """Arguments for the impact_analysis tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     file_path: str = Field(
         min_length=1,
         description="File path relative to repo root to analyze impact for",
@@ -808,7 +789,7 @@ Arguments for the get_complexity_metrics tool.
 
 
 <details>
-<summary>View Source (lines 404-411) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L404-L411">GitHub</a></summary>
+<summary>View Source (lines 378-385) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L378-L385">GitHub</a></summary>
 
 ```python
 class GetComplexityMetricsArgs(BaseModel):
@@ -831,7 +812,7 @@ Arguments for the analyze_diff tool.
 
 
 <details>
-<summary>View Source (lines 414-433) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L414-L433">GitHub</a></summary>
+<summary>View Source (lines 388-407) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L388-L407">GitHub</a></summary>
 
 ```python
 class AnalyzeDiffArgs(BaseModel):
@@ -866,7 +847,7 @@ Arguments for the ask_about_diff tool.
 
 
 <details>
-<summary>View Source (lines 436-463) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L436-L463">GitHub</a></summary>
+<summary>View Source (lines 410-437) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L410-L437">GitHub</a></summary>
 
 ```python
 class AskAboutDiffArgs(BaseModel):
@@ -909,15 +890,13 @@ Arguments for the get_wiki_stats tool.
 
 
 <details>
-<summary>View Source (lines 466-471) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L466-L471">GitHub</a></summary>
+<summary>View Source (lines 440-443) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L440-L443">GitHub</a></summary>
 
 ```python
 class GetWikiStatsArgs(BaseModel):
     """Arguments for the get_wiki_stats tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
 ```
 
 </details>
@@ -930,15 +909,13 @@ Arguments for the [generate_codemap](../generators/codemap/generator.md) tool.
 
 
 <details>
-<summary>View Source (lines 474-506) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L474-L506">GitHub</a></summary>
+<summary>View Source (lines 446-476) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L446-L476">GitHub</a></summary>
 
 ```python
 class GenerateCodemapArgs(BaseModel):
     """Arguments for the generate_codemap tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     query: str = Field(
         min_length=1,
         max_length=2000,
@@ -978,15 +955,13 @@ Arguments for the suggest_codemap_topics tool.
 
 
 <details>
-<summary>View Source (lines 509-520) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L509-L520">GitHub</a></summary>
+<summary>View Source (lines 479-488) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L479-L488">GitHub</a></summary>
 
 ```python
 class SuggestCodemapTopicsArgs(BaseModel):
     """Arguments for the suggest_codemap_topics tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     max_suggestions: int = Field(
         default=10,
         ge=1,
@@ -1005,7 +980,7 @@ Arguments for the suggest_next_actions tool.
 
 
 <details>
-<summary>View Source (lines 523-538) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L523-L538">GitHub</a></summary>
+<summary>View Source (lines 491-506) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L491-L506">GitHub</a></summary>
 
 ```python
 class SuggestNextActionsArgs(BaseModel):
@@ -1036,7 +1011,7 @@ Arguments for the run_workflow tool.
 
 
 <details>
-<summary>View Source (lines 541-547) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L541-L547">GitHub</a></summary>
+<summary>View Source (lines 509-515) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L509-L515">GitHub</a></summary>
 
 ```python
 class RunWorkflowArgs(BaseModel):
@@ -1058,7 +1033,7 @@ Arguments for the batch_explain_entities tool.
 
 
 <details>
-<summary>View Source (lines 550-562) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L550-L562">GitHub</a></summary>
+<summary>View Source (lines 518-530) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L518-L530">GitHub</a></summary>
 
 ```python
 class BatchExplainEntitiesArgs(BaseModel):
@@ -1086,7 +1061,7 @@ Arguments for the query_codebase tool.
 
 
 <details>
-<summary>View Source (lines 565-577) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L565-L577">GitHub</a></summary>
+<summary>View Source (lines 533-545) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L533-L545">GitHub</a></summary>
 
 ```python
 class QueryCodebaseArgs(BaseModel):
@@ -1114,7 +1089,7 @@ Arguments for the get_layer_dependencies tool.
 
 
 <details>
-<summary>View Source (lines 580-587) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L580-L587">GitHub</a></summary>
+<summary>View Source (lines 548-555) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L548-L555">GitHub</a></summary>
 
 ```python
 class GetLayerDependenciesArgs(BaseModel):
@@ -1137,7 +1112,7 @@ Arguments for the get_architecture_summary tool.
 
 
 <details>
-<summary>View Source (lines 590-593) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L590-L593">GitHub</a></summary>
+<summary>View Source (lines 558-561) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L558-L561">GitHub</a></summary>
 
 ```python
 class GetArchitectureSummaryArgs(BaseModel):
@@ -1156,7 +1131,7 @@ Arguments for the get_hotspots tool.
 
 
 <details>
-<summary>View Source (lines 596-621) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L596-L621">GitHub</a></summary>
+<summary>View Source (lines 564-589) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L564-L589">GitHub</a></summary>
 
 ```python
 class GetHotspotsArgs(BaseModel):
@@ -1197,7 +1172,7 @@ Arguments for the get_cross_module_dependencies tool.
 
 
 <details>
-<summary>View Source (lines 624-650) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L624-L650">GitHub</a></summary>
+<summary>View Source (lines 592-618) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L592-L618">GitHub</a></summary>
 
 ```python
 class GetCrossModuleDependenciesArgs(BaseModel):
@@ -1239,7 +1214,7 @@ Arguments for the get_coupling_metrics tool.
 
 
 <details>
-<summary>View Source (lines 653-678) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L653-L678">GitHub</a></summary>
+<summary>View Source (lines 621-646) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L621-L646">GitHub</a></summary>
 
 ```python
 class GetCouplingMetricsArgs(BaseModel):
@@ -1280,7 +1255,7 @@ Arguments for the get_design_smells tool.
 
 
 <details>
-<summary>View Source (lines 681-701) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L681-L701">GitHub</a></summary>
+<summary>View Source (lines 649-669) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L649-L669">GitHub</a></summary>
 
 ```python
 class GetDesignSmellsArgs(BaseModel):
@@ -1316,7 +1291,7 @@ Arguments for the get_architecture_health tool.
 
 
 <details>
-<summary>View Source (lines 704-717) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L704-L717">GitHub</a></summary>
+<summary>View Source (lines 672-685) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L672-L685">GitHub</a></summary>
 
 ```python
 class GetArchitectureHealthArgs(BaseModel):
@@ -1345,7 +1320,7 @@ Arguments for the analyze_architecture composite tool.
 
 
 <details>
-<summary>View Source (lines 720-731) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L720-L731">GitHub</a></summary>
+<summary>View Source (lines 688-699) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L688-L699">GitHub</a></summary>
 
 ```python
 class AnalyzeArchitectureArgs(BaseModel):
@@ -1372,7 +1347,7 @@ Arguments for the get_onboarding_guide tool.
 
 
 <details>
-<summary>View Source (lines 734-741) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L734-L741">GitHub</a></summary>
+<summary>View Source (lines 702-709) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L702-L709">GitHub</a></summary>
 
 ```python
 class GetOnboardingGuideArgs(BaseModel):
@@ -1395,7 +1370,7 @@ Arguments for the get_recommendations tool.
 
 
 <details>
-<summary>View Source (lines 744-761) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L744-L761">GitHub</a></summary>
+<summary>View Source (lines 712-729) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L712-L729">GitHub</a></summary>
 
 ```python
 class GetRecommendationsArgs(BaseModel):
@@ -1428,7 +1403,7 @@ Arguments for the get_architecture_trends tool.
 
 
 <details>
-<summary>View Source (lines 764-771) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L764-L771">GitHub</a></summary>
+<summary>View Source (lines 732-739) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L732-L739">GitHub</a></summary>
 
 ```python
 class GetArchitectureTrendsArgs(BaseModel):
@@ -1451,7 +1426,7 @@ Arguments for the [compare_architecture](../generators/analysis/architecture_com
 
 
 <details>
-<summary>View Source (lines 774-794) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L774-L794">GitHub</a></summary>
+<summary>View Source (lines 742-762) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L742-L762">GitHub</a></summary>
 
 ```python
 class CompareArchitectureArgs(BaseModel):
@@ -1487,7 +1462,7 @@ Arguments for the get_module_health tool.
 
 
 <details>
-<summary>View Source (lines 797-805) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L797-L805">GitHub</a></summary>
+<summary>View Source (lines 765-773) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L765-L773">GitHub</a></summary>
 
 ```python
 class GetModuleHealthArgs(BaseModel):
@@ -1511,7 +1486,7 @@ Arguments for the get_guided_tour tool.
 
 
 <details>
-<summary>View Source (lines 808-825) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L808-L825">GitHub</a></summary>
+<summary>View Source (lines 776-793) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L776-L793">GitHub</a></summary>
 
 ```python
 class GetGuidedTourArgs(BaseModel):
@@ -1544,15 +1519,13 @@ Arguments for the serve_wiki tool.
 
 
 <details>
-<summary>View Source (lines 828-848) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L828-L848">GitHub</a></summary>
+<summary>View Source (lines 796-814) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L796-L814">GitHub</a></summary>
 
 ```python
 class ServeWikiArgs(BaseModel):
     """Arguments for the serve_wiki tool."""
 
-    wiki_path: str = Field(
-        description="Path to the wiki directory (typically {repo}/.deepwiki)"
-    )
+    wiki_path: str = Field(description="Path to the wiki directory (typically {repo}/.deepwiki)")
     host: str = Field(
         default="127.0.0.1",
         max_length=256,
@@ -1579,9 +1552,8 @@ class ServeWikiArgs(BaseModel):
 Arguments for the stop_wiki_server tool.
 
 
-
 <details>
-<summary>View Source (lines 851-863) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L851-L863">GitHub</a></summary>
+<summary>View Source (lines 817-829) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L817-L829">GitHub</a></summary>
 
 ```python
 class StopWikiServerArgs(BaseModel):
@@ -1596,6 +1568,191 @@ class StopWikiServerArgs(BaseModel):
     wiki_path: str | None = Field(
         default=None,
         description="Optional wiki path to identify which server to stop",
+    )
+```
+
+</details>
+
+### class `GetChurnMetricsArgs`
+
+**Inherits from:** `BaseModel`
+
+Arguments for the get_churn_metrics tool.
+
+
+<details>
+<summary>View Source (lines 832-851) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L832-L851">GitHub</a></summary>
+
+```python
+class GetChurnMetricsArgs(BaseModel):
+    """Arguments for the get_churn_metrics tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    window_days: int = Field(
+        default=90,
+        ge=1,
+        le=365,
+        description="Number of days of git history to analyze (default: 90)",
+    )
+    top_n: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Number of top results to return (default: 20)",
+    )
+    include_complexity: bool = Field(
+        default=True,
+        description="Include churn×complexity composite scores (default: true)",
+    )
+```
+
+</details>
+
+### class `GetCoChangeArgs`
+
+**Inherits from:** `BaseModel`
+
+Arguments for the get_co_change tool.
+
+
+<details>
+<summary>View Source (lines 854-875) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L854-L875">GitHub</a></summary>
+
+```python
+class GetCoChangeArgs(BaseModel):
+    """Arguments for the get_co_change tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    window_days: int = Field(
+        default=90,
+        ge=1,
+        le=365,
+        description="Number of days of git history to analyze (default: 90)",
+    )
+    min_shared: int = Field(
+        default=2,
+        ge=1,
+        le=50,
+        description="Minimum shared commits for a pair to be included (default: 2)",
+    )
+    top_n: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Number of top pairs to return (default: 20)",
+    )
+```
+
+</details>
+
+### class `GetCohesionMetricsArgs`
+
+**Inherits from:** `BaseModel`
+
+Arguments for the get_cohesion_metrics tool.
+
+
+<details>
+<summary>View Source (lines 878-891) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L878-L891">GitHub</a></summary>
+
+```python
+class GetCohesionMetricsArgs(BaseModel):
+    """Arguments for the get_cohesion_metrics tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    top_n: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Number of top results to return (default: 20)",
+    )
+    exclude_tests: bool = Field(
+        default=True,
+        description="Exclude test files from analysis (default: true)",
+    )
+```
+
+</details>
+
+### class `GetDuplicationMetricsArgs`
+
+**Inherits from:** `BaseModel`
+
+Arguments for the get_duplication_metrics tool.
+
+
+<details>
+<summary>View Source (lines 894-913) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L894-L913">GitHub</a></summary>
+
+```python
+class GetDuplicationMetricsArgs(BaseModel):
+    """Arguments for the get_duplication_metrics tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    min_lines: int = Field(
+        default=6,
+        ge=3,
+        le=50,
+        description="Minimum lines for a clone block (default: 6)",
+    )
+    top_n: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Number of top results to return (default: 20)",
+    )
+    exclude_tests: bool = Field(
+        default=True,
+        description="Exclude test files from analysis (default: true)",
+    )
+```
+
+</details>
+
+### class `GetTestabilityMetricsArgs`
+
+**Inherits from:** `BaseModel`
+
+Arguments for the get_testability_metrics tool.
+
+
+<details>
+<summary>View Source (lines 916-919) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L916-L919">GitHub</a></summary>
+
+```python
+class GetTestabilityMetricsArgs(BaseModel):
+    """Arguments for the get_testability_metrics tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+```
+
+</details>
+
+### class `GetMaintainabilityMetricsArgs`
+
+**Inherits from:** `BaseModel`
+
+Arguments for the get_maintainability_metrics tool.
+
+
+
+<details>
+<summary>View Source (lines 922-935) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models/tool_args.py#L922-L935">GitHub</a></summary>
+
+```python
+class GetMaintainabilityMetricsArgs(BaseModel):
+    """Arguments for the get_maintainability_metrics tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    top_n: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Number of top results to return (default: 20)",
+    )
+    exclude_tests: bool = Field(
+        default=True,
+        description="Exclude test files from analysis (default: true)",
     )
 ```
 
@@ -1735,6 +1892,26 @@ classDiagram
         +repo_path: str
         +max_commits: int
     }
+    class GetChurnMetricsArgs {
+        <<dataclass>>
+        +repo_path: str
+        +window_days: int
+        +top_n: int
+        +include_complexity: bool
+    }
+    class GetCoChangeArgs {
+        <<dataclass>>
+        +repo_path: str
+        +window_days: int
+        +min_shared: int
+        +top_n: int
+    }
+    class GetCohesionMetricsArgs {
+        <<dataclass>>
+        +repo_path: str
+        +top_n: int
+        +exclude_tests: bool
+    }
     class GetComplexityMetricsArgs {
         <<dataclass>>
         +repo_path: str
@@ -1775,6 +1952,13 @@ classDiagram
         +repo_path: str
         +diagram_type: DiagramType
         +entry_point: str | None
+    }
+    class GetDuplicationMetricsArgs {
+        <<dataclass>>
+        +repo_path: str
+        +min_lines: int
+        +top_n: int
+        +exclude_tests: bool
     }
     class GetFileContextArgs {
         <<dataclass>>
@@ -1822,6 +2006,12 @@ classDiagram
         +repo_path: str
         +summary_only: bool
     }
+    class GetMaintainabilityMetricsArgs {
+        <<dataclass>>
+        +repo_path: str
+        +top_n: int
+        +exclude_tests: bool
+    }
     class GetModuleHealthArgs {
         <<dataclass>>
         +repo_path: str
@@ -1849,6 +2039,10 @@ classDiagram
         +repo_path: str
         +entity_name: str
         +max_examples: int
+    }
+    class GetTestabilityMetricsArgs {
+        <<dataclass>>
+        +repo_path: str
     }
     class GetWikiStatsArgs {
         <<dataclass>>
@@ -1962,12 +2156,16 @@ classDiagram
     GetArchitectureTrendsArgs --|> BaseModel
     GetCallGraphArgs --|> BaseModel
     GetChangelogArgs --|> BaseModel
+    GetChurnMetricsArgs --|> BaseModel
+    GetCoChangeArgs --|> BaseModel
+    GetCohesionMetricsArgs --|> BaseModel
     GetComplexityMetricsArgs --|> BaseModel
     GetCouplingMetricsArgs --|> BaseModel
     GetCoverageArgs --|> BaseModel
     GetCrossModuleDependenciesArgs --|> BaseModel
     GetDesignSmellsArgs --|> BaseModel
     GetDiagramsArgs --|> BaseModel
+    GetDuplicationMetricsArgs --|> BaseModel
     GetFileContextArgs --|> BaseModel
     GetGlossaryArgs --|> BaseModel
     GetGuidedTourArgs --|> BaseModel
@@ -1975,11 +2173,13 @@ classDiagram
     GetIndexStatusArgs --|> BaseModel
     GetInheritanceArgs --|> BaseModel
     GetLayerDependenciesArgs --|> BaseModel
+    GetMaintainabilityMetricsArgs --|> BaseModel
     GetModuleHealthArgs --|> BaseModel
     GetOnboardingGuideArgs --|> BaseModel
     GetProjectManifestArgs --|> BaseModel
     GetRecommendationsArgs --|> BaseModel
     GetTestExamplesArgs --|> BaseModel
+    GetTestabilityMetricsArgs --|> BaseModel
     GetWikiStatsArgs --|> BaseModel
     ImpactAnalysisArgs --|> BaseModel
     IndexRepositoryArgs --|> BaseModel
@@ -2000,36 +2200,49 @@ classDiagram
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `GetCouplingMetricsArgs` | class | Brian Breidenbach | today | `56000bf` fix: improve analysis accur... |
-| `GetGuidedTourArgs` | class | Brian Breidenbach | 5 days ago | `d2cd819` feat: add get_guided_tour M... |
-| `CompareArchitectureArgs` | class | Brian Breidenbach | 5 days ago | `37320f0` feat: add detail_level to c... |
-| `GetFileContextArgs` | class | Brian Breidenbach | 5 days ago | `71bd7d7` feat: add detail_level to g... |
-| `GetArchitectureTrendsArgs` | class | Brian Breidenbach | 5 days ago | `fc85c34` feat: add deepwiki check CL... |
-| `GetRecommendationsArgs` | class | Brian Breidenbach | 5 days ago | `caa4c66` feat: add get_recommendatio... |
-| `GetOnboardingGuideArgs` | class | Brian Breidenbach | 5 days ago | `0fd6383` feat: add get_onboarding_gu... |
-| `AnalyzeArchitectureArgs` | class | Brian Breidenbach | 5 days ago | `133094f` feat: add analyze_architect... |
-| `GetArchitectureHealthArgs` | class | Brian Breidenbach | 5 days ago | `951a981` feat: add detail_level para... |
-| `GetLayerDependenciesArgs` | class | Brian Breidenbach | 5 days ago | `38ffb40` feat: add summary_only para... |
-| `GetHotspotsArgs` | class | Brian Breidenbach | 5 days ago | `38ffb40` feat: add summary_only para... |
-| `GetCrossModuleDependenciesArgs` | class | Brian Breidenbach | 5 days ago | `38ffb40` feat: add summary_only para... |
-| `GetDesignSmellsArgs` | class | Brian Breidenbach | 1 week ago | `2b6636a` feat: add top_n and summary... |
-| `GetModuleHealthArgs` | class | Brian Breidenbach | 1 week ago | `38d706a` feat: add architecture_heal... |
+| `DeepResearchArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `ReadWikiPageArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `ExportWikiHtmlArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `ExportWikiPdfArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `GetGlossaryArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `SearchWikiArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `GetFileContextArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `FuzzySearchArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `ExplainEntityArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `ImpactAnalysisArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `GetWikiStatsArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `GenerateCodemapArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `SuggestCodemapTopicsArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `ServeWikiArgs` | class | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `GetMaintainabilityMetricsArgs` | class | Brian Breidenbach | today | `64e4b55` feat: add maintainability i... |
+| `GetTestabilityMetricsArgs` | class | Brian Breidenbach | today | `6d8243f` feat: add testability-based... |
+| `GetDuplicationMetricsArgs` | class | Brian Breidenbach | today | `d7e2187` feat(duplication): add scor... |
+| `GetCohesionMetricsArgs` | class | Brian Breidenbach | today | `d2646c8` feat(cohesion): integrate i... |
+| `GetChurnMetricsArgs` | class | Brian Breidenbach | today | `148a027` feat(churn): add MCP tools ... |
+| `GetCoChangeArgs` | class | Brian Breidenbach | today | `148a027` feat(churn): add MCP tools ... |
+| `GetCouplingMetricsArgs` | class | Brian Breidenbach | yesterday | `56000bf` fix: improve analysis accur... |
+| `GetGuidedTourArgs` | class | Brian Breidenbach | 1 week ago | `d2cd819` feat: add get_guided_tour M... |
+| `CompareArchitectureArgs` | class | Brian Breidenbach | 1 week ago | `37320f0` feat: add detail_level to c... |
+| `GetArchitectureTrendsArgs` | class | Brian Breidenbach | 1 week ago | `fc85c34` feat: add deepwiki check CL... |
+| `GetRecommendationsArgs` | class | Brian Breidenbach | 1 week ago | `caa4c66` feat: add get_recommendatio... |
+| `GetOnboardingGuideArgs` | class | Brian Breidenbach | 1 week ago | `0fd6383` feat: add get_onboarding_gu... |
+| `AnalyzeArchitectureArgs` | class | Brian Breidenbach | 1 week ago | `133094f` feat: add analyze_architect... |
+| `GetArchitectureHealthArgs` | class | Brian Breidenbach | 1 week ago | `951a981` feat: add detail_level para... |
+| `GetLayerDependenciesArgs` | class | Brian Breidenbach | 1 week ago | `38ffb40` feat: add summary_only para... |
+| `GetHotspotsArgs` | class | Brian Breidenbach | 1 week ago | `38ffb40` feat: add summary_only para... |
+| `GetCrossModuleDependenciesArgs` | class | Brian Breidenbach | 1 week ago | `38ffb40` feat: add summary_only para... |
+| `GetDesignSmellsArgs` | class | Brian Breidenbach | 2 weeks ago | `2b6636a` feat: add top_n and summary... |
+| `GetModuleHealthArgs` | class | Brian Breidenbach | 2 weeks ago | `38d706a` feat: add architecture_heal... |
 | `GetArchitectureSummaryArgs` | class | Brian Breidenbach | 2 weeks ago | `3d14562` feat: add get_layer_depende... |
-| `AskQuestionArgs` | class | Brian Breidenbach | 2 weeks ago | `8203fe8` feat: add service layer, hy... |
-| `ServeWikiArgs` | class | Brian Breidenbach | 2 weeks ago | `8203fe8` feat: add service layer, hy... |
+| `AskQuestionArgs` | class | Brian Breidenbach | 3 weeks ago | `8203fe8` feat: add service layer, hy... |
 | `StopWikiServerArgs` | class | Brian Breidenbach | Feb 18, 2026 | `3e2f123` feat: add serve_wiki and st... |
 | `BatchExplainEntitiesArgs` | class | Brian Breidenbach | Feb 14, 2026 | `2732638` feat: agent UX improvements... |
 | `IndexRepositoryArgs` | class | Brian Breidenbach | Feb 14, 2026 | `45d649a` feat: lazy wiki generation ... |
 | `SuggestNextActionsArgs` | class | Brian Breidenbach | Feb 12, 2026 | `df695d3` feat: add MCP Resources, ag... |
 | `RunWorkflowArgs` | class | Brian Breidenbach | Feb 12, 2026 | `df695d3` feat: add MCP Resources, ag... |
 | `QueryCodebaseArgs` | class | Brian Breidenbach | Feb 12, 2026 | `df695d3` feat: add MCP Resources, ag... |
-| `DeepResearchArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
 | `ReadWikiStructureArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
-| `ReadWikiPageArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
 | `SearchCodeArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
-| `ExportWikiHtmlArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
-| `ExportWikiPdfArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
-| `GetGlossaryArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
 | `GetDiagramsArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
 | `GetInheritanceArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
 | `GetCallGraphArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
@@ -2041,17 +2254,10 @@ classDiagram
 | `GetApiDocsArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
 | `ListIndexedReposArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
 | `GetIndexStatusArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
-| `SearchWikiArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
 | `GetProjectManifestArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
-| `FuzzySearchArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
-| `ExplainEntityArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
-| `ImpactAnalysisArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
 | `GetComplexityMetricsArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
 | `AnalyzeDiffArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
 | `AskAboutDiffArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
-| `GetWikiStatsArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
-| `GenerateCodemapArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
-| `SuggestCodemapTopicsArgs` | class | Brian Breidenbach | Feb 11, 2026 | `0c71b8e` refactor: convert models.py... |
 
 ## Relevant Source Files
 

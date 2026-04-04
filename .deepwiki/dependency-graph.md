@@ -114,210 +114,215 @@ flowchart TD
         M102[architecture_health]
         M103[architecture_report]
         M104[callgraph]
-        M105[complexity]
-        M106[coupling]
-        M107[coupling_page]
-        M108[coverage]
-        M109[dependency_graph]
-        M110[dependency_graph_data]
-        M111[design_smells]
-        M112[glossary]
-        M113[health_page]
-        M114[health_scoring]
-        M115[hotspots]
-        M116[hotspots_page]
-        M117[inheritance]
-        M118[layer_analysis]
-        M119[module_dependencies]
-        M120[module_health]
-        M121[onboarding]
-        M122[recommendations]
-        M123[smells_page]
-        M124[source_filter]
-        M125[stale_detection]
-        M126[tours]
-        M127[changelog]
-        M128[__init__]
-        M129[cache]
-        M130[generator]
-        M131[graph]
-        M132[models]
-        M133[overview]
-        M134[params]
-        M135[viz]
-        M136[context_builder]
-        M137[crosslinks]
-        M138[__init__]
-        M139[_utils]
-        M140[class_diagram]
-        M141[dependency_diagram]
-        M142[language_pie]
-        M143[module_diagram]
-        M144[sequence_diagram]
-        M145[dir_tree]
-        M146[__init__]
-        M147[discovery]
-        M148[docstring]
-        M149[extractor]
-        M150[orchestrator]
-        M151[plugin]
-        M152[lazy_cache]
-        M153[lazy_generator]
-        M154[lazy_resources]
-        M155[llms_txt]
-        M156[manifest]
-        M157[manifest_parsers]
-        M158[prefetch]
-        M159[progress_tracker]
-        M160[protocols]
-        M161[search]
-        M162[see_also]
-        M163[source_refs]
-        M164[toc]
-        M165[__init__]
-        M166[codemap_pages]
-        M167[context]
-        M168[files]
-        M169[generator]
-        M170[modules]
-        M171[pages]
-        M172[phases]
-        M173[pipeline]
-        M174[pipeline_params]
-        M175[plugin_runner]
-        M176[postprocessing]
-        M177[source_formatter]
-        M178[status]
-        M179[term_validator]
-        M180[utils]
-        M181[__init__]
-        M182[_error_handling]
-        M183[_export_validation]
-        M184[_index_helpers]
-        M185[_progress]
-        M186[_response]
-        M187[agentic]
-        M188[agentic_data]
-        M189[agentic_workflows]
-        M190[analysis_architecture]
-        M191[analysis_diff]
-        M192[analysis_entity]
-        M193[analysis_metadata]
-        M194[analysis_search]
-        M195[codemap]
-        M196[core]
-        M197[generators]
-        M198[indexing]
-        M199[prompts]
-        M200[research]
-        M201[resources]
-        M202[session_state]
-        M203[types]
-        M204[web_server]
-        M205[logging]
-        M206[__init__]
-        M207[chunks]
-        M208[foundation]
-        M209[provider_types]
-        M210[research]
-        M211[tool_args]
-        M212[wiki]
-        M213[__init__]
-        M214[base]
-        M215[registry]
-        M216[progress]
-        M217[prompts]
+        M105[churn]
+        M106[cohesion]
+        M107[complexity]
+        M108[coupling]
+        M109[coupling_page]
+        M110[coverage]
+        M111[dependency_graph]
+        M112[dependency_graph_data]
+        M113[design_smells]
+        M114[duplication]
+        M115[glossary]
+        M116[health_page]
+        M117[health_scoring]
+        M118[hotspots]
+        M119[hotspots_page]
+        M120[inheritance]
+        M121[layer_analysis]
+        M122[maintainability]
+        M123[module_dependencies]
+        M124[module_health]
+        M125[onboarding]
+        M126[recommendations]
+        M127[smells_page]
+        M128[source_filter]
+        M129[stale_detection]
+        M130[testability]
+        M131[tours]
+        M132[changelog]
+        M133[__init__]
+        M134[cache]
+        M135[generator]
+        M136[graph]
+        M137[models]
+        M138[overview]
+        M139[params]
+        M140[viz]
+        M141[context_builder]
+        M142[crosslinks]
+        M143[__init__]
+        M144[_utils]
+        M145[class_diagram]
+        M146[dependency_diagram]
+        M147[language_pie]
+        M148[module_diagram]
+        M149[sequence_diagram]
+        M150[dir_tree]
+        M151[__init__]
+        M152[discovery]
+        M153[docstring]
+        M154[extractor]
+        M155[orchestrator]
+        M156[plugin]
+        M157[lazy_cache]
+        M158[lazy_generator]
+        M159[lazy_resources]
+        M160[llms_txt]
+        M161[manifest]
+        M162[manifest_parsers]
+        M163[prefetch]
+        M164[progress_tracker]
+        M165[protocols]
+        M166[search]
+        M167[see_also]
+        M168[source_refs]
+        M169[toc]
+        M170[__init__]
+        M171[codemap_pages]
+        M172[context]
+        M173[files]
+        M174[generator]
+        M175[modules]
+        M176[pages]
+        M177[phases]
+        M178[pipeline]
+        M179[pipeline_params]
+        M180[plugin_runner]
+        M181[postprocessing]
+        M182[source_formatter]
+        M183[status]
+        M184[term_validator]
+        M185[utils]
+        M186[__init__]
+        M187[_error_handling]
+        M188[_export_validation]
+        M189[_index_helpers]
+        M190[_progress]
+        M191[_response]
+        M192[agentic]
+        M193[agentic_data]
+        M194[agentic_workflows]
+        M195[analysis_architecture]
+        M196[analysis_diff]
+        M197[analysis_entity]
+        M198[analysis_metadata]
+        M199[analysis_search]
+        M200[codemap]
+        M201[core]
+        M202[generators]
+        M203[indexing]
+        M204[prompts]
+        M205[research]
+        M206[resources]
+        M207[session_state]
+        M208[types]
+        M209[web_server]
+        M210[logging]
+        M211[__init__]
+        M212[chunks]
+        M213[foundation]
+        M214[provider_types]
+        M215[research]
+        M216[tool_args]
+        M217[wiki]
         M218[__init__]
         M219[base]
-        M220[credentials]
-        M221[__init__]
-        M222[cache]
-        M223[local]
-        M224[openai]
-        M225[errors]
+        M220[registry]
+        M221[progress]
+        M222[prompts]
+        M223[__init__]
+        M224[base]
+        M225[credentials]
         M226[__init__]
-        M227[anthropic]
-        M228[cached]
-        M229[ollama]
-        M230[openai]
-        M231[retry]
-        M232[__init__]
-        M233[access_control]
-        M234[repository_access]
-        M235[role_config]
-        M236[server]
+        M227[cache]
+        M228[local]
+        M229[openai]
+        M230[errors]
+        M231[__init__]
+        M232[anthropic]
+        M233[cached]
+        M234[ollama]
+        M235[openai]
+        M236[retry]
         M237[__init__]
-        M238[analysis_service]
-        M239[generator_service]
-        M240[graph_expansion]
-        M241[indexing_service]
-        M242[models]
-        M243[protocols]
-        M244[provider_factory]
-        M245[query_service]
-        M246[wiki_service]
-        M247[__init__]
-        M248[analysis]
-        M249[annotations]
-        M250[core]
-        M251[generators]
-        M252[workflow]
-        M253[validation]
-        M254[watcher]
-        M255[__init__]
-        M256[app]
-        M257[rate_limit]
-        M258[routes_architecture]
-        M259[routes_chat]
-        M260[routes_codemap]
-        M261[routes_research]
-        M262[utils]
+        M238[access_control]
+        M239[repository_access]
+        M240[role_config]
+        M241[server]
+        M242[__init__]
+        M243[analysis_service]
+        M244[generator_service]
+        M245[graph_expansion]
+        M246[indexing_service]
+        M247[models]
+        M248[protocols]
+        M249[provider_factory]
+        M250[query_service]
+        M251[wiki_service]
+        M252[__init__]
+        M253[analysis]
+        M254[annotations]
+        M255[core]
+        M256[generators]
+        M257[workflow]
+        M258[validation]
+        M259[watcher]
+        M260[__init__]
+        M261[app]
+        M262[rate_limit]
+        M263[routes_architecture]
+        M264[routes_chat]
+        M265[routes_codemap]
+        M266[routes_research]
+        M267[utils]
     end
     subgraph external[External Dependencies]
-        E263([argparse]):::external
-        E264([asyncio]):::external
-        E265([collections]):::external
-        E266([contextlib]):::external
-        E267([contextvars]):::external
-        E268([dataclasses]):::external
-        E269([enum]):::external
-        E270([functools]):::external
-        E271([importlib]):::external
-        E272([json]):::external
+        E268([argparse]):::external
+        E269([asyncio]):::external
+        E270([collections]):::external
+        E271([contextlib]):::external
+        E272([contextvars]):::external
+        E273([dataclasses]):::external
+        E274([enum]):::external
+        E275([functools]):::external
+        E276([importlib]):::external
+        E277([json]):::external
     end
-    M0 -.-> E271
-    M6 -.-> E263
-    M6 -.-> E265
+    M0 -.-> E276
     M6 -.-> E268
+    M6 -.-> E270
+    M6 -.-> E273
     M6 --> M16
     M6 --> M32
-    M8 -.-> E271
-    M15 -.-> E266
-    M15 -.-> E267
-    M15 -.-> E268
-    M15 --> M16
-    M15 --> M209
-    M75 -.-> E268
+    M8 -.-> E276
+    M15 -.-> E271
+    M15 -.-> E272
+    M15 -.-> E273
+    M15 --> M42
+    M15 --> M214
+    M75 -.-> E273
     M75 --> M77
     M101 --> M102
     M101 --> M103
-    M101 --> M119
-    M101 --> M122
-    M123 -.-> E265
-    M124 --> M57
-    M133 -.-> E265
-    M133 -.-> E268
-    M133 -.-> E272
-    M133 --> M59
-    M133 --> M205
-    M180 --> M59
-    M209 -.-> E269
-    M233 -.-> E264
-    M233 -.-> E265
-    M233 -.-> E267
-    M233 -.-> E268
-    M233 -.-> E269
-    M233 -.-> E270
+    M101 --> M123
+    M101 --> M126
+    M127 -.-> E270
+    M128 --> M57
+    M138 -.-> E270
+    M138 -.-> E273
+    M138 -.-> E277
+    M138 --> M59
+    M138 --> M210
+    M185 --> M59
+    M214 -.-> E274
+    M238 -.-> E269
+    M238 -.-> E270
+    M238 -.-> E272
+    M238 -.-> E273
+    M238 -.-> E274
+    M238 -.-> E275
     click M0 "files/files/src/local_deepwiki/__init__.md"
     click M1 "files/files/src/local_deepwiki/cli/__init__.md"
     click M2 "files/files/src/local_deepwiki/cli/cache_cli.md"
@@ -423,164 +428,169 @@ flowchart TD
     click M102 "files/files/src/local_deepwiki/generators/analysis/architecture_health.md"
     click M103 "files/files/src/local_deepwiki/generators/analysis/architecture_report.md"
     click M104 "files/files/src/local_deepwiki/generators/analysis/callgraph.md"
-    click M105 "files/files/src/local_deepwiki/generators/analysis/complexity.md"
-    click M106 "files/files/src/local_deepwiki/generators/analysis/coupling.md"
-    click M107 "files/files/src/local_deepwiki/generators/analysis/coupling_page.md"
-    click M108 "files/files/src/local_deepwiki/generators/analysis/coverage.md"
-    click M109 "files/files/src/local_deepwiki/generators/analysis/dependency_graph.md"
-    click M110 "files/files/src/local_deepwiki/generators/analysis/dependency_graph_data.md"
-    click M111 "files/files/src/local_deepwiki/generators/analysis/design_smells.md"
-    click M112 "files/files/src/local_deepwiki/generators/analysis/glossary.md"
-    click M113 "files/files/src/local_deepwiki/generators/analysis/health_page.md"
-    click M114 "files/files/src/local_deepwiki/generators/analysis/health_scoring.md"
-    click M115 "files/files/src/local_deepwiki/generators/analysis/hotspots.md"
-    click M116 "files/files/src/local_deepwiki/generators/analysis/hotspots_page.md"
-    click M117 "files/files/src/local_deepwiki/generators/analysis/inheritance.md"
-    click M118 "files/files/src/local_deepwiki/generators/analysis/layer_analysis.md"
-    click M119 "files/files/src/local_deepwiki/generators/analysis/module_dependencies.md"
-    click M120 "files/files/src/local_deepwiki/generators/analysis/module_health.md"
-    click M121 "files/files/src/local_deepwiki/generators/analysis/onboarding.md"
-    click M122 "files/files/src/local_deepwiki/generators/analysis/recommendations.md"
-    click M123 "files/files/src/local_deepwiki/generators/analysis/smells_page.md"
-    click M124 "files/files/src/local_deepwiki/generators/analysis/source_filter.md"
-    click M125 "files/files/src/local_deepwiki/generators/analysis/stale_detection.md"
-    click M126 "files/files/src/local_deepwiki/generators/analysis/tours.md"
-    click M127 "files/files/src/local_deepwiki/generators/changelog.md"
-    click M128 "files/files/src/local_deepwiki/generators/codemap/__init__.md"
-    click M129 "files/files/src/local_deepwiki/generators/codemap/cache.md"
-    click M130 "files/files/src/local_deepwiki/generators/codemap/generator.md"
-    click M131 "files/files/src/local_deepwiki/generators/codemap/graph.md"
-    click M132 "files/files/src/local_deepwiki/generators/codemap/models.md"
-    click M133 "files/files/src/local_deepwiki/generators/codemap/overview.md"
-    click M134 "files/files/src/local_deepwiki/generators/codemap/params.md"
-    click M135 "files/files/src/local_deepwiki/generators/codemap/viz.md"
-    click M136 "files/files/src/local_deepwiki/generators/context_builder.md"
-    click M137 "files/files/src/local_deepwiki/generators/crosslinks.md"
-    click M138 "files/files/src/local_deepwiki/generators/diagrams/__init__.md"
-    click M139 "files/files/src/local_deepwiki/generators/diagrams/_utils.md"
-    click M140 "files/files/src/local_deepwiki/generators/diagrams/class_diagram.md"
-    click M141 "files/files/src/local_deepwiki/generators/diagrams/dependency_diagram.md"
-    click M142 "files/files/src/local_deepwiki/generators/diagrams/language_pie.md"
-    click M143 "files/files/src/local_deepwiki/generators/diagrams/module_diagram.md"
-    click M144 "files/files/src/local_deepwiki/generators/diagrams/sequence_diagram.md"
-    click M145 "files/files/src/local_deepwiki/generators/dir_tree.md"
-    click M146 "files/files/src/local_deepwiki/generators/examples/__init__.md"
-    click M147 "files/files/src/local_deepwiki/generators/examples/discovery.md"
-    click M148 "files/files/src/local_deepwiki/generators/examples/docstring.md"
-    click M149 "files/files/src/local_deepwiki/generators/examples/extractor.md"
-    click M150 "files/files/src/local_deepwiki/generators/examples/orchestrator.md"
-    click M151 "files/files/src/local_deepwiki/generators/examples/plugin.md"
-    click M152 "files/files/src/local_deepwiki/generators/lazy_cache.md"
-    click M153 "files/files/src/local_deepwiki/generators/lazy_generator.md"
-    click M154 "files/files/src/local_deepwiki/generators/lazy_resources.md"
-    click M155 "files/files/src/local_deepwiki/generators/llms_txt.md"
-    click M156 "files/files/src/local_deepwiki/generators/manifest.md"
-    click M157 "files/files/src/local_deepwiki/generators/manifest_parsers.md"
-    click M158 "files/files/src/local_deepwiki/generators/prefetch.md"
-    click M159 "files/files/src/local_deepwiki/generators/progress_tracker.md"
-    click M160 "files/files/src/local_deepwiki/generators/protocols.md"
-    click M161 "files/files/src/local_deepwiki/generators/search.md"
-    click M162 "files/files/src/local_deepwiki/generators/see_also.md"
-    click M163 "files/files/src/local_deepwiki/generators/source_refs.md"
-    click M164 "files/files/src/local_deepwiki/generators/toc.md"
-    click M165 "files/files/src/local_deepwiki/generators/wiki/__init__.md"
-    click M166 "files/files/src/local_deepwiki/generators/wiki/codemap_pages.md"
-    click M167 "files/files/src/local_deepwiki/generators/wiki/context.md"
-    click M168 "files/files/src/local_deepwiki/generators/wiki/files.md"
-    click M169 "files/files/src/local_deepwiki/generators/wiki/generator.md"
-    click M170 "files/files/src/local_deepwiki/generators/wiki/modules.md"
-    click M171 "files/files/src/local_deepwiki/generators/wiki/pages.md"
-    click M172 "files/files/src/local_deepwiki/generators/wiki/phases.md"
-    click M173 "files/files/src/local_deepwiki/generators/wiki/pipeline.md"
-    click M174 "files/files/src/local_deepwiki/generators/wiki/pipeline_params.md"
-    click M175 "files/files/src/local_deepwiki/generators/wiki/plugin_runner.md"
-    click M176 "files/files/src/local_deepwiki/generators/wiki/postprocessing.md"
-    click M177 "files/files/src/local_deepwiki/generators/wiki/source_formatter.md"
-    click M178 "files/files/src/local_deepwiki/generators/wiki/status.md"
-    click M179 "files/files/src/local_deepwiki/generators/wiki/term_validator.md"
-    click M180 "files/files/src/local_deepwiki/generators/wiki/utils.md"
-    click M181 "files/files/src/local_deepwiki/handlers/__init__.md"
-    click M182 "files/files/src/local_deepwiki/handlers/_error_handling.md"
-    click M183 "files/files/src/local_deepwiki/handlers/_export_validation.md"
-    click M184 "files/files/src/local_deepwiki/handlers/_index_helpers.md"
-    click M185 "files/files/src/local_deepwiki/handlers/_progress.md"
-    click M186 "files/files/src/local_deepwiki/handlers/_response.md"
-    click M187 "files/files/src/local_deepwiki/handlers/agentic.md"
-    click M188 "files/files/src/local_deepwiki/handlers/agentic_data.md"
-    click M189 "files/files/src/local_deepwiki/handlers/agentic_workflows.md"
-    click M190 "files/files/src/local_deepwiki/handlers/analysis_architecture.md"
-    click M191 "files/files/src/local_deepwiki/handlers/analysis_diff.md"
-    click M192 "files/files/src/local_deepwiki/handlers/analysis_entity.md"
-    click M193 "files/files/src/local_deepwiki/handlers/analysis_metadata.md"
-    click M194 "files/files/src/local_deepwiki/handlers/analysis_search.md"
-    click M195 "files/files/src/local_deepwiki/handlers/codemap.md"
-    click M196 "files/files/src/local_deepwiki/handlers/core.md"
-    click M197 "files/files/src/local_deepwiki/handlers/generators.md"
-    click M198 "files/files/src/local_deepwiki/handlers/indexing.md"
-    click M199 "files/files/src/local_deepwiki/handlers/prompts.md"
-    click M200 "files/files/src/local_deepwiki/handlers/research.md"
-    click M201 "files/files/src/local_deepwiki/handlers/resources.md"
-    click M202 "files/files/src/local_deepwiki/handlers/session_state.md"
-    click M203 "files/files/src/local_deepwiki/handlers/types.md"
-    click M204 "files/files/src/local_deepwiki/handlers/web_server.md"
-    click M205 "files/files/src/local_deepwiki/logging.md"
-    click M206 "files/files/src/local_deepwiki/models/__init__.md"
-    click M207 "files/files/src/local_deepwiki/models/chunks.md"
-    click M208 "files/files/src/local_deepwiki/models/foundation.md"
-    click M209 "files/files/src/local_deepwiki/models/provider_types.md"
-    click M210 "files/files/src/local_deepwiki/models/research.md"
-    click M211 "files/files/src/local_deepwiki/models/tool_args.md"
-    click M212 "files/files/src/local_deepwiki/models/wiki.md"
-    click M213 "files/files/src/local_deepwiki/plugins/__init__.md"
-    click M214 "files/files/src/local_deepwiki/plugins/base.md"
-    click M215 "files/files/src/local_deepwiki/plugins/registry.md"
-    click M216 "files/files/src/local_deepwiki/progress.md"
-    click M217 "files/files/src/local_deepwiki/prompts.md"
-    click M218 "files/files/src/local_deepwiki/providers/__init__.md"
-    click M219 "files/files/src/local_deepwiki/providers/base.md"
-    click M220 "files/files/src/local_deepwiki/providers/credentials.md"
-    click M221 "files/files/src/local_deepwiki/providers/embeddings/__init__.md"
-    click M222 "files/files/src/local_deepwiki/providers/embeddings/cache.md"
-    click M223 "files/files/src/local_deepwiki/providers/embeddings/local.md"
-    click M224 "files/files/src/local_deepwiki/providers/embeddings/openai.md"
-    click M225 "files/files/src/local_deepwiki/providers/errors.md"
-    click M226 "files/files/src/local_deepwiki/providers/llm/__init__.md"
-    click M227 "files/files/src/local_deepwiki/providers/llm/anthropic.md"
-    click M228 "files/files/src/local_deepwiki/providers/llm/cached.md"
-    click M229 "files/files/src/local_deepwiki/providers/llm/ollama.md"
-    click M230 "files/files/src/local_deepwiki/providers/llm/openai.md"
-    click M231 "files/files/src/local_deepwiki/providers/retry.md"
-    click M232 "files/files/src/local_deepwiki/security/__init__.md"
-    click M233 "files/files/src/local_deepwiki/security/access_control.md"
-    click M234 "files/files/src/local_deepwiki/security/repository_access.md"
-    click M235 "files/files/src/local_deepwiki/security/role_config.md"
-    click M236 "files/files/src/local_deepwiki/server.md"
-    click M237 "files/files/src/local_deepwiki/services/__init__.md"
-    click M238 "files/files/src/local_deepwiki/services/analysis_service.md"
-    click M239 "files/files/src/local_deepwiki/services/generator_service.md"
-    click M240 "files/files/src/local_deepwiki/services/graph_expansion.md"
-    click M241 "files/files/src/local_deepwiki/services/indexing_service.md"
-    click M242 "files/files/src/local_deepwiki/services/models.md"
-    click M243 "files/files/src/local_deepwiki/services/protocols.md"
-    click M244 "files/files/src/local_deepwiki/services/provider_factory.md"
-    click M245 "files/files/src/local_deepwiki/services/query_service.md"
-    click M246 "files/files/src/local_deepwiki/services/wiki_service.md"
-    click M247 "files/files/src/local_deepwiki/tool_defs/__init__.md"
-    click M248 "files/files/src/local_deepwiki/tool_defs/analysis.md"
-    click M249 "files/files/src/local_deepwiki/tool_defs/annotations.md"
-    click M250 "files/files/src/local_deepwiki/tool_defs/core.md"
-    click M251 "files/files/src/local_deepwiki/tool_defs/generators.md"
-    click M252 "files/files/src/local_deepwiki/tool_defs/workflow.md"
-    click M253 "files/files/src/local_deepwiki/validation.md"
-    click M254 "files/files/src/local_deepwiki/watcher.md"
-    click M255 "files/files/src/local_deepwiki/web/__init__.md"
-    click M256 "files/files/src/local_deepwiki/web/app.md"
-    click M257 "files/files/src/local_deepwiki/web/rate_limit.md"
-    click M258 "files/files/src/local_deepwiki/web/routes_architecture.md"
-    click M259 "files/files/src/local_deepwiki/web/routes_chat.md"
-    click M260 "files/files/src/local_deepwiki/web/routes_codemap.md"
-    click M261 "files/files/src/local_deepwiki/web/routes_research.md"
-    click M262 "files/files/src/local_deepwiki/web/utils.md"
+    click M105 "files/files/src/local_deepwiki/generators/analysis/churn.md"
+    click M106 "files/files/src/local_deepwiki/generators/analysis/cohesion.md"
+    click M107 "files/files/src/local_deepwiki/generators/analysis/complexity.md"
+    click M108 "files/files/src/local_deepwiki/generators/analysis/coupling.md"
+    click M109 "files/files/src/local_deepwiki/generators/analysis/coupling_page.md"
+    click M110 "files/files/src/local_deepwiki/generators/analysis/coverage.md"
+    click M111 "files/files/src/local_deepwiki/generators/analysis/dependency_graph.md"
+    click M112 "files/files/src/local_deepwiki/generators/analysis/dependency_graph_data.md"
+    click M113 "files/files/src/local_deepwiki/generators/analysis/design_smells.md"
+    click M114 "files/files/src/local_deepwiki/generators/analysis/duplication.md"
+    click M115 "files/files/src/local_deepwiki/generators/analysis/glossary.md"
+    click M116 "files/files/src/local_deepwiki/generators/analysis/health_page.md"
+    click M117 "files/files/src/local_deepwiki/generators/analysis/health_scoring.md"
+    click M118 "files/files/src/local_deepwiki/generators/analysis/hotspots.md"
+    click M119 "files/files/src/local_deepwiki/generators/analysis/hotspots_page.md"
+    click M120 "files/files/src/local_deepwiki/generators/analysis/inheritance.md"
+    click M121 "files/files/src/local_deepwiki/generators/analysis/layer_analysis.md"
+    click M122 "files/files/src/local_deepwiki/generators/analysis/maintainability.md"
+    click M123 "files/files/src/local_deepwiki/generators/analysis/module_dependencies.md"
+    click M124 "files/files/src/local_deepwiki/generators/analysis/module_health.md"
+    click M125 "files/files/src/local_deepwiki/generators/analysis/onboarding.md"
+    click M126 "files/files/src/local_deepwiki/generators/analysis/recommendations.md"
+    click M127 "files/files/src/local_deepwiki/generators/analysis/smells_page.md"
+    click M128 "files/files/src/local_deepwiki/generators/analysis/source_filter.md"
+    click M129 "files/files/src/local_deepwiki/generators/analysis/stale_detection.md"
+    click M130 "files/files/src/local_deepwiki/generators/analysis/testability.md"
+    click M131 "files/files/src/local_deepwiki/generators/analysis/tours.md"
+    click M132 "files/files/src/local_deepwiki/generators/changelog.md"
+    click M133 "files/files/src/local_deepwiki/generators/codemap/__init__.md"
+    click M134 "files/files/src/local_deepwiki/generators/codemap/cache.md"
+    click M135 "files/files/src/local_deepwiki/generators/codemap/generator.md"
+    click M136 "files/files/src/local_deepwiki/generators/codemap/graph.md"
+    click M137 "files/files/src/local_deepwiki/generators/codemap/models.md"
+    click M138 "files/files/src/local_deepwiki/generators/codemap/overview.md"
+    click M139 "files/files/src/local_deepwiki/generators/codemap/params.md"
+    click M140 "files/files/src/local_deepwiki/generators/codemap/viz.md"
+    click M141 "files/files/src/local_deepwiki/generators/context_builder.md"
+    click M142 "files/files/src/local_deepwiki/generators/crosslinks.md"
+    click M143 "files/files/src/local_deepwiki/generators/diagrams/__init__.md"
+    click M144 "files/files/src/local_deepwiki/generators/diagrams/_utils.md"
+    click M145 "files/files/src/local_deepwiki/generators/diagrams/class_diagram.md"
+    click M146 "files/files/src/local_deepwiki/generators/diagrams/dependency_diagram.md"
+    click M147 "files/files/src/local_deepwiki/generators/diagrams/language_pie.md"
+    click M148 "files/files/src/local_deepwiki/generators/diagrams/module_diagram.md"
+    click M149 "files/files/src/local_deepwiki/generators/diagrams/sequence_diagram.md"
+    click M150 "files/files/src/local_deepwiki/generators/dir_tree.md"
+    click M151 "files/files/src/local_deepwiki/generators/examples/__init__.md"
+    click M152 "files/files/src/local_deepwiki/generators/examples/discovery.md"
+    click M153 "files/files/src/local_deepwiki/generators/examples/docstring.md"
+    click M154 "files/files/src/local_deepwiki/generators/examples/extractor.md"
+    click M155 "files/files/src/local_deepwiki/generators/examples/orchestrator.md"
+    click M156 "files/files/src/local_deepwiki/generators/examples/plugin.md"
+    click M157 "files/files/src/local_deepwiki/generators/lazy_cache.md"
+    click M158 "files/files/src/local_deepwiki/generators/lazy_generator.md"
+    click M159 "files/files/src/local_deepwiki/generators/lazy_resources.md"
+    click M160 "files/files/src/local_deepwiki/generators/llms_txt.md"
+    click M161 "files/files/src/local_deepwiki/generators/manifest.md"
+    click M162 "files/files/src/local_deepwiki/generators/manifest_parsers.md"
+    click M163 "files/files/src/local_deepwiki/generators/prefetch.md"
+    click M164 "files/files/src/local_deepwiki/generators/progress_tracker.md"
+    click M165 "files/files/src/local_deepwiki/generators/protocols.md"
+    click M166 "files/files/src/local_deepwiki/generators/search.md"
+    click M167 "files/files/src/local_deepwiki/generators/see_also.md"
+    click M168 "files/files/src/local_deepwiki/generators/source_refs.md"
+    click M169 "files/files/src/local_deepwiki/generators/toc.md"
+    click M170 "files/files/src/local_deepwiki/generators/wiki/__init__.md"
+    click M171 "files/files/src/local_deepwiki/generators/wiki/codemap_pages.md"
+    click M172 "files/files/src/local_deepwiki/generators/wiki/context.md"
+    click M173 "files/files/src/local_deepwiki/generators/wiki/files.md"
+    click M174 "files/files/src/local_deepwiki/generators/wiki/generator.md"
+    click M175 "files/files/src/local_deepwiki/generators/wiki/modules.md"
+    click M176 "files/files/src/local_deepwiki/generators/wiki/pages.md"
+    click M177 "files/files/src/local_deepwiki/generators/wiki/phases.md"
+    click M178 "files/files/src/local_deepwiki/generators/wiki/pipeline.md"
+    click M179 "files/files/src/local_deepwiki/generators/wiki/pipeline_params.md"
+    click M180 "files/files/src/local_deepwiki/generators/wiki/plugin_runner.md"
+    click M181 "files/files/src/local_deepwiki/generators/wiki/postprocessing.md"
+    click M182 "files/files/src/local_deepwiki/generators/wiki/source_formatter.md"
+    click M183 "files/files/src/local_deepwiki/generators/wiki/status.md"
+    click M184 "files/files/src/local_deepwiki/generators/wiki/term_validator.md"
+    click M185 "files/files/src/local_deepwiki/generators/wiki/utils.md"
+    click M186 "files/files/src/local_deepwiki/handlers/__init__.md"
+    click M187 "files/files/src/local_deepwiki/handlers/_error_handling.md"
+    click M188 "files/files/src/local_deepwiki/handlers/_export_validation.md"
+    click M189 "files/files/src/local_deepwiki/handlers/_index_helpers.md"
+    click M190 "files/files/src/local_deepwiki/handlers/_progress.md"
+    click M191 "files/files/src/local_deepwiki/handlers/_response.md"
+    click M192 "files/files/src/local_deepwiki/handlers/agentic.md"
+    click M193 "files/files/src/local_deepwiki/handlers/agentic_data.md"
+    click M194 "files/files/src/local_deepwiki/handlers/agentic_workflows.md"
+    click M195 "files/files/src/local_deepwiki/handlers/analysis_architecture.md"
+    click M196 "files/files/src/local_deepwiki/handlers/analysis_diff.md"
+    click M197 "files/files/src/local_deepwiki/handlers/analysis_entity.md"
+    click M198 "files/files/src/local_deepwiki/handlers/analysis_metadata.md"
+    click M199 "files/files/src/local_deepwiki/handlers/analysis_search.md"
+    click M200 "files/files/src/local_deepwiki/handlers/codemap.md"
+    click M201 "files/files/src/local_deepwiki/handlers/core.md"
+    click M202 "files/files/src/local_deepwiki/handlers/generators.md"
+    click M203 "files/files/src/local_deepwiki/handlers/indexing.md"
+    click M204 "files/files/src/local_deepwiki/handlers/prompts.md"
+    click M205 "files/files/src/local_deepwiki/handlers/research.md"
+    click M206 "files/files/src/local_deepwiki/handlers/resources.md"
+    click M207 "files/files/src/local_deepwiki/handlers/session_state.md"
+    click M208 "files/files/src/local_deepwiki/handlers/types.md"
+    click M209 "files/files/src/local_deepwiki/handlers/web_server.md"
+    click M210 "files/files/src/local_deepwiki/logging.md"
+    click M211 "files/files/src/local_deepwiki/models/__init__.md"
+    click M212 "files/files/src/local_deepwiki/models/chunks.md"
+    click M213 "files/files/src/local_deepwiki/models/foundation.md"
+    click M214 "files/files/src/local_deepwiki/models/provider_types.md"
+    click M215 "files/files/src/local_deepwiki/models/research.md"
+    click M216 "files/files/src/local_deepwiki/models/tool_args.md"
+    click M217 "files/files/src/local_deepwiki/models/wiki.md"
+    click M218 "files/files/src/local_deepwiki/plugins/__init__.md"
+    click M219 "files/files/src/local_deepwiki/plugins/base.md"
+    click M220 "files/files/src/local_deepwiki/plugins/registry.md"
+    click M221 "files/files/src/local_deepwiki/progress.md"
+    click M222 "files/files/src/local_deepwiki/prompts.md"
+    click M223 "files/files/src/local_deepwiki/providers/__init__.md"
+    click M224 "files/files/src/local_deepwiki/providers/base.md"
+    click M225 "files/files/src/local_deepwiki/providers/credentials.md"
+    click M226 "files/files/src/local_deepwiki/providers/embeddings/__init__.md"
+    click M227 "files/files/src/local_deepwiki/providers/embeddings/cache.md"
+    click M228 "files/files/src/local_deepwiki/providers/embeddings/local.md"
+    click M229 "files/files/src/local_deepwiki/providers/embeddings/openai.md"
+    click M230 "files/files/src/local_deepwiki/providers/errors.md"
+    click M231 "files/files/src/local_deepwiki/providers/llm/__init__.md"
+    click M232 "files/files/src/local_deepwiki/providers/llm/anthropic.md"
+    click M233 "files/files/src/local_deepwiki/providers/llm/cached.md"
+    click M234 "files/files/src/local_deepwiki/providers/llm/ollama.md"
+    click M235 "files/files/src/local_deepwiki/providers/llm/openai.md"
+    click M236 "files/files/src/local_deepwiki/providers/retry.md"
+    click M237 "files/files/src/local_deepwiki/security/__init__.md"
+    click M238 "files/files/src/local_deepwiki/security/access_control.md"
+    click M239 "files/files/src/local_deepwiki/security/repository_access.md"
+    click M240 "files/files/src/local_deepwiki/security/role_config.md"
+    click M241 "files/files/src/local_deepwiki/server.md"
+    click M242 "files/files/src/local_deepwiki/services/__init__.md"
+    click M243 "files/files/src/local_deepwiki/services/analysis_service.md"
+    click M244 "files/files/src/local_deepwiki/services/generator_service.md"
+    click M245 "files/files/src/local_deepwiki/services/graph_expansion.md"
+    click M246 "files/files/src/local_deepwiki/services/indexing_service.md"
+    click M247 "files/files/src/local_deepwiki/services/models.md"
+    click M248 "files/files/src/local_deepwiki/services/protocols.md"
+    click M249 "files/files/src/local_deepwiki/services/provider_factory.md"
+    click M250 "files/files/src/local_deepwiki/services/query_service.md"
+    click M251 "files/files/src/local_deepwiki/services/wiki_service.md"
+    click M252 "files/files/src/local_deepwiki/tool_defs/__init__.md"
+    click M253 "files/files/src/local_deepwiki/tool_defs/analysis.md"
+    click M254 "files/files/src/local_deepwiki/tool_defs/annotations.md"
+    click M255 "files/files/src/local_deepwiki/tool_defs/core.md"
+    click M256 "files/files/src/local_deepwiki/tool_defs/generators.md"
+    click M257 "files/files/src/local_deepwiki/tool_defs/workflow.md"
+    click M258 "files/files/src/local_deepwiki/validation.md"
+    click M259 "files/files/src/local_deepwiki/watcher.md"
+    click M260 "files/files/src/local_deepwiki/web/__init__.md"
+    click M261 "files/files/src/local_deepwiki/web/app.md"
+    click M262 "files/files/src/local_deepwiki/web/rate_limit.md"
+    click M263 "files/files/src/local_deepwiki/web/routes_architecture.md"
+    click M264 "files/files/src/local_deepwiki/web/routes_chat.md"
+    click M265 "files/files/src/local_deepwiki/web/routes_codemap.md"
+    click M266 "files/files/src/local_deepwiki/web/routes_research.md"
+    click M267 "files/files/src/local_deepwiki/web/utils.md"
     classDef external fill:#2d2d3d,stroke:#666,stroke-dasharray: 5 5
     classDef circular fill:#ff6b6b,stroke:#c92a2a
 ```
@@ -602,16 +612,16 @@ flowchart TD
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
-- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
-- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
-- [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
-- [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
-- [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
-- [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
-- `src/local_deepwiki/__init__.py`
-- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
-- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
+- [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
+- `src/local_deepwiki/models/__init__.py`
+- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
+- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
+- [`src/local_deepwiki/generators/analysis/architecture_health.py:55-123`](files/src/local_deepwiki/generators/analysis/architecture_health.md)
+- [`src/local_deepwiki/generators/analysis/maintainability.py:69-79`](files/src/local_deepwiki/generators/analysis/maintainability.md)
+- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
+- [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/generators/analysis/churn.py:25-38`](files/src/local_deepwiki/generators/analysis/churn.md)
 
 
-*Showing 10 of 263 source files.*
+*Showing 10 of 268 source files.*

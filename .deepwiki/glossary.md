@@ -4,14 +4,14 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 **Quick Navigation:** [#](##) | [A](#a) | [B](#b) | [C](#c) | [D](#d) | [E](#e) | [F](#f) | [G](#g) | [H](#h) | [I](#i) | [K](#k) | [L](#l) | [M](#m) | [N](#n) | [O](#o) | [P](#p) | [Q](#q) | [R](#r) | [S](#s) | [T](#t) | [U](#u) | [V](#v) | [W](#w)
 
-**Total:** 2528 entities (409 classes, 1295 functions, 824 methods)
+**Total:** 2586 entities (416 classes, 1346 functions, 824 methods)
 
 ---
 
 <p><a href="#" onclick="document.querySelectorAll('details').forEach(d=>d.open=true);return false">Expand All</a> | <a href="#" onclick="document.querySelectorAll('details').forEach(d=>d.open=false);return false">Collapse All</a></p>
 
 <details id="#" markdown="1">
-<summary><strong>#</strong> — 1114 entities</summary>
+<summary><strong>#</strong> — 1140 entities</summary>
 
 - ▪️ **[`PluginRegistry._`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: LanguageParserPlugin) → None` (`registry.py`)
 - ▪️ **[`PluginRegistry._`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: WikiGeneratorPlugin) → None` (`registry.py`)
@@ -181,6 +181,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_build_file_list_section`](files/src/local_deepwiki/generators/wiki/modules.md)** `(files: list[str], relevant_chunks: list) → str` (`modules.py`) - Build a file list with brief descriptions from search res...
 - ▪️ **[`DependencyGraphGenerator._build_file_nodes`](files/src/local_deepwiki/generators/analysis/dependency_graph.md)** `(module_files: list) → "DependencyGraph"` (`dependency_graph.py`) - Create a [DependencyGraph](files/src/local_deepwiki/generators/analysis/dependency_graph_data.md) populated with nodes for each mo...
 - ▪️ **[`InteractiveSearch._build_filters_panel`](files/src/local_deepwiki/cli/interactive_search.md)** `(...) → Panel` (`interactive_search.py`) - Build the filters display panel.
+- 🔹 **[`_build_fingerprints`](files/src/local_deepwiki/generators/analysis/duplication.md)** `(repo_path: Path, min_lines: int, exclude_tests: bool) → dict[int, list[dict[str, Any]]]` (`duplication.py`) - Build hash -> location mapping from all files.
 - 🔹 **[`_build_flow_selection_prompt`](files/src/local_deepwiki/generators/analysis/onboarding.md)** `(manifest: ProjectManifest, entry_points: list[Path], directory_tree: str) → str` (`onboarding.py`) - Construct the LLM prompt for selecting important newcomer...
 - 🔹 **[`_build_freshness_info`](files/src/local_deepwiki/cli/status_cli.md)** `(repo_path: Path, status: object, manager: object, ...+1) → dict` (`status_cli.py`) - Build the freshness sub-dict by scanning the current repo...
 - 🔹 **[`_build_freshness_summary_section`](files/src/local_deepwiki/generators/analysis/stale_detection.md)** `(report: StaleReport) → list[str]` (`stale_detection.py`) - Build the summary section lines for the freshness report.
@@ -286,8 +287,10 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_chunk_to_text`](files/src/local_deepwiki/core/vectorstore/store.md)** `(chunk: [CodeChunk](files/src/local_deepwiki/models/chunks.md)) → str` (`store.py`) - Convert a chunk to text for embedding.
 - 🔷 **[`_ChunkMaps`](files/src/local_deepwiki/generators/wiki/source_formatter.md)** (`source_formatter.py`) - Maps for looking up chunks by name.
 - 🔹 **[`_classify_doctest_line`](files/src/local_deepwiki/generators/examples/docstring.md)** `(stripped: str, in_code: bool) → str` (`docstring.py`) - Classify a stripped doctest line into one of: prompt, con...
+- 🔹 **[`_classify_files`](files/src/local_deepwiki/generators/analysis/testability.md)** `(all_py: list[tuple[Path, str]], source_files_set: set[str]) → tuple[list[tuple[Path, str]], list[tuple[Path, str]]]` (`testability.py`) - Split files into test and source lists. Populates *source...
 - 🔹 **[`_classify_generic_error`](files/src/local_deepwiki/providers/retry.md)** `(e: Exception) → tuple[bool, bool]` (`retry.py`) - Classify a generic exception as rate-limit and/or server-...
 - 🔹 **[`_classify_hint`](files/src/local_deepwiki/error_factories.md)** `(msg_lower: str, classifiers: tuple[tuple[tuple[str, ...], str], ...], default: str) → str` (`error_factories.py`) - Match the first classifier whose keywords appear in the m...
+- 🔹 **[`_classify_line`](files/src/local_deepwiki/generators/analysis/churn.md)** `(stripped: str) → tuple[str, str | None]` (`churn.py`) - Classify a git log line as 'blank', 'binary', 'numstat', ...
 - 🔹 **[`_classify_provider_error`](files/src/local_deepwiki/error_factories.md)** `(provider_name: str, original_error: Exception) → tuple[str, str]` (`error_factories.py`) - Return (hint, message) for a provider error.
 - 🔹 **[`_cleanup_all_servers`](files/src/local_deepwiki/handlers/web_server.md)** `(...) → None` (`web_server.py`) - Terminate all tracked servers. Registered via atexit.
 - 🔹 **[`_cleanup_orphaned_codemap_pages`](files/src/local_deepwiki/generators/wiki/codemap_pages.md)** `(wiki_path: Path | None, generated_topics: list[dict]) → None` (`codemap_pages.py`) - Remove codemap pages on disk that are no longer in the ge...
@@ -315,13 +318,16 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹⚡ **[`_collect_inheritance`](files/src/local_deepwiki/handlers/analysis_entity.md)** `(result: dict[str, Any], entity_name: str, index_status: Any, ...+1) → None` (`analysis_entity.py`) - Collect inheritance hierarchy for a class entity.
 - 🔹⚡ **[`_collect_inheritance`](files/src/local_deepwiki/services/analysis_service.md)** `(result: dict[str, Any], entity_name: str, index_status: Any, ...+1) → None` (`analysis_service.py`) - Collect inheritance hierarchy for a class entity.
 - 🔹⚡ **[`_collect_inheritance_dependents`](files/src/local_deepwiki/services/analysis_service.md)** `(result: dict[str, Any], ctx: [EntityAnalysisContext](files/src/local_deepwiki/services/analysis_service.md), affected_files: set[str], ...+1) → None` ⚠️`ValueError` (`analysis_service.py`) - Collect classes that inherit from classes in *ctx.file_pa...
+- 🔹 **[`_collect_leaves`](files/src/local_deepwiki/generators/analysis/maintainability.md)** `(node: Node) → list[Node]` (`maintainability.py`) - Collect all leaf nodes (no children) from an AST subtree.
 - 🔹 **[`_collect_method_from_chunk`](files/src/local_deepwiki/generators/diagrams/class_diagram.md)** `(chunk: [CodeChunk](files/src/local_deepwiki/models/chunks.md), methods_by_class: dict[str, list[tuple[str, str | None]]], show_types: bool) → None` (`class_diagram.py`) - Extract method info from a METHOD chunk and add to dictio...
 - ▪️ **[`DependencyGraphGenerator._collect_module_files`](files/src/local_deepwiki/generators/analysis/dependency_graph.md)** `(index_status: [IndexStatus](files/src/local_deepwiki/models/wiki.md), module_path: str, exclude_tests: bool) → list` (`dependency_graph.py`) - Filter index files to those belonging to the specified mo...
 - 🔹⚡ **[`_collect_modules_to_generate`](files/src/local_deepwiki/generators/wiki/modules.md)** `(directories: dict[str, list[str]], status_manager: Any, full_rebuild: bool) → tuple[list[tuple[str, list[str]]], list[[WikiPage](files/src/local_deepwiki/export/streaming.md)], int]` (`modules.py`) - Filter directories and return modules that need (re)gener...
+- 🔹 **[`_collect_node_types`](files/src/local_deepwiki/generators/analysis/duplication.md)** `(node: Any) → list[str]` (`duplication.py`) - Walk all descendants depth-first and collect node type st...
 - 🔹 **[`_collect_page_matches`](files/src/local_deepwiki/handlers/analysis_search.md)** `(pages: list[dict[str, Any]], query: str, wiki_path: Path) → list[dict[str, Any]]` (`analysis_search.py`) - Score and collect matching wiki pages.
 - ▪️ **[`PdfExporter._collect_pages_in_order`](files/src/local_deepwiki/export/pdf_sync.md)** `(...) → list[Path]` (`pdf_sync.py`) - Collect markdown files in TOC order.
 - 🔹 **[`_collect_parent_identifiers`](files/src/local_deepwiki/core/chunk_extractors.md)** `(heritage_node: Node, clause_types: set[str], id_types: set[str], ...+1) → list[str]` (`chunk_extractors.py`) - Collect parent identifiers from a heritage/delegation AST...
 - 🔹 **[`_collect_preceding_comments`](files/src/local_deepwiki/core/parser/docstrings.md)** `(node: Node, source: bytes, comment_types: set[str], ...+1) → list[str]` (`docstrings.py`) - Collect all consecutive preceding comment lines.
+- 🔹 **[`_collect_python_files`](files/src/local_deepwiki/generators/analysis/testability.md)** `(repo_path: Path) → list[tuple[Path, str]]` (`testability.py`) - Walk repo for .py files, skipping hidden/non-source dirs.
 - 🔹 **[`_collect_relevant_lines`](files/src/local_deepwiki/generators/examples/orchestrator.md)** `(lines: list[str], entity_name: str, max_lines: int) → list[str]` (`orchestrator.py`) - Collect lines from *lines* that demonstrate usage of *ent...
 - 🔹 **[`_collect_reverse_calls`](files/src/local_deepwiki/services/analysis_service.md)** `(result: dict[str, Any], ctx: [EntityAnalysisContext](files/src/local_deepwiki/services/analysis_service.md), affected_files: set[str], ...+1) → None` (`analysis_service.py`) - Extract reverse call graph and update affected sets.
 - 🔹 **[`_collect_see_also_entries`](files/src/local_deepwiki/generators/see_also.md)** `(relationships: [FileRelationships](files/src/local_deepwiki/generators/see_also.md), file_to_wiki: dict[str, str], current_wiki_path: str) → list[tuple[str, str, str]]` (`see_also.py`) - Collect (wiki_path, title, relationship_type) tuples from...
@@ -343,13 +349,18 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_compute_etag`](files/src/local_deepwiki/web/app.md)** `(file_path: Path) → str | None` (`app.py`) - Compute an ETag from file mtime and size, or None on error.
 - 🔹 **[`_compute_file_hash`](files/src/local_deepwiki/core/parser/code_parser.md)** `(file_path: Path) → str` (`code_parser.py`) - Compute SHA-256 hash of a file using chunked reading.
 - 🔹 **[`_compute_file_hash_safe`](files/src/local_deepwiki/cli/status_cli.md)** `(file_path: Path) → str | None` (`status_cli.py`) - Return the SHA-256 hash of *file_path*, or None on OSError.
+- 🔹 **[`_compute_gini`](files/src/local_deepwiki/generators/analysis/churn.md)** `(values: list[int]) → float` (`churn.py`) - Compute Gini coefficient measuring churn concentration ac...
 - ▪️ **[`GraphAugmentedRetriever._compute_graph_score`](files/src/local_deepwiki/core/graph_rag/retriever.md)** `(min_vector_score: float, boost_factor: float, depth: int) → float` (`retriever.py`) - Compute score for a graph-discovered chunk.
+- 🔹 **[`_compute_halstead`](files/src/local_deepwiki/generators/analysis/maintainability.md)** `(func_node: Node, source: bytes) → dict[str, Any]` (`maintainability.py`) - Compute Halstead metrics for a function AST node.
 - ▪️ **[`LLMCache._compute_hash`](files/src/local_deepwiki/core/llm_cache.md)** `(system_prompt: str | None, prompt: str) → str` (`llm_cache.py`) - Compute exact match hash for fast lookup.
+- 🔹 **[`_compute_mi`](files/src/local_deepwiki/generators/analysis/maintainability.md)** `(halstead_volume: float, cc: int, loc: int) → float` (`maintainability.py`) - Compute normalized Maintainability Index (0-100).
+- 🔹 **[`_compute_mi_stats`](files/src/local_deepwiki/generators/analysis/maintainability.md)** `(all_functions: list[dict[str, Any]]) → dict[str, Any]` (`maintainability.py`) - Compute summary statistics from per-function MI values.
 - 🔹 **[`_compute_risk_level`](files/src/local_deepwiki/services/analysis_service.md)** `(affected_file_count: int) → str` (`analysis_service.py`) - Return ``low``, ``medium``, or ``high`` based on affected...
 - ▪️ **[`SearchCache._compute_similarity`](files/src/local_deepwiki/core/vectorstore/cache.md)** `(embedding1: list[float], embedding2: list[float]) → float` (`cache.py`) - Compute cosine similarity between two embeddings.
 - 🔹 **[`_compute_smell_diff`](files/src/local_deepwiki/generators/analysis/architecture_compare.md)** `(base_health: dict[str, Any], head_health: dict[str, Any]) → dict[str, Any]` (`architecture_compare.py`) - Diff high-severity smells between base and head health re...
 - 🔹 **[`_compute_smell_summary`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(all_smells: list[dict[str, Any]]) → dict[str, Any]` (`design_smells.py`) - Build the summary dict from a flat list of smell dicts.
 - 🔹 **[`_compute_suggestions`](files/src/local_deepwiki/handlers/agentic.md)** `(tools_used: list[str]) → list[dict[str, str]]` (`agentic.py`) - Build ordered suggestions from the tool-graph based on re...
+- 🔹 **[`_compute_testability_stats`](files/src/local_deepwiki/generators/analysis/testability.md)** `(source_paths: list[tuple[Path, str]], test_paths: list[tuple[Path, str]], test_files: list[dict[str, Any]], ...+4) → tuple[list[str], dict[str, Any]]` (`testability.py`) - Compute summary statistics.
 - 🔹 **[`_compute_verdict`](files/src/local_deepwiki/generators/analysis/architecture_compare.md)** `(deltas: dict[str, Any]) → dict[str, Any]` (`architecture_compare.py`) - Compute architecture verdict from deltas.
 - ▪️ **[`_CacheStorage._conn`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → sqlite3.Connection` (`cache.py`) - Return the current thread's connection via the owner's fa...
 - ▪️ **[`LLMCache._connect`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → LanceDB.DBConnection` (`llm_cache.py`) - Get or create database connection.
@@ -360,13 +371,16 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_convert_vector_results`](files/src/local_deepwiki/core/vectorstore/search_pipeline.md)** `(rows: list[dict[str, Any]], min_similarity: float, row_to_chunk: RowToChunk) → list[[SearchResult](files/src/local_deepwiki/handlers/types.md)]` (`search_pipeline.py`) - Convert raw LanceDB vector-search rows to SearchResult ob...
 - 🔹 **[`_count`](files/src/local_deepwiki/generators/analysis/hotspots.md)** `(n: Node) → None` (`hotspots.py`)
 - 🔹 **[`_count`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(n: Node) → None` (`design_smells.py`)
+- 🔹 **[`_count_assertions`](files/src/local_deepwiki/generators/analysis/testability.md)** `(content: str) → int` (`testability.py`) - Count assertion statements in a file.
 - 🔹 **[`_count_branches`](files/src/local_deepwiki/generators/analysis/complexity.md)** `(n: Node, count: list[int]) → None` (`complexity.py`) - Recursively count branch and logical-operator decision po...
 - 🔹 **[`_count_call_graph_connections`](files/src/local_deepwiki/generators/codemap/generator.md)** `(combined_cg: dict[str, list[str]]) → Counter[str]` (`generator.py`) - Count caller/callee mentions in the call graph, skipping ...
+- 🔹 **[`_count_cc`](files/src/local_deepwiki/generators/analysis/maintainability.md)** `(node: Node) → int` (`maintainability.py`) - Count cyclomatic complexity decision points inside a node.
 - 🔹 **[`_count_classes_in_file`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(full_path: Path) → tuple[int, int]` (`coupling.py`) - Return ``(total_classes, abstract_classes)`` found in *fu...
 - 🔹 **[`_count_comment_lines`](files/src/local_deepwiki/generators/analysis/complexity.md)** `(root: Node) → int` (`complexity.py`) - Count lines that contain comments.
 - 🔹 **[`_count_external_calls`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(func_node: Any) → tuple[str, int] | None` (`design_smells.py`) - Return (most_common_obj, count) for feature-envy detectio...
 - 🔹 **[`_count_module_edges`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(edges: list[dict[str, Any]]) → dict[str, int]` (`analysis_architecture.py`) - Count total edge appearances (source + target) per module...
 - 🔹 **[`_count_smells_by_type`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(smells: list[dict[str, Any]]) → dict[str, int]` (`analysis_architecture.py`) - Count smell occurrences grouped by type.
+- 🔹 **[`_count_source_lines`](files/src/local_deepwiki/generators/analysis/testability.md)** `(source_paths: list[tuple[Path, str]]) → int` (`testability.py`) - Sum line counts across source files.
 - 🔹 **[`_count_total_lines`](files/src/local_deepwiki/generators/analysis/architecture_health.md)** `(repo_path: Path) → int` (`architecture_health.py`) - Count total source lines across all Python files (excludi...
 - 🔹 **[`_count_wiki_pages`](files/src/local_deepwiki/cli/status_cli.md)** `(wiki_path: Path) → int` (`status_cli.py`) - Count .md files in the wiki directory.
 - 🔹 **`_create_anthropic`** `(config: [LLMConfig](files/src/local_deepwiki/config/provider_models.md)) → [LLMProvider](files/src/local_deepwiki/providers/base.md)` (`__init__.py`)
@@ -399,6 +413,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`ReasoningMixin._decompose_question`](files/src/local_deepwiki/core/deep_research/reasoning.md)** `(question: str) → list[[SubQuestion](files/src/local_deepwiki/models/research.md)]` (`reasoning.py`) - Decompose a complex question into sub-questions.
 - 🔹 **[`_deduplicate`](files/src/local_deepwiki/generators/analysis/recommendations.md)** `(recs: list[dict[str, Any]]) → list[dict[str, Any]]` (`recommendations.py`) - Remove duplicates and group related recommendations.
 - 🔹 **[`_deduplicate_candidates`](files/src/local_deepwiki/generators/codemap/graph.md)** `(scored: list[tuple[float, [CodemapNode](files/src/local_deepwiki/generators/codemap/models.md)]], extra: list[tuple[float, [CodemapNode](files/src/local_deepwiki/generators/codemap/models.md)]]) → list[tuple[float, [CodemapNode](files/src/local_deepwiki/generators/codemap/models.md)]]` (`graph.py`) - Merge *extra* into *scored*, dropping duplicates by ``qua...
+- 🔹 **[`_deduplicate_clone_group`](files/src/local_deepwiki/generators/analysis/duplication.md)** `(instances: list[dict[str, Any]]) → list[dict[str, Any]]` (`duplication.py`) - Remove overlapping windows from a clone group, return uni...
 - 🔹 **[`_deduplicate_related`](files/src/local_deepwiki/generators/see_also.md)** `(related: list[tuple[str, str, str]], max_items: int) → list[tuple[str, str, str]]` (`see_also.py`) - Deduplicate by wiki_path and truncate to *max_items*.
 - ▪️ **[`ReasoningMixin._deduplicate_results`](files/src/local_deepwiki/core/deep_research/reasoning.md)** `(results: list[[SearchResult](files/src/local_deepwiki/handlers/types.md)]) → list[[SearchResult](files/src/local_deepwiki/handlers/types.md)]` (`reasoning.py`) - Remove duplicate chunks, keeping highest-scoring ones.
 - 🔹 **[`_deduplicate_texts`](files/src/local_deepwiki/core/vectorstore/embedding.md)** `(texts: list[str]) → tuple[list[str], dict[str, int]]` (`embedding.py`) - Return unique texts and a mapping from text to its unique...
@@ -489,6 +504,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_extract_go_import`](files/src/local_deepwiki/core/graph_rag/extractor.md)** `(node: Any, source_bytes: bytes) → str | None` (`extractor.py`) - Handle Go import declarations.
 - 🔹 **[`_extract_import_module`](files/src/local_deepwiki/core/graph_rag/extractor.md)** `(import_node: Any, source_bytes: bytes, language: [Language](files/src/local_deepwiki/models/foundation.md)) → str | None` (`extractor.py`) - Extract the module/package name from an import AST node.
 - 🔹 **[`_extract_imports`](files/src/local_deepwiki/generators/analysis/layer_analysis.md)** `(source: str) → list[str]` (`layer_analysis.py`) - Extract top-level module names from Python import stateme...
+- 🔹 **[`_extract_imports`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(source: str) → list[str]` (`cohesion.py`) - Return full dotted module paths from all import statements.
 - ▪️ **[`GraphRelationshipExtractor._extract_imports`](files/src/local_deepwiki/core/graph_rag/extractor.md)** `(root_node: Any, source_bytes: bytes, language: [Language](files/src/local_deepwiki/models/foundation.md), ...+1) → tuple[[GraphRelationship](files/src/local_deepwiki/core/graph_rag/models.md), ...]` (`extractor.py`) - Extract *imports* relationships from import statements.
 - ▪️ **[`GraphRelationshipExtractor._extract_inheritance`](files/src/local_deepwiki/core/graph_rag/extractor.md)** `(root_node: Any, source_bytes: bytes, language: [Language](files/src/local_deepwiki/models/foundation.md), ...+2) → tuple[[GraphRelationship](files/src/local_deepwiki/core/graph_rag/models.md), ...]` (`extractor.py`) - Extract *inherits_from* relationships from class definiti...
 - 🔹 **[`_extract_java_call`](files/src/local_deepwiki/generators/analysis/callgraph.md)** `(call_node: Node, source: bytes) → str | None` (`callgraph.py`) - Extract call name from a Java method invocation node.
@@ -510,6 +526,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_extract_retry_after`](files/src/local_deepwiki/providers/errors.md)** `(e: Exception) → float | None` (`errors.py`) - Extract Retry-After header value from an API error response.
 - 🔹 **[`_extract_rust_call`](files/src/local_deepwiki/generators/analysis/callgraph.md)** `(call_node: Node, source: bytes) → str | None` (`callgraph.py`) - Extract call name from a Rust call expression node.
 - 🔹 **[`_extract_rust_import`](files/src/local_deepwiki/core/graph_rag/extractor.md)** `(node: Any, source_bytes: bytes) → str | None` (`extractor.py`) - Handle Rust ``use`` declarations.
+- 🔹 **[`_extract_self_fields`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(method_node: Any, source: bytes) → set[str]` (`cohesion.py`) - Walk *method_node* and return names of ``self.<field>`` a...
 - 🔹 **[`_extract_splat_parameter`](files/src/local_deepwiki/core/chunk_extractors.md)** `(child: Node, source: bytes) → tuple[str, str | None] | None` (`chunk_extractors.py`) - Extract name and type hint from a list_splat_pattern or d...
 - 🔹 **[`_extract_swift_call`](files/src/local_deepwiki/generators/analysis/callgraph.md)** `(call_node: Node, source: bytes) → str | None` (`callgraph.py`) - Extract call name from a Swift call expression node.
 - ▪️ **[`WikiPageIterator._extract_title`](files/src/local_deepwiki/export/streaming.md)** `(md_file: Path) → str` (`streaming.py`) - Extract title from markdown file without loading full con...
@@ -554,6 +571,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_find_wiki_directories`](files/src/local_deepwiki/handlers/resources.md)** `(...) → list[Path]` (`resources.py`) - Find .deepwiki directories under the current working dire...
 - 🔹 **[`_fix_markdown_fences`](files/src/local_deepwiki/web/app.md)** `(content: str) → str` (`app.py`) - Fix malformed markdown where headings and code fences are...
 - 🔹 **[`_fix_mermaid_click_paths`](files/src/local_deepwiki/generators/wiki/codemap_pages.md)** `(diagram: str, wiki_path: Path | None) → str` (`codemap_pages.py`) - Rewrite Mermaid click handlers for wiki context.
+- 🔹 **[`_flush_commit`](files/src/local_deepwiki/generators/analysis/churn.md)** `(result: list[tuple[str, list[str]]], current_hash: str | None, current_files: list[str]) → None` (`churn.py`) - Append a completed commit to result if it has files.
 - 🔹 **[`_flush_example`](files/src/local_deepwiki/generators/examples/docstring.md)** `(code_lines: list[str], description: str | None) → [CodeExample](files/src/local_deepwiki/generators/examples/docstring.md) | None` (`docstring.py`) - Build a CodeExample from accumulated lines, or None if no...
 - ▪️ **[`EmbeddingCache._flush_pending_writes`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → None` (`cache.py`) - Flush all pending writes to the database.
 - 🔹 **[`_format_attribute`](files/src/local_deepwiki/generators/diagrams/class_diagram.md)** `(name: str, type_hint: str | None) → str` (`class_diagram.py`) - Format a single attribute as a Mermaid attribute string.
@@ -659,6 +677,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_get_embedding_stats`](files/src/local_deepwiki/cli/cache_cli.md)** `(...) → dict[str, int | str]` (`cache_cli.py`) - Get embedding cache statistics by querying SQLite directly.
 - 🔹 **[`_get_enclosing_class_name`](files/src/local_deepwiki/core/graph_rag/extractor.md)** `(node: Any, class_types: set[str], source_bytes: bytes, ...+1) → str | None` (`extractor.py`) - Return the name of the class enclosing *node*, or ``None``.
 - ▪️ **[`KnowledgeGraphStore._get_entities_table`](files/src/local_deepwiki/core/graph_rag/store.md)** `(...) → Table | None` (`store.py`) - Return the entities table if it exists, creating indexes ...
+- 🔹 **[`_get_file_max_complexity`](files/src/local_deepwiki/generators/analysis/churn.md)** `(repo_path: Path) → dict[str, float]` (`churn.py`) - Get max cyclomatic complexity per file using the hotspots...
 - 🔹 **[`_get_function_body`](files/src/local_deepwiki/generators/examples/discovery.md)** `(func_node: Node, source: bytes) → str` (`discovery.py`) - Get the body of a function as a string.
 - 🔹 **[`_get_function_name`](files/src/local_deepwiki/generators/examples/discovery.md)** `(func_node: Node, source: bytes) → str` (`discovery.py`) - Get the name of a function from its AST node.
 - ▪️ **[`ProgressManager._get_historical_rate`](files/src/local_deepwiki/progress.md)** `(...) → float | None` (`progress.py`) - Get historical rate from past operations.
@@ -762,6 +781,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_is_source_candidate`](files/src/local_deepwiki/services/analysis_service.md)** `(candidate: Path, repo_path: Path, resolved_target: Path, ...+1) → bool` (`analysis_service.py`) - Return True if *candidate* should be scanned for callers.
 - 🔹 **[`_is_test_file`](files/src/local_deepwiki/generators/wiki/files.md)** `(path: str) → bool` (`files.py`) - Check if a file is in a test directory.
 - 🔹 **[`_is_test_file`](files/src/local_deepwiki/handlers/_index_helpers.md)** `(file_path: str) → bool` (`_index_helpers.py`) - Check if a file path looks like a test file.
+- 🔹 **[`_is_test_file`](files/src/local_deepwiki/generators/analysis/testability.md)** `(rel_path: str) → bool` (`testability.py`) - Return True if a relative path looks like a test file.
 - ▪️ **[`SecretDetector._is_test_file`](files/src/local_deepwiki/core/secret_detector.md)** `(file_path: str) → bool` (`secret_detector.py`) - Check if the file path indicates a test file.
 - 🔹 **[`_is_test_module`](files/src/local_deepwiki/generators/diagrams/dependency_diagram.md)** `(module: str, file_path: str) → bool` (`dependency_diagram.py`) - Check if a module is a test module.
 - 🔹 **[`_is_test_module`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(name: str) → bool` (`coupling.py`) - Return True if *name* looks like a test module label.
@@ -802,6 +822,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`DependencyGraphGenerator._mark_circular_file_edges`](files/src/local_deepwiki/generators/analysis/dependency_graph.md)** `(graph: "[DependencyGraph](files/src/local_deepwiki/generators/analysis/dependency_graph_data.md)") → None` (`dependency_graph.py`) - Detect cycles and mark the corresponding edges as circular.
 - 🔹 **[`_match_function_by_name`](files/src/local_deepwiki/generators/codemap/graph.md)** `(callee_name: str, call_graph: dict[str, list[str]]) → str | None` (`graph.py`) - Return the call-graph key that matches *callee_name*, or ...
 - 🔹 **[`_match_query_to_functions`](files/src/local_deepwiki/generators/codemap/graph.md)** `(callable_results: list[Any], entry_point_hint: str | None) → list[Any]` (`graph.py`) - Narrow *callable_results* to name-matching entries when a...
+- 🔹 **[`_match_test_to_source`](files/src/local_deepwiki/generators/analysis/testability.md)** `(test_path: str, source_files: set[str]) → str | None` (`testability.py`) - Heuristic matching: map a test file to its likely source ...
 - 🔹 **[`_max_callees_for`](files/src/local_deepwiki/generators/codemap/graph.md)** `(node: [CodemapNode](files/src/local_deepwiki/generators/codemap/models.md), file_call_graphs: dict[str, dict[str, list[str]]]) → int` (`graph.py`) - Return the maximum callee count for *node* across all cal...
 - 🔹 **[`_max_nesting`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(node: Node, depth: int) → int` (`design_smells.py`) - Return the maximum nesting depth within a node.
 - ▪️⚡ **[`LLMCache._maybe_evict`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → None` (`llm_cache.py`) - Evict old entries if cache exceeds max_entries.
@@ -812,6 +833,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`StreamingPdfExporter._merge_pdfs`](files/src/local_deepwiki/export/pdf.md)** `(pdf_files: list[Path], output_path: Path) → None` (`pdf.py`) - Merge multiple PDF files into one.
 - 🔹 **[`_migrate_status`](files/src/local_deepwiki/core/index_manager.md)** `(status: [IndexStatus](files/src/local_deepwiki/models/wiki.md)) → tuple[[IndexStatus](files/src/local_deepwiki/models/wiki.md), bool]` (`index_manager.py`) - Migrate an index status to the current schema version.
 - 🔹 **[`_module_label`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)** `(rel_path: Path, project_tops: set[str] | None) → str` (`module_dependencies.py`) - Convert a relative file path to a dotted module label.
+- 🔹 **[`_module_label`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(rel_path: Path) → str` (`cohesion.py`) - Convert a relative file path to a dotted module label.
 - ▪️ **[`RelationshipAnalyzer._module_matches_file`](files/src/local_deepwiki/generators/see_also.md)** `(module: str, file_path: str) → bool` (`see_also.py`) - Check if a module name refers to a file path.
 - ▪️ **[`RelationshipAnalyzer._module_to_file_path`](files/src/local_deepwiki/generators/see_also.md)** `(module: str) → str | None` (`see_also.py`) - Try to find a file path that matches a module name.
 - 🔹 **[`_module_to_wiki_path`](files/src/local_deepwiki/generators/diagrams/dependency_diagram.md)** `(module: str, project_name: str) → str` (`dependency_diagram.py`) - Convert module name to wiki file path.
@@ -821,12 +843,14 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_node_text`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(node: Node) → str` (`design_smells.py`)
 - 🔹 **[`_normalize_cycle`](files/src/local_deepwiki/generators/analysis/dependency_graph.md)** `(cycle: list[str]) → list[str]` (`dependency_graph.py`) - Normalize a cycle for consistent comparison.
 - 🔹 **[`_normalize_cycle`](files/src/local_deepwiki/generators/analysis/dependency_graph_data.md)** `(cycle: list[str]) → list[str]` (`dependency_graph_data.py`)
+- 🔹 **[`_normalize_line`](files/src/local_deepwiki/generators/analysis/duplication.md)** `(line: str) → str | None` (`duplication.py`) - Normalize a source line for fingerprinting.
 - 🔹⚡ **[`_notify`](files/src/local_deepwiki/handlers/indexing.md)** `(notifier: Any, current: int, phase: [ProgressPhase](files/src/local_deepwiki/progress.md), ...+2) → None` (`indexing.py`) - Send a progress notification if a notifier is available.
 - 🔹⚡ **[`_notify_pipeline_complete`](files/src/local_deepwiki/handlers/indexing.md)** `(notifier: Any, registry: Any, operation_id: str, ...+2) → None` (`indexing.py`) - Send the final progress notification and mark the operati...
 - 🔹 **[`_package_from_file_path`](files/src/local_deepwiki/generators/diagrams/class_diagram.md)** `(file_path: str) → str` (`class_diagram.py`) - Extract the package name from a file path.
 - 🔹 **[`_page_summary`](files/src/local_deepwiki/generators/llms_txt.md)** `(page: [WikiPage](files/src/local_deepwiki/export/streaming.md)) → str` (`llms_txt.py`) - Extract a brief summary from a page's content.
 - ▪️ **[`SearchEngine._pagination`](files/src/local_deepwiki/core/vectorstore/search_engine.md)** `(...) → [PaginationEngine](files/src/local_deepwiki/core/vectorstore/search_engine.md)` (`search_engine.py`) - Lazily create and return the `[`PaginationEngine`](files/src/local_deepwiki/core/vectorstore/search_engine.md)`.
 - ▪️⚡ **[`ReasoningMixin._parallel_retrieve`](files/src/local_deepwiki/core/deep_research/reasoning.md)** `(sub_questions: list[[SubQuestion](files/src/local_deepwiki/models/research.md)]) → list[[SearchResult](files/src/local_deepwiki/handlers/types.md)]` ⚠️`result_or_exc` (`reasoning.py`) - Retrieve code chunks for each sub-question in parallel.
+- 🔹 **[`_parent_module`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(label: str) → str` (`cohesion.py`) - Return the parent module label (everything up to the last...
 - 🔹 **[`_parse_all_porcelain_blame`](files/src/local_deepwiki/core/git_blame.md)** `(output: str) → list[[BlameInfo](files/src/local_deepwiki/core/git_blame.md)]` (`git_blame.py`) - Parse git blame porcelain format output for multiple entr...
 - 🔹 **[`_parse_blame_entry`](files/src/local_deepwiki/core/git_blame.md)** `(lines: list[str], hash_line: str, start: int, ...+1) → tuple[int, [BlameInfo](files/src/local_deepwiki/core/git_blame.md) | None, int]` (`git_blame.py`) - Parse a single blame entry from the porcelain output.
 - 🔹 **[`_parse_blame_header`](files/src/local_deepwiki/core/git_blame.md)** `(lines: list[str], start: int) → tuple[str | None, str | None, int | None, str | None, int]` (`git_blame.py`) - Parse blame header lines starting at *start* (after the c...
@@ -894,6 +918,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹⚡ **[`_process_file_doc_tasks`](files/src/local_deepwiki/generators/wiki/files.md)** `(tasks: list, [progress_callback](files/src/local_deepwiki/handlers/research.md): [ProgressCallback](files/src/local_deepwiki/models/foundation.md) | None, write_callback: WriteCallback | None, ...+1) → tuple[list[[WikiPage](files/src/local_deepwiki/export/streaming.md)], int, int, int]` (`files.py`) - Collect results from file-doc generation tasks as they co...
 - ▪️⚡ **[`StreamingPdfExporter._process_pages_in_batches`](files/src/local_deepwiki/export/pdf.md)** `(iterator: Any, total_pages: int, errors: list[str], ...+1) → tuple[int, list[Path]]` (`pdf.py`) - Iterate pages, accumulate them into batches, and render e...
 - ▪️ **[`DependencyGraphGenerator._process_single_import`](files/src/local_deepwiki/generators/analysis/dependency_graph.md)** `(graph: "[DependencyGraph](files/src/local_deepwiki/generators/analysis/dependency_graph_data.md)", imp: str, source_module: str, ...+2) → None` (`dependency_graph.py`) - Add a single import as an internal or external edge.
+- 🔹 **[`_process_test_files`](files/src/local_deepwiki/generators/analysis/testability.md)** `(test_paths: list[tuple[Path, str]], source_files_set: set[str]) → tuple[list[dict[str, Any]], int, int]` (`testability.py`) - Read test files, count assertions, match to source.
 - ▪️⚡ **[`FileParsingPipeline._process_window`](files/src/local_deepwiki/core/parsing_pipeline.md)** `(futures: dict, file_count: int, state: _WindowState, ...+2) → None` (`parsing_pipeline.py`) - Iterate completed futures for one sliding window, collect...
 - 🔹 **[`_prompt_embedding_config`](files/src/local_deepwiki/cli/init_cli.md)** `(console: Console, non_interactive: bool, embedding_flag: str | None) → str` (`init_cli.py`) - Prompt the user to select an embedding provider and retur...
 - 🔹 **[`_prompt_llm_config`](files/src/local_deepwiki/cli/init_cli.md)** `(console: Console, providers: dict[str, bool], non_interactive: bool, ...+1) → str` (`init_cli.py`) - Prompt the user to select an LLM provider and return the ...
@@ -1033,7 +1058,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`WikiPageIterator._scan_pages`](files/src/local_deepwiki/export/streaming.md)** `(...) → None` (`streaming.py`) - Scan wiki directory to count pages and calculate total size.
 - 🔷 **[`_ScanAccumulators`](files/src/local_deepwiki/generators/diagrams/dependency_diagram.md)** (`dependency_diagram.py`) - Mutable accumulators shared by the dependency-scanning fu...
 - ▪️ **[`DebouncedHandler._schedule_reindex`](files/src/local_deepwiki/watcher.md)** `(...) → None` (`watcher.py`) - Schedule a reindex after debounce period (thread-safe).
-- 🔹 **[`_score_all_dimensions`](files/src/local_deepwiki/generators/analysis/architecture_health.md)** `(hotspot_result: dict[str, Any], coupling_result: dict[str, Any], src_smells: list[dict[str, Any]], ...+2) → dict[str, Any]` (`architecture_health.py`) - Compute scored dimension dict from raw analysis results.
+- 🔹 **[`_score_all_dimensions`](files/src/local_deepwiki/generators/analysis/architecture_health.md)** `(hotspot_result: dict[str, Any], coupling_result: dict[str, Any], src_smells: list[dict[str, Any]], ...+7) → dict[str, Any]` (`architecture_health.py`) - Compute scored dimension dict from raw analysis results.
 - 🔹 **[`_score_candidates`](files/src/local_deepwiki/generators/codemap/graph.md)** `(callable_results: list[Any], file_call_graphs: dict[str, dict[str, list[str]]], repo_path: Path) → list[tuple[float, [CodemapNode](files/src/local_deepwiki/generators/codemap/models.md)]]` (`graph.py`) - Score candidates by vector similarity, chunk type, and ca...
 - 🔹 **[`_score_entity_match`](files/src/local_deepwiki/handlers/analysis_search.md)** `(entity: dict[str, Any], query: str) → float` (`analysis_search.py`) - Score a code entity against a lowercased *query*.
 - 🔹 **[`_score_page_match`](files/src/local_deepwiki/handlers/analysis_search.md)** `(page: dict[str, Any], query: str) → float` (`analysis_search.py`) - Score a wiki page against a lowercased *query*.
@@ -1098,6 +1123,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹⚡ **[`_try_lazy_generate_page`](files/src/local_deepwiki/handlers/resources.md)** `(wiki_path: Path, page_relative: str) → list[ReadResourceContents]` ⚠️`FileNotFoundError` (`resources.py`) - Attempt lazy generation for a missing page.
 - 🔹⚡ **[`_try_load_cached_auxiliary_pages`](files/src/local_deepwiki/generators/wiki/phases.md)** `(ctx: _GenerationContext, aux_pages: list[tuple[str, str]], index_status: [IndexStatus](files/src/local_deepwiki/models/wiki.md), ...+1) → bool` (`phases.py`) - Try to load all auxiliary pages from cache.
 - 🔹⚡ **[`_try_load_cached_file_page`](files/src/local_deepwiki/generators/wiki/files.md)** `(file_info: [FileInfo](files/src/local_deepwiki/models/chunks.md), wiki_path: str, source_files: list[str], ...+1) → [WikiPage](files/src/local_deepwiki/export/streaming.md) | None` (`files.py`) - Return the existing cached page if regeneration is not ne...
+- 🔷 **[`_UnionFind`](files/src/local_deepwiki/generators/analysis/cohesion.md)** (`cohesion.py`) - Disjoint-set data structure with path compression.
 - 🔹 **[`_unwrap_chunk`](files/src/local_deepwiki/generators/diagrams/_utils.md)** `(chunk: [CodeChunk](files/src/local_deepwiki/models/chunks.md) | Any) → [CodeChunk](files/src/local_deepwiki/models/chunks.md)` (`_utils.py`) - Unwrap SearchResult to get the underlying chunk.
 - 🔹 **[`_validate_and_build_config`](files/src/local_deepwiki/handlers/indexing.md)** `(validated: [IndexRepositoryArgs](files/src/local_deepwiki/models/tool_args.md)) → tuple[Path, Any, str | None, str | None]` ⚠️`[ValidationError](files/src/local_deepwiki/errors.md), [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`indexing.py`) - Validate inputs and build configuration for indexing.
 - 🔹 **[`_validate_chat_history`](files/src/local_deepwiki/web/routes_chat.md)** `(history: Any) → tuple[Response, int] | None` (`routes_chat.py`) - Validate the chat history field; return an error response...
@@ -1140,7 +1166,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 </details>
 
 <details id="a" markdown="1">
-<summary><strong>A</strong> — 89 entities</summary>
+<summary><strong>A</strong> — 95 entities</summary>
 
 - 🔷 **[`AccessController`](files/src/local_deepwiki/security/access_control.md)** (`access_control.py`) - Manages access control and authorization.
 - 🔷 **[`AccessDecisionParams`](files/src/local_deepwiki/core/audit.md)** (`audit.py`) - Parameters for logging an access control decision.
@@ -1178,16 +1204,22 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`analyze_architecture_composite`](files/src/local_deepwiki/generators/analysis/architecture_composite.md)** `(repo_path: Path, project_name: str, detail_level: str, ...+1) → dict[str, Any]` (`architecture_composite.py`) - Run composite architecture analysis and return narrative ...
 - 🔹 **[`analyze_architecture_health`](files/src/local_deepwiki/generators/analysis/architecture_health.md)** `(repo_path: Path, project_name: str, top_findings: int) → dict[str, Any]` (`architecture_health.py`) - Run all architecture analyses and return a scored health ...
 - ▪️ **[`RelationshipAnalyzer.analyze_chunks`](files/src/local_deepwiki/generators/see_also.md)** `(chunks: list[[CodeChunk](files/src/local_deepwiki/models/chunks.md)]) → None` (`see_also.py`) - Analyze import chunks to build relationship graph.
+- 🔹 **[`analyze_churn`](files/src/local_deepwiki/generators/analysis/churn.md)** `(repo_path: str | Path, window_days: int, top_n: int, ...+2) → dict[str, Any]` (`churn.py`) - Full churn analysis orchestrator.
+- 🔹 **[`analyze_class_cohesion`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(repo_path: Path, language: LangEnum | None, exclude_tests: bool) → list[dict[str, Any]]` (`cohesion.py`) - Walk Python files, parse each, find classes, compute LCOM...
+- 🔹 **[`analyze_cohesion`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(repo_path: Path, top_n: int, exclude_tests: bool) → dict[str, Any]` (`cohesion.py`) - Run both class and module cohesion analyses.
 - 🔹 **[`analyze_coupling_metrics`](files/src/local_deepwiki/generators/analysis/coupling.md)** `(repo_path: Path, module_filter: str | None, exclude_tests: bool) → dict[str, Any]` (`coupling.py`) - Compute Robert C. Martin coupling metrics per module.
 - 🔹 **[`analyze_cross_module_dependencies`](files/src/local_deepwiki/generators/analysis/module_dependencies.md)** `(repo_path: Path, module_filter: str | None, include_external: bool, ...+1) → dict[str, Any]` (`module_dependencies.py`) - Build and return the inter-module import graph for *repo_...
 - 🔹 **[`analyze_design_smells`](files/src/local_deepwiki/generators/analysis/design_smells.md)** `(repo_path: Path, severity_threshold: str, exclude_tests: bool) → dict[str, Any]` (`design_smells.py`) - Scan *repo_path* for design smells.
+- 🔹 **[`analyze_duplication`](files/src/local_deepwiki/generators/analysis/duplication.md)** `(repo_path: Path, min_lines: int, top_n: int, ...+1) → dict[str, Any]` (`duplication.py`) - Run both detection types and compute summary statistics.
 - 🔹⚡ **[`analyze_file_coverage`](files/src/local_deepwiki/generators/analysis/coverage.md)** `(file_path: str, vector_store: [VectorStore](files/src/local_deepwiki/core/vectorstore/store.md)) → [FileCoverage](files/src/local_deepwiki/generators/analysis/coverage.md)` (`coverage.py`) - Analyze documentation coverage for a single file.
 - 🔹 **[`analyze_hotspots`](files/src/local_deepwiki/generators/analysis/hotspots.md)** `(repo_path: Path, metric: str, top_n: int, ...+2) → dict[str, Any]` (`hotspots.py`) - Walk all source files in *repo_path* and rank functions b...
 - 🔹⚡ **[`analyze_imports_for_relationships`](files/src/local_deepwiki/generators/wiki/pipeline.md)** `(generator: [WikiGenerator](files/src/local_deepwiki/generators/wiki/generator.md)) → None` (`pipeline.py`) - Collect import chunks for relationship analysis (See Also...
 - 🔹 **[`analyze_layer_dependencies`](files/src/local_deepwiki/generators/analysis/layer_analysis.md)** `(repo_path: Path, project_name: str) → dict[str, Any]` (`layer_analysis.py`) - Scan Python files and detect layer dependency violations.
+- 🔹 **[`analyze_maintainability`](files/src/local_deepwiki/generators/analysis/maintainability.md)** `(repo_path: Path, top_n: int, exclude_tests: bool) → dict[str, Any]` (`maintainability.py`) - Compute Maintainability Index per function across the rep...
 - 🔹 **[`analyze_module_health`](files/src/local_deepwiki/generators/analysis/module_health.md)** `(repo_path: Path, module_name: str) → dict[str, Any]` (`module_health.py`) - Analyze health of a single module.
 - 🔹⚡ **[`analyze_project_coverage`](files/src/local_deepwiki/generators/analysis/coverage.md)** `(index_status: [IndexStatus](files/src/local_deepwiki/models/wiki.md), vector_store: [VectorStore](files/src/local_deepwiki/core/vectorstore/store.md)) → tuple[[CoverageStats](files/src/local_deepwiki/generators/analysis/coverage.md), list[[FileCoverage](files/src/local_deepwiki/generators/analysis/coverage.md)]]` (`coverage.py`) - Analyze documentation coverage for the entire project.
 - 🔹 **[`analyze_staleness`](files/src/local_deepwiki/generators/analysis/stale_detection.md)** `(repo_path: Path, wiki_status: [WikiGenerationStatus](files/src/local_deepwiki/models/wiki.md), stale_threshold_days: int) → [StaleReport](files/src/local_deepwiki/generators/analysis/stale_detection.md)` (`stale_detection.py`) - Analyze all wiki pages for staleness.
+- 🔹 **[`analyze_testability`](files/src/local_deepwiki/generators/analysis/testability.md)** `(repo_path: Path | str, exclude_patterns: list[str] | None) → dict[str, Any]` (`testability.py`) - Analyze testability metrics for a repository.
 - 🔷 **[`AnalyzeArchitectureArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the analyze_architecture composite tool.
 - 🔷 **[`AnalyzeDiffArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the analyze_diff tool.
 - ▪️⚡ **[`QueryService.answer_question`](files/src/local_deepwiki/services/query_service.md)** `(request: [QuestionRequest](files/src/local_deepwiki/services/query_service.md)) → [QueryResult](files/src/local_deepwiki/services/models.md)` (`query_service.py`) - Execute the full RAG pipeline: search -> [rerank] -> synt...
@@ -1271,7 +1303,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 </details>
 
 <details id="c" markdown="1">
-<summary><strong>C</strong> — 151 entities</summary>
+<summary><strong>C</strong> — 156 entities</summary>
 
 - ▪️ **[`CodeParser.cache`](files/src/local_deepwiki/core/parser/code_parser.md)** `(...) → [ASTCache](files/src/local_deepwiki/core/parser/ast_cache.md) | None` (`code_parser.py`) - Get the AST cache instance if configured.
 - 🔹 **[`cache_key`](files/src/local_deepwiki/generators/codemap/cache.md)** `(query: str, focus: str, max_depth: int, ...+1) → str` (`cache.py`) - Generate a cache key from codemap parameters.
@@ -1367,10 +1399,15 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`OperationProgressRegistry.complete_operation`](files/src/local_deepwiki/progress.md)** `(operation_id: str, record_timing: bool) → dict[str, Any] | None` (`progress.py`) - Complete and remove an operation.
 - ▪️ **[`MultiPhaseProgress.complete_phase`](files/src/local_deepwiki/cli_progress.md)** `(name: str) → None` (`cli_progress.py`) - Mark a phase as complete.
 - ▪️ **[`GenerationProgress.complete_phase`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → None` (`progress_tracker.py`) - Mark the current phase as complete.
+- 🔹 **[`compute_churn_complexity`](files/src/local_deepwiki/generators/analysis/churn.md)** `(churn: dict[str, int], complexity: dict[str, float]) → list[dict[str, Any]]` (`churn.py`) - Compute composite risk score per file (normalized churn *...
+- 🔹 **[`compute_co_change`](files/src/local_deepwiki/generators/analysis/churn.md)** `(commits: list[tuple[str, list[str]]], min_shared: int) → list[dict[str, Any]]` (`churn.py`) - Compute Jaccard similarity for file pairs co-occurring in...
 - 🔹⚡ **[`compute_complexity_metrics`](files/src/local_deepwiki/generators/analysis/complexity.md)** `(file_path: Path, repo_path: Path) → dict[str, Any]` (`complexity.py`) - Compute cyclomatic complexity metrics for a source file.
 - ▪️ **[`WikiStatusManager.compute_content_hash`](files/src/local_deepwiki/generators/wiki/status.md)** `(content: str) → str` (`status.py`) - Compute hash of page content.
 - ▪️ **[`SearchConfigResolver.compute_fetch_limit`](files/src/local_deepwiki/core/vectorstore/search_config_resolver.md)** `(request: "[SearchRequest](files/src/local_deepwiki/core/vectorstore/mixins/search_types.md)", profile_config: [SearchProfileConfig](files/src/local_deepwiki/core/vectorstore/schema.md)) → int` (`search_config_resolver.py`) - Compute the number of candidates to fetch before post-pro...
+- 🔹 **[`compute_file_churn`](files/src/local_deepwiki/generators/analysis/churn.md)** `(commits: list[tuple[str, list[str]]]) → dict[str, int]` (`churn.py`) - Count commits per file from parsed git log.
 - 🔹 **[`compute_files_to_process`](files/src/local_deepwiki/core/indexer_files.md)** `(source_files: list[Path], parser: "[CodeParser](files/src/local_deepwiki/core/parser/code_parser.md)", repo_path: Path, ...+1) → tuple[list[Path], list["[FileInfo](files/src/local_deepwiki/models/chunks.md)"]]` (`indexer_files.py`) - Determine which source files need (re)processing and whic...
+- 🔹 **[`compute_lcom4`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(class_node: Any, source: bytes, language: LangEnum) → int` (`cohesion.py`) - Compute LCOM4 for a single class node.
+- 🔹 **[`compute_module_cohesion`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(repo_path: Path) → list[dict[str, Any]]` (`cohesion.py`) - Compute internal-import ratio per module directory.
 - 🔹 **[`compute_module_metadata`](files/src/local_deepwiki/generators/codemap/overview.md)** `(raw_modules: list[dict[str, object]], file_functions: dict[str, list[str]], edges: list[dict[str, str]]) → list[[OverviewModule](files/src/local_deepwiki/generators/codemap/overview.md)]` (`overview.py`) - Enrich raw module dicts with function counts and hub func...
 - 🔹 **[`compute_overall`](files/src/local_deepwiki/generators/analysis/health_scoring.md)** `(dimension_scores: dict[str, dict[str, Any]]) → dict[str, Any]` (`health_scoring.py`) - Compute weighted overall score from dimension scores.
 - ▪️ **[`IndexStatusManager.compute_status_hash`](files/src/local_deepwiki/core/index_manager.md)** `(status: [IndexStatus](files/src/local_deepwiki/models/wiki.md)) → str` (`index_manager.py`) - Compute a hash of the index status for change detection.
@@ -1428,7 +1465,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 </details>
 
 <details id="d" markdown="1">
-<summary><strong>D</strong> — 65 entities</summary>
+<summary><strong>D</strong> — 67 entities</summary>
 
 - 🔷 **[`DebouncedHandler`](files/src/local_deepwiki/watcher.md)** (`watcher.py`) - File system event handler with debouncing.
 - 🔹 **[`decorator`](files/src/local_deepwiki/security/access_control.md)** `(func: F) → F` (`access_control.py`)
@@ -1473,6 +1510,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`detect_providers`](files/src/local_deepwiki/cli/init_cli.md)** `(...) → dict[str, bool]` (`init_cli.py`) - Detect which LLM providers are available.
 - ▪️⚡ **[`GeneratorService.detect_secrets`](files/src/local_deepwiki/services/generator_service.md)** `(repo_path: Path, exclude_tests: bool) → dict[str, Any]` (`generator_service.py`) - Scan repository for hardcoded secrets.
 - ▪️⚡ **[`GeneratorService.detect_stale_docs`](files/src/local_deepwiki/services/generator_service.md)** `(repo_path: Path, wiki_path: Path, threshold_days: int) → dict[str, Any]` (`generator_service.py`) - Detect wiki pages that are stale relative to source files.
+- 🔹 **[`detect_type1_clones`](files/src/local_deepwiki/generators/analysis/duplication.md)** `(repo_path: Path, min_lines: int, exclude_tests: bool) → list[dict[str, Any]]` (`duplication.py`) - Detect exact code clones (Type 1) using line-based finger...
+- 🔹 **[`detect_type2_clones`](files/src/local_deepwiki/generators/analysis/duplication.md)** `(repo_path: Path, exclude_tests: bool) → list[dict[str, Any]]` (`duplication.py`) - Detect structural clones (Type 2) by comparing function A...
 - 🔷 **[`DetectSecretsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the detect_secrets tool.
 - 🔷 **[`DetectStaleDocsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the detect_stale_docs tool.
 - 🔹 **[`dfs`](files/src/local_deepwiki/generators/analysis/dependency_graph_data.md)** `(node: str, path: list[str]) → None` (`dependency_graph_data.py`)
@@ -1664,7 +1703,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 </details>
 
 <details id="g" markdown="1">
-<summary><strong>G</strong> — 263 entities</summary>
+<summary><strong>G</strong> — 269 entities</summary>
 
 - ▪️⚡ **[`CachingLLMProvider.generate`](files/src/local_deepwiki/providers/llm/cached.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`cached.py`) - Generate text with caching.
 - ▪️⚡ **[`LLMProvider.generate`](files/src/local_deepwiki/providers/base.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`base.py`) - Generate text from a prompt.
@@ -1895,12 +1934,16 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`GetArchitectureTrendsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_architecture_trends tool.
 - 🔷 **[`GetCallGraphArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_call_graph tool.
 - 🔷 **[`GetChangelogArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_changelog tool.
+- 🔷 **[`GetChurnMetricsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_churn_metrics tool.
+- 🔷 **[`GetCoChangeArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_co_change tool.
+- 🔷 **[`GetCohesionMetricsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_cohesion_metrics tool.
 - 🔷 **[`GetComplexityMetricsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_complexity_metrics tool.
 - 🔷 **[`GetCouplingMetricsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_coupling_metrics tool.
 - 🔷 **[`GetCoverageArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_coverage tool.
 - 🔷 **[`GetCrossModuleDependenciesArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_cross_module_dependencies tool.
 - 🔷 **[`GetDesignSmellsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_design_smells tool.
 - 🔷 **[`GetDiagramsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_diagrams tool.
+- 🔷 **[`GetDuplicationMetricsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_duplication_metrics tool.
 - 🔷 **[`GetFileContextArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_file_context tool.
 - 🔷 **[`GetGlossaryArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_glossary tool.
 - 🔷 **[`GetGuidedTourArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_guided_tour tool.
@@ -1908,11 +1951,13 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`GetIndexStatusArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_index_status tool.
 - 🔷 **[`GetInheritanceArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_inheritance tool.
 - 🔷 **[`GetLayerDependenciesArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_layer_dependencies tool.
+- 🔷 **[`GetMaintainabilityMetricsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_maintainability_metrics tool.
 - 🔷 **[`GetModuleHealthArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_module_health tool.
 - 🔷 **[`GetOnboardingGuideArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_onboarding_guide tool.
 - 🔷 **[`GetOperationProgressArgs`](files/src/local_deepwiki/progress.md)** (`progress.py`) - Arguments for the get_operation_progress tool.
 - 🔷 **[`GetProjectManifestArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_project_manifest tool.
 - 🔷 **[`GetRecommendationsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_recommendations tool.
+- 🔷 **[`GetTestabilityMetricsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_testability_metrics tool.
 - 🔷 **[`GetTestExamplesArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_test_examples tool.
 - 🔷 **[`GetWikiStatsArgs`](files/src/local_deepwiki/models/tool_args.md)** (`tool_args.py`) - Arguments for the get_wiki_stats tool.
 - 🔷 **[`GitPathValidationError`](files/src/local_deepwiki/core/git_utils.md)** (`git_utils.py`) - Raised when a path fails git-specific validation.
@@ -1933,7 +1978,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 </details>
 
 <details id="h" markdown="1">
-<summary><strong>H</strong> — 69 entities</summary>
+<summary><strong>H</strong> — 75 entities</summary>
 
 - 🔹⚡ **[`handle_analyze_architecture`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle analyze_architecture composite tool call.
 - 🔹⚡ **[`handle_analyze_diff`](files/src/local_deepwiki/handlers/analysis_diff.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_diff.py`) - Handle analyze_diff tool call.
@@ -1958,12 +2003,16 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹⚡ **[`handle_get_architecture_trends`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_architecture_trends tool call.
 - 🔹⚡ **[`handle_get_call_graph`](files/src/local_deepwiki/handlers/generators.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`generators.py`) - Handle get_call_graph tool call.
 - 🔹⚡ **[`handle_get_changelog`](files/src/local_deepwiki/handlers/generators.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`generators.py`) - Handle get_changelog tool call.
+- 🔹⚡ **[`handle_get_churn_metrics`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_churn_metrics tool call.
+- 🔹⚡ **[`handle_get_co_change`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_co_change tool call.
+- 🔹⚡ **[`handle_get_cohesion_metrics`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_cohesion_metrics tool call.
 - 🔹⚡ **[`handle_get_complexity_metrics`](files/src/local_deepwiki/handlers/analysis_metadata.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`[ValidationError](files/src/local_deepwiki/errors.md), ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_metadata.py`) - Handle get_complexity_metrics tool call.
 - 🔹⚡ **[`handle_get_coupling_metrics`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_coupling_metrics tool call.
 - 🔹⚡ **[`handle_get_coverage`](files/src/local_deepwiki/handlers/generators.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`generators.py`) - Handle get_coverage tool call.
 - 🔹⚡ **[`handle_get_cross_module_dependencies`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_cross_module_dependencies tool call.
 - 🔹⚡ **[`handle_get_design_smells`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_design_smells tool call.
 - 🔹⚡ **[`handle_get_diagrams`](files/src/local_deepwiki/handlers/generators.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`generators.py`) - Handle get_diagrams tool call.
+- 🔹⚡ **[`handle_get_duplication_metrics`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_duplication_metrics tool call.
 - 🔹⚡ **[`handle_get_file_context`](files/src/local_deepwiki/handlers/analysis_metadata.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_metadata.py`) - Handle get_file_context tool call.
 - 🔹⚡ **[`handle_get_glossary`](files/src/local_deepwiki/handlers/generators.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`generators.py`) - Handle get_glossary tool call.
 - 🔹⚡ **[`handle_get_guided_tour`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_guided_tour tool call.
@@ -1971,6 +2020,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹⚡ **[`handle_get_index_status`](files/src/local_deepwiki/handlers/generators.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`generators.py`) - Handle get_index_status tool call.
 - 🔹⚡ **[`handle_get_inheritance`](files/src/local_deepwiki/handlers/generators.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`generators.py`) - Handle get_inheritance tool call.
 - 🔹⚡ **[`handle_get_layer_dependencies`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_layer_dependencies tool call.
+- 🔹⚡ **[`handle_get_maintainability_metrics`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_maintainability_metrics tool call.
 - 🔹⚡ **[`handle_get_module_health`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_module_health tool call.
 - 🔹⚡ **[`handle_get_onboarding_guide`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_onboarding_guide tool call.
 - 🔹⚡ **[`handle_get_operation_progress`](files/src/local_deepwiki/handlers/research.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError` (`research.py`) - Handle get_operation_progress tool call.
@@ -1978,6 +2028,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹⚡ **[`handle_get_recommendations`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_recommendations tool call.
 - 🔹⚡ **[`handle_get_status`](files/src/local_deepwiki/handlers/analysis_metadata.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_metadata.py`) - Handle get_status tool call with scope-based dispatch.
 - 🔹⚡ **[`handle_get_test_examples`](files/src/local_deepwiki/handlers/generators.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`generators.py`) - Handle get_test_examples tool call.
+- 🔹⚡ **[`handle_get_testability_metrics`](files/src/local_deepwiki/handlers/analysis_architecture.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_architecture.py`) - Handle get_testability_metrics tool call.
 - 🔹⚡ **[`handle_get_wiki_stats`](files/src/local_deepwiki/handlers/analysis_metadata.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_metadata.py`) - Handle get_wiki_stats tool call.
 - 🔹⚡ **[`handle_impact_analysis`](files/src/local_deepwiki/handlers/analysis_entity.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, [path_not_found_error](files/src/local_deepwiki/error_factories.md)` (`analysis_entity.py`) - Handle impact_analysis tool call.
 - 🔹⚡ **[`handle_index_repository`](files/src/local_deepwiki/handlers/indexing.md)** `(args: dict[str, Any], server: Any) → list[TextContent]` (`indexing.py`) - Handle index_repository tool call with streaming progress.
@@ -2151,9 +2202,9 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`main`](files/src/local_deepwiki/cli/cache_cli.md)** `(...) → int` (`cache_cli.py`) - Main entry point for the cache CLI.
 - 🔹 **[`main`](files/src/local_deepwiki/export/html.md)** `(...) → int` (`html.py`) - CLI entry point for HTML export.
 - 🔹 **[`main`](files/src/local_deepwiki/export/pdf_sync.md)** `(...) → None` (`pdf_sync.py`) - CLI entry point for PDF export.
-- 🔹 **[`main`](files/src/local_deepwiki/server.md)** `(...) → None` (`server.py`) - Main entry point for the MCP server.
 - 🔹 **[`main`](files/src/local_deepwiki/cli/init_cli.md)** `(...) → int` (`init_cli.py`) - Main entry point for ``deepwiki init``.
 - 🔹 **[`main`](files/src/local_deepwiki/web/app.md)** `(...) → None` (`app.py`) - CLI entry point.
+- 🔹 **[`main`](files/src/local_deepwiki/server.md)** `(...) → None` (`server.py`) - Main entry point for the MCP server.
 - 🔹 **[`make_tool_text_content`](files/src/local_deepwiki/handlers/_response.md)** `(tool_name: str, data: dict[str, Any], hints: dict[str, Any] | None) → list[TextContent]` (`_response.py`) - Produce a list[TextContent] wrapped in a standard JSON en...
 - 🔷 **[`ManifestCacheEntry`](files/src/local_deepwiki/generators/manifest.md)** (`manifest.py`) - Cache entry storing manifest data and file modification t...
 - 🔹 **[`map_exception_to_deepwiki_error`](files/src/local_deepwiki/error_factories.md)** `(exc: Exception, context: dict[str, Any] | None) → [DeepWikiError](files/src/local_deepwiki/errors.md)` (`error_factories.py`) - Map a standard exception to an appropriate DeepWikiError.
@@ -2229,7 +2280,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 </details>
 
 <details id="p" markdown="1">
-<summary><strong>P</strong> — 60 entities</summary>
+<summary><strong>P</strong> — 61 entities</summary>
 
 - ▪️ **[`WikiStatusManager.page_statuses`](files/src/local_deepwiki/generators/wiki/status.md)** `(...) → dict[str, [WikiPageStatus](files/src/local_deepwiki/models/wiki.md)]` (`status.py`) - Get page statuses map.
 - 🔷 **[`PageGenerator`](files/src/local_deepwiki/models/foundation.md)** (`foundation.py`) - Generate a wiki page on demand.
@@ -2240,6 +2291,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`parse_doctest_examples`](files/src/local_deepwiki/generators/examples/docstring.md)** `(docstring: str) → list[[CodeExample](files/src/local_deepwiki/generators/examples/docstring.md)]` (`docstring.py`) - Extract >>> doctest examples from a docstring.
 - ▪️ **[`CodeParser.parse_file`](files/src/local_deepwiki/core/parser/code_parser.md)** `(file_path: Path) → tuple[Node, LangEnum, bytes] | None` (`code_parser.py`) - Parse a source file and return the AST root.
 - ▪️⚡ **[`FileParsingPipeline.parse_files_parallel`](files/src/local_deepwiki/core/parsing_pipeline.md)** `(files_to_process: list[Path], full_rebuild: bool, [progress_callback](files/src/local_deepwiki/handlers/research.md): [ProgressCallback](files/src/local_deepwiki/models/foundation.md) | None, ...+1) → tuple[list[[FileInfo](files/src/local_deepwiki/models/chunks.md)], int]` (`parsing_pipeline.py`) - Handle parallel file parsing with ThreadPoolExecutor.
+- 🔹 **[`parse_git_log_numstat`](files/src/local_deepwiki/generators/analysis/churn.md)** `(raw: str) → list[tuple[str, list[str]]]` (`churn.py`) - Parse ``git log --format='%H' --numstat`` output.
 - 🔹 **[`parse_google_docstring`](files/src/local_deepwiki/generators/analysis/api_docs.md)** `(docstring: str) → [ParsedDocstring](files/src/local_deepwiki/generators/analysis/api_docs.md)` (`api_docs.py`) - Parse a Google-style docstring.
 - 🔹 **[`parse_google_style_examples`](files/src/local_deepwiki/generators/examples/docstring.md)** `(docstring: str) → list[[CodeExample](files/src/local_deepwiki/generators/examples/docstring.md)]` (`docstring.py`) - Extract examples from Google-style docstring Examples sec...
 - 🔹 **[`parse_manifest`](files/src/local_deepwiki/generators/manifest.md)** `(repo_path: Path) → [ProjectManifest](files/src/local_deepwiki/generators/manifest.md)` (`manifest.py`) - Parse all recognized package manifests in a repository.
@@ -2449,7 +2501,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 </details>
 
 <details id="s" markdown="1">
-<summary><strong>S</strong> — 115 entities</summary>
+<summary><strong>S</strong> — 120 entities</summary>
 
 - 🔹 **[`sanitize_error_message`](files/src/local_deepwiki/error_factories.md)** `(message: str, sanitize_paths: bool) → str` (`error_factories.py`) - Remove sensitive information from error messages.
 - 🔹 **[`sanitize_mermaid_name`](files/src/local_deepwiki/generators/diagrams/_utils.md)** `(name: str) → str` (`_utils.py`) - Sanitize a name for use in Mermaid diagrams.
@@ -2464,10 +2516,15 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`SecretDetector.scan_content`](files/src/local_deepwiki/core/secret_detector.md)** `(content: str, file_path: str, start_line: int) → list[[SecretFinding](files/src/local_deepwiki/handlers/types.md)]` (`secret_detector.py`) - Scan code content for secrets.
 - 🔹 **[`scan_repository_for_secrets`](files/src/local_deepwiki/core/secret_detector.md)** `(repo_path: Path) → dict[str, list[[SecretFinding](files/src/local_deepwiki/handlers/types.md)]]` (`secret_detector.py`) - Scan entire repository for secrets.
 - ▪️⚡ **[`LazyIndexManager.schedule_index_creation`](files/src/local_deepwiki/core/vectorstore/maintenance.md)** `([progress_callback](files/src/local_deepwiki/handlers/research.md): [LogCallback](files/src/local_deepwiki/models/foundation.md) | None) → None` (`maintenance.py`) - Schedule index creation as a background task.
+- 🔹 **[`score_churn`](files/src/local_deepwiki/generators/analysis/health_scoring.md)** `(composite: list[dict[str, Any]], stats: dict[str, Any]) → dict[str, Any]` (`health_scoring.py`) - Score churn dimension (0-100).
+- 🔹 **[`score_cohesion`](files/src/local_deepwiki/generators/analysis/health_scoring.md)** `(class_cohesion: list[dict[str, Any]], module_cohesion: list[dict[str, Any]], stats: dict[str, Any]) → dict[str, Any]` (`health_scoring.py`) - Score cohesion dimension (0-100).
 - 🔹 **[`score_complexity`](files/src/local_deepwiki/generators/analysis/health_scoring.md)** `(hotspots: list[dict[str, Any]], total_functions: int) → dict[str, Any]` (`health_scoring.py`) - Score complexity dimension (0-100).
 - 🔹 **[`score_coupling`](files/src/local_deepwiki/generators/analysis/health_scoring.md)** `(metrics: list[dict[str, Any]]) → dict[str, Any]` (`health_scoring.py`) - Score coupling dimension (0-100).
+- 🔹 **[`score_duplication`](files/src/local_deepwiki/generators/analysis/health_scoring.md)** `(stats: dict[str, Any]) → dict[str, Any]` (`health_scoring.py`) - Score duplication dimension (0-100).
 - 🔹 **[`score_layers`](files/src/local_deepwiki/generators/analysis/health_scoring.md)** `(violations: list[dict[str, Any]]) → dict[str, Any]` (`health_scoring.py`) - Score layer discipline dimension (0-100).
+- 🔹 **[`score_maintainability`](files/src/local_deepwiki/generators/analysis/health_scoring.md)** `(stats: dict[str, Any]) → dict[str, Any]` (`health_scoring.py`) - Score maintainability dimension (0-100).
 - 🔹 **[`score_smells`](files/src/local_deepwiki/generators/analysis/health_scoring.md)** `(smells: list[dict[str, Any]], total_lines: int) → dict[str, Any]` (`health_scoring.py`) - Score design smells dimension (0-100).
+- 🔹 **[`score_testability`](files/src/local_deepwiki/generators/analysis/health_scoring.md)** `(stats: dict[str, Any]) → dict[str, Any]` (`health_scoring.py`) - Score testability dimension (0-100).
 - ▪️⚡ **[`SearchEngine.search`](files/src/local_deepwiki/core/vectorstore/search_engine.md)** `(request: [SearchRequest](files/src/local_deepwiki/core/vectorstore/mixins/search_types.md), store: Any) → list[[SearchResult](files/src/local_deepwiki/handlers/types.md)]` (`search_engine.py`) - Search for similar code chunks.
 - ▪️⚡ **[`SearchMixin.search`](files/src/local_deepwiki/core/vectorstore/mixins/search.md)** `(query: str, limit: int, request: "[SearchRequest](files/src/local_deepwiki/core/vectorstore/mixins/search_types.md) | None", ...+9) → list[[SearchResult](files/src/local_deepwiki/handlers/types.md)]` (`search.py`) - Search for similar code chunks.
 - ▪️⚡ **[`InteractiveSearch.search`](files/src/local_deepwiki/cli/interactive_search.md)** `(query: str, limit: int) → None` (`interactive_search.py`) - Execute a search query.
@@ -2641,11 +2698,12 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 </details>
 
 <details id="w" markdown="1">
-<summary><strong>W</strong> — 39 entities</summary>
+<summary><strong>W</strong> — 40 entities</summary>
 
 - ▪️⚡ **[`LazyIndexManager.wait_for_index`](files/src/local_deepwiki/core/vectorstore/maintenance.md)** `(timeout: float | None) → bool` (`maintenance.py`) - Wait for the index to be ready.
 - 🔹 **[`walk`](files/src/local_deepwiki/core/parser/ast_utils.md)** `(node: Node) → None` (`ast_utils.py`)
 - 🔹 **[`walk`](files/src/local_deepwiki/generators/examples/discovery.md)** `(node: Node, current_class: str | None) → None` (`discovery.py`)
+- 🔹 **[`walk`](files/src/local_deepwiki/generators/analysis/cohesion.md)** `(node: Any) → None` (`cohesion.py`)
 - ▪️⚡ **[`LazyPageGenerator.warm_page`](files/src/local_deepwiki/generators/lazy_generator.md)** `(page_path: str) → None` (`lazy_generator.py`) - Generate a page in the background (no return).
 - 🔷 **[`WebProviders`](files/src/local_deepwiki/web/utils.md)** (`utils.py`) - Shared providers for web route handlers.
 - ▪️ **[`PluginRegistry.wiki_generators`](files/src/local_deepwiki/plugins/registry.md)** `(...) → dict[str, [WikiGeneratorPlugin](files/src/local_deepwiki/plugins/base.md)]` (`registry.py`) - Get registered wiki generator plugins.
@@ -2693,16 +2751,16 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
-- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
-- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
-- [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
-- [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
-- [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
-- [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
-- `src/local_deepwiki/__init__.py`
-- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
-- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
+- [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
+- `src/local_deepwiki/models/__init__.py`
+- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
+- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
+- [`src/local_deepwiki/generators/analysis/architecture_health.py:55-123`](files/src/local_deepwiki/generators/analysis/architecture_health.md)
+- [`src/local_deepwiki/generators/analysis/maintainability.py:69-79`](files/src/local_deepwiki/generators/analysis/maintainability.md)
+- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
+- [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/generators/analysis/churn.py:25-38`](files/src/local_deepwiki/generators/analysis/churn.md)
 
 
-*Showing 10 of 263 source files.*
+*Showing 10 of 268 source files.*

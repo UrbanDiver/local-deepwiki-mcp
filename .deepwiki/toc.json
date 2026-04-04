@@ -2,7 +2,7 @@
   "entries": [
     {
       "number": "1",
-      "title": "Index",
+      "title": "Overview",
       "path": "index.md"
     },
     {
@@ -22,7 +22,7 @@
     },
     {
       "number": "5",
-      "title": "Inheritance",
+      "title": "Class Inheritance",
       "path": "inheritance.md"
     },
     {
@@ -94,7 +94,7 @@
                 },
                 {
                   "number": "8.1.1.8",
-                  "title": "Server",
+                  "title": "server.py",
                   "path": "files/src/local_deepwiki/server.md"
                 },
                 {
@@ -427,12 +427,12 @@
                         },
                         {
                           "number": "8.1.1.13.26.4",
-                          "title": "docstrings.py",
+                          "title": "Docstrings",
                           "path": "files/src/local_deepwiki/core/parser/docstrings.md"
                         },
                         {
                           "number": "8.1.1.13.26.5",
-                          "title": "languages.py",
+                          "title": "Languages",
                           "path": "files/src/local_deepwiki/core/parser/languages.md"
                         }
                       ]
@@ -697,7 +697,7 @@
                         },
                         {
                           "number": "8.1.1.15.18.4",
-                          "title": "Architecture Health",
+                          "title": "architecture_health.py",
                           "path": "files/src/local_deepwiki/generators/analysis/architecture_health.md"
                         },
                         {
@@ -712,111 +712,136 @@
                         },
                         {
                           "number": "8.1.1.15.18.7",
+                          "title": "churn.py",
+                          "path": "files/src/local_deepwiki/generators/analysis/churn.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.8",
+                          "title": "cohesion.py",
+                          "path": "files/src/local_deepwiki/generators/analysis/cohesion.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.9",
                           "title": "Complexity",
                           "path": "files/src/local_deepwiki/generators/analysis/complexity.md"
                         },
                         {
-                          "number": "8.1.1.15.18.8",
+                          "number": "8.1.1.15.18.10",
                           "title": "Coupling",
                           "path": "files/src/local_deepwiki/generators/analysis/coupling.md"
                         },
                         {
-                          "number": "8.1.1.15.18.9",
+                          "number": "8.1.1.15.18.11",
                           "title": "Coupling Page",
                           "path": "files/src/local_deepwiki/generators/analysis/coupling_page.md"
                         },
                         {
-                          "number": "8.1.1.15.18.10",
+                          "number": "8.1.1.15.18.12",
                           "title": "Coverage",
                           "path": "files/src/local_deepwiki/generators/analysis/coverage.md"
                         },
                         {
-                          "number": "8.1.1.15.18.11",
+                          "number": "8.1.1.15.18.13",
                           "title": "Dependency Graph",
                           "path": "files/src/local_deepwiki/generators/analysis/dependency_graph.md"
                         },
                         {
-                          "number": "8.1.1.15.18.12",
+                          "number": "8.1.1.15.18.14",
                           "title": "Dependency Graph Data",
                           "path": "files/src/local_deepwiki/generators/analysis/dependency_graph_data.md"
                         },
                         {
-                          "number": "8.1.1.15.18.13",
+                          "number": "8.1.1.15.18.15",
                           "title": "Design Smells",
                           "path": "files/src/local_deepwiki/generators/analysis/design_smells.md"
                         },
                         {
-                          "number": "8.1.1.15.18.14",
+                          "number": "8.1.1.15.18.16",
+                          "title": "duplication.py",
+                          "path": "files/src/local_deepwiki/generators/analysis/duplication.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.17",
                           "title": "Glossary",
                           "path": "files/src/local_deepwiki/generators/analysis/glossary.md"
                         },
                         {
-                          "number": "8.1.1.15.18.15",
+                          "number": "8.1.1.15.18.18",
                           "title": "Health Page",
                           "path": "files/src/local_deepwiki/generators/analysis/health_page.md"
                         },
                         {
-                          "number": "8.1.1.15.18.16",
-                          "title": "Health Scoring",
+                          "number": "8.1.1.15.18.19",
+                          "title": "health_scoring.py",
                           "path": "files/src/local_deepwiki/generators/analysis/health_scoring.md"
                         },
                         {
-                          "number": "8.1.1.15.18.17",
+                          "number": "8.1.1.15.18.20",
                           "title": "Hotspots",
                           "path": "files/src/local_deepwiki/generators/analysis/hotspots.md"
                         },
                         {
-                          "number": "8.1.1.15.18.18",
+                          "number": "8.1.1.15.18.21",
                           "title": "Hotspots Page",
                           "path": "files/src/local_deepwiki/generators/analysis/hotspots_page.md"
                         },
                         {
-                          "number": "8.1.1.15.18.19",
+                          "number": "8.1.1.15.18.22",
                           "title": "Inheritance",
                           "path": "files/src/local_deepwiki/generators/analysis/inheritance.md"
                         },
                         {
-                          "number": "8.1.1.15.18.20",
+                          "number": "8.1.1.15.18.23",
                           "title": "Layer Analysis",
                           "path": "files/src/local_deepwiki/generators/analysis/layer_analysis.md"
                         },
                         {
-                          "number": "8.1.1.15.18.21",
+                          "number": "8.1.1.15.18.24",
+                          "title": "maintainability.py",
+                          "path": "files/src/local_deepwiki/generators/analysis/maintainability.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.25",
                           "title": "Module Dependencies",
                           "path": "files/src/local_deepwiki/generators/analysis/module_dependencies.md"
                         },
                         {
-                          "number": "8.1.1.15.18.22",
+                          "number": "8.1.1.15.18.26",
                           "title": "Module Health",
                           "path": "files/src/local_deepwiki/generators/analysis/module_health.md"
                         },
                         {
-                          "number": "8.1.1.15.18.23",
+                          "number": "8.1.1.15.18.27",
                           "title": "Onboarding",
                           "path": "files/src/local_deepwiki/generators/analysis/onboarding.md"
                         },
                         {
-                          "number": "8.1.1.15.18.24",
+                          "number": "8.1.1.15.18.28",
                           "title": "Recommendations",
                           "path": "files/src/local_deepwiki/generators/analysis/recommendations.md"
                         },
                         {
-                          "number": "8.1.1.15.18.25",
+                          "number": "8.1.1.15.18.29",
                           "title": "Smells Page",
                           "path": "files/src/local_deepwiki/generators/analysis/smells_page.md"
                         },
                         {
-                          "number": "8.1.1.15.18.26",
+                          "number": "8.1.1.15.18.30",
                           "title": "Source Filter",
                           "path": "files/src/local_deepwiki/generators/analysis/source_filter.md"
                         },
                         {
-                          "number": "8.1.1.15.18.27",
+                          "number": "8.1.1.15.18.31",
                           "title": "Stale Detection",
                           "path": "files/src/local_deepwiki/generators/analysis/stale_detection.md"
                         },
                         {
-                          "number": "8.1.1.15.18.28",
+                          "number": "8.1.1.15.18.32",
+                          "title": "testability.py",
+                          "path": "files/src/local_deepwiki/generators/analysis/testability.md"
+                        },
+                        {
+                          "number": "8.1.1.15.18.33",
                           "title": "Tours",
                           "path": "files/src/local_deepwiki/generators/analysis/tours.md"
                         }
@@ -1064,7 +1089,7 @@
                     },
                     {
                       "number": "8.1.1.16.9",
-                      "title": "Analysis Architecture",
+                      "title": "analysis_architecture.py",
                       "path": "files/src/local_deepwiki/handlers/analysis_architecture.md"
                     },
                     {
@@ -1151,7 +1176,7 @@
                     },
                     {
                       "number": "8.1.1.17.2",
-                      "title": "foundation.py",
+                      "title": "Foundation",
                       "path": "files/src/local_deepwiki/models/foundation.md"
                     },
                     {
@@ -1166,7 +1191,7 @@
                     },
                     {
                       "number": "8.1.1.17.5",
-                      "title": "Tool Args",
+                      "title": "tool_args.py",
                       "path": "files/src/local_deepwiki/models/tool_args.md"
                     },
                     {
@@ -1350,7 +1375,7 @@
                   "children": [
                     {
                       "number": "8.1.1.22.1",
-                      "title": "Analysis",
+                      "title": "analysis.py",
                       "path": "files/src/local_deepwiki/tool_defs/analysis.md"
                     },
                     {

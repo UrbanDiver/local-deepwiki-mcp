@@ -2,84 +2,92 @@
 
 ## File Overview
 
-This file provides a composite architecture health analysis by orchestrating multiple granular analysis functions into a single, cohesive health report. It integrates results from hotspots, coupling, design smells, and layer dependency analysis to compute dimension-specific scores and an overall health grade.
+This file implements a composite architecture health analysis function that aggregates results from multiple specialized analysis modules. It serves as the central coordination point for running a suite of architectural health checks, including complexity hotspots, coupling metrics, design smells, and more, then computes a scored health report.
 
-The purpose of this module is to offer a unified, structured view of a project's architectural health without relying on LLMs — instead, it composes existing pure-analysis functions to produce a report that can be used for decision-making and prioritization.
+The module is designed to be a pure analysis function that composes existing analysis tools without making any LLM-based calls. It orchestrates the execution of various analysis functions, collects and filters their results, scores each dimension, and computes an overall health grade.
 
 ## Key Concepts
 
 ### Composite Analysis Pattern
-This module implements a **composite analysis pattern**, where several independent analysis functions are called in sequence and their results aggregated. Each dimension (complexity, coupling, smells, layers) is scored independently, then combined into an overall health score.
 
-### Dimension Scoring
-Each architectural dimension is scored using dedicated scoring functions:
-- [`score_complexity`](health_scoring.md): Evaluates function-level complexity hotspots.
-- [`score_coupling`](health_scoring.md): Scores module-level coupling metrics.
-- [`score_smells`](health_scoring.md): Computes a score based on design smell density and line count.
-- [`score_layers`](health_scoring.md): Scores adherence to layering principles.
+This module uses the **composite analysis pattern**, where multiple individual analysis functions are orchestrated together to produce a holistic view of system health. Each analysis function ([`analyze_hotspots`](hotspots.md), [`analyze_coupling_metrics`](coupling.md), etc.) is responsible for a specific aspect of code architecture, and this module ties them together.
 
-This approach allows for granular diagnostics, enabling users to understand which aspects of the architecture are most problematic.
+### Dimensional Scoring
+
+The health report is scored across multiple dimensions:
+- **Complexity**: Based on function hotspots
+- **Coupling**: Based on coupling metrics
+- **Smells**: Based on design smells found
+- **Layers**: Based on layer dependency violations
+- **Churn**: Based on file change frequency
+- **Cohesion**: Based on class and module cohesion
+- **Duplication**: Based on code duplication statistics
+- **Testability**: Based on testability metrics
+- **Maintainability**: Based on maintainability indicators
+
+This approach allows for granular feedback on specific architectural concerns while providing an overall health score.
 
 ### Next Steps Generation
-The `_generate_next_steps` function implements a **rule-based recommendation engine**. It identifies the worst-performing dimension and suggests relevant drill-down tools (e.g., `get_hotspots`, `get_design_smells`) based on that finding. It also provides recommendations based on thresholds for smell count and hotspot detection.
 
-This design choice ensures that the output isn't just a score but actionable insights.
+The `_generate_next_steps` function implements a **drill-down suggestion engine**. It analyzes the overall score and top findings to recommend follow-up tools or actions. This provides actionable insights to users based on the analysis results, helping them prioritize remediation efforts.
 
 ## Integration
 
 ### External Usage
-This file is used by:
-- `architecture_compare`
-- `health_page`
-- `test_architecture_health`
 
-These callers invoke `analyze_architecture_health` to generate health reports for comparison or display in documentation pages.
+This file is called by:
+- `architecture_compare` (for comparing health across different versions or projects)
+- `health_page` (for generating health reports in web interfaces)
+- `test_architecture_health` (for unit testing the health analysis)
 
-### Internal Dependencies
-This module integrates with several other analysis modules:
-- [`analyze_coupling_metrics`](coupling.md) from `local_deepwiki.generators.analysis.coupling`
-- [`analyze_design_smells`](design_smells.md) from `local_deepwiki.generators.analysis.design_smells`
-- [`analyze_hotspots`](hotspots.md) from `local_deepwiki.generators.analysis.hotspots`
-- [`analyze_layer_dependencies`](layer_analysis.md) from `local_deepwiki.generators.analysis.layer_analysis`
-- [`iter_python_files`](source_filter.md) from `local_deepwiki.generators.analysis.source_filter`
+### Module Dependencies
 
-It also uses scoring logic from `local_deepwiki.generators.analysis.health_scoring` and logging from `local_deepwiki.logging`.
+This module imports and integrates analysis functions from:
+- `local_deepwiki.generators.analysis.churn`
+- `local_deepwiki.generators.analysis.cohesion`
+- `local_deepwiki.generators.analysis.coupling`
+- `local_deepwiki.generators.analysis.duplication`
+- `local_deepwiki.generators.analysis.design_smells`
+- `local_deepwiki.generators.analysis.health_scoring` (for scoring functions)
+- `local_deepwiki.generators.analysis.maintainability`
+- `local_deepwiki.generators.analysis.testability`
+- `local_deepwiki.generators.analysis.hotspots`
+- `local_deepwiki.generators.analysis.layer_analysis`
+- `local_deepwiki.generators.analysis.source_filter` (for filtering Python files)
 
-### Context in the Codebase
-This file is part of the `local_deepwiki.generators.analysis` package, which is responsible for generating various architectural and code quality reports. It fits into the larger CLI and wiki generation pipeline by being called from top-level CLI commands like `health_page` or `architecture_compare`, where it provides structured input for further processing or display.
+### Related Files
+
+This module is part of the `local_deepwiki.generators.analysis` package and integrates with:
+- `architecture_report.py` (likely for generating full reports)
+- `health_scoring.py` (for scoring logic)
+- `dependency_graph_data.py` (for dependency-related analysis)
+- `tours.py` (for interactive analysis tours)
 
 ## Design Notes
 
-### Thresholds and Constants
-Several thresholds are hardcoded:
-- `_SCORE_WARN_THRESHOLD`: Used to determine when a dimension is considered "bad enough" to trigger a next-step recommendation.
-- `_SMELL_THRESHOLD_MEDIUM` and `_SMELL_THRESHOLD_HIGH`: Used to decide whether to recommend actions based on smell count.
-- `_MAX_NEXT_STEPS`: Limits the number of recommendations to 5.
+### Modular Design and Reusability
 
-These thresholds are chosen to balance between being too sensitive (generating too many steps) and too insensitive (missing important issues).
+The module is designed to be modular and reusable. Each analysis function is kept separate, which allows:
+- Independent development and testing of each analysis
+- Easy replacement or extension of individual analysis components
+- Clear separation of concerns
+
+### Error Handling
+
+The module gracefully handles cases where certain analyses might fail, such as when [`analyze_churn`](churn.md) is run on a non-Git repository. It logs the failure and continues with other analyses, ensuring that one failure doesn't halt the entire health check.
 
 ### Filtering Smells
-In `analyze_architecture_health`, smells are filtered to include only those from the `src/` directory:
-```python
-src_smells = [
-    s
-    for s in smell_result.get("smells", [])
-    if s.get("file", "").startswith("src/")
-]
-```
-This ensures that test or generated code does not contribute to the smell score, focusing the analysis on actual source code quality.
 
-### Line Counting
-The `_count_total_lines` function uses [`iter_python_files`](source_filter.md) to enumerate source files and counts lines using `read_text`. It gracefully handles `OSError` exceptions, ensuring that a single unreadable file doesn't halt the entire analysis.
+Design smells are filtered to include only those found in the `src/` directory, excluding test and generated code. This ensures that the health report focuses on the actual codebase and not on artifacts.
 
-### Modular Scoring
-Each dimension is scored in `_score_all_dimensions`, which calls dimension-specific scoring functions. This modular design allows for easy replacement or extension of scoring logic without affecting the overall orchestration.
+### Threshold-Based Next Steps
 
-### Logging
-The module uses [`get_logger`](../../logging.md) to log the final grade and score for debugging and monitoring purposes, aligning with the project's logging strategy.
+The `_generate_next_steps` function uses threshold-based logic to determine which suggestions to provide:
+- If a dimension is below a warning threshold, it recommends drilling into that area
+- If there are many smells, it suggests getting recommendations or checking for parameter bloat
+- Limits the number of next steps to prevent overwhelming the user
 
-### No LLM Dependency
-This module is designed to be pure analysis, avoiding LLM calls. This ensures deterministic, fast results and aligns with the project's focus on static code analysis.
+This approach makes the tool both actionable and scalable, providing only the most relevant suggestions based on severity and volume of findings.
 
 ## API Reference
 
@@ -106,7 +114,7 @@ Run all architecture analyses and return a scored health report.
 
 
 <details>
-<summary>View Source (lines 148-220) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/architecture_health.py#L148-L220">GitHub</a></summary>
+<summary>View Source (lines 179-267) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/architecture_health.py#L179-L267">GitHub</a></summary>
 
 ```python
 def analyze_architecture_health(
@@ -132,24 +140,40 @@ def analyze_architecture_health(
     coupling_result = analyze_coupling_metrics(repo_path)
     smell_result = analyze_design_smells(repo_path, severity_threshold="medium")
     layer_result = analyze_layer_dependencies(repo_path, project_name)
+    try:
+        churn_result = analyze_churn(repo_path)
+    except Exception:
+        logger.debug("Churn analysis skipped (not a git repo or git error)")
+        churn_result = {"composite": [], "stats": {}}
+
+    cohesion_result = analyze_cohesion(repo_path)
+
+    duplication_result = analyze_duplication(repo_path)
+
+    testability_result = analyze_testability(repo_path)
+
+    maintainability_result = analyze_maintainability(repo_path)
 
     # Filter smells to source-only (exclude test/generated)
-    src_smells = [
-        s
-        for s in smell_result.get("smells", [])
-        if s.get("file", "").startswith("src/")
-    ]
+    src_smells = [s for s in smell_result.get("smells", []) if s.get("file", "").startswith("src/")]
 
     dimensions = _score_all_dimensions(
-        hotspot_result, coupling_result, src_smells, layer_result, total_lines
+        hotspot_result,
+        coupling_result,
+        src_smells,
+        layer_result,
+        churn_result,
+        cohesion_result,
+        duplication_result,
+        testability_result,
+        maintainability_result,
+        total_lines,
     )
     overall = compute_overall(dimensions)
 
     # Build top findings
     top_hotspots = hotspot_result.get("hotspots", [])[:top_findings]
-    top_smells_high = [s for s in src_smells if s.get("severity") == "high"][
-        :top_findings
-    ]
+    top_smells_high = [s for s in src_smells if s.get("severity") == "high"][:top_findings]
     god_classes = [s for s in src_smells if s.get("type") == "god_class"]
 
     logger.info(
@@ -194,33 +218,53 @@ flowchart TD
     N1[_generate_next_steps]
     N2[_score_all_dimensions]
     N3[analyze_architecture_health]
-    N4[analyze_coupling_metrics]
-    N5[analyze_design_smells]
-    N6[analyze_hotspots]
-    N7[analyze_layer_dependencies]
-    N8[compute_overall]
-    N9[iter_python_files]
-    N10[read_text]
-    N11[score_complexity]
-    N12[score_coupling]
-    N13[score_layers]
-    N14[score_smells]
-    N0 --> N9
-    N0 --> N10
-    N2 --> N11
-    N2 --> N12
-    N2 --> N14
-    N2 --> N13
+    N4[analyze_churn]
+    N5[analyze_cohesion]
+    N6[analyze_coupling_metrics]
+    N7[analyze_design_smells]
+    N8[analyze_duplication]
+    N9[analyze_hotspots]
+    N10[analyze_layer_dependencies]
+    N11[analyze_maintainability]
+    N12[analyze_testability]
+    N13[compute_overall]
+    N14[iter_python_files]
+    N15[read_text]
+    N16[score_churn]
+    N17[score_cohesion]
+    N18[score_complexity]
+    N19[score_coupling]
+    N20[score_duplication]
+    N21[score_layers]
+    N22[score_maintainability]
+    N23[score_smells]
+    N24[score_testability]
+    N0 --> N14
+    N0 --> N15
+    N2 --> N18
+    N2 --> N19
+    N2 --> N23
+    N2 --> N21
+    N2 --> N16
+    N2 --> N17
+    N2 --> N20
+    N2 --> N24
+    N2 --> N22
     N3 --> N0
+    N3 --> N9
     N3 --> N6
+    N3 --> N7
+    N3 --> N10
     N3 --> N4
     N3 --> N5
-    N3 --> N7
-    N3 --> N2
     N3 --> N8
+    N3 --> N12
+    N3 --> N11
+    N3 --> N2
+    N3 --> N13
     N3 --> N1
     classDef func fill:#e1f5fe
-    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14 func
+    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24 func
 ```
 
 ## Used By
@@ -230,17 +274,27 @@ Functions and methods in this file and their callers:
 - **`_count_total_lines`**: called by `analyze_architecture_health`
 - **`_generate_next_steps`**: called by `analyze_architecture_health`
 - **`_score_all_dimensions`**: called by `analyze_architecture_health`
+- **[`analyze_churn`](churn.md)**: called by `analyze_architecture_health`
+- **[`analyze_cohesion`](cohesion.md)**: called by `analyze_architecture_health`
 - **[`analyze_coupling_metrics`](coupling.md)**: called by `analyze_architecture_health`
 - **[`analyze_design_smells`](design_smells.md)**: called by `analyze_architecture_health`
+- **[`analyze_duplication`](duplication.md)**: called by `analyze_architecture_health`
 - **[`analyze_hotspots`](hotspots.md)**: called by `analyze_architecture_health`
 - **[`analyze_layer_dependencies`](layer_analysis.md)**: called by `analyze_architecture_health`
+- **[`analyze_maintainability`](maintainability.md)**: called by `analyze_architecture_health`
+- **[`analyze_testability`](testability.md)**: called by `analyze_architecture_health`
 - **[`compute_overall`](health_scoring.md)**: called by `analyze_architecture_health`
 - **[`iter_python_files`](source_filter.md)**: called by `_count_total_lines`
 - **`read_text`**: called by `_count_total_lines`
+- **[`score_churn`](health_scoring.md)**: called by `_score_all_dimensions`
+- **[`score_cohesion`](health_scoring.md)**: called by `_score_all_dimensions`
 - **[`score_complexity`](health_scoring.md)**: called by `_score_all_dimensions`
 - **[`score_coupling`](health_scoring.md)**: called by `_score_all_dimensions`
+- **[`score_duplication`](health_scoring.md)**: called by `_score_all_dimensions`
 - **[`score_layers`](health_scoring.md)**: called by `_score_all_dimensions`
+- **[`score_maintainability`](health_scoring.md)**: called by `_score_all_dimensions`
 - **[`score_smells`](health_scoring.md)**: called by `_score_all_dimensions`
+- **[`score_testability`](health_scoring.md)**: called by `_score_all_dimensions`
 
 ## Usage Examples
 
@@ -295,10 +349,10 @@ assert overall["grade"] in ("A", "B", "C", "D", "F")
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `_count_total_lines` | function | Brian Breidenbach | yesterday | `29ae780` refactor: decompose long me... |
-| `_score_all_dimensions` | function | Brian Breidenbach | yesterday | `29ae780` refactor: decompose long me... |
-| `analyze_architecture_health` | function | Brian Breidenbach | yesterday | `29ae780` refactor: decompose long me... |
-| `_generate_next_steps` | function | Brian Breidenbach | 2 days ago | `3b8b067` feat: add next_steps guidan... |
+| `_generate_next_steps` | function | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `analyze_architecture_health` | function | Brian Breidenbach | today | `d50a656` feat: add maintainability i... |
+| `_score_all_dimensions` | function | Brian Breidenbach | today | `64e4b55` feat: add maintainability i... |
+| `_count_total_lines` | function | Brian Breidenbach | 5 days ago | `29ae780` refactor: decompose long me... |
 
 ## Additional Source Code
 
@@ -307,7 +361,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_generate_next_steps`
 
 <details>
-<summary>View Source (lines 45-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/architecture_health.py#L45-L115">GitHub</a></summary>
+<summary>View Source (lines 55-123) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/architecture_health.py#L55-L123">GitHub</a></summary>
 
 ```python
 def _generate_next_steps(
@@ -365,9 +419,7 @@ def _generate_next_steps(
             {
                 "tool": "get_recommendations",
                 "args": {"enrich": True},
-                "reason": (
-                    f"{total_smells} design smells found — get prioritized action items"
-                ),
+                "reason": (f"{total_smells} design smells found — get prioritized action items"),
             }
         )
 
@@ -389,7 +441,7 @@ def _generate_next_steps(
 #### `_count_total_lines`
 
 <details>
-<summary>View Source (lines 118-126) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/architecture_health.py#L118-L126">GitHub</a></summary>
+<summary>View Source (lines 126-134) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/architecture_health.py#L126-L134">GitHub</a></summary>
 
 ```python
 def _count_total_lines(repo_path: Path) -> int:
@@ -409,7 +461,7 @@ def _count_total_lines(repo_path: Path) -> int:
 #### `_score_all_dimensions`
 
 <details>
-<summary>View Source (lines 129-145) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/architecture_health.py#L129-L145">GitHub</a></summary>
+<summary>View Source (lines 137-176) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/analysis/architecture_health.py#L137-L176">GitHub</a></summary>
 
 ```python
 def _score_all_dimensions(
@@ -417,6 +469,11 @@ def _score_all_dimensions(
     coupling_result: dict[str, Any],
     src_smells: list[dict[str, Any]],
     layer_result: dict[str, Any],
+    churn_result: dict[str, Any],
+    cohesion_result: dict[str, Any],
+    duplication_result: dict[str, Any],
+    testability_result: dict[str, Any],
+    maintainability_result: dict[str, Any],
     total_lines: int,
 ) -> dict[str, Any]:
     """Compute scored dimension dict from raw analysis results."""
@@ -428,6 +485,24 @@ def _score_all_dimensions(
         "coupling": score_coupling(coupling_result.get("metrics", [])),
         "smells": score_smells(src_smells, total_lines),
         "layers": score_layers(layer_result.get("violations", [])),
+        "churn": score_churn(
+            churn_result.get("composite", []),
+            stats=churn_result.get("stats", {}),
+        ),
+        "cohesion": score_cohesion(
+            cohesion_result.get("class_cohesion", []),
+            cohesion_result.get("module_cohesion", []),
+            stats=cohesion_result.get("stats", {}),
+        ),
+        "duplication": score_duplication(
+            stats=duplication_result.get("stats", {}),
+        ),
+        "testability": score_testability(
+            stats=testability_result.get("stats", {}),
+        ),
+        "maintainability": score_maintainability(
+            stats=maintainability_result.get("stats", {}),
+        ),
     }
 ```
 
@@ -435,4 +510,4 @@ def _score_all_dimensions(
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/generators/analysis/architecture_health.py:45-115`
+- `src/local_deepwiki/generators/analysis/architecture_health.py:55-123`

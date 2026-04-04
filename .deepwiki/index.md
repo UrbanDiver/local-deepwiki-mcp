@@ -5,21 +5,21 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki-style MCP server for private repository documentation. This project provides a local server that enables intelligent, AI-powered search and documentation of code repositories using a hybrid approach combining local LLMs, embeddings, and structured data indexing. It supports both local and cloud-based LLM providers and offers a range of CLI tools for indexing, searching, and exporting documentation.
+Local DeepWiki-style MCP server for private repository documentation. This project provides a local infrastructure for indexing and querying code repositories using LLM-powered tools, with support for both local and cloud-based language model providers. It enables developers to create, maintain, and search documentation directly from their codebase.
 
 ## Key Features
 
-- **Hybrid LLM Support**: Supports both local (e.g., Ollama) and cloud (e.g., Anthropic, OpenAI) language model providers through a unified provider abstraction layer
-- **AST-Aware Code Chunking**: Uses tree-sitter to split code at function and class boundaries for more precise semantic indexing and retrieval
-- **Multi-Format Documentation Export**: Includes CLI tools for exporting documentation to HTML and PDF formats
-- **Architecture Quality Gates**: Provides commands for checking architecture health and quality through automated analysis and reporting
-- **Async Core Architecture**: All core operations are implemented using asyncio for efficient concurrent processing and responsiveness
+- **Async-native architecture** - All core operations use asyncio for efficient concurrent processing
+- **AST-aware code chunking** - Code is split at function and class boundaries using tree-sitter for more precise semantic indexing
+- **Multi-provider LLM support** - Supports local (Ollama), cloud (Anthropic, OpenAI) and hybrid configurations through provider abstraction
+- **Comprehensive testing framework** - Uses pytest-asyncio with shared test factories and mocking for LLM/embedding providers
+- **Multi-language codebase support** - Processes Python, TypeScript/TSX, JavaScript, Go, Rust, Java, C, C++, Objective-C, Swift, Ruby, PHP, Kotlin, and C# codebases
 
 ## Technology Stack
 
 - **Python >=3.11**
 - **Dependencies**: anthropic, flask, lancedb, markdown, mcp, nh3, ollama, openai, pandas, psutil, pydantic, pyyaml
-  - Plus 18 more...
+  - Plus 19 more...
 
 ## Directory Structure
 

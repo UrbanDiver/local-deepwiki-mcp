@@ -4,14 +4,14 @@
 
 | Type | Count |
 |------|-------|
-| Long Parameter List | 18 |
+| Long Parameter List | 20 |
 | Feature Envy | 12 |
 | Large File | 7 |
 
 ## Severity Summary
 
-- **Total smells:** 37
-- **Medium:** 37
+- **Total smells:** 39
+- **Medium:** 39
 
 ## Long Parameter List
 
@@ -27,6 +27,8 @@
 | `_execute_paginated_search` | `src/local_deepwiki/core/vectorstore/search_engine.py:303` | medium | Function has 7 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
 | `__init__` | `src/local_deepwiki/core/vectorstore/search_engine.py:361` | medium | Function has 9 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
 | `__init__` | `src/local_deepwiki/core/vectorstore/store.py:114` | medium | Function has 11 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
+| `_score_all_dimensions` | `src/local_deepwiki/generators/analysis/architecture_health.py:137` | medium | Function has 10 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
+| `_compute_testability_stats` | `src/local_deepwiki/generators/analysis/testability.py:167` | medium | Function has 7 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
 | `build_cross_file_graph` | `src/local_deepwiki/generators/codemap/graph.py:552` | medium | Function has 7 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
 | `generate_file_docs` | `src/local_deepwiki/generators/wiki/files.py:703` | medium | Function has 7 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
 | `__init__` | `src/local_deepwiki/generators/wiki/generator.py:109` | medium | Function has 8 parameters (threshold: 6) | Introduce a parameter object or configuration dataclass. |
@@ -48,8 +50,8 @@
 | `get_virtual_structure` | `src/local_deepwiki/generators/lazy_generator.py:430` | medium | Function calls 'pages' methods 6 times — it may belong there (threshold: 5) | Consider moving this function to the 'pages' class. |
 | `_populate_pyproject_standard` | `src/local_deepwiki/generators/manifest_parsers.py:26` | medium | Function calls 'project' methods 8 times — it may belong there (threshold: 5) | Consider moving this function to the 'project' class. |
 | `_build_keywords` | `src/local_deepwiki/generators/search.py:215` | medium | Function calls 'keywords' methods 7 times — it may belong there (threshold: 5) | Consider moving this function to the 'keywords' class. |
-| `handle_get_cross_module_dependencies` | `src/local_deepwiki/handlers/analysis_architecture.py:236` | medium | Function calls 'result' methods 7 times — it may belong there (threshold: 5) | Consider moving this function to the 'result' class. |
-| `handle_get_coupling_metrics` | `src/local_deepwiki/handlers/analysis_architecture.py:295` | medium | Function calls 'result' methods 7 times — it may belong there (threshold: 5) | Consider moving this function to the 'result' class. |
+| `handle_get_cross_module_dependencies` | `src/local_deepwiki/handlers/analysis_architecture.py:239` | medium | Function calls 'result' methods 7 times — it may belong there (threshold: 5) | Consider moving this function to the 'result' class. |
+| `handle_get_coupling_metrics` | `src/local_deepwiki/handlers/analysis_architecture.py:298` | medium | Function calls 'result' methods 7 times — it may belong there (threshold: 5) | Consider moving this function to the 'result' class. |
 | `_compute_coverage_stats` | `src/local_deepwiki/handlers/analysis_metadata.py:142` | medium | Function calls 'coverage_data' methods 9 times — it may belong there (threshold: 5) | Consider moving this function to the 'coverage_data' class. |
 | `initial_index` | `src/local_deepwiki/watcher.py:480` | medium | Function calls 'progress' methods 6 times — it may belong there (threshold: 5) | Consider moving this function to the 'progress' class. |
 
@@ -60,25 +62,25 @@
 | `api_docs.py` | `src/local_deepwiki/generators/analysis/api_docs.py:1` | medium | File has 828 lines (threshold: 800) | Split into smaller, focused modules. |
 | `dependency_graph.py` | `src/local_deepwiki/generators/analysis/dependency_graph.py:1` | medium | File has 852 lines (threshold: 800) | Split into smaller, focused modules. |
 | `files.py` | `src/local_deepwiki/generators/wiki/files.py:1` | medium | File has 816 lines (threshold: 800) | Split into smaller, focused modules. |
-| `analysis_architecture.py` | `src/local_deepwiki/handlers/analysis_architecture.py:1` | medium | File has 830 lines (threshold: 800) | Split into smaller, focused modules. |
-| `tool_args.py` | `src/local_deepwiki/models/tool_args.py:1` | medium | File has 863 lines (threshold: 800) | Split into smaller, focused modules. |
+| `analysis_architecture.py` | `src/local_deepwiki/handlers/analysis_architecture.py:1` | medium | File has 995 lines (threshold: 800) | Split into smaller, focused modules. |
+| `tool_args.py` | `src/local_deepwiki/models/tool_args.py:1` | medium | File has 935 lines (threshold: 800) | Split into smaller, focused modules. |
 | `analysis_service.py` | `src/local_deepwiki/services/analysis_service.py:1` | medium | File has 806 lines (threshold: 800) | Split into smaller, focused modules. |
-| `analysis.py` | `src/local_deepwiki/tool_defs/analysis.py:1` | medium | File has 854 lines (threshold: 800) | Split into smaller, focused modules. |
+| `analysis.py` | `src/local_deepwiki/tool_defs/analysis.py:1` | medium | File has 1032 lines (threshold: 800) | Split into smaller, focused modules. |
 
 ## Relevant Source Files
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/core/parser/docstrings.py:15-44`](files/src/local_deepwiki/core/parser/docstrings.md)
-- [`src/local_deepwiki/core/parser/languages.py`](files/src/local_deepwiki/core/parser/languages.md)
-- [`src/local_deepwiki/models/foundation.py:16-31`](files/src/local_deepwiki/models/foundation.md)
-- [`src/local_deepwiki/logging.py:28-83`](files/src/local_deepwiki/logging.md)
-- [`src/local_deepwiki/server.py:92-94`](files/src/local_deepwiki/server.md)
-- [`src/local_deepwiki/cli_progress.py:147-199`](files/src/local_deepwiki/cli_progress.md)
-- [`src/local_deepwiki/events.py:35-63`](files/src/local_deepwiki/events.md)
-- `src/local_deepwiki/__init__.py`
-- [`src/local_deepwiki/prompts.py:28-72`](files/src/local_deepwiki/prompts.md)
-- [`src/local_deepwiki/error_factories.py:47-83`](files/src/local_deepwiki/error_factories.md)
+- [`src/local_deepwiki/server.py:98-100`](files/src/local_deepwiki/server.md)
+- `src/local_deepwiki/models/__init__.py`
+- [`src/local_deepwiki/tool_defs/analysis.py`](files/src/local_deepwiki/tool_defs/analysis.md)
+- [`src/local_deepwiki/generators/analysis/duplication.py:26-37`](files/src/local_deepwiki/generators/analysis/duplication.md)
+- [`src/local_deepwiki/generators/analysis/architecture_health.py:55-123`](files/src/local_deepwiki/generators/analysis/architecture_health.md)
+- [`src/local_deepwiki/generators/analysis/maintainability.py:69-79`](files/src/local_deepwiki/generators/analysis/maintainability.md)
+- [`src/local_deepwiki/models/tool_args.py:15-49`](files/src/local_deepwiki/models/tool_args.md)
+- [`src/local_deepwiki/generators/analysis/cohesion.py:40-60`](files/src/local_deepwiki/generators/analysis/cohesion.md)
+- [`src/local_deepwiki/generators/analysis/health_scoring.py:34-39`](files/src/local_deepwiki/generators/analysis/health_scoring.md)
+- [`src/local_deepwiki/generators/analysis/churn.py:25-38`](files/src/local_deepwiki/generators/analysis/churn.md)
 
 
-*Showing 10 of 263 source files.*
+*Showing 10 of 268 source files.*
