@@ -90,48 +90,6 @@ _ABC_BASES = frozenset({"ABC", "ABCMeta"})
 _PROTOCOL_BASES = frozenset({"Protocol"})
 
 
-def _classify_class_pattern(class_node: Any, source: bytes) -> str | None:
-    """Classify a class as a known OOP pattern where LCOM4 is misleading.
-
-    Returns:
-        ``"abc"`` for abstract base classes, ``"protocol"`` for Protocol
-        classes, ``"mixin"`` for mixin classes, or ``None`` for regular classes.
-    """
-    # --- Check class name for Mixin ---
-    name_node = class_node.child_by_field_name("name")
-    if name_node and "Mixin" in get_node_text(name_node, source):
-        return "mixin"
-
-    # --- Check base classes in the argument_list ---
-    for child in class_node.children:
-        if child.type == "argument_list":
-            for arg in child.children:
-                base_name = _extract_base_name(arg, source)
-                if base_name in _ABC_BASES:
-                    return "abc"
-                if base_name in _PROTOCOL_BASES:
-                    return "protocol"
-                # Handle keyword arguments like metaclass=ABCMeta
-                if arg.type == "keyword_argument":
-                    for kw_child in arg.children:
-                        kw_name = _extract_base_name(kw_child, source)
-                        if kw_name in _ABC_BASES:
-                            return "abc"
-            break
-
-    # --- Check for @abstractmethod on >= half of methods ---
-    func_types = FUNCTION_NODE_TYPES.get(LangEnum.PYTHON, set())
-    methods = find_nodes_by_type(class_node, func_types)
-    if methods:
-        abstract_count = sum(
-            1 for m in methods if _has_abstractmethod_decorator(m, source)
-        )
-        if abstract_count >= len(methods) / 2:
-            return "abc"
-
-    return None
-
-
 def _extract_base_name(node: Any, source: bytes) -> str:
     """Extract the final identifier from a base class node.
 
@@ -161,6 +119,66 @@ def _has_abstractmethod_decorator(method_node: Any, source: bytes) -> bool:
                 ):
                     return True
     return False
+
+
+def _extract_keyword_base(kw_node: Any, source: bytes) -> str:
+    """Extract the base name from a keyword argument like ``metaclass=ABCMeta``."""
+    for child in kw_node.children:
+        name = _extract_base_name(child, source)
+        if name:
+            return name
+    return ""
+
+
+def _find_base_class_pattern(class_node: Any, source: bytes) -> str | None:
+    """Check base classes for ABC or Protocol inheritance."""
+    arg_list = next((c for c in class_node.children if c.type == "argument_list"), None)
+    if arg_list is None:
+        return None
+
+    for arg in arg_list.children:
+        base_name = _extract_base_name(arg, source)
+        if base_name in _ABC_BASES:
+            return "abc"
+        if base_name in _PROTOCOL_BASES:
+            return "protocol"
+        if arg.type == "keyword_argument":
+            kw_name = _extract_keyword_base(arg, source)
+            if kw_name in _ABC_BASES:
+                return "abc"
+
+    return None
+
+
+def _is_mostly_abstract(class_node: Any, source: bytes) -> bool:
+    """Return True if at least half of the class methods are abstract."""
+    func_types = FUNCTION_NODE_TYPES.get(LangEnum.PYTHON, set())
+    methods = find_nodes_by_type(class_node, func_types)
+    if not methods:
+        return False
+    abstract_count = sum(1 for m in methods if _has_abstractmethod_decorator(m, source))
+    return abstract_count >= len(methods) / 2
+
+
+def _classify_class_pattern(class_node: Any, source: bytes) -> str | None:
+    """Classify a class as a known OOP pattern where LCOM4 is misleading.
+
+    Returns:
+        ``"abc"`` for abstract base classes, ``"protocol"`` for Protocol
+        classes, ``"mixin"`` for mixin classes, or ``None`` for regular classes.
+    """
+    name_node = class_node.child_by_field_name("name")
+    if name_node and "Mixin" in get_node_text(name_node, source):
+        return "mixin"
+
+    base_pattern = _find_base_class_pattern(class_node, source)
+    if base_pattern is not None:
+        return base_pattern
+
+    if _is_mostly_abstract(class_node, source):
+        return "abc"
+
+    return None
 
 
 def compute_lcom4(class_node: Any, source: bytes, language: LangEnum) -> int:
