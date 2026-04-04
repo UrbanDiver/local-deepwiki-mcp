@@ -14,6 +14,11 @@ from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
 
+try:
+    from coverage import CoverageData  # type: ignore[import-untyped]
+except ImportError:
+    CoverageData = None  # type: ignore[assignment,misc]
+
 _TEST_FILE_RE = re.compile(r"(^test_.*\.py$|.*_test\.py$|.*_spec\.py$)")
 _TEST_DIR_RE = re.compile(r"(^|/)(__tests__|tests?)/")
 
@@ -91,7 +96,10 @@ def _collect_python_files(repo_path: Path) -> list[tuple[Path, str]]:
             continue
 
         parts = rel_path.split("/")
-        if any(part.startswith(".") or part in ("node_modules", "__pycache__") for part in parts):
+        if any(
+            part.startswith(".") or part in ("node_modules", "__pycache__")
+            for part in parts
+        ):
             continue
 
         all_py.append((py_file, rel_path))
@@ -164,6 +172,61 @@ def _process_test_files(
     return test_files, test_lines, total_assertions
 
 
+def _read_coverage_db(
+    coverage_path: Path,
+    repo_path: Path,
+    source_files_set: set[str],
+) -> tuple[set[str], float] | None:
+    """Read a ``.coverage`` database and return covered source files.
+
+    Args:
+        coverage_path: Path to the ``.coverage`` SQLite database.
+        repo_path: Repository root (used to resolve relative paths).
+        source_files_set: Set of relative source file paths to check.
+
+    Returns:
+        Tuple of (covered_files_set, avg_coverage_pct) or ``None`` if the
+        database cannot be read.
+    """
+    if CoverageData is None:
+        logger.debug("coverage package not available, skipping coverage DB")
+        return None
+
+    if not coverage_path.is_file():
+        return None
+
+    try:
+        cd = CoverageData(str(coverage_path))
+        cd.read()
+    except Exception:
+        logger.debug("Failed to read coverage database at %s", coverage_path)
+        return None
+
+    measured = cd.measured_files()
+    if not measured:
+        return None
+
+    # Build absolute -> relative lookup for source files
+    abs_to_rel: dict[str, str] = {}
+    for rel in source_files_set:
+        abs_path = str((repo_path / rel).resolve())
+        abs_to_rel[abs_path] = rel
+
+    covered: set[str] = set()
+    coverage_pcts: list[float] = []
+
+    for abs_path, rel_path in abs_to_rel.items():
+        lines = cd.lines(abs_path)
+        if lines:
+            covered.add(rel_path)
+            coverage_pcts.append(100.0)  # Has coverage (> 0 lines)
+        else:
+            coverage_pcts.append(0.0)
+
+    avg_cov = sum(coverage_pcts) / len(coverage_pcts) if coverage_pcts else 0.0
+    return covered, avg_cov
+
+
 def _compute_testability_stats(
     source_paths: list[tuple[Path, str]],
     test_paths: list[tuple[Path, str]],
@@ -172,13 +235,35 @@ def _compute_testability_stats(
     test_lines: int,
     total_assertions: int,
     source_files_set: set[str],
+    *,
+    covered_files: set[str] | None = None,
+    avg_coverage_pct: float | None = None,
 ) -> tuple[list[str], dict[str, Any]]:
     """Compute summary statistics.
 
+    Args:
+        covered_files: Files with > 0% line coverage from coverage DB.
+            When provided, overrides filename-heuristic matching for
+            determining untested files.
+        avg_coverage_pct: Average coverage percentage across source files.
+
     Returns (untested_files, stats_dict).
     """
-    tested_sources = {tf["matches_source"] for tf in test_files if tf["matches_source"]}
-    untested_files = sorted(rel for rel in source_files_set if rel not in tested_sources)
+    if covered_files is not None:
+        # Use real coverage data
+        untested_files = sorted(
+            rel for rel in source_files_set if rel not in covered_files
+        )
+        coverage_source = "coverage_db"
+    else:
+        # Fall back to filename-heuristic matching
+        tested_sources = {
+            tf["matches_source"] for tf in test_files if tf["matches_source"]
+        }
+        untested_files = sorted(
+            rel for rel in source_files_set if rel not in tested_sources
+        )
+        coverage_source = "filename_heuristic"
 
     total_source = len(source_paths)
     total_test = len(test_paths)
@@ -187,7 +272,7 @@ def _compute_testability_stats(
     ratio = test_lines / source_lines if source_lines > 0 else 0.0
     avg_assertions = total_assertions / total_test if total_test > 0 else 0.0
 
-    stats = {
+    stats: dict[str, Any] = {
         "source_lines": source_lines,
         "test_lines": test_lines,
         "test_to_code_ratio": round(ratio, 4),
@@ -197,7 +282,10 @@ def _compute_testability_stats(
         "untested_file_pct": round(untested_pct, 1),
         "total_assertions": total_assertions,
         "avg_assertions_per_test": round(avg_assertions, 2),
+        "coverage_source": coverage_source,
     }
+    if avg_coverage_pct is not None:
+        stats["actual_coverage_pct"] = round(avg_coverage_pct, 1)
 
     return untested_files, stats
 
@@ -205,6 +293,7 @@ def _compute_testability_stats(
 def analyze_testability(
     repo_path: Path | str,
     *,
+    coverage_path: Path | None = None,
     exclude_patterns: list[str] | None = None,
 ) -> dict[str, Any]:
     """Analyze testability metrics for a repository.
@@ -213,8 +302,14 @@ def analyze_testability(
     test-to-code ratio, matches test files to source, counts assertions,
     and identifies untested modules.
 
+    When a ``.coverage`` database is available (from ``pytest --cov``),
+    uses actual line-coverage data to determine which files are tested.
+    Falls back to filename-heuristic matching otherwise.
+
     Args:
         repo_path: Repository root directory.
+        coverage_path: Explicit path to ``.coverage`` database. Auto-discovers
+            ``<repo_path>/.coverage`` when ``None``.
         exclude_patterns: Optional glob patterns to exclude.
 
     Returns:
@@ -226,7 +321,16 @@ def analyze_testability(
     all_py = _collect_python_files(repo_path)
     test_paths, source_paths = _classify_files(all_py, source_files_set)
     source_lines = _count_source_lines(source_paths)
-    test_files, test_lines, total_assertions = _process_test_files(test_paths, source_files_set)
+    test_files, test_lines, total_assertions = _process_test_files(
+        test_paths, source_files_set
+    )
+
+    # Try to read real coverage data
+    cov_path = coverage_path or (repo_path / ".coverage")
+    cov_result = _read_coverage_db(cov_path, repo_path, source_files_set)
+    covered_files = cov_result[0] if cov_result else None
+    avg_coverage_pct = cov_result[1] if cov_result else None
+
     untested_files, stats = _compute_testability_stats(
         source_paths,
         test_paths,
@@ -235,13 +339,16 @@ def analyze_testability(
         test_lines,
         total_assertions,
         source_files_set,
+        covered_files=covered_files,
+        avg_coverage_pct=avg_coverage_pct,
     )
 
     logger.info(
-        "Testability: %d test files, %d source files, ratio=%.2f in %s",
+        "Testability: %d test files, %d source files, ratio=%.2f, source=%s in %s",
         len(test_paths),
         len(source_paths),
         stats["test_to_code_ratio"],
+        stats.get("coverage_source", "unknown"),
         repo_path,
     )
 

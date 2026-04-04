@@ -248,3 +248,115 @@ async def test_handle_get_testability_metrics(tmp_path):
     assert data["status"] == "success"
     assert "test_files" in data
     assert "stats" in data
+
+
+# ---------------------------------------------------------------------------
+# Coverage DB integration
+# ---------------------------------------------------------------------------
+
+
+def test_read_coverage_db_returns_none_when_no_file(tmp_path):
+    from local_deepwiki.generators.analysis.testability import _read_coverage_db
+
+    result = _read_coverage_db(tmp_path / ".coverage", tmp_path, {"src/foo.py"})
+    assert result is None
+
+
+def test_read_coverage_db_returns_none_when_coverage_not_installed(tmp_path):
+    from local_deepwiki.generators.analysis.testability import _read_coverage_db
+
+    # Even with a file present, if coverage import fails → None
+    fake_db = tmp_path / ".coverage"
+    fake_db.write_bytes(b"not a real db")
+    with patch(
+        "local_deepwiki.generators.analysis.testability.CoverageData",
+        side_effect=ImportError,
+    ):
+        result = _read_coverage_db(fake_db, tmp_path, {"src/foo.py"})
+    # Falls through to the ImportError guard
+    assert result is None
+
+
+def test_read_coverage_db_with_real_data(tmp_path):
+    """When coverage DB has data, returns covered files and avg pct."""
+    from local_deepwiki.generators.analysis.testability import _read_coverage_db
+
+    # Create a mock CoverageData
+    mock_cd = MagicMock()
+    mock_cd.measured_files.return_value = {
+        str((tmp_path / "src/foo.py").resolve()),
+        str((tmp_path / "src/bar.py").resolve()),
+    }
+    mock_cd.lines.side_effect = lambda p: ([1, 2, 3] if "foo" in p else [])
+
+    mock_class = MagicMock(return_value=mock_cd)
+
+    _write_py(tmp_path / "src" / "foo.py", "x = 1\n")
+    _write_py(tmp_path / "src" / "bar.py", "y = 2\n")
+    (tmp_path / ".coverage").write_bytes(b"fake")
+
+    with patch(
+        "local_deepwiki.generators.analysis.testability.CoverageData",
+        mock_class,
+    ):
+        result = _read_coverage_db(
+            tmp_path / ".coverage", tmp_path, {"src/foo.py", "src/bar.py"}
+        )
+
+    assert result is not None
+    covered, avg_pct = result
+    assert "src/foo.py" in covered
+    assert "src/bar.py" not in covered
+    assert avg_pct == 50.0  # 1 of 2 files covered
+
+
+def test_analyze_testability_uses_coverage_db(tmp_path):
+    """When .coverage exists, untested_file_pct reflects real coverage."""
+    from local_deepwiki.generators.analysis.testability import analyze_testability
+
+    # Create source and test files
+    _write_py(tmp_path / "src" / "foo.py", "def foo():\n    return 1\n")
+    _write_py(tmp_path / "src" / "bar.py", "def bar():\n    return 2\n")
+    _write_py(
+        tmp_path / "tests" / "test_foo.py",
+        "from src.foo import foo\nassert foo() == 1\n",
+    )
+
+    # Mock coverage DB: both foo and bar are covered
+    mock_cd = MagicMock()
+    mock_cd.measured_files.return_value = {
+        str((tmp_path / "src/foo.py").resolve()),
+        str((tmp_path / "src/bar.py").resolve()),
+    }
+    mock_cd.lines.return_value = [1, 2]
+    mock_class = MagicMock(return_value=mock_cd)
+
+    # Create a fake .coverage file so the path check passes
+    (tmp_path / ".coverage").write_bytes(b"fake")
+
+    with patch(
+        "local_deepwiki.generators.analysis.testability.CoverageData",
+        mock_class,
+    ):
+        result = analyze_testability(tmp_path)
+
+    stats = result["stats"]
+    assert stats["coverage_source"] == "coverage_db"
+    assert stats["untested_file_pct"] == 0.0
+    assert stats["untested_file_count"] == 0
+
+
+def test_analyze_testability_falls_back_to_heuristic(tmp_path):
+    """Without .coverage, falls back to filename matching."""
+    from local_deepwiki.generators.analysis.testability import analyze_testability
+
+    _write_py(tmp_path / "src" / "foo.py", "def foo():\n    return 1\n")
+    _write_py(
+        tmp_path / "tests" / "test_foo.py",
+        "assert True\n",
+    )
+
+    # No .coverage file → heuristic
+    result = analyze_testability(tmp_path)
+    stats = result["stats"]
+    assert stats["coverage_source"] == "filename_heuristic"
