@@ -8,6 +8,7 @@ from local_deepwiki.generators.analysis.health_scoring import (
     compute_overall,
     letter_grade,
     score_churn,
+    score_cohesion,
     score_complexity,
     score_coupling,
     score_layers,
@@ -401,7 +402,8 @@ def test_score_churn_no_high_churn_complex_files():
 
 def test_score_churn_many_high_churn_complex_files():
     composite = [
-        {"file": f"f{i}.py", "churn": 20, "complexity": 30, "composite": 0.8} for i in range(10)
+        {"file": f"f{i}.py", "churn": 20, "complexity": 30, "composite": 0.8}
+        for i in range(10)
     ]
     stats = {"gini_coefficient": 0.5, "total_files": 20}
     result = score_churn(composite, stats=stats)
@@ -434,6 +436,74 @@ def test_score_churn_returns_factors():
 
 
 # ---------------------------------------------------------------------------
+# score_cohesion
+# ---------------------------------------------------------------------------
+
+
+def test_score_cohesion_empty_stats():
+    result = score_cohesion([], [], stats={})
+    assert result["score"] == 100
+    assert result["grade"] == "A"
+
+
+def test_score_cohesion_no_issues():
+    stats = {
+        "classes_with_lcom_gt_2": 0,
+        "total_classes": 10,
+        "avg_lcom": 1.2,
+        "low_cohesion_modules": 0,
+    }
+    result = score_cohesion([], [], stats=stats)
+    assert result["score"] >= 90
+
+
+def test_score_cohesion_many_splittable_classes():
+    stats = {
+        "classes_with_lcom_gt_2": 8,
+        "total_classes": 10,
+        "avg_lcom": 3.5,
+        "low_cohesion_modules": 2,
+    }
+    result = score_cohesion([], [], stats=stats)
+    assert result["score"] < 50
+
+
+def test_score_cohesion_high_avg_lcom():
+    stats = {
+        "classes_with_lcom_gt_2": 0,
+        "total_classes": 10,
+        "avg_lcom": 5.0,
+        "low_cohesion_modules": 0,
+    }
+    result = score_cohesion([], [], stats=stats)
+    assert result["score"] < 90
+
+
+def test_score_cohesion_score_clamped():
+    stats = {
+        "classes_with_lcom_gt_2": 100,
+        "total_classes": 100,
+        "avg_lcom": 10.0,
+        "low_cohesion_modules": 20,
+    }
+    result = score_cohesion([], [], stats=stats)
+    assert 0.0 <= result["score"] <= 100.0
+
+
+def test_score_cohesion_returns_factors():
+    stats = {
+        "classes_with_lcom_gt_2": 3,
+        "total_classes": 20,
+        "avg_lcom": 2.5,
+        "low_cohesion_modules": 1,
+    }
+    result = score_cohesion([], [], stats=stats)
+    assert "classes_with_lcom_gt_2" in result["factors"]
+    assert "avg_lcom" in result["factors"]
+    assert "low_cohesion_modules" in result["factors"]
+
+
+# ---------------------------------------------------------------------------
 # compute_overall
 # ---------------------------------------------------------------------------
 
@@ -445,6 +515,7 @@ def test_compute_overall_all_perfect():
         "smells": {"score": 100},
         "layers": {"score": 100},
         "churn": {"score": 100},
+        "cohesion": {"score": 100},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 100.0
@@ -458,6 +529,7 @@ def test_compute_overall_all_zero():
         "smells": {"score": 0},
         "layers": {"score": 0},
         "churn": {"score": 0},
+        "cohesion": {"score": 0},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 0.0
@@ -465,17 +537,19 @@ def test_compute_overall_all_zero():
 
 
 def test_compute_overall_weighted_average():
-    # complexity=100 (0.25), coupling=100 (0.20), smells=0 (0.20), layers=100 (0.15), churn=100 (0.20)
-    # expected = 100*0.25 + 100*0.20 + 0*0.20 + 100*0.15 + 100*0.20 = 25+20+0+15+20 = 80
+    # complexity=100 (0.20), coupling=100 (0.18), smells=0 (0.18),
+    # layers=100 (0.14), churn=100 (0.15), cohesion=100 (0.15)
+    # expected = 100*0.20 + 100*0.18 + 0*0.18 + 100*0.14 + 100*0.15 + 100*0.15 = 82.0
     dimensions = {
         "complexity": {"score": 100},
         "coupling": {"score": 100},
         "smells": {"score": 0},
         "layers": {"score": 100},
         "churn": {"score": 100},
+        "cohesion": {"score": 100},
     }
     result = compute_overall(dimensions)
-    assert result["score"] == pytest.approx(80.0, rel=0.01)
+    assert result["score"] == pytest.approx(82.0, rel=0.01)
     assert result["grade"] == "B"
 
 
@@ -483,11 +557,11 @@ def test_compute_overall_missing_dimension_defaults_100():
     # If a dimension is missing, it defaults to 100
     dimensions = {
         "complexity": {"score": 0},
-        # coupling, smells, layers, churn missing → default 100
+        # all others missing → default 100
     }
     result = compute_overall(dimensions)
-    # 0*0.25 + 100*0.20 + 100*0.20 + 100*0.15 + 100*0.20 = 0 + 20 + 20 + 15 + 20 = 75
-    assert result["score"] == pytest.approx(75.0, rel=0.01)
+    # 0*0.20 + 100*0.18 + 100*0.18 + 100*0.14 + 100*0.15 + 100*0.15 = 80.0
+    assert result["score"] == pytest.approx(80.0, rel=0.01)
 
 
 def test_compute_overall_dimensions_included_in_result():
@@ -497,6 +571,7 @@ def test_compute_overall_dimensions_included_in_result():
         "smells": {"score": 90},
         "layers": {"score": 100},
         "churn": {"score": 85},
+        "cohesion": {"score": 75},
     }
     result = compute_overall(dimensions)
     assert result["dimensions"] is dimensions
@@ -511,6 +586,7 @@ def test_compute_overall_weights_included_in_result():
     assert "smells" in weights
     assert "layers" in weights
     assert "churn" in weights
+    assert "cohesion" in weights
     # Weights should sum to approximately 1.0
     assert sum(weights.values()) == pytest.approx(1.0, rel=0.001)
 
@@ -523,6 +599,7 @@ def test_compute_overall_grade_b_boundary():
         "smells": {"score": 75},
         "layers": {"score": 75},
         "churn": {"score": 75},
+        "cohesion": {"score": 75},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 75.0
