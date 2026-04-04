@@ -254,3 +254,131 @@ async def test_hotspots_pydantic_validation(mock_access_control, tmp_path):
     result = await handle_get_hotspots({"repo_path": str(tmp_path), "top_n": 0})
     data = json.loads(result[0].text)
     assert data["status"] == "error"
+
+
+# ---------------------------------------------------------------------------
+# Cognitive complexity
+# ---------------------------------------------------------------------------
+
+
+def test_cognitive_complexity_simple_function():
+    """Flat function with no control flow has cognitive complexity 0."""
+    from local_deepwiki.generators.analysis.hotspots import (
+        _compute_cognitive_complexity,
+    )
+    from local_deepwiki.core.parser.code_parser import CodeParser
+    from local_deepwiki.models import Language as LangEnum
+    from local_deepwiki.core.parser.ast_utils import find_nodes_by_type
+
+    source = "def simple(a, b):\n    return a + b\n"
+    parser = CodeParser()
+    root = parser.parse_source(source, LangEnum.PYTHON)
+    fns = find_nodes_by_type(root, {"function_definition"})
+    assert _compute_cognitive_complexity(fns[0]) == 0
+
+
+def test_cognitive_complexity_single_if():
+    """Top-level if: +1 structural, 0 nesting = 1."""
+    from local_deepwiki.generators.analysis.hotspots import (
+        _compute_cognitive_complexity,
+    )
+    from local_deepwiki.core.parser.code_parser import CodeParser
+    from local_deepwiki.models import Language as LangEnum
+    from local_deepwiki.core.parser.ast_utils import find_nodes_by_type
+
+    source = "def f(x):\n    if x:\n        return 1\n    return 0\n"
+    parser = CodeParser()
+    root = parser.parse_source(source, LangEnum.PYTHON)
+    fns = find_nodes_by_type(root, {"function_definition"})
+    assert _compute_cognitive_complexity(fns[0]) == 1
+
+
+def test_cognitive_complexity_nested_if():
+    """Nested if: outer +1, inner +1 structural +1 nesting = 3."""
+    from local_deepwiki.generators.analysis.hotspots import (
+        _compute_cognitive_complexity,
+    )
+    from local_deepwiki.core.parser.code_parser import CodeParser
+    from local_deepwiki.models import Language as LangEnum
+    from local_deepwiki.core.parser.ast_utils import find_nodes_by_type
+
+    source = (
+        "def f(x, y):\n    if x:\n        if y:\n            return 1\n    return 0\n"
+    )
+    parser = CodeParser()
+    root = parser.parse_source(source, LangEnum.PYTHON)
+    fns = find_nodes_by_type(root, {"function_definition"})
+    assert _compute_cognitive_complexity(fns[0]) == 3
+
+
+def test_cognitive_complexity_else_counted():
+    """else gets +1 structural (unlike cyclomatic which ignores it)."""
+    from local_deepwiki.generators.analysis.hotspots import (
+        _compute_cognitive_complexity,
+    )
+    from local_deepwiki.core.parser.code_parser import CodeParser
+    from local_deepwiki.models import Language as LangEnum
+    from local_deepwiki.core.parser.ast_utils import find_nodes_by_type
+
+    source = "def f(x):\n    if x:\n        return 1\n    else:\n        return 0\n"
+    parser = CodeParser()
+    root = parser.parse_source(source, LangEnum.PYTHON)
+    fns = find_nodes_by_type(root, {"function_definition"})
+    # if: +1, else: +1 = 2
+    assert _compute_cognitive_complexity(fns[0]) == 2
+
+
+def test_cognitive_complexity_for_in_if():
+    """for inside if: if +1, for +1 structural +1 nesting = 3."""
+    from local_deepwiki.generators.analysis.hotspots import (
+        _compute_cognitive_complexity,
+    )
+    from local_deepwiki.core.parser.code_parser import CodeParser
+    from local_deepwiki.models import Language as LangEnum
+    from local_deepwiki.core.parser.ast_utils import find_nodes_by_type
+
+    source = "def f(x):\n    if x:\n        for i in range(10):\n            pass\n"
+    parser = CodeParser()
+    root = parser.parse_source(source, LangEnum.PYTHON)
+    fns = find_nodes_by_type(root, {"function_definition"})
+    assert _compute_cognitive_complexity(fns[0]) == 3
+
+
+def test_cognitive_complexity_logical_operators():
+    """Mixed logical operators: each type switch gets +1."""
+    from local_deepwiki.generators.analysis.hotspots import (
+        _compute_cognitive_complexity,
+    )
+    from local_deepwiki.core.parser.code_parser import CodeParser
+    from local_deepwiki.models import Language as LangEnum
+    from local_deepwiki.core.parser.ast_utils import find_nodes_by_type
+
+    # a and b or c: +1 for 'and' group, +1 for 'or' switch = if(+1) + and(+1) + or(+1) = 3
+    source = "def f(a, b, c):\n    if a and b or c:\n        return 1\n"
+    parser = CodeParser()
+    root = parser.parse_source(source, LangEnum.PYTHON)
+    fns = find_nodes_by_type(root, {"function_definition"})
+    result = _compute_cognitive_complexity(fns[0])
+    assert result >= 3  # if + at least 2 for mixed operators
+
+
+async def test_cognitive_complexity_in_hotspots_output(
+    mock_access_control, simple_repo
+):
+    """Hotspot details should include cognitive complexity."""
+    result = await handle_get_hotspots({"repo_path": str(simple_repo)})
+    data = json.loads(result[0].text)
+    for h in data["hotspots"]:
+        assert "cognitive" in h["details"]
+
+
+async def test_hotspots_metric_cognitive(mock_access_control, simple_repo):
+    """metric='cognitive' should rank by cognitive complexity."""
+    result = await handle_get_hotspots(
+        {"repo_path": str(simple_repo), "metric": "cognitive"}
+    )
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert data["stats"]["metric_used"] == "cognitive"
+    values = [h["metric_value"] for h in data["hotspots"]]
+    assert values == sorted(values, reverse=True)

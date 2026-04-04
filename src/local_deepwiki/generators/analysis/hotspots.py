@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 # Metric names accepted by the public API.
-VALID_METRICS = frozenset({"complexity", "params", "length", "nesting"})
+VALID_METRICS = frozenset({"complexity", "cognitive", "params", "length", "nesting"})
 
 # Node types that count as branch/decision points for cyclomatic complexity.
 _BRANCH_TYPES = frozenset(
@@ -89,6 +89,97 @@ def _estimate_cyclomatic(node: Node) -> int:
     return count
 
 
+# Node types that get a structural increment AND increase nesting for children.
+_COGNITIVE_NESTING_TYPES = frozenset(
+    {
+        "if_statement",
+        "for_statement",
+        "while_statement",
+        "except_clause",
+        "match_statement",
+        "switch_statement",
+        "conditional_expression",
+        "ternary_expression",
+        "for_expression",
+        "while_expression",
+        "if_expression",
+    }
+)
+
+# Node types that get a structural increment but do NOT increase nesting.
+_COGNITIVE_FLAT_TYPES = frozenset(
+    {
+        "elif_clause",
+        "else_clause",
+    }
+)
+
+# Node types that increase nesting but get no structural increment (closures).
+_COGNITIVE_NEST_ONLY = frozenset(
+    {
+        "lambda",
+        "lambda_expression",
+    }
+)
+
+
+def _compute_cognitive_complexity(node: Node) -> int:
+    """Compute cognitive complexity following SonarSource's specification.
+
+    Three increment rules:
+    1. Structural: +1 for each control flow break (if, for, while, catch, etc.)
+    2. Nesting: +nesting_depth for each structural increment inside nesting
+    3. Fundamental: +1 for each switch between logical operator types
+    """
+    score = 0
+
+    def _walk(n: Node, nesting: int) -> None:
+        nonlocal score
+
+        if n.type in _COGNITIVE_NESTING_TYPES:
+            # Structural +1, plus nesting bonus
+            score += 1 + nesting
+            # Children are nested one level deeper
+            for child in n.children:
+                _walk(child, nesting + 1)
+            return
+
+        if n.type in _COGNITIVE_FLAT_TYPES:
+            # Structural +1, but no nesting bonus and no nesting increase
+            score += 1
+            for child in n.children:
+                _walk(child, nesting)
+            return
+
+        if n.type in _COGNITIVE_NEST_ONLY:
+            # No structural increment, but increases nesting for children
+            for child in n.children:
+                _walk(child, nesting + 1)
+            return
+
+        # Logical operator sequences: +1 per switch between operator types
+        if n.type in ("boolean_operator", "binary_expression"):
+            op_text = None
+            for child in n.children:
+                child_text = (
+                    child.text.decode("utf-8", errors="replace") if child.text else ""
+                )
+                if child_text in ("and", "or", "&&", "||"):
+                    if op_text is None or child_text != op_text:
+                        score += 1
+                        op_text = child_text
+            # Still walk children for nested boolean expressions
+            for child in n.children:
+                _walk(child, nesting)
+            return
+
+        for child in n.children:
+            _walk(child, nesting)
+
+    _walk(node, 0)
+    return score
+
+
 def _extract_function_info(node: Node, depth: int) -> dict[str, Any]:
     """Extract name, line range, param count, and complexity from a function node."""
     name = ""
@@ -105,12 +196,14 @@ def _extract_function_info(node: Node, depth: int) -> dict[str, Any]:
                 not in ("self", "cls")
             )
     cyclomatic = _estimate_cyclomatic(node)
+    cognitive = _compute_cognitive_complexity(node)
     length = node.end_point[0] - node.start_point[0] + 1
     return {
         "name": name,
         "line": node.start_point[0] + 1,
         "end_line": node.end_point[0] + 1,
         "cyclomatic": cyclomatic,
+        "cognitive": cognitive,
         "params": param_count,
         "length": length,
         "nesting": depth,
@@ -141,6 +234,7 @@ def _parse_file_functions(full_path: Path, rel_path: Path) -> list[dict[str, Any
             "file": str(rel_path),
             "line": entry["line"],
             "cyclomatic": entry["cyclomatic"],
+            "cognitive": entry["cognitive"],
             "params": entry["params"],
             "length": entry["length"],
             "nesting": entry["nesting"],
@@ -215,6 +309,7 @@ def analyze_hotspots(
             "metric_value": f[metric_key],
             "details": {
                 "cyclomatic": f["cyclomatic"],
+                "cognitive": f["cognitive"],
                 "params": f["params"],
                 "length": f["length"],
                 "nesting": f["nesting"],
