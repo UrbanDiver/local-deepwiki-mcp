@@ -333,7 +333,7 @@ Multi-step reasoning for complex architectural questions. Performs query decompo
 | Tool | Description |
 |------|-------------|
 | `get_architecture_health` | Composite health grade (A-F) across 9 dimensions |
-| `get_hotspots` | Rank functions by complexity, params, length, or nesting |
+| `get_hotspots` | Rank functions by complexity, cognitive complexity, params, length, or nesting |
 | `get_coupling_metrics` | Robert C. Martin coupling metrics (Ca, Ce, I, A, D) |
 | `get_design_smells` | Detect god classes, feature envy, long methods, etc. |
 | `get_layer_dependencies` | Layer violation detection (handlers→services→core) |
