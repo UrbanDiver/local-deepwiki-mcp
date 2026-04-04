@@ -128,3 +128,152 @@ def compute_co_change(
 
     results.sort(key=lambda r: r["jaccard"], reverse=True)
     return results
+
+
+def compute_churn_complexity(
+    churn: dict[str, int],
+    complexity: dict[str, float],
+) -> list[dict[str, Any]]:
+    """Compute composite risk score per file (normalized churn * complexity).
+
+    Both churn (commit count) and complexity (max cyclomatic complexity) are
+    normalized to [0, 1] before multiplying.  Files absent from *complexity*
+    receive complexity=0 (and therefore composite=0).
+
+    Returns a list sorted by ``composite`` descending.
+    """
+    if not churn:
+        return []
+
+    max_churn = max(churn.values()) or 1
+    max_cc = max(complexity.values()) if complexity else 1
+    max_cc = max_cc or 1
+
+    rows: list[dict[str, Any]] = []
+    for filepath, commits in churn.items():
+        cc = complexity.get(filepath, 0)
+        norm_churn = commits / max_churn
+        norm_cc = cc / max_cc
+        composite = round(norm_churn * norm_cc, 4)
+        rows.append(
+            {
+                "file": filepath,
+                "churn": commits,
+                "complexity": cc,
+                "composite": composite,
+            }
+        )
+
+    rows.sort(key=lambda r: r["composite"], reverse=True)
+    return rows
+
+
+def _compute_gini(values: list[int]) -> float:
+    """Compute Gini coefficient measuring churn concentration across files.
+
+    Returns 0.0 for empty or all-zero input.
+    Range: 0 (perfectly even) to approaching 1 (all churn in one file).
+    """
+    if not values:
+        return 0.0
+
+    sorted_vals = sorted(values)
+    n = len(sorted_vals)
+    total = sum(sorted_vals)
+    if total == 0:
+        return 0.0
+
+    return sum((2 * i - n + 1) * v for i, v in enumerate(sorted_vals)) / (n * total)
+
+
+def _get_file_max_complexity(repo_path: Path) -> dict[str, float]:
+    """Get max cyclomatic complexity per file using the hotspots module.
+
+    Returns a dict of file path -> max CC value.
+    """
+    from local_deepwiki.generators.analysis.hotspots import analyze_hotspots
+
+    result = analyze_hotspots(repo_path, metric="complexity", top_n=500)
+    file_max: dict[str, float] = {}
+    for hotspot in result.get("hotspots", []):
+        filepath = hotspot["file"]
+        cc = hotspot["metric_value"]
+        if filepath not in file_max or cc > file_max[filepath]:
+            file_max[filepath] = cc
+    return file_max
+
+
+def analyze_churn(
+    repo_path: str | Path,
+    *,
+    window_days: int = DEFAULT_WINDOW_DAYS,
+    top_n: int = 20,
+    min_co_change: int = 2,
+    include_complexity: bool = True,
+) -> dict[str, Any]:
+    """Full churn analysis orchestrator.
+
+    Runs ``git log --numstat`` over *window_days*, computes per-file churn,
+    co-change coupling, optionally churn x complexity composite, and Gini
+    coefficient.
+
+    Returns a dict with ``status``, ``file_churn``, ``co_change``,
+    ``composite``, and ``stats`` keys.
+    """
+    repo = _validate_repo_path(repo_path)
+
+    # Run git log
+    cmd = [
+        "git",
+        "log",
+        f"--since={window_days} days ago",
+        "--format=%H",
+        "--numstat",
+    ]
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            timeout=_GIT_LOG_CHURN_TIMEOUT,
+        )
+        raw = proc.stdout
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        logger.warning("git log failed: %s", exc)
+        raw = ""
+
+    # Parse and compute
+    commits = parse_git_log_numstat(raw)
+    file_churn = compute_file_churn(commits)
+    co_change = compute_co_change(commits, min_shared=min_co_change)
+
+    # Churn x complexity composite
+    composite: list[dict[str, Any]] = []
+    if include_complexity and file_churn:
+        try:
+            complexity = _get_file_max_complexity(repo)
+            composite = compute_churn_complexity(file_churn, complexity)[:top_n]
+        except Exception as exc:
+            logger.warning("Complexity analysis failed: %s", exc)
+
+    # Gini coefficient
+    gini = _compute_gini(list(file_churn.values()))
+
+    # Build file_churn list (top_n)
+    file_churn_list = [
+        {"file": f, "commits": c} for f, c in list(file_churn.items())[:top_n]
+    ]
+
+    return {
+        "status": "success",
+        "file_churn": file_churn_list,
+        "co_change": co_change,
+        "composite": composite,
+        "stats": {
+            "total_commits": len(commits),
+            "total_files": len(file_churn),
+            "window_days": window_days,
+            "gini_coefficient": round(gini, 4),
+        },
+    }

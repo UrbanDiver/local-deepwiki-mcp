@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from local_deepwiki.generators.analysis.churn import (
     compute_co_change,
     compute_file_churn,
@@ -113,3 +115,97 @@ def test_compute_co_change_min_shared_filter():
 def test_compute_co_change_empty():
     """Empty commits returns empty list."""
     assert compute_co_change([]) == []
+
+
+# ---------------------------------------------------------------------------
+# Task 4: compute_churn_complexity
+# ---------------------------------------------------------------------------
+
+
+def test_compute_churn_complexity_composite():
+    """Composite score multiplies normalized churn by normalized complexity."""
+    from local_deepwiki.generators.analysis.churn import compute_churn_complexity
+
+    churn = {"src/a.py": 10, "src/b.py": 5, "src/c.py": 1}
+    complexity = {"src/a.py": 20, "src/b.py": 5, "src/c.py": 15}
+    result = compute_churn_complexity(churn, complexity)
+    assert result[0]["file"] == "src/a.py"
+    assert result[0]["churn"] == 10
+    assert result[0]["complexity"] == 20
+    assert result[0]["composite"] > result[1]["composite"]
+
+
+def test_compute_churn_complexity_missing_complexity():
+    from local_deepwiki.generators.analysis.churn import compute_churn_complexity
+
+    churn = {"src/a.py": 10}
+    complexity = {}
+    result = compute_churn_complexity(churn, complexity)
+    assert result[0]["complexity"] == 0
+    assert result[0]["composite"] == 0.0
+
+
+def test_compute_churn_complexity_empty():
+    from local_deepwiki.generators.analysis.churn import compute_churn_complexity
+
+    assert compute_churn_complexity({}, {}) == []
+
+
+# ---------------------------------------------------------------------------
+# Task 4: _compute_gini
+# ---------------------------------------------------------------------------
+
+
+def test_gini_even_distribution():
+    from local_deepwiki.generators.analysis.churn import _compute_gini
+
+    assert _compute_gini([10, 10, 10, 10]) == pytest.approx(0.0, abs=0.01)
+
+
+def test_gini_concentrated():
+    from local_deepwiki.generators.analysis.churn import _compute_gini
+
+    result = _compute_gini([0, 0, 0, 100])
+    assert result > 0.7
+
+
+def test_gini_empty():
+    from local_deepwiki.generators.analysis.churn import _compute_gini
+
+    assert _compute_gini([]) == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Task 4: analyze_churn orchestrator
+# ---------------------------------------------------------------------------
+
+
+def test_analyze_churn_with_git_repo(tmp_path):
+    """analyze_churn on a real (tiny) git repo."""
+    import subprocess
+
+    from local_deepwiki.generators.analysis.churn import analyze_churn
+
+    subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@test.com"],
+        cwd=tmp_path,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=tmp_path,
+        capture_output=True,
+    )
+    (tmp_path / "a.py").write_text("x = 1\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "first"], cwd=tmp_path, capture_output=True)
+    (tmp_path / "a.py").write_text("x = 2\n")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "second"], cwd=tmp_path, capture_output=True)
+    result = analyze_churn(tmp_path)
+    assert result["status"] == "success"
+    assert "file_churn" in result
+    assert "co_change" in result
+    assert "stats" in result
+    assert result["stats"]["total_commits"] >= 2
