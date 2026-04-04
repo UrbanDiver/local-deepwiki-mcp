@@ -1029,4 +1029,56 @@ ANALYSIS_TOOLS: tuple[Tool, ...] = (
         },
         annotations=_READ_ONLY,
     ),
+    Tool(
+        name="detect_bugs",
+        description=(
+            "Scan a repository for potential bugs using AST pattern matching. "
+            "Detects bug patterns across Python, JavaScript, TypeScript, Go, "
+            "Rust, Java, C, C++, C#, and Kotlin including mutable default "
+            "arguments, bare excepts, unreachable code, empty catch blocks, "
+            "missing breaks, and more. Set enrich=true for LLM verification."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository to scan",
+                },
+                "min_confidence": {
+                    "type": "string",
+                    "enum": ["low", "medium", "high"],
+                    "description": "Minimum confidence threshold (default: medium)",
+                },
+                "languages": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Filter to specific languages",
+                },
+                "enrich": {
+                    "type": "boolean",
+                    "description": "Use LLM to verify and explain top findings (default: false)",
+                },
+                "enrich_top_n": {
+                    "type": "integer",
+                    "description": "Max findings to send to LLM (default: 10, max: 50)",
+                },
+                "exclude_tests": {
+                    "type": "boolean",
+                    "description": "Exclude test files (default: true)",
+                },
+                "file_path": {
+                    "type": "string",
+                    "description": "Scope to a single file (relative path)",
+                },
+                "top_n": {
+                    "type": "integer",
+                    "description": "Maximum findings to return (default: 50, max: 500)",
+                },
+            },
+            "required": ["repo_path"],
+        },
+        annotations=_READ_ONLY,
+    ),
 )

@@ -38,6 +38,7 @@ from local_deepwiki.handlers.analysis_architecture import (
     handle_get_onboarding_guide,
     handle_get_recommendations,
 )
+from local_deepwiki.handlers.analysis_bugs import handle_detect_bugs
 from local_deepwiki.handlers.analysis_diff import (
     handle_analyze_diff,
     handle_ask_about_diff,
@@ -154,6 +155,7 @@ __all__ = [
     # Analysis handlers
     "handle_analyze_architecture",
     "handle_analyze_diff",
+    "handle_detect_bugs",
     "handle_ask_about_diff",
     "handle_compare_architecture",
     "handle_explain_entity",
