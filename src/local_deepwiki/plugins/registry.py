@@ -54,46 +54,37 @@ class PluginRegistry:
         """Get registered embedding provider plugins."""
         return self._embedding_providers.copy()
 
-    def register_language_parser(self, plugin: LanguageParserPlugin) -> None:
-        """Register a language parser plugin.
-
-        Args:
-            plugin: The plugin to register.
-        """
-        name = plugin.language_name
-        if name in self._language_parsers:
-            logger.warning("Language parser '%s' already registered, overwriting", name)
-        self._language_parsers[name] = plugin
+    def _register_plugin(
+        self,
+        registry: dict[str, Any],
+        plugin: Plugin,
+        name_attr: str,
+        kind: str,
+    ) -> None:
+        name = getattr(plugin, name_attr)
+        if name in registry:
+            logger.warning("%s '%s' already registered, overwriting", kind, name)
+        registry[name] = plugin
         plugin.initialize()
-        logger.info("Registered language parser plugin: %s", plugin.metadata)
+        logger.info("Registered %s plugin: %s", kind, plugin.metadata)
+
+    def register_language_parser(self, plugin: LanguageParserPlugin) -> None:
+        """Register a language parser plugin."""
+        self._register_plugin(
+            self._language_parsers, plugin, "language_name", "Language parser"
+        )
 
     def register_wiki_generator(self, plugin: WikiGeneratorPlugin) -> None:
-        """Register a wiki generator plugin.
-
-        Args:
-            plugin: The plugin to register.
-        """
-        name = plugin.generator_name
-        if name in self._wiki_generators:
-            logger.warning("Wiki generator '%s' already registered, overwriting", name)
-        self._wiki_generators[name] = plugin
-        plugin.initialize()
-        logger.info("Registered wiki generator plugin: %s", plugin.metadata)
+        """Register a wiki generator plugin."""
+        self._register_plugin(
+            self._wiki_generators, plugin, "generator_name", "Wiki generator"
+        )
 
     def register_embedding_provider(self, plugin: EmbeddingProviderPlugin) -> None:
-        """Register an embedding provider plugin.
-
-        Args:
-            plugin: The plugin to register.
-        """
-        name = plugin.provider_name
-        if name in self._embedding_providers:
-            logger.warning(
-                "Embedding provider '%s' already registered, overwriting", name
-            )
-        self._embedding_providers[name] = plugin
-        plugin.initialize()
-        logger.info("Registered embedding provider plugin: %s", plugin.metadata)
+        """Register an embedding provider plugin."""
+        self._register_plugin(
+            self._embedding_providers, plugin, "provider_name", "Embedding provider"
+        )
 
     @singledispatchmethod
     def register(self, plugin: Plugin) -> None:
@@ -119,53 +110,29 @@ class PluginRegistry:
     def _(self, plugin: EmbeddingProviderPlugin) -> None:
         self.register_embedding_provider(plugin)
 
-    def unregister_language_parser(self, name: str) -> bool:
-        """Unregister a language parser plugin.
-
-        Args:
-            name: The language name.
-
-        Returns:
-            True if plugin was unregistered, False if not found.
-        """
-        if name in self._language_parsers:
-            plugin = self._language_parsers.pop(name)
+    def _unregister_plugin(
+        self, registry: dict[str, Any], name: str, kind: str
+    ) -> bool:
+        if name in registry:
+            plugin = registry.pop(name)
             plugin.cleanup()
-            logger.info("Unregistered language parser: %s", name)
+            logger.info("Unregistered %s: %s", kind, name)
             return True
         return False
+
+    def unregister_language_parser(self, name: str) -> bool:
+        """Unregister a language parser plugin."""
+        return self._unregister_plugin(self._language_parsers, name, "language parser")
 
     def unregister_wiki_generator(self, name: str) -> bool:
-        """Unregister a wiki generator plugin.
-
-        Args:
-            name: The generator name.
-
-        Returns:
-            True if plugin was unregistered, False if not found.
-        """
-        if name in self._wiki_generators:
-            plugin = self._wiki_generators.pop(name)
-            plugin.cleanup()
-            logger.info("Unregistered wiki generator: %s", name)
-            return True
-        return False
+        """Unregister a wiki generator plugin."""
+        return self._unregister_plugin(self._wiki_generators, name, "wiki generator")
 
     def unregister_embedding_provider(self, name: str) -> bool:
-        """Unregister an embedding provider plugin.
-
-        Args:
-            name: The provider name.
-
-        Returns:
-            True if plugin was unregistered, False if not found.
-        """
-        if name in self._embedding_providers:
-            plugin = self._embedding_providers.pop(name)
-            plugin.cleanup()
-            logger.info("Unregistered embedding provider: %s", name)
-            return True
-        return False
+        """Unregister an embedding provider plugin."""
+        return self._unregister_plugin(
+            self._embedding_providers, name, "embedding provider"
+        )
 
     def get_language_parser(self, name: str) -> LanguageParserPlugin | None:
         """Get a language parser plugin by name.
