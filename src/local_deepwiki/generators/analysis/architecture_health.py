@@ -12,10 +12,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from local_deepwiki.generators.analysis.churn import analyze_churn
 from local_deepwiki.generators.analysis.coupling import analyze_coupling_metrics
 from local_deepwiki.generators.analysis.design_smells import analyze_design_smells
 from local_deepwiki.generators.analysis.health_scoring import (
     compute_overall,
+    score_churn,
     score_complexity,
     score_coupling,
     score_layers,
@@ -131,6 +133,7 @@ def _score_all_dimensions(
     coupling_result: dict[str, Any],
     src_smells: list[dict[str, Any]],
     layer_result: dict[str, Any],
+    churn_result: dict[str, Any],
     total_lines: int,
 ) -> dict[str, Any]:
     """Compute scored dimension dict from raw analysis results."""
@@ -142,6 +145,10 @@ def _score_all_dimensions(
         "coupling": score_coupling(coupling_result.get("metrics", [])),
         "smells": score_smells(src_smells, total_lines),
         "layers": score_layers(layer_result.get("violations", [])),
+        "churn": score_churn(
+            churn_result.get("composite", []),
+            stats=churn_result.get("stats", {}),
+        ),
     }
 
 
@@ -168,6 +175,11 @@ def analyze_architecture_health(
     coupling_result = analyze_coupling_metrics(repo_path)
     smell_result = analyze_design_smells(repo_path, severity_threshold="medium")
     layer_result = analyze_layer_dependencies(repo_path, project_name)
+    try:
+        churn_result = analyze_churn(repo_path)
+    except Exception:
+        logger.debug("Churn analysis skipped (not a git repo or git error)")
+        churn_result = {"composite": [], "stats": {}}
 
     # Filter smells to source-only (exclude test/generated)
     src_smells = [
@@ -177,7 +189,12 @@ def analyze_architecture_health(
     ]
 
     dimensions = _score_all_dimensions(
-        hotspot_result, coupling_result, src_smells, layer_result, total_lines
+        hotspot_result,
+        coupling_result,
+        src_smells,
+        layer_result,
+        churn_result,
+        total_lines,
     )
     overall = compute_overall(dimensions)
 

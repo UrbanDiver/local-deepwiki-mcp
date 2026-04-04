@@ -72,7 +72,7 @@ def test_analyze_architecture_health_dimension_scores(simple_repo: Path) -> None
     result = analyze_architecture_health(simple_repo, "test-project")
     dimensions = result["overall"]["dimensions"]
 
-    for dim in ("complexity", "coupling", "smells", "layers"):
+    for dim in ("complexity", "coupling", "smells", "layers", "churn"):
         assert dim in dimensions, f"Missing dimension: {dim}"
         score = dimensions[dim]["score"]
         assert 0 <= score <= 100, f"Score out of range for {dim}: {score}"
@@ -285,3 +285,35 @@ async def test_architecture_health_full_detail(tmp_path):
     assert "top_findings" in data
     assert "stats" in data
     assert "file_metrics" in data
+
+
+def test_analyze_architecture_health_includes_churn_dimension(simple_repo):
+    """Health output should include churn in dimensions after Phase 1."""
+    import subprocess
+
+    # Initialize git repo so churn analysis can run
+    subprocess.run(["git", "init"], cwd=simple_repo, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@t.com"],
+        cwd=simple_repo,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "T"],
+        cwd=simple_repo,
+        capture_output=True,
+    )
+    subprocess.run(["git", "add", "."], cwd=simple_repo, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "init"], cwd=simple_repo, capture_output=True
+    )
+
+    from local_deepwiki.generators.analysis.architecture_health import (
+        analyze_architecture_health,
+    )
+
+    result = analyze_architecture_health(simple_repo, "test-project")
+    dimensions = result["overall"]["dimensions"]
+    assert "churn" in dimensions
+    assert 0 <= dimensions["churn"]["score"] <= 100
+    assert dimensions["churn"]["grade"] in ("A", "B", "C", "D", "F")

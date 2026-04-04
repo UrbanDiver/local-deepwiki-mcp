@@ -19,10 +19,11 @@ _GRADE_THRESHOLDS: tuple[tuple[str, int], ...] = (
 
 # Weights for overall score
 _DIMENSION_WEIGHTS: dict[str, float] = {
-    "complexity": 0.30,
-    "coupling": 0.25,
-    "smells": 0.25,
-    "layers": 0.20,
+    "complexity": 0.25,
+    "coupling": 0.20,
+    "smells": 0.20,
+    "layers": 0.15,
+    "churn": 0.20,
 }
 
 
@@ -169,6 +170,44 @@ def score_layers(violations: list[dict[str, Any]]) -> dict[str, Any]:
         "grade": letter_grade(score),
         "factors": {
             "total_violations": count,
+        },
+    }
+
+
+def score_churn(
+    composite: list[dict[str, Any]],
+    *,
+    stats: dict[str, Any],
+) -> dict[str, Any]:
+    """Score churn dimension (0-100).
+
+    Factors:
+    - Count of files with composite > 0.5 (high churn AND high complexity)
+    - Gini coefficient of churn distribution (concentration)
+    """
+    if not composite and not stats:
+        return {"score": 100, "grade": "A", "factors": {}}
+
+    high_risk = sum(1 for c in composite if c.get("composite", 0) > 0.5)
+    total_files = stats.get("total_files", 0) or 1
+    high_risk_pct = (high_risk / total_files) * 100
+    gini = stats.get("gini_coefficient", 0.0)
+
+    score = 100.0
+    # High-churn+complex files: up to 40 point deduction
+    score -= min(high_risk_pct * 4, 40)
+    # Churn concentration (Gini): up to 15 point deduction
+    if gini > 0.6:
+        score -= min((gini - 0.6) * 37.5, 15)
+
+    score = max(0.0, min(100.0, score))
+    return {
+        "score": round(score, 1),
+        "grade": letter_grade(score),
+        "factors": {
+            "high_churn_complex_files": high_risk,
+            "churn_concentration": round(gini, 4),
+            "total_files": stats.get("total_files", 0),
         },
     }
 
