@@ -131,6 +131,36 @@ class ProgressNotifier:
         except (RuntimeError, OSError, AttributeError, LookupError) as e:
             logger.warning("Failed to send progress notification: %s", e)
 
+    def sync_notify(
+        self,
+        current: int | None = None,
+        total: int | None = None,
+        message: str = "",
+        phase: ProgressPhase | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Fire-and-forget progress update from synchronous code.
+
+        Schedules the async ``update`` on the running event loop without
+        blocking the caller.  Safe to call from sync callbacks invoked
+        inside an async context (e.g. wiki-generation progress hooks).
+        """
+        import asyncio
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return  # No event loop — nothing to schedule on
+        loop.create_task(
+            self.update(
+                current=current,
+                total=total,
+                message=message,
+                phase=phase,
+                metadata=metadata,
+            )
+        )
+
     @property
     def messages(self) -> list[str]:
         """Get accumulated progress messages."""

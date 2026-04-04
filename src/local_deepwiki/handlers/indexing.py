@@ -279,7 +279,7 @@ async def _notify_pipeline_complete(
     """Send the final progress notification and mark the operation complete."""
     await _notify(
         notifier,
-        current=6,
+        current=100,
         phase=ProgressPhase.COMPLETE,
         message=(
             f"Complete: {status.total_files} files, "
@@ -310,7 +310,7 @@ async def _run_index_and_notify(
     """
     await _notify(
         notifier,
-        current=1,
+        current=5,
         phase=ProgressPhase.SCANNING,
         message=f"Starting indexing of {ctx.repo_path.name}",
         metadata={
@@ -322,7 +322,7 @@ async def _run_index_and_notify(
     )
     await _notify(
         notifier,
-        current=2,
+        current=10,
         phase=ProgressPhase.PARSING,
         message="Parsing source files...",
     )
@@ -338,7 +338,7 @@ async def _run_index_and_notify(
 
     await _notify(
         notifier,
-        current=4,
+        current=35,
         phase=ProgressPhase.STORING,
         message=f"Indexed {status.total_files} files, {status.total_chunks} chunks",
         metadata={
@@ -349,7 +349,7 @@ async def _run_index_and_notify(
     )
     await _notify(
         notifier,
-        current=5,
+        current=40,
         phase=ProgressPhase.WIKI_GENERATION,
         message="Generating wiki documentation...",
     )
@@ -383,7 +383,7 @@ async def _run_indexing_pipeline(
     notifier, operation_id = create_progress_notifier(
         operation_type=OperationType.INDEX_REPOSITORY,
         server=server,
-        total=6,
+        total=100,
     )
     indexer = RepositoryIndexer(
         repo_path=repo_path,
@@ -394,6 +394,17 @@ async def _run_indexing_pipeline(
 
     def sync_progress_callback(msg: str, current: int, total: int) -> None:
         progress_messages.append(f"[{current}/{total}] {msg}")
+        # Forward wiki-generation page progress to MCP notifications.
+        # Wiki phases use total=14; per-file generation uses total=file_count.
+        # Map per-file progress (the slow part) to the 40-95% range.
+        if notifier and total > 14:
+            pct = 40 + int((current / max(total, 1)) * 55)
+            notifier.sync_notify(
+                current=min(pct, 95),
+                total=100,
+                phase=ProgressPhase.WIKI_GENERATION,
+                message=msg,
+            )
 
     ctx = IndexingPipelineContext(
         repo_path=repo_path,
