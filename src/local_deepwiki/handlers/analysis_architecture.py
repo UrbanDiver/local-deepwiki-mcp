@@ -20,6 +20,7 @@ from local_deepwiki.models import (
     GetArchitectureTrendsArgs,
     GetChurnMetricsArgs,
     GetCoChangeArgs,
+    GetCohesionMetricsArgs,
     GetCouplingMetricsArgs,
     GetCrossModuleDependenciesArgs,
     GetDesignSmellsArgs,
@@ -64,7 +65,9 @@ async def handle_get_layer_dependencies(
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    from local_deepwiki.generators.analysis.layer_analysis import analyze_layer_dependencies
+    from local_deepwiki.generators.analysis.layer_analysis import (
+        analyze_layer_dependencies,
+    )
     from local_deepwiki.generators.manifest import get_cached_manifest
 
     manifest = get_cached_manifest(repo_path)
@@ -420,7 +423,9 @@ async def handle_get_architecture_health(
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    from local_deepwiki.generators.analysis.architecture_health import analyze_architecture_health
+    from local_deepwiki.generators.analysis.architecture_health import (
+        analyze_architecture_health,
+    )
     from local_deepwiki.generators.manifest import get_cached_manifest
 
     manifest = get_cached_manifest(repo_path)
@@ -474,7 +479,9 @@ async def handle_compare_architecture(
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    from local_deepwiki.generators.analysis.architecture_compare import compare_architecture
+    from local_deepwiki.generators.analysis.architecture_compare import (
+        compare_architecture,
+    )
     from local_deepwiki.generators.manifest import get_cached_manifest
 
     manifest = get_cached_manifest(repo_path)
@@ -588,7 +595,9 @@ async def handle_get_onboarding_guide(
     # Try rich onboarding (requires index + vector store + LLM)
     try:
         from local_deepwiki.config import get_config
-        from local_deepwiki.generators.analysis.onboarding import generate_rich_onboarding
+        from local_deepwiki.generators.analysis.onboarding import (
+            generate_rich_onboarding,
+        )
         from local_deepwiki.handlers._index_helpers import _create_vector_store
         from local_deepwiki.providers.llm import get_llm_provider
 
@@ -874,3 +883,30 @@ async def handle_get_co_change(
             "stats": result["stats"],
         },
     )
+
+
+@handle_tool_errors
+async def handle_get_cohesion_metrics(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_cohesion_metrics tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetCohesionMetricsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.analysis.cohesion import analyze_cohesion
+
+    result = analyze_cohesion(
+        repo_path,
+        top_n=validated.top_n,
+        exclude_tests=validated.exclude_tests,
+    )
+    return make_tool_text_content("get_cohesion_metrics", result)

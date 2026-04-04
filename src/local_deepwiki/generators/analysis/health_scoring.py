@@ -19,11 +19,12 @@ _GRADE_THRESHOLDS: tuple[tuple[str, int], ...] = (
 
 # Weights for overall score
 _DIMENSION_WEIGHTS: dict[str, float] = {
-    "complexity": 0.25,
-    "coupling": 0.20,
-    "smells": 0.20,
-    "layers": 0.15,
-    "churn": 0.20,
+    "complexity": 0.20,
+    "coupling": 0.18,
+    "smells": 0.18,
+    "layers": 0.14,
+    "churn": 0.15,
+    "cohesion": 0.15,
 }
 
 
@@ -136,7 +137,9 @@ def score_smells(
         return {"score": 100, "grade": "A", "factors": {}}
 
     severity_weights = {"high": 3, "medium": 1, "low": 0.5}
-    weighted_count = sum(severity_weights.get(s.get("severity", "medium"), 1) for s in smells)
+    weighted_count = sum(
+        severity_weights.get(s.get("severity", "medium"), 1) for s in smells
+    )
     density = (weighted_count / total_lines) * 1000
     god_classes = sum(1 for s in smells if s.get("type") == "god_class")
 
@@ -206,6 +209,50 @@ def score_churn(
             "high_churn_complex_files": high_risk,
             "churn_concentration": round(gini, 4),
             "total_files": stats.get("total_files", 0),
+        },
+    }
+
+
+def score_cohesion(
+    class_cohesion: list[dict[str, Any]],
+    module_cohesion: list[dict[str, Any]],
+    *,
+    stats: dict[str, Any],
+) -> dict[str, Any]:
+    """Score cohesion dimension (0-100).
+
+    Factors:
+    - Count of classes with LCOM4 > 2 (splittable)
+    - Average LCOM4 across all classes
+    - Count of modules with cohesion ratio < 0.3
+    """
+    if not stats:
+        return {"score": 100, "grade": "A", "factors": {}}
+
+    classes_gt2 = stats.get("classes_with_lcom_gt_2", 0)
+    total_classes = stats.get("total_classes", 0) or 1
+    gt2_pct = (classes_gt2 / total_classes) * 100
+    avg_lcom = stats.get("avg_lcom", 1.0)
+    low_modules = stats.get("low_cohesion_modules", 0)
+
+    score = 100.0
+    # Classes with high LCOM4: up to 40 point deduction
+    score -= min(gt2_pct * 2, 40)
+    # Low-cohesion modules: up to 30 point deduction
+    score -= min(low_modules * 5, 30)
+    # High average LCOM: up to 15 point deduction
+    if avg_lcom > 2.0:
+        score -= min((avg_lcom - 2.0) * 5, 15)
+
+    score = max(0.0, min(100.0, score))
+    return {
+        "score": round(score, 1),
+        "grade": letter_grade(score),
+        "factors": {
+            "classes_with_lcom_gt_2": classes_gt2,
+            "avg_lcom": round(avg_lcom, 2),
+            "low_cohesion_modules": low_modules,
+            "total_classes": stats.get("total_classes", 0),
         },
     }
 

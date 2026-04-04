@@ -873,3 +873,19 @@ class GetCoChangeArgs(BaseModel):
         le=100,
         description="Number of top pairs to return (default: 20)",
     )
+
+
+class GetCohesionMetricsArgs(BaseModel):
+    """Arguments for the get_cohesion_metrics tool."""
+
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
+    top_n: int = Field(
+        default=20,
+        ge=1,
+        le=100,
+        description="Number of top results to return (default: 20)",
+    )
+    exclude_tests: bool = Field(
+        default=True,
+        description="Exclude test files from analysis (default: true)",
+    )
