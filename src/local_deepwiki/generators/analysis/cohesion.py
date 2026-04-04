@@ -85,6 +85,84 @@ def _extract_self_fields(method_node: Any, source: bytes) -> set[str]:
     return fields
 
 
+# Base class names that indicate ABC or Protocol patterns.
+_ABC_BASES = frozenset({"ABC", "ABCMeta"})
+_PROTOCOL_BASES = frozenset({"Protocol"})
+
+
+def _classify_class_pattern(class_node: Any, source: bytes) -> str | None:
+    """Classify a class as a known OOP pattern where LCOM4 is misleading.
+
+    Returns:
+        ``"abc"`` for abstract base classes, ``"protocol"`` for Protocol
+        classes, ``"mixin"`` for mixin classes, or ``None`` for regular classes.
+    """
+    # --- Check class name for Mixin ---
+    name_node = class_node.child_by_field_name("name")
+    if name_node and "Mixin" in get_node_text(name_node, source):
+        return "mixin"
+
+    # --- Check base classes in the argument_list ---
+    for child in class_node.children:
+        if child.type == "argument_list":
+            for arg in child.children:
+                base_name = _extract_base_name(arg, source)
+                if base_name in _ABC_BASES:
+                    return "abc"
+                if base_name in _PROTOCOL_BASES:
+                    return "protocol"
+                # Handle keyword arguments like metaclass=ABCMeta
+                if arg.type == "keyword_argument":
+                    for kw_child in arg.children:
+                        kw_name = _extract_base_name(kw_child, source)
+                        if kw_name in _ABC_BASES:
+                            return "abc"
+            break
+
+    # --- Check for @abstractmethod on >= half of methods ---
+    func_types = FUNCTION_NODE_TYPES.get(LangEnum.PYTHON, set())
+    methods = find_nodes_by_type(class_node, func_types)
+    if methods:
+        abstract_count = sum(
+            1 for m in methods if _has_abstractmethod_decorator(m, source)
+        )
+        if abstract_count >= len(methods) / 2:
+            return "abc"
+
+    return None
+
+
+def _extract_base_name(node: Any, source: bytes) -> str:
+    """Extract the final identifier from a base class node.
+
+    For ``ABC`` returns ``"ABC"``. For ``abc.ABC`` returns ``"ABC"``.
+    """
+    if node.type == "identifier":
+        return get_node_text(node, source)
+    if node.type == "attribute":
+        # Dotted name -- last identifier child is the class name.
+        children = [c for c in node.children if c.type == "identifier"]
+        if children:
+            return get_node_text(children[-1], source)
+    return ""
+
+
+def _has_abstractmethod_decorator(method_node: Any, source: bytes) -> bool:
+    """Return True if *method_node* has an ``@abstractmethod`` decorator."""
+    parent = method_node.parent
+    if parent is None or parent.type != "decorated_definition":
+        return False
+    for sibling in parent.children:
+        if sibling.type == "decorator":
+            for dec_child in sibling.children:
+                if (
+                    dec_child.type == "identifier"
+                    and get_node_text(dec_child, source) == "abstractmethod"
+                ):
+                    return True
+    return False
+
+
 def compute_lcom4(class_node: Any, source: bytes, language: LangEnum) -> int:
     """Compute LCOM4 for a single class node.
 
@@ -147,7 +225,9 @@ def analyze_class_cohesion(
     parser = CodeParser()
     results: list[dict[str, Any]] = []
 
-    for full_path, rel_path in iter_python_files(repo_path, exclude_tests=exclude_tests):
+    for full_path, rel_path in iter_python_files(
+        repo_path, exclude_tests=exclude_tests
+    ):
         parsed = parser.parse_file(full_path)
         if parsed is None:
             continue
@@ -160,6 +240,7 @@ def analyze_class_cohesion(
         for cls_node in find_nodes_by_type(root, class_types):
             cls_name = get_node_name(cls_node, source, detected_lang) or "<anonymous>"
             lcom4 = compute_lcom4(cls_node, source, detected_lang)
+            pattern = _classify_class_pattern(cls_node, source)
 
             func_types = FUNCTION_NODE_TYPES.get(detected_lang, set())
             methods = find_nodes_by_type(cls_node, func_types)
@@ -175,6 +256,7 @@ def analyze_class_cohesion(
                     "lcom4": lcom4,
                     "method_count": len(methods),
                     "field_count": len(all_fields),
+                    "pattern": pattern,
                 }
             )
 
@@ -324,9 +406,22 @@ def analyze_cohesion(
     module_results = compute_module_cohesion(repo_path)
 
     total_classes = len(all_classes)
-    classes_gt_2 = sum(1 for c in all_classes if c["lcom4"] > 2)
-    avg_lcom = sum(c["lcom4"] for c in all_classes) / total_classes if total_classes > 0 else 0.0
-    low_cohesion_modules = sum(1 for m in module_results if m["cohesion_ratio"] < 0.3)
+    regular_classes = [c for c in all_classes if c.get("pattern") is None]
+    pattern_count = total_classes - len(regular_classes)
+    classes_gt_2 = sum(1 for c in regular_classes if c["lcom4"] > 2)
+    avg_lcom = (
+        sum(c["lcom4"] for c in regular_classes) / len(regular_classes)
+        if regular_classes
+        else 0.0
+    )
+    # Don't penalize small leaf packages with 0 internal imports —
+    # they're likely independent implementations (e.g. providers/llm).
+    low_cohesion_modules = sum(
+        1
+        for m in module_results
+        if m["cohesion_ratio"] < 0.3
+        and not (m["internal_imports"] == 0 and m["file_count"] < 6)
+    )
 
     return {
         "status": "success",
@@ -338,5 +433,6 @@ def analyze_cohesion(
             "avg_lcom": round(avg_lcom, 2),
             "total_modules": len(module_results),
             "low_cohesion_modules": low_cohesion_modules,
+            "excluded_pattern_classes": pattern_count,
         },
     }

@@ -133,6 +133,165 @@ class NoFields:
     assert result == 2
 
 
+def test_classify_abc_class():
+    """Class inheriting from ABC is classified as 'abc'."""
+    from local_deepwiki.core.chunk_extractors import CLASS_NODE_TYPES
+    from local_deepwiki.core.parser.ast_utils import find_nodes_by_type
+    from local_deepwiki.core.parser.code_parser import CodeParser
+    from local_deepwiki.generators.analysis.cohesion import _classify_class_pattern
+    from local_deepwiki.models import Language as LangEnum
+
+    source = """
+from abc import ABC, abstractmethod
+
+class MyBase(ABC):
+    @abstractmethod
+    def do_thing(self):
+        pass
+    @abstractmethod
+    def do_other(self):
+        pass
+"""
+    parser = CodeParser()
+    root = parser.parse_source(source, LangEnum.PYTHON)
+    classes = find_nodes_by_type(root, CLASS_NODE_TYPES[LangEnum.PYTHON])
+    assert len(classes) == 1
+    result = _classify_class_pattern(classes[0], source.encode())
+    assert result == "abc"
+
+
+def test_classify_protocol_class():
+    """Class inheriting from Protocol is classified as 'protocol'."""
+    from local_deepwiki.core.chunk_extractors import CLASS_NODE_TYPES
+    from local_deepwiki.core.parser.ast_utils import find_nodes_by_type
+    from local_deepwiki.core.parser.code_parser import CodeParser
+    from local_deepwiki.generators.analysis.cohesion import _classify_class_pattern
+    from local_deepwiki.models import Language as LangEnum
+
+    source = """
+from typing import Protocol
+
+class Readable(Protocol):
+    def read(self) -> bytes:
+        ...
+"""
+    parser = CodeParser()
+    root = parser.parse_source(source, LangEnum.PYTHON)
+    classes = find_nodes_by_type(root, CLASS_NODE_TYPES[LangEnum.PYTHON])
+    assert len(classes) == 1
+    result = _classify_class_pattern(classes[0], source.encode())
+    assert result == "protocol"
+
+
+def test_classify_mixin_class():
+    """Class with 'Mixin' in name is classified as 'mixin'."""
+    from local_deepwiki.core.chunk_extractors import CLASS_NODE_TYPES
+    from local_deepwiki.core.parser.ast_utils import find_nodes_by_type
+    from local_deepwiki.core.parser.code_parser import CodeParser
+    from local_deepwiki.generators.analysis.cohesion import _classify_class_pattern
+    from local_deepwiki.models import Language as LangEnum
+
+    source = """
+class LoggingMixin:
+    def log(self):
+        self.logger.info("hi")
+    def debug(self):
+        self.logger.debug("dbg")
+"""
+    parser = CodeParser()
+    root = parser.parse_source(source, LangEnum.PYTHON)
+    classes = find_nodes_by_type(root, CLASS_NODE_TYPES[LangEnum.PYTHON])
+    assert len(classes) == 1
+    result = _classify_class_pattern(classes[0], source.encode())
+    assert result == "mixin"
+
+
+def test_classify_regular_class():
+    """Regular class without any pattern indicators returns None."""
+    from local_deepwiki.core.chunk_extractors import CLASS_NODE_TYPES
+    from local_deepwiki.core.parser.ast_utils import find_nodes_by_type
+    from local_deepwiki.core.parser.code_parser import CodeParser
+    from local_deepwiki.generators.analysis.cohesion import _classify_class_pattern
+    from local_deepwiki.models import Language as LangEnum
+
+    source = """
+class UserService:
+    def __init__(self):
+        self.db = None
+    def get_user(self):
+        return self.db.query()
+"""
+    parser = CodeParser()
+    root = parser.parse_source(source, LangEnum.PYTHON)
+    classes = find_nodes_by_type(root, CLASS_NODE_TYPES[LangEnum.PYTHON])
+    assert len(classes) == 1
+    result = _classify_class_pattern(classes[0], source.encode())
+    assert result is None
+
+
+def test_analyze_class_cohesion_includes_pattern(tmp_path):
+    """analyze_class_cohesion results include a 'pattern' field."""
+    from local_deepwiki.generators.analysis.cohesion import analyze_class_cohesion
+
+    _write_py(
+        tmp_path / "src" / "mod.py",
+        """
+from abc import ABC, abstractmethod
+
+class MyABC(ABC):
+    @abstractmethod
+    def do(self):
+        pass
+
+class Regular:
+    def do(self):
+        self.x = 1
+""",
+    )
+    results = analyze_class_cohesion(tmp_path)
+    assert len(results) >= 2
+    for r in results:
+        assert "pattern" in r
+    abc_result = next(r for r in results if r["class_name"] == "MyABC")
+    regular_result = next(r for r in results if r["class_name"] == "Regular")
+    assert abc_result["pattern"] == "abc"
+    assert regular_result["pattern"] is None
+
+
+def test_analyze_cohesion_excludes_patterns_from_stats(tmp_path):
+    """ABC class with LCOM>2 should not be counted in classes_with_lcom_gt_2."""
+    from local_deepwiki.generators.analysis.cohesion import analyze_cohesion
+
+    _write_py(
+        tmp_path / "src" / "mod.py",
+        """
+from abc import ABC, abstractmethod
+
+class MyABC(ABC):
+    @abstractmethod
+    def do_a(self):
+        pass
+    @abstractmethod
+    def do_b(self):
+        pass
+    @abstractmethod
+    def do_c(self):
+        pass
+
+class Regular:
+    def do(self):
+        self.x = 1
+""",
+    )
+    result = analyze_cohesion(tmp_path)
+    stats = result["stats"]
+    # ABC class has LCOM4=3 (3 abstract methods, no shared fields) but should be excluded
+    assert stats["classes_with_lcom_gt_2"] == 0
+    assert stats["excluded_pattern_classes"] == 1
+    # avg_lcom should only consider the Regular class (LCOM4=1)
+    assert stats["avg_lcom"] == 1.0
+
+
 def test_analyze_class_cohesion(tmp_path):
     from local_deepwiki.generators.analysis.cohesion import analyze_class_cohesion
 
@@ -252,7 +411,9 @@ def test_compute_module_cohesion_sorted_ascending(tmp_path):
 
     pkg_b = tmp_path / "src" / "beta"
     _write_py(pkg_b / "__init__.py", "")
-    _write_py(pkg_b / "mod.py", "from beta.other import x\n")  # 1 internal / 1 total = 1.0
+    _write_py(
+        pkg_b / "mod.py", "from beta.other import x\n"
+    )  # 1 internal / 1 total = 1.0
     _write_py(pkg_b / "other.py", "x = 1\n")
 
     results = compute_module_cohesion(tmp_path)
