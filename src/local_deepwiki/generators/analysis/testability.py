@@ -81,33 +81,8 @@ def _count_assertions(content: str) -> int:
     return count
 
 
-def analyze_testability(
-    repo_path: Path | str,
-    *,
-    exclude_patterns: list[str] | None = None,
-) -> dict[str, Any]:
-    """Analyze testability metrics for a repository.
-
-    Walks all Python files, classifies them as test or source, computes
-    test-to-code ratio, matches test files to source, counts assertions,
-    and identifies untested modules.
-
-    Args:
-        repo_path: Repository root directory.
-        exclude_patterns: Optional glob patterns to exclude.
-
-    Returns:
-        Dict with status, test_files, untested_files, and stats.
-    """
-    repo_path = Path(repo_path)
-
-    test_files: list[dict[str, Any]] = []
-    source_files_set: set[str] = set()
-    source_lines = 0
-    test_lines = 0
-    total_assertions = 0
-
-    # Collect all Python files
+def _collect_python_files(repo_path: Path) -> list[tuple[Path, str]]:
+    """Walk repo for .py files, skipping hidden/non-source dirs."""
     all_py: list[tuple[Path, str]] = []
     for py_file in sorted(repo_path.rglob("*.py")):
         try:
@@ -115,14 +90,19 @@ def analyze_testability(
         except ValueError:
             continue
 
-        # Skip hidden dirs and common non-source trees
         parts = rel_path.split("/")
         if any(part.startswith(".") or part in ("node_modules", "__pycache__") for part in parts):
             continue
 
         all_py.append((py_file, rel_path))
+    return all_py
 
-    # Classify files
+
+def _classify_files(
+    all_py: list[tuple[Path, str]],
+    source_files_set: set[str],
+) -> tuple[list[tuple[Path, str]], list[tuple[Path, str]]]:
+    """Split files into test and source lists. Populates *source_files_set* in place."""
     test_paths: list[tuple[Path, str]] = []
     source_paths: list[tuple[Path, str]] = []
 
@@ -133,15 +113,33 @@ def analyze_testability(
             source_paths.append((full_path, rel_path))
             source_files_set.add(rel_path)
 
-    # Count source lines
+    return test_paths, source_paths
+
+
+def _count_source_lines(source_paths: list[tuple[Path, str]]) -> int:
+    """Sum line counts across source files."""
+    total = 0
     for full_path, _rel in source_paths:
         try:
             content = full_path.read_text(encoding="utf-8", errors="replace")
-            source_lines += len(content.splitlines())
+            total += len(content.splitlines())
         except OSError:
             continue
+    return total
 
-    # Process test files
+
+def _process_test_files(
+    test_paths: list[tuple[Path, str]],
+    source_files_set: set[str],
+) -> tuple[list[dict[str, Any]], int, int]:
+    """Read test files, count assertions, match to source.
+
+    Returns (test_files, test_lines, total_assertions).
+    """
+    test_files: list[dict[str, Any]] = []
+    test_lines = 0
+    total_assertions = 0
+
     for full_path, rel_path in test_paths:
         try:
             content = full_path.read_text(encoding="utf-8", errors="replace")
@@ -163,7 +161,22 @@ def analyze_testability(
             }
         )
 
-    # Identify untested source files
+    return test_files, test_lines, total_assertions
+
+
+def _compute_testability_stats(
+    source_paths: list[tuple[Path, str]],
+    test_paths: list[tuple[Path, str]],
+    test_files: list[dict[str, Any]],
+    source_lines: int,
+    test_lines: int,
+    total_assertions: int,
+    source_files_set: set[str],
+) -> tuple[list[str], dict[str, Any]]:
+    """Compute summary statistics.
+
+    Returns (untested_files, stats_dict).
+    """
     tested_sources = {tf["matches_source"] for tf in test_files if tf["matches_source"]}
     untested_files = sorted(rel for rel in source_files_set if rel not in tested_sources)
 
@@ -174,11 +187,61 @@ def analyze_testability(
     ratio = test_lines / source_lines if source_lines > 0 else 0.0
     avg_assertions = total_assertions / total_test if total_test > 0 else 0.0
 
+    stats = {
+        "source_lines": source_lines,
+        "test_lines": test_lines,
+        "test_to_code_ratio": round(ratio, 4),
+        "total_source_files": total_source,
+        "total_test_files": total_test,
+        "untested_file_count": untested_count,
+        "untested_file_pct": round(untested_pct, 1),
+        "total_assertions": total_assertions,
+        "avg_assertions_per_test": round(avg_assertions, 2),
+    }
+
+    return untested_files, stats
+
+
+def analyze_testability(
+    repo_path: Path | str,
+    *,
+    exclude_patterns: list[str] | None = None,
+) -> dict[str, Any]:
+    """Analyze testability metrics for a repository.
+
+    Walks all Python files, classifies them as test or source, computes
+    test-to-code ratio, matches test files to source, counts assertions,
+    and identifies untested modules.
+
+    Args:
+        repo_path: Repository root directory.
+        exclude_patterns: Optional glob patterns to exclude.
+
+    Returns:
+        Dict with status, test_files, untested_files, and stats.
+    """
+    repo_path = Path(repo_path)
+
+    source_files_set: set[str] = set()
+    all_py = _collect_python_files(repo_path)
+    test_paths, source_paths = _classify_files(all_py, source_files_set)
+    source_lines = _count_source_lines(source_paths)
+    test_files, test_lines, total_assertions = _process_test_files(test_paths, source_files_set)
+    untested_files, stats = _compute_testability_stats(
+        source_paths,
+        test_paths,
+        test_files,
+        source_lines,
+        test_lines,
+        total_assertions,
+        source_files_set,
+    )
+
     logger.info(
         "Testability: %d test files, %d source files, ratio=%.2f in %s",
-        total_test,
-        total_source,
-        ratio,
+        len(test_paths),
+        len(source_paths),
+        stats["test_to_code_ratio"],
         repo_path,
     )
 
@@ -186,15 +249,5 @@ def analyze_testability(
         "status": "success",
         "test_files": test_files,
         "untested_files": untested_files,
-        "stats": {
-            "source_lines": source_lines,
-            "test_lines": test_lines,
-            "test_to_code_ratio": round(ratio, 4),
-            "total_source_files": total_source,
-            "total_test_files": total_test,
-            "untested_file_count": untested_count,
-            "untested_file_pct": round(untested_pct, 1),
-            "total_assertions": total_assertions,
-            "avg_assertions_per_test": round(avg_assertions, 2),
-        },
+        "stats": stats,
     }

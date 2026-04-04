@@ -45,26 +45,17 @@ def _collect_node_types(node: Any) -> list[str]:
     return types
 
 
-def detect_type1_clones(
+def _build_fingerprints(
     repo_path: Path,
-    *,
-    min_lines: int = _MIN_CLONE_LINES,
-    exclude_tests: bool = True,
-) -> list[dict[str, Any]]:
-    """Detect exact code clones (Type 1) using line-based fingerprinting.
+    min_lines: int,
+    exclude_tests: bool,
+) -> dict[int, list[dict[str, Any]]]:
+    """Build hash -> location mapping from all files.
 
-    Args:
-        repo_path: Root of the repository to scan.
-        min_lines: Minimum consecutive lines for a clone block.
-        exclude_tests: Skip test files when True.
-
-    Returns:
-        List of clone groups sorted by number of instances descending.
+    Reads each file, normalizes lines, and computes sliding-window hashes.
+    Returns a dict mapping fingerprint hash to list of location dicts.
     """
-    repo_path = Path(repo_path)
     files = iter_python_files(repo_path, exclude_tests=exclude_tests)
-
-    # Build mapping: hash -> list of (file_rel, start_line, end_line)
     fingerprints: dict[int, list[dict[str, Any]]] = defaultdict(list)
 
     for full_path, rel_path in files:
@@ -76,7 +67,7 @@ def detect_type1_clones(
 
         raw_lines = content.splitlines()
 
-        # Build list of (original_line_number, normalized_text) for non-blank/non-comment lines
+        # Build list of (original_line_number, normalized_text)
         normalized: list[tuple[int, str]] = []
         for i, line in enumerate(raw_lines, start=1):
             norm = _normalize_line(line)
@@ -98,21 +89,49 @@ def detect_type1_clones(
                 }
             )
 
+    return fingerprints
+
+
+def _deduplicate_clone_group(
+    instances: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Remove overlapping windows from a clone group, return unique instances."""
+    seen: set[tuple[str, int]] = set()
+    unique: list[dict[str, Any]] = []
+    for inst in instances:
+        loc = (inst["file"], inst["start_line"])
+        if loc not in seen:
+            seen.add(loc)
+            unique.append(inst)
+    return unique
+
+
+def detect_type1_clones(
+    repo_path: Path,
+    *,
+    min_lines: int = _MIN_CLONE_LINES,
+    exclude_tests: bool = True,
+) -> list[dict[str, Any]]:
+    """Detect exact code clones (Type 1) using line-based fingerprinting.
+
+    Args:
+        repo_path: Root of the repository to scan.
+        min_lines: Minimum consecutive lines for a clone block.
+        exclude_tests: Skip test files when True.
+
+    Returns:
+        List of clone groups sorted by number of instances descending.
+    """
+    repo_path = Path(repo_path)
+    fingerprints = _build_fingerprints(repo_path, min_lines, exclude_tests)
+
     # Filter to groups with 2+ instances and deduplicate overlapping windows
     clone_groups: list[dict[str, Any]] = []
     for fp_hash, instances in fingerprints.items():
         if len(instances) < 2:
             continue
 
-        # Deduplicate: keep only unique (file, start_line) pairs
-        seen: set[tuple[str, int]] = set()
-        unique_instances: list[dict[str, Any]] = []
-        for inst in instances:
-            loc = (inst["file"], inst["start_line"])
-            if loc not in seen:
-                seen.add(loc)
-                unique_instances.append(inst)
-
+        unique_instances = _deduplicate_clone_group(instances)
         if len(unique_instances) < 2:
             continue
 

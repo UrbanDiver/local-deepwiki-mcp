@@ -22,6 +22,32 @@ DEFAULT_WINDOW_DAYS = 90
 _GIT_LOG_CHURN_TIMEOUT = 30
 
 
+def _classify_line(stripped: str) -> tuple[str, str | None]:
+    """Classify a git log line as 'blank', 'binary', 'numstat', or 'hash'.
+
+    Returns (type, value) where value is the filepath for numstat or hash string.
+    """
+    if not stripped:
+        return ("blank", None)
+    parts = stripped.split("\t")
+    if len(parts) == 3:
+        added, deleted, filepath = parts
+        if added == "-" and deleted == "-":
+            return ("binary", None)
+        return ("numstat", filepath)
+    return ("hash", stripped)
+
+
+def _flush_commit(
+    result: list[tuple[str, list[str]]],
+    current_hash: str | None,
+    current_files: list[str],
+) -> None:
+    """Append a completed commit to result if it has files."""
+    if current_hash is not None and current_files:
+        result.append((current_hash, list(current_files)))
+
+
 def parse_git_log_numstat(raw: str) -> list[tuple[str, list[str]]]:
     """Parse ``git log --format='%H' --numstat`` output.
 
@@ -34,36 +60,21 @@ def parse_git_log_numstat(raw: str) -> list[tuple[str, list[str]]]:
     current_files: list[str] = []
 
     for line in raw.splitlines():
-        stripped = line.strip()
-        if not stripped:
-            # Blank line separates commits — flush current
-            if current_hash is not None and current_files:
-                result.append((current_hash, current_files))
+        line_type, value = _classify_line(line.strip())
+
+        if line_type == "blank":
+            if current_files:
+                _flush_commit(result, current_hash, current_files)
                 current_hash = None
                 current_files = []
-            continue
-
-        parts = stripped.split("\t")
-        if len(parts) == 3:
-            added, deleted, filepath = parts
-            # Skip binary files (git shows "-\t-\tpath")
-            if added == "-" and deleted == "-":
-                continue
-            current_files.append(filepath)
-        elif len(parts) == 1 and current_hash is None:
-            # This is a commit hash line
-            current_hash = stripped
-        elif len(parts) == 1 and current_hash is not None:
-            # New commit hash — flush previous
-            if current_files:
-                result.append((current_hash, current_files))
-            current_hash = stripped
+        elif line_type == "numstat" and value is not None:
+            current_files.append(value)
+        elif line_type == "hash" and value is not None:
+            _flush_commit(result, current_hash, current_files)
+            current_hash = value
             current_files = []
 
-    # Flush last commit
-    if current_hash is not None and current_files:
-        result.append((current_hash, current_files))
-
+    _flush_commit(result, current_hash, current_files)
     return result
 
 
@@ -261,7 +272,9 @@ def analyze_churn(
     gini = _compute_gini(list(file_churn.values()))
 
     # Build file_churn list (top_n)
-    file_churn_list = [{"file": f, "commits": c} for f, c in list(file_churn.items())[:top_n]]
+    file_churn_list = [
+        {"file": f, "commits": c} for f, c in list(file_churn.items())[:top_n]
+    ]
 
     return {
         "status": "success",

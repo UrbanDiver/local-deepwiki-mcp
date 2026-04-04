@@ -157,6 +157,23 @@ def _compute_mi(halstead_volume: float, cc: int, loc: int) -> float:
     return max(0.0, min(100.0, raw * 100 / 171))
 
 
+def _compute_mi_stats(all_functions: list[dict[str, Any]]) -> dict[str, Any]:
+    """Compute summary statistics from per-function MI values."""
+    total = len(all_functions)
+    mi_values = [f["mi"] for f in all_functions]
+    avg_mi = sum(mi_values) / total if total > 0 else 100.0
+    low_mi_count = sum(1 for v in mi_values if v < 20)
+    low_mi_pct = (low_mi_count / total * 100) if total > 0 else 0.0
+    min_mi = min(mi_values) if mi_values else 100.0
+    return {
+        "total_functions": total,
+        "avg_mi": round(avg_mi, 1),
+        "low_mi_functions": low_mi_count,
+        "low_mi_pct": round(low_mi_pct, 1),
+        "min_mi": round(min_mi, 1),
+    }
+
+
 def analyze_maintainability(
     repo_path: Path,
     *,
@@ -212,29 +229,18 @@ def analyze_maintainability(
     # Sort by MI ascending (worst first)
     all_functions.sort(key=lambda f: f["mi"])
 
-    total = len(all_functions)
-    mi_values = [f["mi"] for f in all_functions]
-    avg_mi = sum(mi_values) / total if total > 0 else 100.0
-    low_mi_count = sum(1 for v in mi_values if v < 20)
-    low_mi_pct = (low_mi_count / total * 100) if total > 0 else 0.0
-    min_mi = min(mi_values) if mi_values else 100.0
+    stats = _compute_mi_stats(all_functions)
 
     logger.info(
         "Maintainability: %d functions, avg_mi=%.1f, low_mi=%d in %s",
-        total,
-        avg_mi,
-        low_mi_count,
+        stats["total_functions"],
+        stats["avg_mi"],
+        stats["low_mi_functions"],
         repo_path,
     )
 
     return {
         "status": "success",
         "functions": all_functions[:top_n],
-        "stats": {
-            "total_functions": total,
-            "avg_mi": round(avg_mi, 1),
-            "low_mi_functions": low_mi_count,
-            "low_mi_pct": round(low_mi_pct, 1),
-            "min_mi": round(min_mi, 1),
-        },
+        "stats": stats,
     }
