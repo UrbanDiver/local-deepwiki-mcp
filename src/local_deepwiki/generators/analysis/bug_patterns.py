@@ -248,7 +248,9 @@ def _detect_fstring_no_expression(node: Node, src_bytes: bytes) -> list[BugFindi
     """Detect f-strings that contain no interpolation expressions.
 
     An f-string without ``{}`` placeholders is identical to a regular
-    string and the ``f`` prefix is unnecessary noise.
+    string and the ``f`` prefix is unnecessary noise.  Skips f-strings
+    that are part of implicit string concatenation where a sibling
+    string does have interpolation.
     """
     findings: list[BugFinding] = []
     for child in _walk(node):
@@ -267,17 +269,28 @@ def _detect_fstring_no_expression(node: Node, src_bytes: bytes) -> list[BugFindi
             continue
         # Check for interpolation children
         has_interpolation = any(c.type == "interpolation" for c in child.children)
-        if not has_interpolation:
-            findings.append(
-                BugFinding(
-                    pattern="f-string-no-expression",
-                    file="",
-                    line=child.start_point[0] + 1,
-                    confidence=BugConfidence.HIGH.value,
-                    message=f"f-string has no interpolation: {_node_text(child, src_bytes)!r}",
-                    snippet=_snippet(child, src_bytes),
-                )
+        if has_interpolation:
+            continue
+        # Skip f-strings in implicit concatenation (e.g. f"text " f"{expr}")
+        parent = child.parent
+        if parent is not None and parent.type == "concatenated_string":
+            sibling_has_interp = any(
+                any(gc.type == "interpolation" for gc in sib.children)
+                for sib in parent.children
+                if sib.type == "string" and sib is not child
             )
+            if sibling_has_interp:
+                continue
+        findings.append(
+            BugFinding(
+                pattern="f-string-no-expression",
+                file="",
+                line=child.start_point[0] + 1,
+                confidence=BugConfidence.HIGH.value,
+                message=f"f-string has no interpolation: {_node_text(child, src_bytes)!r}",
+                snippet=_snippet(child, src_bytes),
+            )
+        )
     return findings
 
 
@@ -882,7 +895,7 @@ PATTERNS: list[BugPattern] = [
         name="unused-variable",
         description="Variable assigned but never read within the function",
         languages=frozenset({"python"}),
-        confidence=BugConfidence.MEDIUM,
+        confidence=BugConfidence.LOW,
         detect=_detect_unused_variable,
     ),
     BugPattern(
