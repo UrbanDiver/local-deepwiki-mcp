@@ -1,0 +1,257 @@
+"""Tests for bug pattern data types and detectors."""
+
+from __future__ import annotations
+
+import textwrap
+
+from local_deepwiki.core.parser import CodeParser
+from local_deepwiki.generators.analysis.bug_patterns import (
+    CONFIDENCE_ORDER,
+    PATTERNS,
+    BugConfidence,
+    BugPattern,
+)
+from local_deepwiki.models import Language
+
+
+def _parse_python(source: str):
+    """Parse Python source, return (root_node, src_bytes)."""
+    parser = CodeParser()
+    src_bytes = textwrap.dedent(source).encode()
+    tree = parser._get_parser(Language.PYTHON).parse(src_bytes)
+    return tree.root_node, src_bytes
+
+
+def _find_functions(root_node):
+    """Collect all function_definition nodes."""
+    funcs: list = []
+
+    def _walk(node):
+        if node.type == "function_definition":
+            funcs.append(node)
+        for child in node.children:
+            _walk(child)
+
+    _walk(root_node)
+    return funcs
+
+
+# ---------------------------------------------------------------------------
+# Data type tests
+# ---------------------------------------------------------------------------
+def test_bug_confidence_ordering():
+    """BugConfidence enum has HIGH, MEDIUM, LOW values."""
+    assert BugConfidence.HIGH.value == "high"
+    assert BugConfidence.MEDIUM.value == "medium"
+    assert BugConfidence.LOW.value == "low"
+    assert CONFIDENCE_ORDER[BugConfidence.HIGH] > CONFIDENCE_ORDER[BugConfidence.MEDIUM]
+    assert CONFIDENCE_ORDER[BugConfidence.MEDIUM] > CONFIDENCE_ORDER[BugConfidence.LOW]
+
+
+def test_bug_pattern_is_frozen():
+    """PATTERNS entries are frozen BugPattern dataclasses with correct types."""
+    pat = PATTERNS[0]
+    assert isinstance(pat, BugPattern)
+    assert isinstance(pat.name, str)
+    assert isinstance(pat.description, str)
+    assert isinstance(pat.languages, frozenset)
+    assert isinstance(pat.confidence, BugConfidence)
+    assert callable(pat.detect)
+
+
+def test_patterns_registry_not_empty():
+    """PATTERNS registry is non-empty with unique names."""
+    assert len(PATTERNS) >= 5
+    names = [p.name for p in PATTERNS]
+    assert len(names) == len(set(names)), f"Duplicate pattern names: {names}"
+
+
+# ---------------------------------------------------------------------------
+# Mutable default argument
+# ---------------------------------------------------------------------------
+def test_detect_mutable_default_list():
+    """Detect mutable default: def f(x=[])."""
+    root, src = _parse_python(
+        """\
+        def f(x=[]):
+            pass
+        """
+    )
+    funcs = _find_functions(root)
+    assert len(funcs) == 1
+    pat = next(p for p in PATTERNS if p.name == "mutable-default-argument")
+    findings = pat.detect(funcs[0], src)
+    assert len(findings) == 1
+    assert findings[0]["pattern"] == "mutable-default-argument"
+    assert findings[0]["confidence"] == "high"
+    assert findings[0]["line"] >= 1
+
+
+def test_detect_mutable_default_dict():
+    """Detect mutable default: def f(x={})."""
+    root, src = _parse_python(
+        """\
+        def f(x={}):
+            pass
+        """
+    )
+    funcs = _find_functions(root)
+    pat = next(p for p in PATTERNS if p.name == "mutable-default-argument")
+    findings = pat.detect(funcs[0], src)
+    assert len(findings) == 1
+    assert "x={}" in findings[0]["message"]
+
+
+def test_no_false_positive_immutable_default():
+    """No finding for immutable defaults: None, int, str."""
+    root, src = _parse_python(
+        """\
+        def f(x=None, y=42, z="hello"):
+            pass
+        """
+    )
+    funcs = _find_functions(root)
+    pat = next(p for p in PATTERNS if p.name == "mutable-default-argument")
+    findings = pat.detect(funcs[0], src)
+    assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# Bare except
+# ---------------------------------------------------------------------------
+def test_detect_bare_except():
+    """Detect bare except: clause."""
+    root, src = _parse_python(
+        """\
+        def f():
+            try:
+                pass
+            except:
+                pass
+        """
+    )
+    funcs = _find_functions(root)
+    pat = next(p for p in PATTERNS if p.name == "bare-except")
+    findings = pat.detect(funcs[0], src)
+    assert len(findings) == 1
+    assert findings[0]["pattern"] == "bare-except"
+
+
+def test_bare_except_with_specific_exception_no_finding():
+    """No finding when except specifies a type."""
+    root, src = _parse_python(
+        """\
+        def f():
+            try:
+                pass
+            except ValueError:
+                raise
+        """
+    )
+    funcs = _find_functions(root)
+    pat = next(p for p in PATTERNS if p.name == "bare-except")
+    findings = pat.detect(funcs[0], src)
+    assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# Comparison to None
+# ---------------------------------------------------------------------------
+def test_detect_comparison_to_none():
+    """Detect x == None."""
+    root, src = _parse_python(
+        """\
+        def f(x):
+            if x == None:
+                pass
+        """
+    )
+    funcs = _find_functions(root)
+    pat = next(p for p in PATTERNS if p.name == "comparison-to-none")
+    findings = pat.detect(funcs[0], src)
+    assert len(findings) == 1
+    assert findings[0]["pattern"] == "comparison-to-none"
+    assert "is None" in findings[0]["message"]
+
+
+def test_is_none_no_finding():
+    """No finding for x is None (correct form)."""
+    root, src = _parse_python(
+        """\
+        def f(x):
+            if x is None:
+                pass
+        """
+    )
+    funcs = _find_functions(root)
+    pat = next(p for p in PATTERNS if p.name == "comparison-to-none")
+    findings = pat.detect(funcs[0], src)
+    assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# f-string no expression
+# ---------------------------------------------------------------------------
+def test_detect_fstring_no_expression():
+    """Detect f-string with no interpolation."""
+    root, src = _parse_python(
+        """\
+        def f():
+            x = f"no braces here"
+        """
+    )
+    funcs = _find_functions(root)
+    pat = next(p for p in PATTERNS if p.name == "f-string-no-expression")
+    findings = pat.detect(funcs[0], src)
+    assert len(findings) == 1
+    assert findings[0]["pattern"] == "f-string-no-expression"
+
+
+def test_fstring_with_expression_no_finding():
+    """No finding for f-string with interpolation."""
+    root, src = _parse_python(
+        """\
+        def f():
+            name = "world"
+            x = f"hello {name}"
+        """
+    )
+    funcs = _find_functions(root)
+    pat = next(p for p in PATTERNS if p.name == "f-string-no-expression")
+    findings = pat.detect(funcs[0], src)
+    assert len(findings) == 0
+
+
+# ---------------------------------------------------------------------------
+# Unreachable code
+# ---------------------------------------------------------------------------
+def test_detect_unreachable_after_return():
+    """Detect code after return statement."""
+    root, src = _parse_python(
+        """\
+        def f():
+            return 1
+            x = 2
+        """
+    )
+    funcs = _find_functions(root)
+    pat = next(p for p in PATTERNS if p.name == "unreachable-code")
+    findings = pat.detect(funcs[0], src)
+    assert len(findings) == 1
+    assert findings[0]["pattern"] == "unreachable-code"
+    assert "return statement" in findings[0]["message"]
+
+
+def test_no_unreachable_when_return_is_last():
+    """No finding when return is the last statement."""
+    root, src = _parse_python(
+        """\
+        def f():
+            x = 1
+            return x
+        """
+    )
+    funcs = _find_functions(root)
+    pat = next(p for p in PATTERNS if p.name == "unreachable-code")
+    findings = pat.detect(funcs[0], src)
+    assert len(findings) == 0
