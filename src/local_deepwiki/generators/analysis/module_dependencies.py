@@ -137,6 +137,8 @@ def _build_module_graph(
     project_tops: set[str],
     module_filter: str | None,
     include_external: bool,
+    *,
+    exclude_tests: bool = False,
 ) -> tuple[
     dict[str, int],
     dict[str, int],
@@ -160,7 +162,7 @@ def _build_module_graph(
     edge_counts: dict[tuple[str, str], int] = defaultdict(int)
     edge_imports: dict[tuple[str, str], list[str]] = defaultdict(list)
 
-    for py_file, rel_path in iter_python_files(repo_path, exclude_tests=False):
+    for py_file, rel_path in iter_python_files(repo_path, exclude_tests=exclude_tests):
         src_module = _module_label(rel_path, project_tops)
         if module_filter and not src_module.startswith(module_filter):
             continue
@@ -226,6 +228,8 @@ def analyze_cross_module_dependencies(
     module_filter: str | None = None,
     include_external: bool = False,
     min_edge_weight: int = 1,
+    *,
+    exclude_tests: bool = False,
 ) -> dict[str, Any]:
     """Build and return the inter-module import graph for *repo_path*.
 
@@ -237,6 +241,7 @@ def analyze_cross_module_dependencies(
             imports are excluded.
         min_edge_weight: Minimum number of import occurrences to include an
             edge in the output.
+        exclude_tests: When True, skip test files during graph building.
 
     Returns:
         A dict with ``status``, ``modules``, ``edges``, ``mermaid``, and
@@ -245,7 +250,13 @@ def analyze_cross_module_dependencies(
     project_tops = _discover_project_tops(repo_path)
 
     module_file_counts, module_line_counts, edge_counts, edge_imports = (
-        _build_module_graph(repo_path, project_tops, module_filter, include_external)
+        _build_module_graph(
+            repo_path,
+            project_tops,
+            module_filter,
+            include_external,
+            exclude_tests=exclude_tests,
+        )
     )
 
     # Build output structures.

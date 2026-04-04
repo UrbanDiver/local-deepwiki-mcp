@@ -176,12 +176,6 @@ def _compute_ca_ce(
     return ca, ce
 
 
-def _is_test_module(name: str) -> bool:
-    """Return True if *name* looks like a test module label."""
-    parts = name.split(".")
-    return any(p.startswith("test_") or p == "tests" or p == "conftest" for p in parts)
-
-
 def analyze_coupling_metrics(
     repo_path: Path,
     module_filter: str | None = None,
@@ -202,18 +196,10 @@ def analyze_coupling_metrics(
         module_filter=module_filter,
         include_external=False,
         min_edge_weight=1,
+        exclude_tests=exclude_tests,
     )
     modules = dep_result["modules"]
     edges = dep_result["edges"]
-
-    if exclude_tests:
-        test_names = {m["name"] for m in modules if _is_test_module(m["name"])}
-        modules = [m for m in modules if m["name"] not in test_names]
-        edges = [
-            e
-            for e in edges
-            if e["source"] not in test_names and e["target"] not in test_names
-        ]
 
     ca, ce = _compute_ca_ce(modules, edges)
     abstractness = _compute_abstractness(repo_path, modules)
