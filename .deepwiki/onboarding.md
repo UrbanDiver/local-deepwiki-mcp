@@ -52,7 +52,7 @@ componentDiagram
 ```
 
 - **CLI Layer**: Provides command-line tools for configuration, initialization, status checking, and updates. [CLI Overview](files/src/local_deepwiki/cli/main.md)
-- **Core Services**: Contains the main logic for configuration loading, documentation generation, analysis, graph-based retrieval, and parsing. [Core Services](src/local_deepwiki/core)
+- **Core Services**: Contains the main logic for configuration loading, documentation generation, analysis, graph-based retrieval, and parsing. [Core Services](files/src/local_deepwiki/core/indexer.md)
 - **Web Layer**: Serves the web interface using Flask and handles request routing with access control. [Web App](files/src/local_deepwiki/web/app.md)
 - **AI/ML Providers**: Integrates with various AI/ML services for LLMs, embeddings, and search capabilities. [Providers](files/src/local_deepwiki/config/provider_models.md)
 - **Storage**: Manages vector databases (LanceDB) and file system storage for documentation chunks and metadata. [Storage](files/src/local_deepwiki/config/models.md)

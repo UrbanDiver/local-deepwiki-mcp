@@ -10,7 +10,22 @@ Usage in test files:
 
 from __future__ import annotations
 
+import os
+import sys
 import time
+
+# Ensure Homebrew shared libraries are discoverable on macOS.
+# WeasyPrint needs libgobject/libpango which live in /opt/homebrew/lib
+# on Apple Silicon and /usr/local/lib on Intel Macs.
+if sys.platform == "darwin":
+    _brew_lib = (
+        "/opt/homebrew/lib" if os.path.isdir("/opt/homebrew/lib") else "/usr/local/lib"
+    )
+    _current = os.environ.get("DYLD_LIBRARY_PATH", "")
+    if _brew_lib not in _current:
+        os.environ["DYLD_LIBRARY_PATH"] = (
+            f"{_brew_lib}:{_current}" if _current else _brew_lib
+        )
 import uuid
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
