@@ -166,3 +166,78 @@ async def test_handle_get_duplication_metrics(tmp_path):
     assert data["status"] == "success"
     assert "type1_clones" in data
     assert "type2_clones" in data
+
+
+# --- Scope tagging tests ---
+
+
+def test_type1_clones_tagged_with_scope(tmp_path):
+    """Each clone group returned by detect_type1_clones has a 'scope' field."""
+    from local_deepwiki.generators.analysis.duplication import detect_type1_clones
+
+    _write_py(tmp_path / "src" / "a.py", _DUPLICATE_BLOCK + "\nx = 1\n")
+    _write_py(tmp_path / "src" / "b.py", _DUPLICATE_BLOCK + "\ny = 2\n")
+    clones = detect_type1_clones(tmp_path, min_lines=6)
+    assert len(clones) >= 1
+    for group in clones:
+        assert "scope" in group
+        assert group["scope"] in ("intra_file", "inter_file")
+
+
+def test_intra_file_clones_detected(tmp_path):
+    """Duplicates within the same file are tagged as 'intra_file'."""
+    from local_deepwiki.generators.analysis.duplication import detect_type1_clones
+
+    # Put two copies of the block in a single file
+    _write_py(
+        tmp_path / "src" / "a.py",
+        _DUPLICATE_BLOCK
+        + "\nx = 1\n\n"
+        + _DUPLICATE_BLOCK.replace("process_data", "process_data2"),
+    )
+    clones = detect_type1_clones(tmp_path, min_lines=6)
+    assert len(clones) >= 1
+    intra = [g for g in clones if g["scope"] == "intra_file"]
+    assert len(intra) >= 1
+
+
+def test_inter_file_clones_detected(tmp_path):
+    """Duplicates across different files are tagged as 'inter_file'."""
+    from local_deepwiki.generators.analysis.duplication import detect_type1_clones
+
+    _write_py(tmp_path / "src" / "a.py", _DUPLICATE_BLOCK + "\nx = 1\n")
+    _write_py(tmp_path / "src" / "b.py", _DUPLICATE_BLOCK + "\ny = 2\n")
+    clones = detect_type1_clones(tmp_path, min_lines=6)
+    assert len(clones) >= 1
+    inter = [g for g in clones if g["scope"] == "inter_file"]
+    assert len(inter) >= 1
+
+
+def test_analyze_duplication_has_inter_file_ratio(tmp_path):
+    """Stats dict includes 'inter_file_duplication_ratio'."""
+    from local_deepwiki.generators.analysis.duplication import analyze_duplication
+
+    _write_py(tmp_path / "src" / "a.py", _DUPLICATE_BLOCK + "\nx = 1\n")
+    _write_py(tmp_path / "src" / "b.py", _DUPLICATE_BLOCK + "\ny = 2\n")
+    result = analyze_duplication(tmp_path)
+    stats = result["stats"]
+    assert "inter_file_duplication_ratio" in stats
+    assert stats["inter_file_duplication_ratio"] >= 0.0
+    assert stats["inter_file_duplication_ratio"] <= 1.0
+
+
+def test_intra_file_only_has_zero_inter_file_ratio(tmp_path):
+    """When all duplication is intra-file, inter_file_duplication_ratio is 0."""
+    from local_deepwiki.generators.analysis.duplication import analyze_duplication
+
+    # Put two copies of the block in a single file only
+    _write_py(
+        tmp_path / "src" / "a.py",
+        _DUPLICATE_BLOCK
+        + "\nx = 1\n\n"
+        + _DUPLICATE_BLOCK.replace("process_data", "process_data2"),
+    )
+    result = analyze_duplication(tmp_path)
+    stats = result["stats"]
+    assert "inter_file_duplication_ratio" in stats
+    assert stats["inter_file_duplication_ratio"] == 0.0

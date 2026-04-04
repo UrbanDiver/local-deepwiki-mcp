@@ -135,11 +135,15 @@ def detect_type1_clones(
         if len(unique_instances) < 2:
             continue
 
+        files_in_group = {inst["file"] for inst in unique_instances}
+        scope = "intra_file" if len(files_in_group) == 1 else "inter_file"
+
         clone_groups.append(
             {
                 "fingerprint": hex(fp_hash & 0xFFFFFFFFFFFFFFFF),
                 "line_count": min_lines,
                 "instances": unique_instances,
+                "scope": scope,
             }
         )
 
@@ -252,7 +256,9 @@ def analyze_duplication(
             continue
 
     # Run both detectors
-    type1_clones = detect_type1_clones(repo_path, min_lines=min_lines, exclude_tests=exclude_tests)
+    type1_clones = detect_type1_clones(
+        repo_path, min_lines=min_lines, exclude_tests=exclude_tests
+    )
     type2_clones = detect_type2_clones(repo_path, exclude_tests=exclude_tests)
 
     # Compute duplicated lines:
@@ -261,9 +267,20 @@ def analyze_duplication(
         group["line_count"] * (len(group["instances"]) - 1) for group in type1_clones
     )
 
-    largest_clone_lines = max((group["line_count"] for group in type1_clones), default=0)
+    largest_clone_lines = max(
+        (group["line_count"] for group in type1_clones), default=0
+    )
 
     duplication_ratio = duplicated_lines / total_lines if total_lines > 0 else 0.0
+
+    inter_file_duplicated_lines = sum(
+        group["line_count"] * (len(group["instances"]) - 1)
+        for group in type1_clones
+        if group.get("scope") == "inter_file"
+    )
+    inter_file_ratio = (
+        inter_file_duplicated_lines / total_lines if total_lines > 0 else 0.0
+    )
 
     return {
         "status": "success",
@@ -273,6 +290,7 @@ def analyze_duplication(
             "total_lines": total_lines,
             "duplicated_lines": duplicated_lines,
             "duplication_ratio": duplication_ratio,
+            "inter_file_duplication_ratio": inter_file_ratio,
             "type1_clone_groups": len(type1_clones),
             "type2_clone_groups": len(type2_clones),
             "largest_clone_lines": largest_clone_lines,
