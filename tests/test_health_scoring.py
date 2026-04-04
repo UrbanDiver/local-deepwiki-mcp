@@ -405,7 +405,8 @@ def test_score_churn_no_high_churn_complex_files():
 
 def test_score_churn_many_high_churn_complex_files():
     composite = [
-        {"file": f"f{i}.py", "churn": 20, "complexity": 30, "composite": 0.8} for i in range(10)
+        {"file": f"f{i}.py", "churn": 20, "complexity": 30, "composite": 0.8}
+        for i in range(10)
     ]
     stats = {"gini_coefficient": 0.5, "total_files": 20}
     result = score_churn(composite, stats=stats)
@@ -505,6 +506,28 @@ def test_score_cohesion_returns_factors():
     assert "low_cohesion_modules" in result["factors"]
 
 
+def test_score_cohesion_with_excluded_patterns():
+    """Excluded pattern classes should be surfaced in factors."""
+    stats_with_patterns = {
+        "classes_with_lcom_gt_2": 2,
+        "total_classes": 50,
+        "avg_lcom": 1.5,
+        "low_cohesion_modules": 1,
+        "excluded_pattern_classes": 20,
+    }
+    stats_without_patterns = {
+        "classes_with_lcom_gt_2": 22,
+        "total_classes": 50,
+        "avg_lcom": 1.5,
+        "low_cohesion_modules": 1,
+    }
+    result_with = score_cohesion([], [], stats=stats_with_patterns)
+    result_without = score_cohesion([], [], stats=stats_without_patterns)
+    # With patterns excluded (only 2 problematic), score should be higher
+    assert result_with["score"] > result_without["score"]
+    assert result_with["factors"]["excluded_pattern_classes"] == 20
+
+
 # ---------------------------------------------------------------------------
 # score_duplication
 # ---------------------------------------------------------------------------
@@ -571,6 +594,28 @@ def test_score_duplication_returns_factors():
     assert "duplication_ratio" in result["factors"]
     assert "clone_groups" in result["factors"]
     assert "largest_clone_lines" in result["factors"]
+
+
+def test_score_duplication_prefers_inter_file_ratio():
+    """When inter_file_duplication_ratio is available, use it for scoring."""
+    stats_with_inter = {
+        "duplication_ratio": 0.15,
+        "inter_file_duplication_ratio": 0.03,
+        "type1_clone_groups": 50,
+        "type2_clone_groups": 10,
+        "largest_clone_lines": 6,
+    }
+    stats_without_inter = {
+        "duplication_ratio": 0.15,
+        "type1_clone_groups": 50,
+        "type2_clone_groups": 10,
+        "largest_clone_lines": 6,
+    }
+    result_with = score_duplication(stats=stats_with_inter)
+    result_without = score_duplication(stats=stats_without_inter)
+    # With inter-file ratio (much lower), score should be higher
+    assert result_with["score"] > result_without["score"]
+    assert result_with["factors"]["inter_file_duplication_ratio"] == 0.03
 
 
 # ---------------------------------------------------------------------------

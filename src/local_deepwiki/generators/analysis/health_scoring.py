@@ -140,7 +140,9 @@ def score_smells(
         return {"score": 100, "grade": "A", "factors": {}}
 
     severity_weights = {"high": 3, "medium": 1, "low": 0.5}
-    weighted_count = sum(severity_weights.get(s.get("severity", "medium"), 1) for s in smells)
+    weighted_count = sum(
+        severity_weights.get(s.get("severity", "medium"), 1) for s in smells
+    )
     density = (weighted_count / total_lines) * 1000
     god_classes = sum(1 for s in smells if s.get("type") == "god_class")
 
@@ -232,6 +234,7 @@ def score_cohesion(
 
     classes_gt2 = stats.get("classes_with_lcom_gt_2", 0)
     total_classes = stats.get("total_classes", 0) or 1
+    excluded = stats.get("excluded_pattern_classes", 0)
     gt2_pct = (classes_gt2 / total_classes) * 100
     avg_lcom = stats.get("avg_lcom", 1.0)
     low_modules = stats.get("low_cohesion_modules", 0)
@@ -246,15 +249,19 @@ def score_cohesion(
         score -= min((avg_lcom - 2.0) * 5, 15)
 
     score = max(0.0, min(100.0, score))
+    factors: dict[str, Any] = {
+        "classes_with_lcom_gt_2": classes_gt2,
+        "avg_lcom": round(avg_lcom, 2),
+        "low_cohesion_modules": low_modules,
+        "total_classes": stats.get("total_classes", 0),
+    }
+    if excluded > 0:
+        factors["excluded_pattern_classes"] = excluded
+
     return {
         "score": round(score, 1),
         "grade": letter_grade(score),
-        "factors": {
-            "classes_with_lcom_gt_2": classes_gt2,
-            "avg_lcom": round(avg_lcom, 2),
-            "low_cohesion_modules": low_modules,
-            "total_classes": stats.get("total_classes", 0),
-        },
+        "factors": factors,
     }
 
 
@@ -271,8 +278,14 @@ def score_duplication(
     if not stats:
         return {"score": 100, "grade": "A", "factors": {}}
 
-    ratio = stats.get("duplication_ratio", 0.0)
-    clone_groups = stats.get("type1_clone_groups", 0) + stats.get("type2_clone_groups", 0)
+    # Prefer inter-file ratio (excludes declarative intra-file repetition)
+    total_ratio = stats.get("duplication_ratio", 0.0)
+    inter_file_ratio = stats.get("inter_file_duplication_ratio")
+    ratio = inter_file_ratio if inter_file_ratio is not None else total_ratio
+
+    clone_groups = stats.get("type1_clone_groups", 0) + stats.get(
+        "type2_clone_groups", 0
+    )
     largest = stats.get("largest_clone_lines", 0)
 
     score = 100.0
@@ -294,14 +307,18 @@ def score_duplication(
         score -= min((largest - 50) * 0.3, 15)
 
     score = max(0.0, min(100.0, score))
+    factors: dict[str, Any] = {
+        "duplication_ratio": round(total_ratio, 4),
+        "clone_groups": clone_groups,
+        "largest_clone_lines": largest,
+    }
+    if inter_file_ratio is not None:
+        factors["inter_file_duplication_ratio"] = round(inter_file_ratio, 4)
+
     return {
         "score": round(score, 1),
         "grade": letter_grade(score),
-        "factors": {
-            "duplication_ratio": round(ratio, 4),
-            "clone_groups": clone_groups,
-            "largest_clone_lines": largest,
-        },
+        "factors": factors,
     }
 
 
