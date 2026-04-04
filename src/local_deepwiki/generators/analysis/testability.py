@@ -117,10 +117,7 @@ def analyze_testability(
 
         # Skip hidden dirs and common non-source trees
         parts = rel_path.split("/")
-        if any(
-            part.startswith(".") or part in ("node_modules", "__pycache__")
-            for part in parts
-        ):
+        if any(part.startswith(".") or part in ("node_modules", "__pycache__") for part in parts):
             continue
 
         all_py.append((py_file, rel_path))
@@ -168,9 +165,7 @@ def analyze_testability(
 
     # Identify untested source files
     tested_sources = {tf["matches_source"] for tf in test_files if tf["matches_source"]}
-    untested_files = sorted(
-        rel for rel in source_files_set if rel not in tested_sources
-    )
+    untested_files = sorted(rel for rel in source_files_set if rel not in tested_sources)
 
     total_source = len(source_paths)
     total_test = len(test_paths)

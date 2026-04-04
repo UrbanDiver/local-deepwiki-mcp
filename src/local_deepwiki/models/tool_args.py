@@ -71,9 +71,7 @@ class DeepResearchArgs(BaseModel):
     """Arguments for the deep_research tool."""
 
     repo_path: str = Field(description="Path to the indexed repository")
-    question: str = Field(
-        min_length=1, description="Complex question requiring deep analysis"
-    )
+    question: str = Field(min_length=1, description="Complex question requiring deep analysis")
     max_chunks: int = Field(
         default=30, ge=10, le=50, description="Maximum code chunks to analyze (10-50)"
     )
@@ -96,9 +94,7 @@ class ReadWikiPageArgs(BaseModel):
     """Arguments for the read_wiki_page tool."""
 
     wiki_path: str = Field(description="Path to the wiki directory")
-    page: str = Field(
-        min_length=1, description="Relative path to the page within the wiki"
-    )
+    page: str = Field(min_length=1, description="Relative path to the page within the wiki")
 
 
 class SearchCodeArgs(BaseModel):
@@ -122,9 +118,7 @@ class ExportWikiHtmlArgs(BaseModel):
     """Arguments for the export_wiki_html tool."""
 
     wiki_path: str = Field(description="Path to the wiki directory to export")
-    output_path: str | None = Field(
-        default=None, description="Output directory for HTML files"
-    )
+    output_path: str | None = Field(default=None, description="Output directory for HTML files")
 
 
 class ExportWikiPdfArgs(BaseModel):
@@ -132,18 +126,14 @@ class ExportWikiPdfArgs(BaseModel):
 
     wiki_path: str = Field(description="Path to the wiki directory to export")
     output_path: str | None = Field(default=None, description="Output path for PDF")
-    single_file: bool = Field(
-        default=True, description="Combine all pages into single PDF"
-    )
+    single_file: bool = Field(default=True, description="Combine all pages into single PDF")
 
 
 class GetGlossaryArgs(BaseModel):
     """Arguments for the get_glossary tool."""
 
     repo_path: str = Field(description="Path to the indexed repository")
-    search: str | None = Field(
-        default=None, description="Optional search term to filter entities"
-    )
+    search: str | None = Field(default=None, description="Optional search term to filter entities")
     file_path: str | None = Field(
         default=None,
         description="Filter to entities from a specific file (relative path)",
@@ -282,13 +272,9 @@ class GetIndexStatusArgs(BaseModel):
 class SearchWikiArgs(BaseModel):
     """Arguments for the search_wiki tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     query: str = Field(min_length=1, max_length=1000, description="Search query string")
-    limit: int = Field(
-        default=20, ge=1, le=100, description="Maximum results to return (1-100)"
-    )
+    limit: int = Field(default=20, ge=1, le=100, description="Maximum results to return (1-100)")
     entity_types: list[str] | None = Field(
         default=None,
         description="Optional filter by entity type: 'function', 'class', 'method', or 'page'",
@@ -308,9 +294,7 @@ class GetProjectManifestArgs(BaseModel):
 class GetFileContextArgs(BaseModel):
     """Arguments for the get_file_context tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     file_path: str = Field(
         min_length=1,
         description="File path relative to repo root (e.g., 'src/local_deepwiki/server.py')",
@@ -324,9 +308,7 @@ class GetFileContextArgs(BaseModel):
 class FuzzySearchArgs(BaseModel):
     """Arguments for the fuzzy_search tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     query: str = Field(
         min_length=1,
         max_length=1000,
@@ -335,9 +317,7 @@ class FuzzySearchArgs(BaseModel):
     threshold: float = Field(
         default=0.6, ge=0.0, le=1.0, description="Minimum similarity score (0.0-1.0)"
     )
-    limit: int = Field(
-        default=10, ge=1, le=50, description="Maximum results to return (1-50)"
-    )
+    limit: int = Field(default=10, ge=1, le=50, description="Maximum results to return (1-50)")
     entity_type: str | None = Field(
         default=None,
         description="Optional filter: 'function', 'class', 'method', or 'module'",
@@ -347,9 +327,7 @@ class FuzzySearchArgs(BaseModel):
 class ExplainEntityArgs(BaseModel):
     """Arguments for the explain_entity tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     entity_name: str = Field(
         min_length=1,
         max_length=500,
@@ -364,9 +342,7 @@ class ExplainEntityArgs(BaseModel):
     include_test_examples: bool = Field(
         default=True, description="Include usage examples from tests"
     )
-    include_api_docs: bool = Field(
-        default=True, description="Include API signature details"
-    )
+    include_api_docs: bool = Field(default=True, description="Include API signature details")
     max_test_examples: int = Field(
         default=3, ge=1, le=10, description="Max test examples to include (1-10)"
     )
@@ -375,9 +351,7 @@ class ExplainEntityArgs(BaseModel):
 class ImpactAnalysisArgs(BaseModel):
     """Arguments for the impact_analysis tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     file_path: str = Field(
         min_length=1,
         description="File path relative to repo root to analyze impact for",
@@ -466,17 +440,13 @@ class AskAboutDiffArgs(BaseModel):
 class GetWikiStatsArgs(BaseModel):
     """Arguments for the get_wiki_stats tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
 
 
 class GenerateCodemapArgs(BaseModel):
     """Arguments for the generate_codemap tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     query: str = Field(
         min_length=1,
         max_length=2000,
@@ -509,9 +479,7 @@ class GenerateCodemapArgs(BaseModel):
 class SuggestCodemapTopicsArgs(BaseModel):
     """Arguments for the suggest_codemap_topics tool."""
 
-    repo_path: str = Field(
-        max_length=4096, description="Path to the indexed repository"
-    )
+    repo_path: str = Field(max_length=4096, description="Path to the indexed repository")
     max_suggestions: int = Field(
         default=10,
         ge=1,
@@ -828,9 +796,7 @@ class GetGuidedTourArgs(BaseModel):
 class ServeWikiArgs(BaseModel):
     """Arguments for the serve_wiki tool."""
 
-    wiki_path: str = Field(
-        description="Path to the wiki directory (typically {repo}/.deepwiki)"
-    )
+    wiki_path: str = Field(description="Path to the wiki directory (typically {repo}/.deepwiki)")
     host: str = Field(
         default="127.0.0.1",
         max_length=256,
