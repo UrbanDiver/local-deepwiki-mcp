@@ -140,9 +140,7 @@ def score_smells(
         return {"score": 100, "grade": "A", "factors": {}}
 
     severity_weights = {"high": 3, "medium": 1, "low": 0.5}
-    weighted_count = sum(
-        severity_weights.get(s.get("severity", "medium"), 1) for s in smells
-    )
+    weighted_count = sum(severity_weights.get(s.get("severity", "medium"), 1) for s in smells)
     density = (weighted_count / total_lines) * 1000
     god_classes = sum(1 for s in smells if s.get("type") == "god_class")
 
@@ -274,9 +272,7 @@ def score_duplication(
         return {"score": 100, "grade": "A", "factors": {}}
 
     ratio = stats.get("duplication_ratio", 0.0)
-    clone_groups = stats.get("type1_clone_groups", 0) + stats.get(
-        "type2_clone_groups", 0
-    )
+    clone_groups = stats.get("type1_clone_groups", 0) + stats.get("type2_clone_groups", 0)
     largest = stats.get("largest_clone_lines", 0)
 
     score = 100.0
