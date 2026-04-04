@@ -379,8 +379,7 @@ class TestStreamingPdfExporter:
 
     def test_add_toc_entries_html(self, sample_wiki: Path, tmp_path: Path):
         """Test _add_toc_entries_html adds entries recursively."""
-        output_path = tmp_path / "output.pdf"
-        exporter = StreamingPdfExporter(sample_wiki, output_path, no_progress=True)
+        from local_deepwiki.export.toc_renderer import _add_toc_entries_html
 
         entries = [
             {"title": "Level 0"},
@@ -394,7 +393,7 @@ class TestStreamingPdfExporter:
         ]
 
         parts: list[str] = []
-        exporter._add_toc_entries_html(entries, parts, 0)
+        _add_toc_entries_html(entries, parts, 0)
 
         html = "\n".join(parts)
         assert "Level 0" in html

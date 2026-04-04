@@ -458,21 +458,9 @@ class StreamingPdfExporter(StreamingExporter):
 
     def _build_streaming_toc_html(self) -> str:
         """Build TOC HTML from loaded TOC entries."""
-        parts = ['<div class="toc">']
-        self._add_toc_entries_html(self._toc_entries, parts, 0)
-        parts.append("</div>")
-        return "\n".join(parts)
+        from local_deepwiki.export.toc_renderer import render_toc_html
 
-    def _add_toc_entries_html(
-        self, entries: list[dict[str, Any]], parts: list[str], depth: int
-    ) -> None:
-        """Recursively add TOC entries to HTML parts."""
-        for entry in entries:
-            title = entry.get("title", "")
-            indent = "  " * depth
-            parts.append(f'<div class="toc-item">{indent}{title}</div>')
-            if "children" in entry:
-                self._add_toc_entries_html(entry["children"], parts, depth + 1)
+        return render_toc_html(self._toc_entries)
 
     @staticmethod
     def _export_single_page(page: WikiPage, output_file: Path) -> None:
