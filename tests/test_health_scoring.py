@@ -569,7 +569,7 @@ def test_score_duplication_high():
         "largest_clone_lines": 100,
     }
     result = score_duplication(stats=stats)
-    assert result["score"] < 30
+    assert result["score"] < 40
 
 
 def test_score_duplication_score_clamped():

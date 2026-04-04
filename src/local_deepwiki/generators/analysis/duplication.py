@@ -273,10 +273,10 @@ def analyze_duplication(
 
     duplication_ratio = duplicated_lines / total_lines if total_lines > 0 else 0.0
 
+    inter_file_type1 = [g for g in type1_clones if g.get("scope") == "inter_file"]
     inter_file_duplicated_lines = sum(
         group["line_count"] * (len(group["instances"]) - 1)
-        for group in type1_clones
-        if group.get("scope") == "inter_file"
+        for group in inter_file_type1
     )
     inter_file_ratio = (
         inter_file_duplicated_lines / total_lines if total_lines > 0 else 0.0
@@ -293,6 +293,7 @@ def analyze_duplication(
             "inter_file_duplication_ratio": inter_file_ratio,
             "type1_clone_groups": len(type1_clones),
             "type2_clone_groups": len(type2_clones),
+            "inter_file_clone_groups": len(inter_file_type1) + len(type2_clones),
             "largest_clone_lines": largest_clone_lines,
         },
     }

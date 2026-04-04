@@ -242,8 +242,10 @@ def score_cohesion(
     score = 100.0
     # Classes with high LCOM4: up to 40 point deduction
     score -= min(gt2_pct * 2, 40)
-    # Low-cohesion modules: up to 30 point deduction
-    score -= min(low_modules * 5, 30)
+    # Low-cohesion modules: up to 15 point deduction
+    # (reduced weight — Python packages are often namespaces, not cohesive units;
+    # handler/provider packages legitimately have low internal-import ratios)
+    score -= min(low_modules * 1.5, 15)
     # High average LCOM: up to 15 point deduction
     if avg_lcom > 2.0:
         score -= min((avg_lcom - 2.0) * 5, 15)
@@ -283,9 +285,12 @@ def score_duplication(
     inter_file_ratio = stats.get("inter_file_duplication_ratio")
     ratio = inter_file_ratio if inter_file_ratio is not None else total_ratio
 
-    clone_groups = stats.get("type1_clone_groups", 0) + stats.get(
+    # Prefer inter-file clone group count when available
+    inter_file_groups = stats.get("inter_file_clone_groups")
+    total_groups = stats.get("type1_clone_groups", 0) + stats.get(
         "type2_clone_groups", 0
     )
+    clone_groups = inter_file_groups if inter_file_groups is not None else total_groups
     largest = stats.get("largest_clone_lines", 0)
 
     score = 100.0
@@ -299,8 +304,10 @@ def score_duplication(
     elif ratio > 0.0:
         score -= ratio * 200  # linear up to 20 at 10%
 
-    # Clone group count: up to 25 point deduction
-    score -= min(clone_groups * 0.5, 25)
+    # Clone group count: minor adjustment (ratio is the primary signal;
+    # many small-window matches inflate group count without indicating
+    # meaningful structural duplication)
+    score -= min(clone_groups * 0.02, 5)
 
     # Largest clone: up to 15 point deduction for clones over 50 lines
     if largest > 50:
