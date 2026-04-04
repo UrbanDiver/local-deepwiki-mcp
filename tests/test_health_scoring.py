@@ -7,6 +7,7 @@ import pytest
 from local_deepwiki.generators.analysis.health_scoring import (
     compute_overall,
     letter_grade,
+    score_churn,
     score_complexity,
     score_coupling,
     score_layers,
@@ -381,6 +382,58 @@ def test_score_layers_grade_d_at_seven_violations():
 
 
 # ---------------------------------------------------------------------------
+# score_churn
+# ---------------------------------------------------------------------------
+
+
+def test_score_churn_empty_stats():
+    result = score_churn([], stats={})
+    assert result["score"] == 100
+    assert result["grade"] == "A"
+
+
+def test_score_churn_no_high_churn_complex_files():
+    composite = [{"file": "a.py", "churn": 5, "complexity": 3, "composite": 0.1}]
+    stats = {"gini_coefficient": 0.3, "total_files": 10}
+    result = score_churn(composite, stats=stats)
+    assert result["score"] >= 80
+
+
+def test_score_churn_many_high_churn_complex_files():
+    composite = [
+        {"file": f"f{i}.py", "churn": 20, "complexity": 30, "composite": 0.8} for i in range(10)
+    ]
+    stats = {"gini_coefficient": 0.5, "total_files": 20}
+    result = score_churn(composite, stats=stats)
+    assert result["score"] < 70
+    assert result["factors"]["high_churn_complex_files"] == 10
+
+
+def test_score_churn_extreme_gini():
+    composite = []
+    stats = {"gini_coefficient": 0.9, "total_files": 50}
+    result = score_churn(composite, stats=stats)
+    assert result["score"] < 90
+    assert result["factors"]["churn_concentration"] == 0.9
+
+
+def test_score_churn_score_clamped():
+    composite = [{"file": f"f{i}.py", "composite": 0.9} for i in range(100)]
+    stats = {"gini_coefficient": 1.0, "total_files": 100}
+    result = score_churn(composite, stats=stats)
+    assert 0.0 <= result["score"] <= 100.0
+
+
+def test_score_churn_returns_factors():
+    composite = [{"file": "a.py", "composite": 0.6}]
+    stats = {"gini_coefficient": 0.4, "total_files": 5}
+    result = score_churn(composite, stats=stats)
+    assert "high_churn_complex_files" in result["factors"]
+    assert "churn_concentration" in result["factors"]
+    assert "total_files" in result["factors"]
+
+
+# ---------------------------------------------------------------------------
 # compute_overall
 # ---------------------------------------------------------------------------
 
@@ -391,6 +444,7 @@ def test_compute_overall_all_perfect():
         "coupling": {"score": 100},
         "smells": {"score": 100},
         "layers": {"score": 100},
+        "churn": {"score": 100},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 100.0
@@ -403,6 +457,7 @@ def test_compute_overall_all_zero():
         "coupling": {"score": 0},
         "smells": {"score": 0},
         "layers": {"score": 0},
+        "churn": {"score": 0},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 0.0
@@ -410,16 +465,17 @@ def test_compute_overall_all_zero():
 
 
 def test_compute_overall_weighted_average():
-    # complexity=100 (weight 0.30), coupling=100 (0.25), smells=0 (0.25), layers=100 (0.20)
-    # expected = 100*0.30 + 100*0.25 + 0*0.25 + 100*0.20 = 30+25+0+20 = 75
+    # complexity=100 (0.25), coupling=100 (0.20), smells=0 (0.20), layers=100 (0.15), churn=100 (0.20)
+    # expected = 100*0.25 + 100*0.20 + 0*0.20 + 100*0.15 + 100*0.20 = 25+20+0+15+20 = 80
     dimensions = {
         "complexity": {"score": 100},
         "coupling": {"score": 100},
         "smells": {"score": 0},
         "layers": {"score": 100},
+        "churn": {"score": 100},
     }
     result = compute_overall(dimensions)
-    assert result["score"] == pytest.approx(75.0, rel=0.01)
+    assert result["score"] == pytest.approx(80.0, rel=0.01)
     assert result["grade"] == "B"
 
 
@@ -427,11 +483,11 @@ def test_compute_overall_missing_dimension_defaults_100():
     # If a dimension is missing, it defaults to 100
     dimensions = {
         "complexity": {"score": 0},
-        # coupling, smells, layers missing
+        # coupling, smells, layers, churn missing → default 100
     }
     result = compute_overall(dimensions)
-    # 0*0.30 + 100*0.25 + 100*0.25 + 100*0.20 = 0 + 25 + 25 + 20 = 70
-    assert result["score"] == pytest.approx(70.0, rel=0.01)
+    # 0*0.25 + 100*0.20 + 100*0.20 + 100*0.15 + 100*0.20 = 0 + 20 + 20 + 15 + 20 = 75
+    assert result["score"] == pytest.approx(75.0, rel=0.01)
 
 
 def test_compute_overall_dimensions_included_in_result():
@@ -440,6 +496,7 @@ def test_compute_overall_dimensions_included_in_result():
         "coupling": {"score": 70},
         "smells": {"score": 90},
         "layers": {"score": 100},
+        "churn": {"score": 85},
     }
     result = compute_overall(dimensions)
     assert result["dimensions"] is dimensions
@@ -453,18 +510,19 @@ def test_compute_overall_weights_included_in_result():
     assert "coupling" in weights
     assert "smells" in weights
     assert "layers" in weights
+    assert "churn" in weights
     # Weights should sum to approximately 1.0
     assert sum(weights.values()) == pytest.approx(1.0, rel=0.001)
 
 
 def test_compute_overall_grade_b_boundary():
     # Score of exactly 75.0 → B
-    # layers=100 (0.20), others all produce 75 combined
     dimensions = {
         "complexity": {"score": 75},
         "coupling": {"score": 75},
         "smells": {"score": 75},
         "layers": {"score": 75},
+        "churn": {"score": 75},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 75.0
