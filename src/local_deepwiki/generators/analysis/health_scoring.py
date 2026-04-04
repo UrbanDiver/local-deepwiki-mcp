@@ -19,12 +19,13 @@ _GRADE_THRESHOLDS: tuple[tuple[str, int], ...] = (
 
 # Weights for overall score
 _DIMENSION_WEIGHTS: dict[str, float] = {
-    "complexity": 0.20,
-    "coupling": 0.18,
-    "smells": 0.18,
-    "layers": 0.14,
-    "churn": 0.15,
-    "cohesion": 0.15,
+    "complexity": 0.18,
+    "coupling": 0.16,
+    "smells": 0.16,
+    "layers": 0.12,
+    "churn": 0.13,
+    "cohesion": 0.13,
+    "duplication": 0.12,
 }
 
 
@@ -253,6 +254,55 @@ def score_cohesion(
             "avg_lcom": round(avg_lcom, 2),
             "low_cohesion_modules": low_modules,
             "total_classes": stats.get("total_classes", 0),
+        },
+    }
+
+
+def score_duplication(
+    stats: dict[str, Any],
+) -> dict[str, Any]:
+    """Score duplication dimension (0-100).
+
+    Factors:
+    - Duplication ratio (duplicated lines / total lines)
+    - Number of clone groups
+    - Largest clone block size
+    """
+    if not stats:
+        return {"score": 100, "grade": "A", "factors": {}}
+
+    ratio = stats.get("duplication_ratio", 0.0)
+    clone_groups = stats.get("type1_clone_groups", 0) + stats.get(
+        "type2_clone_groups", 0
+    )
+    largest = stats.get("largest_clone_lines", 0)
+
+    score = 100.0
+    # Duplication ratio: up to 50 point deduction
+    if ratio >= 0.30:
+        score -= 50
+    elif ratio >= 0.20:
+        score -= 40
+    elif ratio >= 0.10:
+        score -= 20
+    elif ratio > 0.0:
+        score -= ratio * 200  # linear up to 20 at 10%
+
+    # Clone group count: up to 25 point deduction
+    score -= min(clone_groups * 0.5, 25)
+
+    # Largest clone: up to 15 point deduction for clones over 50 lines
+    if largest > 50:
+        score -= min((largest - 50) * 0.3, 15)
+
+    score = max(0.0, min(100.0, score))
+    return {
+        "score": round(score, 1),
+        "grade": letter_grade(score),
+        "factors": {
+            "duplication_ratio": round(ratio, 4),
+            "clone_groups": clone_groups,
+            "largest_clone_lines": largest,
         },
     }
 

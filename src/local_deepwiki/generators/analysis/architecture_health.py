@@ -15,6 +15,7 @@ from typing import Any
 from local_deepwiki.generators.analysis.churn import analyze_churn
 from local_deepwiki.generators.analysis.cohesion import analyze_cohesion
 from local_deepwiki.generators.analysis.coupling import analyze_coupling_metrics
+from local_deepwiki.generators.analysis.duplication import analyze_duplication
 from local_deepwiki.generators.analysis.design_smells import analyze_design_smells
 from local_deepwiki.generators.analysis.health_scoring import (
     compute_overall,
@@ -22,6 +23,7 @@ from local_deepwiki.generators.analysis.health_scoring import (
     score_cohesion,
     score_complexity,
     score_coupling,
+    score_duplication,
     score_layers,
     score_smells,
 )
@@ -101,7 +103,9 @@ def _generate_next_steps(
             {
                 "tool": "get_recommendations",
                 "args": {"enrich": True},
-                "reason": (f"{total_smells} design smells found — get prioritized action items"),
+                "reason": (
+                    f"{total_smells} design smells found — get prioritized action items"
+                ),
             }
         )
 
@@ -135,6 +139,7 @@ def _score_all_dimensions(
     layer_result: dict[str, Any],
     churn_result: dict[str, Any],
     cohesion_result: dict[str, Any],
+    duplication_result: dict[str, Any],
     total_lines: int,
 ) -> dict[str, Any]:
     """Compute scored dimension dict from raw analysis results."""
@@ -154,6 +159,9 @@ def _score_all_dimensions(
             cohesion_result.get("class_cohesion", []),
             cohesion_result.get("module_cohesion", []),
             stats=cohesion_result.get("stats", {}),
+        ),
+        "duplication": score_duplication(
+            stats=duplication_result.get("stats", {}),
         ),
     }
 
@@ -189,8 +197,14 @@ def analyze_architecture_health(
 
     cohesion_result = analyze_cohesion(repo_path)
 
+    duplication_result = analyze_duplication(repo_path)
+
     # Filter smells to source-only (exclude test/generated)
-    src_smells = [s for s in smell_result.get("smells", []) if s.get("file", "").startswith("src/")]
+    src_smells = [
+        s
+        for s in smell_result.get("smells", [])
+        if s.get("file", "").startswith("src/")
+    ]
 
     dimensions = _score_all_dimensions(
         hotspot_result,
@@ -199,13 +213,16 @@ def analyze_architecture_health(
         layer_result,
         churn_result,
         cohesion_result,
+        duplication_result,
         total_lines,
     )
     overall = compute_overall(dimensions)
 
     # Build top findings
     top_hotspots = hotspot_result.get("hotspots", [])[:top_findings]
-    top_smells_high = [s for s in src_smells if s.get("severity") == "high"][:top_findings]
+    top_smells_high = [s for s in src_smells if s.get("severity") == "high"][
+        :top_findings
+    ]
     god_classes = [s for s in src_smells if s.get("type") == "god_class"]
 
     logger.info(

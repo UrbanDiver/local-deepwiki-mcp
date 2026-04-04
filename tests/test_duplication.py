@@ -142,3 +142,27 @@ def test_analyze_duplication_empty_repo(tmp_path):
     assert result["status"] == "success"
     assert result["stats"]["total_lines"] == 0
     assert result["stats"]["duplication_ratio"] == 0.0
+
+
+@pytest.mark.asyncio
+async def test_handle_get_duplication_metrics(tmp_path):
+    import json
+    from unittest.mock import MagicMock, patch
+
+    from local_deepwiki.handlers.analysis_architecture import (
+        handle_get_duplication_metrics,
+    )
+
+    _write_py(tmp_path / "src" / "a.py", "def foo():\n    return 1\n")
+    mock_controller = MagicMock()
+    mock_controller.require_permission.return_value = None
+    with patch(
+        "local_deepwiki.handlers.analysis_architecture.get_access_controller",
+        return_value=mock_controller,
+    ):
+        result = await handle_get_duplication_metrics({"repo_path": str(tmp_path)})
+    assert len(result) == 1
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert "type1_clones" in data
+    assert "type2_clones" in data

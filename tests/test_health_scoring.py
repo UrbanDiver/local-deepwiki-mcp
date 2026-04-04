@@ -11,6 +11,7 @@ from local_deepwiki.generators.analysis.health_scoring import (
     score_cohesion,
     score_complexity,
     score_coupling,
+    score_duplication,
     score_layers,
     score_smells,
 )
@@ -504,6 +505,74 @@ def test_score_cohesion_returns_factors():
 
 
 # ---------------------------------------------------------------------------
+# score_duplication
+# ---------------------------------------------------------------------------
+
+
+def test_score_duplication_empty_stats():
+    result = score_duplication(stats={})
+    assert result["score"] == 100
+    assert result["grade"] == "A"
+
+
+def test_score_duplication_no_duplicates():
+    stats = {
+        "duplication_ratio": 0.0,
+        "type1_clone_groups": 0,
+        "type2_clone_groups": 0,
+        "largest_clone_lines": 0,
+    }
+    result = score_duplication(stats=stats)
+    assert result["score"] == 100.0
+
+
+def test_score_duplication_moderate():
+    stats = {
+        "duplication_ratio": 0.10,
+        "type1_clone_groups": 5,
+        "type2_clone_groups": 3,
+        "largest_clone_lines": 30,
+    }
+    result = score_duplication(stats=stats)
+    assert result["score"] < 80
+
+
+def test_score_duplication_high():
+    stats = {
+        "duplication_ratio": 0.30,
+        "type1_clone_groups": 20,
+        "type2_clone_groups": 10,
+        "largest_clone_lines": 100,
+    }
+    result = score_duplication(stats=stats)
+    assert result["score"] < 30
+
+
+def test_score_duplication_score_clamped():
+    stats = {
+        "duplication_ratio": 0.50,
+        "type1_clone_groups": 100,
+        "type2_clone_groups": 50,
+        "largest_clone_lines": 500,
+    }
+    result = score_duplication(stats=stats)
+    assert 0.0 <= result["score"] <= 100.0
+
+
+def test_score_duplication_returns_factors():
+    stats = {
+        "duplication_ratio": 0.05,
+        "type1_clone_groups": 2,
+        "type2_clone_groups": 1,
+        "largest_clone_lines": 20,
+    }
+    result = score_duplication(stats=stats)
+    assert "duplication_ratio" in result["factors"]
+    assert "clone_groups" in result["factors"]
+    assert "largest_clone_lines" in result["factors"]
+
+
+# ---------------------------------------------------------------------------
 # compute_overall
 # ---------------------------------------------------------------------------
 
@@ -516,6 +585,7 @@ def test_compute_overall_all_perfect():
         "layers": {"score": 100},
         "churn": {"score": 100},
         "cohesion": {"score": 100},
+        "duplication": {"score": 100},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 100.0
@@ -530,6 +600,7 @@ def test_compute_overall_all_zero():
         "layers": {"score": 0},
         "churn": {"score": 0},
         "cohesion": {"score": 0},
+        "duplication": {"score": 0},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 0.0
@@ -537,9 +608,10 @@ def test_compute_overall_all_zero():
 
 
 def test_compute_overall_weighted_average():
-    # complexity=100 (0.20), coupling=100 (0.18), smells=0 (0.18),
-    # layers=100 (0.14), churn=100 (0.15), cohesion=100 (0.15)
-    # expected = 100*0.20 + 100*0.18 + 0*0.18 + 100*0.14 + 100*0.15 + 100*0.15 = 82.0
+    # All 100 except smells=0. New weights:
+    # complexity=0.18, coupling=0.16, smells=0.16, layers=0.12,
+    # churn=0.13, cohesion=0.13, duplication=0.12
+    # expected = 100*(0.18+0.16+0.12+0.13+0.13+0.12) + 0*0.16 = 84.0
     dimensions = {
         "complexity": {"score": 100},
         "coupling": {"score": 100},
@@ -547,9 +619,10 @@ def test_compute_overall_weighted_average():
         "layers": {"score": 100},
         "churn": {"score": 100},
         "cohesion": {"score": 100},
+        "duplication": {"score": 100},
     }
     result = compute_overall(dimensions)
-    assert result["score"] == pytest.approx(82.0, rel=0.01)
+    assert result["score"] == pytest.approx(84.0, rel=0.01)
     assert result["grade"] == "B"
 
 
@@ -560,8 +633,8 @@ def test_compute_overall_missing_dimension_defaults_100():
         # all others missing → default 100
     }
     result = compute_overall(dimensions)
-    # 0*0.20 + 100*0.18 + 100*0.18 + 100*0.14 + 100*0.15 + 100*0.15 = 80.0
-    assert result["score"] == pytest.approx(80.0, rel=0.01)
+    # 0*0.18 + 100*(0.16+0.16+0.12+0.13+0.13+0.12) = 82.0
+    assert result["score"] == pytest.approx(82.0, rel=0.01)
 
 
 def test_compute_overall_dimensions_included_in_result():
@@ -572,6 +645,7 @@ def test_compute_overall_dimensions_included_in_result():
         "layers": {"score": 100},
         "churn": {"score": 85},
         "cohesion": {"score": 75},
+        "duplication": {"score": 80},
     }
     result = compute_overall(dimensions)
     assert result["dimensions"] is dimensions
@@ -587,6 +661,7 @@ def test_compute_overall_weights_included_in_result():
     assert "layers" in weights
     assert "churn" in weights
     assert "cohesion" in weights
+    assert "duplication" in weights
     # Weights should sum to approximately 1.0
     assert sum(weights.values()) == pytest.approx(1.0, rel=0.001)
 
@@ -600,6 +675,7 @@ def test_compute_overall_grade_b_boundary():
         "layers": {"score": 75},
         "churn": {"score": 75},
         "cohesion": {"score": 75},
+        "duplication": {"score": 75},
     }
     result = compute_overall(dimensions)
     assert result["score"] == 75.0
